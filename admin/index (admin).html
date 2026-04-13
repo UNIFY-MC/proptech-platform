@@ -1,0 +1,988 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PropTech — Control Centre</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Outfit:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#07070d;--surface:#0f0f18;--surface2:#16161f;--surface3:#1c1c28;
+  --border:rgba(255,255,255,0.055);--border2:rgba(255,255,255,0.1);
+  --text:#dddbe8;--muted:#5e5c72;--dim:#3a3850;
+  --blue:#5b8ef5;--blue-d:rgba(91,142,245,0.12);
+  --green:#3dc97a;--green-d:rgba(61,201,122,0.1);
+  --gold:#c9a84c;--gold-d:rgba(201,168,76,0.1);
+  --red:#e05555;--red-d:rgba(224,85,85,0.1);
+  --purple:#9b7fe8;--purple-d:rgba(155,127,232,0.1);
+  --teal:#3dc9c9;--teal-d:rgba(61,201,201,0.1);
+  --orange:#e08844;--orange-d:rgba(224,136,68,0.1);
+  --font:'Outfit',sans-serif;--mono:'DM Mono',monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:13px;font-weight:300;min-height:100vh;overflow-x:hidden}
+button,input,select,textarea{font-family:var(--font)}
+a{color:inherit;text-decoration:none}
+
+/* ── SCREENS ── */
+.screen{display:none!important}
+.screen.on{display:block!important}
+#s-login{display:none;min-height:100vh;align-items:center;justify-content:center;background:radial-gradient(ellipse at 25% 60%,rgba(91,142,245,.06),transparent 55%),radial-gradient(ellipse at 75% 30%,rgba(155,127,232,.04),transparent 50%),var(--bg)}
+#s-login.on{display:flex!important}
+#s-app{display:none}
+#s-app.on{display:grid;grid-template-columns:200px 1fr;min-height:100vh}
+
+/* ── LOGIN ── */
+.login-box{width:380px;max-width:calc(100vw - 32px);padding:44px;border:1px solid var(--border2);background:var(--surface)}
+.login-logo{font-family:var(--mono);font-size:9px;letter-spacing:.3em;text-transform:uppercase;color:var(--blue);margin-bottom:36px}
+.login-title{font-size:22px;font-weight:500;margin-bottom:6px}
+.login-sub{font-size:12px;color:var(--muted);margin-bottom:28px;line-height:1.6}
+.toggle{display:flex;border:1px solid var(--border);margin-bottom:24px}
+.toggle-opt{flex:1;background:none;border:none;color:var(--muted);font-family:var(--mono);font-size:9px;letter-spacing:.12em;text-transform:uppercase;padding:9px;cursor:pointer;transition:all .15s}
+.toggle-opt.on{background:var(--blue-d);color:var(--blue)}
+.lbl{font-family:var(--mono);font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;display:block}
+.inp{width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-size:13px;padding:11px 14px;outline:none;transition:border-color .2s;margin-bottom:16px}
+.inp:focus{border-color:rgba(91,142,245,.4)}
+.btn-primary{width:100%;background:var(--blue-d);border:1px solid var(--blue);color:var(--blue);font-family:var(--mono);font-size:9px;letter-spacing:.2em;text-transform:uppercase;padding:12px;cursor:pointer;transition:all .2s}
+.btn-primary:hover:not(:disabled){background:rgba(91,142,245,.22)}
+.btn-primary:disabled{opacity:.35;cursor:not-allowed}
+.login-err{font-family:var(--mono);font-size:10px;color:var(--red);margin-top:12px;text-align:center;display:none}
+.login-err.on{display:block}
+.check-wrap{text-align:center;padding:24px 0}
+.check-wrap p{font-size:13px;color:var(--muted);line-height:1.8}
+.check-wrap strong{color:var(--text)}
+
+/* ── SIDEBAR ── */
+.sb{background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow-y:auto}
+.sb-top{padding:18px 16px;border-bottom:1px solid var(--border)}
+.sb-logo{font-family:var(--mono);font-size:9px;letter-spacing:.25em;text-transform:uppercase;color:var(--blue);margin-bottom:3px}
+.sb-user{font-family:var(--mono);font-size:9px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sb-scope{display:inline-block;margin-top:6px;font-family:var(--mono);font-size:8px;letter-spacing:.1em;padding:2px 8px;border:1px solid var(--green);color:var(--green)}
+.sb-nav{padding:10px 0;flex:1}
+.sb-sec{padding:8px 16px 3px;font-family:var(--mono);font-size:8px;letter-spacing:.2em;text-transform:uppercase;color:var(--dim)}
+.nav-btn{display:flex;align-items:center;gap:9px;padding:8px 16px;cursor:pointer;color:var(--muted);transition:all .12s;border-left:2px solid transparent;font-size:12px;border-top:none;border-right:none;border-bottom:none;background:none;width:100%;text-align:left}
+.nav-btn:hover{background:var(--surface2);color:var(--text)}
+.nav-btn.on{background:var(--blue-d);color:var(--blue);border-left-color:var(--blue)}
+.nav-btn .ni{font-size:13px;width:16px;text-align:center;flex-shrink:0}
+.sb-ext{padding:14px;border-top:1px solid var(--border)}
+.sb-ext-t{font-family:var(--mono);font-size:8px;letter-spacing:.18em;text-transform:uppercase;color:var(--dim);margin-bottom:8px}
+.ext-a{display:flex;align-items:center;gap:7px;padding:6px 8px;font-size:11px;color:var(--muted);border-radius:3px;transition:all .12s;margin-bottom:1px;cursor:pointer}
+.ext-a:hover{background:var(--surface2);color:var(--text)}
+.dot{width:5px;height:5px;border-radius:50%;flex-shrink:0}
+.sb-foot{padding:14px;border-top:1px solid var(--border)}
+.logout-btn{width:100%;background:none;border:1px solid var(--border);color:var(--muted);font-family:var(--mono);font-size:9px;letter-spacing:.12em;text-transform:uppercase;padding:8px;cursor:pointer;transition:all .18s}
+.logout-btn:hover{border-color:var(--red);color:var(--red)}
+
+/* ── MAIN ── */
+.main{overflow-y:auto;display:flex;flex-direction:column}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:12px 28px;border-bottom:1px solid var(--border);background:var(--surface);position:sticky;top:0;z-index:50;flex-shrink:0}
+.tb-l{font-family:var(--mono);font-size:10px;color:var(--muted)}
+.tb-r{display:flex;align-items:center;gap:14px}
+.rb{font-family:var(--mono);font-size:8px;letter-spacing:.1em;padding:3px 9px;border:1px solid var(--blue);color:var(--blue)}
+.sb-tag{font-family:var(--mono);font-size:8px;letter-spacing:.08em;padding:3px 9px;border:1px solid var(--green);color:var(--green)}
+
+/* ── PAGES ── */
+.page{display:none;padding:24px 28px;flex:1}
+.page.on{display:block}
+.ph{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:20px}
+.pt{font-size:19px;font-weight:500}
+.ps{font-size:11px;color:var(--muted);margin-top:3px}
+
+/* ── KPI GRID ── */
+.kpi4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
+.kpi3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}
+.kpi{background:var(--surface);border:1px solid var(--border);padding:16px}
+.kpi-l{font-family:var(--mono);font-size:8px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.kpi-v{font-size:22px;font-weight:500;font-family:var(--mono);margin-bottom:3px}
+.kpi-s{font-size:10px;color:var(--muted)}
+.kpi-delta{font-family:var(--mono);font-size:9px}
+.c-blue .kpi-v{color:var(--blue)}.c-green .kpi-v{color:var(--green)}.c-gold .kpi-v{color:var(--gold)}.c-purple .kpi-v{color:var(--purple)}.c-teal .kpi-v{color:var(--teal)}.c-red .kpi-v{color:var(--red)}
+
+/* ── LAYOUT ── */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px}
+
+/* ── CARDS ── */
+.card{background:var(--surface);border:1px solid var(--border)}
+.card-h{display:flex;align-items:center;justify-content:space-between;padding:13px 16px;border-bottom:1px solid var(--border)}
+.card-t{font-size:13px;font-weight:500}
+.card-s{font-size:10px;color:var(--muted)}
+.card-body{padding:16px}
+
+/* ── TABLE ── */
+.tw{overflow-x:auto}
+table{width:100%;border-collapse:collapse}
+th{font-family:var(--mono);font-size:8px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);padding:9px 16px;text-align:left;border-bottom:1px solid var(--border);font-weight:400;white-space:nowrap}
+td{padding:9px 16px;border-bottom:1px solid var(--border);font-size:12px;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(255,255,255,.015)}
+.tr-click{cursor:pointer}
+
+/* ── BADGES ── */
+.b{font-family:var(--mono);font-size:8px;letter-spacing:.08em;padding:2px 7px;border-radius:2px;display:inline-block;white-space:nowrap}
+.b-member{background:rgba(94,92,114,.2);color:#8e8caa}
+.b-silver{background:rgba(155,170,184,.14);color:#9baab8}
+.b-gold{background:var(--gold-d);color:var(--gold)}
+.b-green{background:var(--green-d);color:var(--green)}
+.b-blue{background:var(--blue-d);color:var(--blue)}
+.b-red{background:var(--red-d);color:var(--red)}
+.b-purple{background:var(--purple-d);color:var(--purple)}
+.b-teal{background:var(--teal-d);color:var(--teal)}
+.b-orange{background:var(--orange-d);color:var(--orange)}
+.b-dim{background:rgba(58,56,80,.4);color:var(--muted)}
+
+/* ── VERTICAL HEALTH ── */
+.vcard{background:var(--surface2);border:1px solid var(--border);padding:14px;position:relative}
+.vcard-name{font-family:var(--mono);font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.vcard-mrr{font-size:20px;font-weight:500;font-family:var(--mono);margin-bottom:3px}
+.vcard-info{font-size:10px;color:var(--muted);line-height:1.6}
+.vcard-status{position:absolute;top:14px;right:14px;width:7px;height:7px;border-radius:50%}
+.vs-active{background:var(--green);box-shadow:0 0 5px rgba(61,201,122,.4)}
+.vs-empty{background:var(--dim)}
+.vcard-delta{display:flex;gap:10px;margin-top:8px;padding-top:8px;border-top:1px solid var(--border)}
+.vd{font-family:var(--mono);font-size:9px}
+.vd-up{color:var(--green)}.vd-dn{color:var(--red)}.vd-0{color:var(--muted)}
+
+/* ── CHART ── */
+.chart-wrap{position:relative;height:180px}
+
+/* ── SEARCH BAR ── */
+.sbar{display:flex;gap:8px;margin-bottom:14px}
+.s-inp{flex:1;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:8px 13px;font-size:12px;outline:none}
+.s-inp:focus{border-color:rgba(91,142,245,.35)}
+.f-btn{background:var(--surface2);border:1px solid var(--border);color:var(--muted);font-family:var(--mono);font-size:8px;letter-spacing:.1em;padding:8px 12px;cursor:pointer;transition:all .12s;white-space:nowrap}
+.f-btn.on,.f-btn:hover{border-color:var(--blue);color:var(--blue)}
+
+/* ── MODAL ── */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;display:none;align-items:flex-start;justify-content:center;overflow-y:auto;padding:40px 16px}
+.modal-bg.on{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border2);width:700px;max-width:100%;margin:auto}
+.modal-h{display:flex;align-items:center;justify-content:space-between;padding:18px 20px;border-bottom:1px solid var(--border)}
+.modal-t{font-size:16px;font-weight:500}
+.modal-x{background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;line-height:1;padding:0 4px}
+.modal-x:hover{color:var(--text)}
+.modal-body{padding:20px}
+.modal-section{margin-bottom:20px}
+.modal-section-t{font-family:var(--mono);font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+.info-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px}
+.info-row:last-child{border-bottom:none}
+.info-k{color:var(--muted)}
+.info-v{font-family:var(--mono);font-size:11px}
+
+/* ── FORM ── */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+.ff label{display:block;font-family:var(--mono);font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:5px}
+.ff input,.ff select,.ff textarea{width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:9px 12px;font-size:12px;outline:none}
+.ff input:focus,.ff select:focus,.ff textarea:focus{border-color:rgba(91,142,245,.35)}
+.ff select option{background:var(--surface2)}
+.ff-full{grid-column:1/-1}
+.form-actions{display:flex;gap:10px;align-items:center;margin-top:16px}
+.ab{background:var(--blue-d);border:1px solid var(--blue);color:var(--blue);font-family:var(--mono);font-size:9px;letter-spacing:.14em;text-transform:uppercase;padding:9px 18px;cursor:pointer;transition:all .18s}
+.ab:hover{background:rgba(91,142,245,.22)}
+.ab-green{background:var(--green-d);border-color:var(--green);color:var(--green)}
+.ab-red{background:var(--red-d);border-color:var(--red);color:var(--red)}
+.form-msg{font-family:var(--mono);font-size:10px}
+.form-msg.ok{color:var(--green)}.form-msg.er{color:var(--red)}
+
+/* ── DEV LINKS ── */
+.dev-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.dev-card{background:var(--surface);border:1px solid var(--border);padding:18px}
+.dev-card-t{font-size:13px;font-weight:500;margin-bottom:4px}
+.dev-card-s{font-size:11px;color:var(--muted);margin-bottom:14px}
+.dev-links{display:flex;flex-direction:column;gap:5px}
+.dev-link{display:flex;align-items:center;justify-content:space-between;padding:8px 11px;background:var(--surface2);border:1px solid var(--border);font-size:12px;transition:all .13s;cursor:pointer}
+.dev-link:hover{border-color:var(--blue);color:var(--blue)}
+.dev-arr{color:var(--muted);font-size:10px}
+.code{background:var(--surface2);border:1px solid var(--border);padding:12px;font-family:var(--mono);font-size:10px;line-height:1.7;color:var(--muted);overflow-x:auto;white-space:pre;margin-top:8px}
+.code .k{color:var(--blue)}.code .s{color:var(--green)}.code .c{color:var(--dim)}
+
+/* ── OFFER CARDS ── */
+.offers-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px;margin-bottom:14px}
+.offer-card{background:var(--surface2);border:1px solid var(--border);padding:14px;position:relative}
+.offer-card-t{font-size:13px;font-weight:400;margin-bottom:3px}
+.offer-card-s{font-size:11px;color:var(--muted);margin-bottom:10px}
+.offer-card-f{display:flex;align-items:center;justify-content:space-between}
+.offer-actions{display:flex;gap:6px;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)}
+.icon-btn{background:none;border:1px solid var(--border);color:var(--muted);font-family:var(--mono);font-size:8px;padding:4px 8px;cursor:pointer;transition:all .12s}
+.icon-btn:hover{border-color:var(--blue);color:var(--blue)}
+.icon-btn.del:hover{border-color:var(--red);color:var(--red)}
+
+/* ── API KEY ── */
+.key-reveal{background:var(--surface2);border:1px solid var(--green);padding:14px;font-family:var(--mono);font-size:11px;color:var(--green);word-break:break-all;margin-top:12px}
+.key-warn{font-size:11px;color:var(--red);margin-top:6px;font-family:var(--mono)}
+
+.loading{text-align:center;padding:40px;color:var(--muted);font-family:var(--mono);font-size:11px}
+.empty{text-align:center;padding:32px;color:var(--muted);font-size:12px}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="s-login" class="screen on">
+  <div class="login-box">
+    <div class="login-logo">PropTech · Control Centre</div>
+    <div class="login-title">Acesso interno</div>
+    <p class="login-sub">Admins usam <strong>magic link</strong>.<br>Staff de vertical usa <strong>email + password</strong>.</p>
+    <div class="toggle">
+      <button class="toggle-opt on" id="opt-m" onclick="setMode('magic')">Magic Link</button>
+      <button class="toggle-opt" id="opt-p" onclick="setMode('pass')">Password</button>
+    </div>
+    <div id="login-form">
+      <label class="lbl">Email</label>
+      <input type="email" id="l-email" class="inp" placeholder="mario@proptech.pt">
+      <div id="pass-field" style="display:none">
+        <label class="lbl">Password</label>
+        <input type="password" id="l-pass" class="inp" placeholder="••••••••">
+      </div>
+      <button class="btn-primary" id="l-btn" onclick="doLogin()">Entrar →</button>
+      <div class="login-err" id="l-err"></div>
+    </div>
+    <div id="check-wrap" class="check-wrap" style="display:none">
+      <p>Link enviado para<br><strong id="sent-to"></strong><br><br>Clique no email para aceder.</p>
+    </div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="s-app" class="screen">
+
+  <!-- SIDEBAR -->
+  <aside class="sb">
+    <div class="sb-top">
+      <div class="sb-logo">PropTech Hub</div>
+      <div class="sb-user" id="sb-user">—</div>
+      <div id="sb-scope-el"></div>
+    </div>
+    <nav class="sb-nav">
+      <div class="sb-sec">Financeiro</div>
+      <button class="nav-btn on" onclick="nav('financeiro',this)"><span class="ni">◈</span> Overview</button>
+      <button class="nav-btn" onclick="nav('financeiro',this)"><span class="ni">◉</span> Verticais</button>
+
+      <div class="sb-sec" style="margin-top:6px">Operacional</div>
+      <button class="nav-btn" id="nav-clientes" onclick="nav('clientes',this)"><span class="ni">◎</span> Clientes</button>
+      <button class="nav-btn" id="nav-pipeline" onclick="nav('pipeline',this)"><span class="ni">⊕</span> CRM Pipeline</button>
+      <button class="nav-btn" id="nav-leads" onclick="nav('leads',this)"><span class="ni">⊙</span> Leads</button>
+
+      <div class="sb-sec" style="margin-top:6px" id="admin-sec">Admin</div>
+      <button class="nav-btn" id="nav-oc" onclick="nav('ownersclub',this)"><span class="ni">★</span> Owners Club</button>
+      <button class="nav-btn" id="nav-staff" onclick="nav('staff',this)"><span class="ni">⊞</span> Staff</button>
+      <button class="nav-btn" id="nav-apikeys" onclick="nav('apikeys',this)"><span class="ni">⌘</span> API Keys</button>
+      <button class="nav-btn" id="nav-dev" onclick="nav('developer',this)"><span class="ni">⚡</span> Developer</button>
+    </nav>
+    <div class="sb-ext">
+      <div class="sb-ext-t">Links</div>
+      <a class="ext-a" href="https://hkmvszkpxjbxmnixzqbl.supabase.co" target="_blank"><span class="dot" style="background:var(--green)"></span>V1 Core Hub</a>
+      <a class="ext-a" href="https://eozklslwfaqujaijvdnl.supabase.co" target="_blank"><span class="dot" style="background:var(--blue)"></span>V2 Condo Hub</a>
+      <a class="ext-a" href="https://www.notion.so/34184147fa6081b1b72ce4e6878656bb" target="_blank"><span class="dot" style="background:var(--purple)"></span>Developer Guide</a>
+      <a class="ext-a" href="https://app.netlify.com" target="_blank"><span class="dot" style="background:var(--gold)"></span>Netlify</a>
+      <a class="ext-a" href="../" target="_blank"><span class="dot" style="background:var(--gold)"></span>Portal Cliente</a>
+    </div>
+    <div class="sb-foot">
+      <button class="logout-btn" onclick="doLogout()">Terminar sessão</button>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <div class="main">
+    <div class="topbar">
+      <div class="tb-l" id="tb-time">—</div>
+      <div class="tb-r">
+        <div id="tb-scope" style="display:none" class="sb-tag">—</div>
+        <div class="rb" id="tb-role">—</div>
+        <div style="font-size:12px;color:var(--muted)" id="tb-name">—</div>
+      </div>
+    </div>
+
+    <!-- ══ FINANCEIRO ══════════════════════════════════════════ -->
+    <div id="p-financeiro" class="page on">
+      <div class="ph"><div><div class="pt">Controlo Financeiro</div><div class="ps" id="fin-ts">A carregar...</div></div></div>
+
+      <div class="kpi4">
+        <div class="kpi c-green"><div class="kpi-l">MRR Total</div><div class="kpi-v" id="k-mrr">—</div><div class="kpi-s">Receita mensal recorrente</div></div>
+        <div class="kpi c-blue"><div class="kpi-l">ARR Estimado</div><div class="kpi-v" id="k-arr">—</div><div class="kpi-s">Receita anual projectada</div></div>
+        <div class="kpi c-teal"><div class="kpi-l">ARPU</div><div class="kpi-v" id="k-arpu">—</div><div class="kpi-s">Receita média por cliente</div></div>
+        <div class="kpi c-purple"><div class="kpi-l">LTV Estimado</div><div class="kpi-v" id="k-ltv">—</div><div class="kpi-s">Valor de vida a 24 meses</div></div>
+      </div>
+
+      <div class="kpi4">
+        <div class="kpi c-gold"><div class="kpi-l">Clientes activos</div><div class="kpi-v" id="k-cli">—</div><div class="kpi-s">Com serviço activo</div></div>
+        <div class="kpi c-green"><div class="kpi-l">Novos (30d)</div><div class="kpi-v" id="k-new">—</div><div class="kpi-s">Novos serviços este mês</div></div>
+        <div class="kpi c-red"><div class="kpi-l">Churn (30d)</div><div class="kpi-v" id="k-churn">—</div><div class="kpi-s">Cancelamentos este mês</div></div>
+        <div class="kpi"><div class="kpi-l">Total Pessoas</div><div class="kpi-v" id="k-pess" style="color:var(--text)">—</div><div class="kpi-s">No Core Hub</div></div>
+      </div>
+
+      <div class="g2">
+        <!-- MRR por vertical -->
+        <div class="card">
+          <div class="card-h"><div class="card-t">MRR por vertical</div></div>
+          <div class="tw"><table id="t-vertical">
+            <thead><tr><th>Vertical</th><th>MRR</th><th>ARR</th><th>Clientes</th><th>Serviços</th></tr></thead>
+            <tbody></tbody>
+          </table></div>
+        </div>
+        <!-- Tier breakdown -->
+        <div class="card">
+          <div class="card-h"><div class="card-t">Owners Club — Tiers</div></div>
+          <div class="tw"><table id="t-tiers">
+            <thead><tr><th>Tier</th><th>Membros</th><th>MRR</th><th>Pontos médios</th></tr></thead>
+            <tbody></tbody>
+          </table></div>
+        </div>
+      </div>
+
+      <!-- MRR Trend chart -->
+      <div class="card" style="margin-bottom:14px">
+        <div class="card-h">
+          <div class="card-t">Evolução MRR</div>
+          <div class="card-s" id="chart-period">últimos 6 meses</div>
+        </div>
+        <div class="card-body"><div class="chart-wrap"><canvas id="mrr-chart"></canvas></div></div>
+      </div>
+
+      <!-- Saúde verticais -->
+      <div style="margin-bottom:8px"><span style="font-size:13px;font-weight:500">Saúde das Verticais</span></div>
+      <div class="g3" id="vertical-health-grid"></div>
+    </div>
+
+    <!-- ══ CLIENTES ════════════════════════════════════════════ -->
+    <div id="p-clientes" class="page">
+      <div class="ph"><div><div class="pt" id="cli-title">Clientes</div><div class="ps" id="cli-count">—</div></div></div>
+      <div class="sbar">
+        <input type="text" id="cli-s" class="s-inp" placeholder="Nome ou email..." oninput="filterCli(this.value)">
+        <button class="f-btn on" id="f-all" onclick="setTierF(null,this)">Todos</button>
+        <button class="f-btn" onclick="setTierF('member',this)">Member</button>
+        <button class="f-btn" onclick="setTierF('silver',this)">Silver</button>
+        <button class="f-btn" onclick="setTierF('gold',this)">Gold</button>
+      </div>
+      <div class="card"><div class="tw">
+        <table id="t-cli">
+          <thead><tr><th>Nome</th><th>Email</th><th>Localidade</th><th>Tier</th><th>Serviços</th><th>MRR</th><th>Pontos</th><th>Fonte</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div></div>
+    </div>
+
+    <!-- ══ PIPELINE ════════════════════════════════════════════ -->
+    <div id="p-pipeline" class="page">
+      <div class="ph"><div><div class="pt">CRM Pipeline</div><div class="ps">Oportunidades abertas por vertical</div></div></div>
+      <div class="card"><div class="tw">
+        <table id="t-pipeline">
+          <thead><tr><th>Data</th><th>Vertical</th><th>Produto</th><th>Cliente</th><th>Estado</th><th>Valor est.</th><th>Origem</th></tr></thead>
+          <tbody><tr><td colspan="7" class="loading">A carregar...</td></tr></tbody>
+        </table>
+      </div></div>
+    </div>
+
+    <!-- ══ LEADS ═══════════════════════════════════════════════ -->
+    <div id="p-leads" class="page">
+      <div class="ph">
+        <div><div class="pt">Leads</div><div class="ps" id="leads-count">—</div></div>
+        <div style="display:flex;gap:8px">
+          <button class="f-btn" id="lf-all" onclick="setLeadV(null,this)">Todos</button>
+          <button class="f-btn" onclick="setLeadV('seguros',this)">Seguros</button>
+          <button class="f-btn" onclick="setLeadV('energia',this)">Energia</button>
+          <button class="f-btn" onclick="setLeadV('manutencao',this)">Manutenção</button>
+        </div>
+      </div>
+      <div class="card"><div class="tw">
+        <table id="t-leads">
+          <thead><tr><th>Data</th><th>Nome</th><th>Email</th><th>Vertical</th><th>Origem</th><th>UTM</th><th>Estado</th><th>Acção</th></tr></thead>
+          <tbody><tr><td colspan="8" class="loading">A carregar...</td></tr></tbody>
+        </table>
+      </div></div>
+    </div>
+
+    <!-- ══ OWNERS CLUB ════════════════════════════════════════ -->
+    <div id="p-ownersclub" class="page">
+      <div class="ph">
+        <div><div class="pt">Owners Club</div><div class="ps">Gestão de ofertas e protocolos</div></div>
+        <button class="ab" onclick="openOfertaModal(null)">+ Nova oferta</button>
+      </div>
+      <div class="offers-grid" id="offers-grid"></div>
+    </div>
+
+    <!-- ══ STAFF ═══════════════════════════════════════════════ -->
+    <div id="p-staff" class="page">
+      <div class="ph"><div><div class="pt">Staff</div><div class="ps">Gestão de acessos internos por vertical</div></div></div>
+
+      <div class="card" style="margin-bottom:14px">
+        <div class="card-h"><div class="card-t">Criar novo membro</div></div>
+        <div class="card-body">
+          <div class="form-grid">
+            <div class="ff"><label>Nome</label><input type="text" id="sf-nome" placeholder="Ana Silva"></div>
+            <div class="ff"><label>Email</label><input type="email" id="sf-email" placeholder="ana@proptech.pt"></div>
+            <div class="ff"><label>Password</label><input type="password" id="sf-pass" placeholder="Min 8 caracteres"></div>
+            <div class="ff">
+              <label>Role</label>
+              <select id="sf-role"><option value="support">Support</option><option value="finance">Finance</option><option value="developer">Developer</option><option value="admin">Admin</option></select>
+            </div>
+            <div class="ff ff-full">
+              <label>Vertical scope (vazio = acesso total)</label>
+              <select id="sf-scope">
+                <option value="">— Todas as verticais —</option>
+                <option value="condominio">V2 Condomínios</option>
+                <option value="seguros">V3 Seguros</option>
+                <option value="energia">V4 Energia</option>
+                <option value="manutencao">V5 Manutenção</option>
+                <option value="reabilitacao">V6 Reabilitação</option>
+                <option value="imoveis">V7 Imobiliário</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-actions">
+            <button class="ab" onclick="createStaff()">Criar membro →</button>
+            <div class="form-msg" id="staff-msg" style="display:none"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-h"><div class="card-t">Staff actual</div></div>
+        <div class="tw"><table id="t-staff">
+          <thead><tr><th>Nome</th><th>Email</th><th>Role</th><th>Scope</th><th>Auth</th><th>Último acesso</th></tr></thead>
+          <tbody id="staff-tbody"><tr><td colspan="6" class="loading">A carregar...</td></tr></tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <!-- ══ API KEYS ════════════════════════════════════════════ -->
+    <div id="p-apikeys" class="page">
+      <div class="ph"><div><div class="pt">API Keys</div><div class="ps">Chaves de autenticação por vertical</div></div></div>
+
+      <div class="card" style="margin-bottom:14px">
+        <div class="card-h"><div class="card-t">Gerar nova API key</div><div class="card-s">A chave só é mostrada uma vez</div></div>
+        <div class="card-body">
+          <div class="form-grid">
+            <div class="ff">
+              <label>Vertical</label>
+              <select id="ak-vertical">
+                <option value="condominio">V2 Condomínios</option>
+                <option value="seguros">V3 Seguros</option>
+                <option value="energia">V4 Energia</option>
+                <option value="manutencao">V5 Manutenção</option>
+                <option value="reabilitacao">V6 Reabilitação</option>
+                <option value="imoveis">V7 Imobiliário</option>
+                <option value="admin">Admin</option>
+              </select>
+            </div>
+            <div class="ff"><label>Descrição</label><input type="text" id="ak-desc" placeholder="ex: Vertical Seguros produção"></div>
+          </div>
+          <div class="form-actions">
+            <button class="ab" onclick="generateKey()">Gerar API key →</button>
+            <div class="form-msg" id="ak-msg" style="display:none"></div>
+          </div>
+          <div id="ak-result" style="display:none">
+            <div class="key-reveal" id="ak-key"></div>
+            <div class="key-warn">⚠ Copia esta chave agora — não será mostrada novamente. Guarda como variável de ambiente CORE_API_KEY_[VERTICAL].</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-h"><div class="card-t">Verticais com API key</div><div class="card-s">Hashes nunca expostos</div></div>
+        <div class="tw"><table id="t-apikeys">
+          <thead><tr><th>Vertical</th><th>Descrição</th><th>Estado</th><th>Último uso</th><th>Criado</th></tr></thead>
+          <tbody><tr><td colspan="5" class="loading">A carregar...</td></tr></tbody>
+        </table></div>
+      </div>
+
+      <div class="card" style="margin-top:14px">
+        <div class="card-h"><div class="card-t">Como usar a API key</div></div>
+        <div class="card-body">
+          <div class="code"><span class="c">// Header obrigatório em todos os pedidos da vertical</span>
+headers: {
+  <span class="s">'X-Api-Key'</span>: process.env.<span class="k">CORE_API_KEY_V3_SEGUROS</span>,
+  <span class="s">'Content-Type'</span>: <span class="s">'application/json'</span>
+}
+
+<span class="c">// Endpoint base</span>
+<span class="k">const</span> CORE_API = <span class="s">'https://hkmvszkpxjbxmnixzqbl.supabase.co/functions/v1/core-api'</span>
+
+<span class="c">// Notificar serviço activo</span>
+<span class="k">POST</span> ${CORE_API}/servico
+{ pessoa_id, vertical: <span class="s">'seguros'</span>, produto, valor_mensal, referencia_id }</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ DEVELOPER ═══════════════════════════════════════════ -->
+    <div id="p-developer" class="page">
+      <div class="ph"><div><div class="pt">Developer Hub</div><div class="ps">Links e referências técnicas</div></div></div>
+      <div class="dev-grid">
+        <div class="dev-card">
+          <div class="dev-card-t">🗄️ Supabase Projects</div>
+          <div class="dev-card-s">Uma BD por vertical</div>
+          <div class="dev-links">
+            <a class="dev-link" href="https://hkmvszkpxjbxmnixzqbl.supabase.co" target="_blank"><span>V1 Core Hub</span><span class="dev-arr">↗</span></a>
+            <a class="dev-link" href="https://eozklslwfaqujaijvdnl.supabase.co" target="_blank"><span>V2 Condo Hub</span><span class="dev-arr">↗</span></a>
+            <div class="dev-link" style="opacity:.35;cursor:default"><span>V3-V7 — a criar</span></div>
+          </div>
+        </div>
+        <div class="dev-card">
+          <div class="dev-card-t">⚡ Core API v1.4</div>
+          <div class="dev-card-s">Base URL: .../functions/v1/core-api</div>
+          <div class="code"><span class="k">GET</span>  /health
+<span class="k">GET</span>  /auth/check?email=
+<span class="k">GET</span>  /auth/me              <span class="c">(JWT cliente)</span>
+<span class="k">GET</span>  /auth/staff-check     <span class="c">(JWT staff)</span>
+<span class="k">GET</span>  /staff/dashboard      <span class="c">(staff)</span>
+<span class="k">GET</span>  /staff/pessoas
+<span class="k">GET</span>  /financial/kpis       <span class="c">(staff)</span>
+<span class="k">GET</span>  /financial/mrr-historico
+<span class="k">GET</span>  /financial/vertical-health
+<span class="k">GET</span>  /leads                <span class="c">(staff)</span>
+<span class="k">POST</span> /leads/converter
+<span class="k">GET</span>  /client/:id           <span class="c">(staff)</span>
+<span class="k">GET</span>  /ofertas-admin        <span class="c">(staff)</span>
+<span class="k">POST</span> /ofertas-admin        <span class="c">(admin)</span>
+<span class="k">GET</span>  /api-keys             <span class="c">(admin)</span>
+<span class="k">POST</span> /api-keys/generate    <span class="c">(admin)</span>
+<span class="k">POST</span> /servico              <span class="c">(vertical)</span>
+<span class="k">POST</span> /lead                 <span class="c">(vertical)</span></div>
+        </div>
+        <div class="dev-card">
+          <div class="dev-card-t">📋 Notion Docs</div>
+          <div class="dev-card-s">Arquitectura e contexto</div>
+          <div class="dev-links">
+            <a class="dev-link" href="https://www.notion.so/34084147fa60813d94fed7f72d47d8bd" target="_blank"><span>🏗️ Visão & Arquitectura</span><span class="dev-arr">↗</span></a>
+            <a class="dev-link" href="https://www.notion.so/34184147fa6081b1b72ce4e6878656bb" target="_blank"><span>🛠️ Developer Guide</span><span class="dev-arr">↗</span></a>
+            <a class="dev-link" href="https://www.notion.so/34084147fa60814d9836c3c572949438" target="_blank"><span>🔑 Prompts V1-V9</span><span class="dev-arr">↗</span></a>
+            <a class="dev-link" href="https://www.notion.so/602318f5c9294e559e050c50d0f5861e" target="_blank"><span>🗺️ Master Roadmap</span><span class="dev-arr">↗</span></a>
+          </div>
+        </div>
+        <div class="dev-card">
+          <div class="dev-card-t">🚀 Deploy</div>
+          <div class="dev-card-s">GitHub → Netlify auto-deploy</div>
+          <div class="code"><span class="c">proptech-platform/</span>
+├── index.html        <span class="c">→ V9 Portal cliente</span>
+├── admin/
+│   └── index.html    <span class="c">→ Este dashboard</span>
+├── v3-seguros/
+│   └── index.html    <span class="c">← a criar</span>
+├── v4-energia/...
+└── netlify.toml</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- MODAL — Cliente -->
+<div class="modal-bg" id="cli-modal">
+  <div class="modal">
+    <div class="modal-h">
+      <div class="modal-t" id="modal-nome">—</div>
+      <button class="modal-x" onclick="closeModal('cli-modal')">×</button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+  </div>
+</div>
+
+<!-- MODAL — Oferta -->
+<div class="modal-bg" id="oferta-modal">
+  <div class="modal">
+    <div class="modal-h">
+      <div class="modal-t" id="oferta-modal-t">Nova Oferta</div>
+      <button class="modal-x" onclick="closeModal('oferta-modal')">×</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="of-id">
+      <div class="form-grid">
+        <div class="ff ff-full"><label>Título</label><input type="text" id="of-titulo" placeholder="ex: Green Fee — Quinta do Lago"></div>
+        <div class="ff ff-full"><label>Descrição</label><input type="text" id="of-desc" placeholder="ex: 1 green fee por pessoa"></div>
+        <div class="ff"><label>Categoria</label>
+          <select id="of-cat"><option>Gastronomia</option><option>Lazer</option><option>Bem-estar</option><option>Stays</option><option>Reabilitação</option><option>Outro</option></select>
+        </div>
+        <div class="ff"><label>Parceiro</label><input type="text" id="of-parceiro" placeholder="ex: Herdade do Esporão"></div>
+        <div class="ff"><label>Desconto (texto)</label><input type="text" id="of-desconto" placeholder="ex: 20% OFF"></div>
+        <div class="ff"><label>Tier mínimo</label>
+          <select id="of-tier"><option value="member">Todos (Member)</option><option value="silver">Silver+</option><option value="gold">Elite Gold</option></select>
+        </div>
+        <div class="ff"><label>Válida até (opcional)</label><input type="date" id="of-validade"></div>
+        <div class="ff"><label>Activa</label>
+          <select id="of-activa"><option value="true">Sim</option><option value="false">Não</option></select>
+        </div>
+      </div>
+      <div class="form-actions">
+        <button class="ab ab-green" onclick="saveOferta()">Guardar oferta</button>
+        <div class="form-msg" id="of-msg" style="display:none"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://hkmvszkpxjbxmnixzqbl.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhrbXZzemtweGpieG1uaXh6cWJsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwMjU5ODcsImV4cCI6MjA5MTYwMTk4N30.kgZGnFKfpJc4hY3TQZjig6WdSsvI-NXDnWrmpISthMw';
+const CORE_API = `${SUPABASE_URL}/functions/v1/core-api`;
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let staffInfo = null, session = null;
+let allPessoas = [], tierFilter = null, leadVertical = null;
+let mrrChart = null;
+
+// ── UTILS ─────────────────────────────────────────────────
+function eur(v,d=0){return Number(v||0).toLocaleString('pt-PT',{style:'currency',currency:'EUR',minimumFractionDigits:d,maximumFractionDigits:d});}
+function fdate(d){if(!d)return'—';return new Date(d).toLocaleDateString('pt-PT',{day:'2-digit',month:'short'});}
+function fdt(d){if(!d)return'—';return new Date(d).toLocaleString('pt-PT',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});}
+function ecls(e){return{lead:'purple',contactado:'blue',em_proposta:'gold',proposta_enviada:'gold',ganho:'green',perdido:'red',cancelado:'red'}[e]||'dim';}
+function vcls(v){return{condominio:'blue',seguros:'purple',energia:'gold',manutencao:'teal',reabilitacao:'orange',imoveis:'green'}[v]||'dim';}
+
+async function api(path, opts={}){
+  const res = await fetch(`${CORE_API}${path}`,{...opts,headers:{Authorization:`Bearer ${session.access_token}`,'Content-Type':'application/json',...(opts.headers||{})}});
+  return res.json();
+}
+
+// ── SCREENS ───────────────────────────────────────────────
+function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('on'));document.getElementById(id).classList.add('on');}
+
+// ── AUTH MODE ─────────────────────────────────────────────
+let authMode='magic';
+function setMode(m){authMode=m;document.getElementById('opt-m').classList.toggle('on',m==='magic');document.getElementById('opt-p').classList.toggle('on',m==='pass');document.getElementById('pass-field').style.display=m==='pass'?'block':'none';document.getElementById('l-btn').textContent=m==='magic'?'Enviar magic link →':'Entrar →';}
+
+async function init(){
+  if(window.location.hash.includes('access_token')){
+    const{data:{session:s}}=await sb.auth.getSession();
+    if(s){session=s;window.history.replaceState({},'',window.location.pathname);await initApp();return;}
+  }
+  const{data:{session:s}}=await sb.auth.getSession();
+  if(s){session=s;await initApp();return;}
+  show('s-login');
+}
+
+async function doLogin(){
+  const email=document.getElementById('l-email').value.trim().toLowerCase();
+  if(!email)return;
+  const btn=document.getElementById('l-btn');
+  btn.disabled=true;setErr('');
+  if(authMode==='pass'){
+    const pw=document.getElementById('l-pass').value;
+    if(!pw){setErr('Introduza a password.');btn.disabled=false;return;}
+    const{data,error}=await sb.auth.signInWithPassword({email,password:pw});
+    if(error){setErr(error.message);btn.disabled=false;return;}
+    session=data.session;await initApp();
+  }else{
+    const{error}=await sb.auth.signInWithOtp({email,options:{emailRedirectTo:window.location.origin+window.location.pathname,shouldCreateUser:true}});
+    if(error){setErr(error.message);btn.disabled=false;return;}
+    document.getElementById('sent-to').textContent=email;
+    document.getElementById('login-form').style.display='none';
+    document.getElementById('check-wrap').style.display='block';
+  }
+}
+function setErr(m){const el=document.getElementById('l-err');el.textContent=m;el.classList.toggle('on',!!m);}
+document.addEventListener('keydown',e=>{if(e.key==='Enter'&&document.getElementById('s-login').classList.contains('on'))doLogin();});
+
+async function initApp(){
+  const sf=await api('/auth/staff-check');
+  if(!sf?.is_staff){await sb.auth.signOut();show('s-login');setErr('Acesso negado.');return;}
+  staffInfo=sf;show('s-app');
+
+  const scope=sf.vertical_scope, isAdmin=sf.role==='admin'||sf.role==='developer';
+  document.getElementById('sb-user').textContent=sf.nome||sf.email;
+  if(scope){document.getElementById('sb-scope-el').innerHTML=`<div class="sb-scope">${scope.toUpperCase()}</div>`;document.getElementById('tb-scope').textContent=scope.toUpperCase();document.getElementById('tb-scope').style.display='block';}
+  document.getElementById('tb-role').textContent=sf.role.toUpperCase();
+  document.getElementById('tb-name').textContent=sf.nome||'';
+  if(!isAdmin){['admin-sec','nav-staff','nav-apikeys','nav-dev'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='none';});}
+
+  setInterval(()=>{document.getElementById('tb-time').textContent=new Date().toLocaleString('pt-PT',{dateStyle:'short',timeStyle:'short'});},1000);
+
+  await Promise.all([loadFinanceiro(),loadPessoas(),isAdmin?loadStaff():Promise.resolve(),loadLeads(),loadOfertas(),isAdmin?loadApiKeys():Promise.resolve()]);
+}
+
+// ── NAVIGATION ────────────────────────────────────────────
+function nav(page,btn){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('on'));
+  document.getElementById('p-'+page).classList.add('on');
+  btn.classList.add('on');
+}
+
+// ── FINANCEIRO ────────────────────────────────────────────
+async function loadFinanceiro(){
+  const [kpis,mrr,health]=await Promise.all([
+    api('/financial/kpis'),
+    api('/financial/mrr-historico?meses=6'),
+    api('/financial/vertical-health'),
+  ]);
+
+  // KPIs
+  document.getElementById('k-mrr').textContent=eur(kpis?.mrr_total);
+  document.getElementById('k-arr').textContent=eur(kpis?.arr);
+  document.getElementById('k-arpu').textContent=eur(kpis?.arpu,2);
+  document.getElementById('k-ltv').textContent=eur(kpis?.ltv_estimado);
+  document.getElementById('k-cli').textContent=kpis?.clientes||0;
+  document.getElementById('k-new').textContent=kpis?.novos_30d||0;
+  document.getElementById('k-churn').textContent=kpis?.churn_30d||0;
+  document.getElementById('k-pess').textContent='62';
+  document.getElementById('fin-ts').textContent='Actualizado: '+new Date().toLocaleTimeString('pt-PT');
+
+  // Vertical table
+  const vtb=document.querySelector('#t-vertical tbody');
+  (kpis?.por_vertical||[]).forEach(v=>{const r=document.createElement('tr');r.innerHTML=`<td><span class="b b-${vcls(v.vertical)}">${v.vertical}</span></td><td style="font-family:var(--mono);color:var(--green)">${eur(v.mrr)}</td><td style="font-family:var(--mono);color:var(--muted)">${eur(v.arr)}</td><td>${v.clientes}</td><td>${v.n_servicos}</td>`;vtb.appendChild(r);});
+  if(!kpis?.por_vertical?.length)vtb.innerHTML='<tr><td colspan="5" class="empty">Sem serviços activos</td></tr>';
+
+  // Tier table
+  const ttb=document.querySelector('#t-tiers tbody');
+  (kpis?.por_tier||[]).forEach(t=>{const r=document.createElement('tr');r.innerHTML=`<td><span class="b b-${t.tier}">${t.tier.toUpperCase()}</span></td><td style="font-family:var(--mono)">${t.n_pessoas}</td><td style="font-family:var(--mono);color:var(--green)">${eur(t.mrr_tier)}</td><td style="font-family:var(--mono);color:var(--muted)">${Math.round(t.pontos_medios)} pts</td>`;ttb.appendChild(r);});
+
+  // MRR Chart
+  renderChart(mrr||[]);
+
+  // Vertical health
+  renderHealth(health||[]);
+}
+
+function renderChart(data){
+  const ctx=document.getElementById('mrr-chart').getContext('2d');
+  if(mrrChart)mrrChart.destroy();
+  // Aggregate by month
+  const months={};
+  (data||[]).forEach(d=>{months[d.mes]=(months[d.mes]||0)+Number(d.mrr_acumulado||0);});
+  const labels=Object.keys(months).sort();
+  const vals=labels.map(l=>months[l]);
+  mrrChart=new Chart(ctx,{type:'bar',data:{labels,datasets:[{label:'MRR',data:vals,backgroundColor:'rgba(91,142,245,.25)',borderColor:'rgba(91,142,245,.8)',borderWidth:1.5,borderRadius:2}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#5e5c72',font:{family:'DM Mono',size:10}}},y:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#5e5c72',font:{family:'DM Mono',size:10},callback:v=>eur(v)}}}}});
+}
+
+const V_NAMES={condominio:'V2 Condomínios',seguros:'V3 Seguros',energia:'V4 Energia',manutencao:'V5 Manutenção',reabilitacao:'V6 Reabilitação',imoveis:'V7 Imobiliário'};
+const V_ALL=['condominio','seguros','energia','manutencao','reabilitacao','imoveis'];
+
+function renderHealth(health){
+  const grid=document.getElementById('vertical-health-grid');
+  const byV={};(health||[]).forEach(h=>byV[h.vertical]=h);
+  grid.innerHTML=V_ALL.map(v=>{
+    const h=byV[v];
+    const active=!!h;
+    const mrr=h?eur(h.mrr):'—';
+    const cli=h?h.n_clientes:'0';
+    const last=h&&h.ultimo_evento?fdate(h.ultimo_evento):'—';
+    const nov=h?h.novos_30d:0;
+    const chu=h?h.churn_30d:0;
+    return `<div class="vcard">
+      <div class="vcard-status ${active?'vs-active':'vs-empty'}"></div>
+      <div class="vcard-name">${V_NAMES[v]||v}</div>
+      <div class="vcard-mrr" style="color:${active?'var(--green)':'var(--muted)'}">${mrr}</div>
+      <div class="vcard-info">${cli} clientes · Último evento: ${last}</div>
+      <div class="vcard-delta">
+        <span class="vd ${nov>0?'vd-up':'vd-0'}">▲${nov} novos</span>
+        <span class="vd ${chu>0?'vd-dn':'vd-0'}">▼${chu} churn</span>
+        <span class="vd vd-0">${active?'activa':'sem dados'}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── CLIENTES ─────────────────────────────────────────────
+async function loadPessoas(){
+  const data=await api('/staff/pessoas');
+  allPessoas=data||[];
+  document.getElementById('cli-count').textContent=`${allPessoas.length} pessoas no Core`;
+  document.getElementById('cli-title').textContent=staffInfo?.vertical_scope?`Clientes — ${staffInfo.vertical_scope}`:'Clientes';
+  renderPessoas(allPessoas);
+}
+
+function renderPessoas(list){
+  const tb=document.querySelector('#t-cli tbody');
+  if(!list.length){tb.innerHTML='<tr><td colspan="8" class="empty">Sem resultados</td></tr>';return;}
+  tb.innerHTML=list.map(p=>`<tr class="tr-click" onclick="openClient('${p.id}')">
+    <td style="font-weight:400">${p.nome}</td>
+    <td style="font-family:var(--mono);font-size:10px;color:var(--muted)">${p.email}</td>
+    <td style="color:var(--muted)">${p.localidade||'—'}</td>
+    <td><span class="b b-${p.tier}">${(p.tier||'').toUpperCase()}</span></td>
+    <td style="font-family:var(--mono);text-align:center">${p.n_servicos||0}</td>
+    <td style="font-family:var(--mono);color:var(--green)">${p.n_servicos?'—':'—'}</td>
+    <td style="font-family:var(--mono);color:var(--gold)">${(p.pontos||0).toLocaleString('pt-PT')}</td>
+    <td><span class="b b-${p.source==='condominio'?'blue':'purple'}">${p.source||'—'}</span></td>
+  </tr>`).join('');
+}
+
+function filterCli(q){const ql=q.toLowerCase();renderPessoas(allPessoas.filter(p=>(!tierFilter||p.tier===tierFilter)&&(!ql||p.nome.toLowerCase().includes(ql)||p.email.toLowerCase().includes(ql))));}
+function setTierF(t,btn){tierFilter=t;document.querySelectorAll('.sbar .f-btn').forEach(b=>b.classList.remove('on'));btn.classList.add('on');filterCli(document.getElementById('cli-s').value);}
+
+async function openClient(id){
+  document.getElementById('cli-modal').classList.add('on');
+  document.getElementById('modal-body').innerHTML='<div class="loading">A carregar...</div>';
+  const d=await api(`/client/${id}`);if(!d?.pessoa){document.getElementById('modal-body').innerHTML='<p style="color:var(--muted)">Erro ao carregar</p>';return;}
+  const p=d.pessoa;
+  document.getElementById('modal-nome').textContent=p.nome;
+  document.getElementById('modal-body').innerHTML=`
+    <div class="modal-section">
+      <div class="modal-section-t">Perfil</div>
+      <div class="info-row"><span class="info-k">Email</span><span class="info-v">${p.email}</span></div>
+      <div class="info-row"><span class="info-k">Tier</span><span><span class="b b-${p.owners_club_tier}">${(p.owners_club_tier||'').toUpperCase()}</span></span></div>
+      <div class="info-row"><span class="info-k">Pontos</span><span class="info-v">${(p.owners_club_pontos||0).toLocaleString('pt-PT')}</span></div>
+      <div class="info-row"><span class="info-k">Serviços activos</span><span class="info-v">${p.num_servicos_activos||0}</span></div>
+      <div class="info-row"><span class="info-k">Membro desde</span><span class="info-v">${p.owners_club_data_entrada||'—'}</span></div>
+    </div>
+    <div class="modal-section">
+      <div class="modal-section-t">Imóveis (${(d.imoveis||[]).length})</div>
+      ${(d.imoveis||[]).map(im=>`<div class="info-row"><span class="info-k">${im.fraccao||im.morada}</span><span class="info-v"><span class="b b-dim">${im.condominio_ref||'—'}</span></span></div>`).join('')||'<div class="empty" style="padding:12px">Sem imóveis</div>'}
+    </div>
+    <div class="modal-section">
+      <div class="modal-section-t">Serviços (${(d.servicos||[]).length})</div>
+      ${(d.servicos||[]).map(s=>`<div class="info-row"><span class="info-k"><span class="b b-${vcls(s.vertical)}">${s.vertical}</span> ${s.produto}</span><span class="info-v" style="color:var(--green)">${s.valor_mensal?eur(s.valor_mensal)+'/mês':'—'}</span></div>`).join('')||'<div class="empty" style="padding:12px">Sem serviços</div>'}
+    </div>
+    <div class="modal-section">
+      <div class="modal-section-t">Últimos eventos</div>
+      ${(d.eventos||[]).slice(0,8).map(e=>`<div class="info-row"><span class="info-k" style="white-space:nowrap">${fdate(e.created_at)}</span><span>${e.descricao}</span><span class="info-v" style="color:var(--green)">${e.pontos_ganhos>0?'+'+e.pontos_ganhos+' pts':''}</span></div>`).join('')||'<div class="empty" style="padding:12px">Sem eventos</div>'}
+    </div>`;
+}
+function closeModal(id){document.getElementById(id).classList.remove('on');}
+
+// ── LEADS ─────────────────────────────────────────────────
+async function loadLeads(){
+  const v=leadVertical?`?vertical=${leadVertical}`:'';
+  const data=await api(`/leads${v}`);
+  const tb=document.querySelector('#t-leads tbody');
+  document.getElementById('leads-count').textContent=`${(data||[]).length} leads`+(leadVertical?` — ${leadVertical}`:'');
+  if(!data?.length){tb.innerHTML='<tr><td colspan="8" class="empty">Sem leads de momento</td></tr>';return;}
+  tb.innerHTML=(data||[]).map(l=>`<tr>
+    <td style="font-family:var(--mono);font-size:10px;color:var(--muted)">${fdate(l.created_at)}</td>
+    <td>${l.nome||'—'}</td>
+    <td style="font-family:var(--mono);font-size:10px">${l.email||l.telemovel||'—'}</td>
+    <td><span class="b b-${vcls(l.vertical_interesse||'')}">${l.vertical_interesse||'—'}</span></td>
+    <td style="color:var(--muted)">${l.origem||'—'}</td>
+    <td style="font-family:var(--mono);font-size:10px;color:var(--muted)">${l.utm_source||'—'}</td>
+    <td><span class="b b-${l.convertido?'green':'orange'}">${l.convertido?'Convertida':'Nova'}</span></td>
+    <td>${!l.convertido?`<button class="icon-btn" onclick="convertLead('${l.id}','${(l.nome||'').replace(/'/g,'')}')" style="font-size:8px">Converter →</button>`:''}</td>
+  </tr>`).join('');
+}
+function setLeadV(v,btn){leadVertical=v;document.querySelectorAll('.ph .f-btn').forEach(b=>b.classList.remove('on'));btn.classList.add('on');loadLeads();}
+async function convertLead(id,nome){if(!confirm(`Converter lead "${nome}" em pessoa no Core?`))return;const r=await api('/leads/converter',{method:'POST',body:JSON.stringify({lead_id:id,nome})});if(r?.ok){alert('Lead convertida com sucesso!');loadLeads();}else alert(r?.error||'Erro');}
+
+// ── PIPELINE ──────────────────────────────────────────────
+async function loadPipeline(){
+  const d=await api('/staff/dashboard');
+  const data=d?.pipeline_crm||[];
+  const tb=document.querySelector('#t-pipeline tbody');
+  tb.innerHTML=data.length?data.map(o=>`<tr>
+    <td style="font-family:var(--mono);font-size:10px;color:var(--muted)">${fdate(o.data_criacao)}</td>
+    <td><span class="b b-${vcls(o.vertical)}">${o.vertical}</span></td>
+    <td>${o.produto}</td>
+    <td style="color:var(--muted)">${o.pessoa_nome||'—'}</td>
+    <td><span class="b b-${ecls(o.estado)}">${o.estado}</span></td>
+    <td style="font-family:var(--mono)">${o.valor_estimado?eur(o.valor_estimado):'—'}</td>
+    <td style="color:var(--muted)">${o.origem||'—'}</td>
+  </tr>`).join(''):'<tr><td colspan="7" class="empty">Sem oportunidades abertas</td></tr>';
+}
+
+// ── OWNERS CLUB (Ofertas) ──────────────────────────────────
+async function loadOfertas(){
+  const data=await api('/ofertas-admin');
+  const g=document.getElementById('offers-grid');
+  if(!data?.length){g.innerHTML='<div class="empty">Sem ofertas. Clica em "+ Nova oferta" para criar.</div>';return;}
+  const tierLbl={member:'Todos',silver:'Silver+',gold:'Elite Gold'};
+  g.innerHTML=(data||[]).map(o=>`<div class="offer-card">
+    <div class="offer-card-t">${o.titulo}</div>
+    <div class="offer-card-s">${o.descricao||''}</div>
+    <div class="offer-card-f">
+      <span class="b b-${o.tier_minimo==='gold'?'gold':o.tier_minimo==='silver'?'silver':'green'}">${tierLbl[o.tier_minimo]||o.tier_minimo}</span>
+      <span style="font-family:var(--mono);font-size:11px;color:var(--gold)">${o.desconto_txt||''}</span>
+    </div>
+    <div class="offer-actions">
+      <button class="icon-btn" onclick="openOfertaModal(${JSON.stringify(o).replace(/"/g,'&quot;')})">Editar</button>
+      <button class="icon-btn del" onclick="deleteOferta('${o.id}')">Apagar</button>
+      <span style="font-family:var(--mono);font-size:8px;color:var(--muted);margin-left:auto">${o.activa?'Activa':'Inactiva'}</span>
+    </div>
+  </div>`).join('');
+}
+
+function openOfertaModal(o){
+  document.getElementById('oferta-modal-t').textContent=o?'Editar Oferta':'Nova Oferta';
+  document.getElementById('of-id').value=o?.id||'';
+  document.getElementById('of-titulo').value=o?.titulo||'';
+  document.getElementById('of-desc').value=o?.descricao||'';
+  document.getElementById('of-cat').value=o?.categoria||'Gastronomia';
+  document.getElementById('of-parceiro').value=o?.parceiro||'';
+  document.getElementById('of-desconto').value=o?.desconto_txt||'';
+  document.getElementById('of-tier').value=o?.tier_minimo||'member';
+  document.getElementById('of-validade').value=o?.validade_ate||'';
+  document.getElementById('of-activa').value=o?.activa!==false?'true':'false';
+  document.getElementById('of-msg').style.display='none';
+  document.getElementById('oferta-modal').classList.add('on');
+}
+
+async function saveOferta(){
+  const msg=document.getElementById('of-msg');
+  const body={id:document.getElementById('of-id').value||undefined,titulo:document.getElementById('of-titulo').value,descricao:document.getElementById('of-desc').value,categoria:document.getElementById('of-cat').value,parceiro:document.getElementById('of-parceiro').value,desconto_txt:document.getElementById('of-desconto').value,tier_minimo:document.getElementById('of-tier').value,validade_ate:document.getElementById('of-validade').value||null,activa:document.getElementById('of-activa').value==='true'};
+  const r=await api('/ofertas-admin',{method:'POST',body:JSON.stringify(body)});
+  if(r?.ok){msg.textContent='✓ Guardado';msg.className='form-msg ok';msg.style.display='block';loadOfertas();setTimeout(()=>closeModal('oferta-modal'),800);}
+  else{msg.textContent=r?.error||'Erro';msg.className='form-msg er';msg.style.display='block';}
+}
+
+async function deleteOferta(id){if(!confirm('Apagar esta oferta?'))return;await api(`/ofertas-admin/${id}`,{method:'DELETE'});loadOfertas();}
+
+// ── STAFF ─────────────────────────────────────────────────
+async function loadStaff(){
+  const{data}=await sb.schema('core').from('staff').select('*').order('nome');
+  const tb=document.getElementById('staff-tbody');
+  if(!data){tb.innerHTML='<tr><td colspan="6" class="loading">Erro</td></tr>';return;}
+  tb.innerHTML=data.map(s=>`<tr>
+    <td style="font-weight:400">${s.nome_display||s.nome}</td>
+    <td style="font-family:var(--mono);font-size:10px;color:var(--muted)">${s.email}</td>
+    <td><span class="b b-${s.role==='admin'?'gold':s.role==='developer'?'blue':'purple'}">${s.role}</span></td>
+    <td>${s.vertical_scope?`<span class="b b-green">${s.vertical_scope}</span>`:'<span style="color:var(--muted)">todas</span>'}</td>
+    <td><span class="b b-${s.auth_method==='password'?'blue':'purple'}">${s.auth_method}</span></td>
+    <td style="font-family:var(--mono);font-size:10px;color:var(--muted)">${fdt(s.ultimo_uso)||'—'}</td>
+  </tr>`).join('');
+}
+
+async function createStaff(){
+  const msg=document.getElementById('staff-msg');msg.style.display='none';
+  const p={email:document.getElementById('sf-email').value.trim().toLowerCase(),nome:document.getElementById('sf-nome').value.trim(),password:document.getElementById('sf-pass').value,role:document.getElementById('sf-role').value,vertical_scope:document.getElementById('sf-scope').value||null};
+  if(!p.email||!p.nome||!p.password){msg.textContent='Preencha email, nome e password.';msg.className='form-msg er';msg.style.display='block';return;}
+  const r=await api('/staff/create-member',{method:'POST',body:JSON.stringify(p)});
+  if(r?.ok){msg.textContent=`✓ ${p.nome} criado. Login: email + password.`;msg.className='form-msg ok';['sf-email','sf-nome','sf-pass'].forEach(id=>document.getElementById(id).value='');loadStaff();}
+  else{msg.textContent=r?.error||'Erro';msg.className='form-msg er';}
+  msg.style.display='block';
+}
+
+// ── API KEYS ──────────────────────────────────────────────
+async function loadApiKeys(){
+  const data=await api('/api-keys');
+  const tb=document.querySelector('#t-apikeys tbody');
+  if(!data?.length){tb.innerHTML='<tr><td colspan="5" class="empty">Sem API keys geradas</td></tr>';return;}
+  tb.innerHTML=(data||[]).map(k=>`<tr>
+    <td><span class="b b-${vcls(k.vertical)}">${k.vertical}</span></td>
+    <td style="color:var(--muted)">${k.descricao||'—'}</td>
+    <td><span class="b b-${k.activa?'green':'red'}">${k.activa?'Activa':'Revogada'}</span></td>
+    <td style="font-family:var(--mono);font-size:10px;color:var(--muted)">${fdt(k.ultimo_uso)||'Nunca usada'}</td>
+    <td style="font-family:var(--mono);font-size:10px;color:var(--muted)">${fdate(k.created_at)}</td>
+  </tr>`).join('');
+}
+
+async function generateKey(){
+  const v=document.getElementById('ak-vertical').value;
+  const d=document.getElementById('ak-desc').value;
+  const msg=document.getElementById('ak-msg');
+  const res=document.getElementById('ak-result');
+  msg.style.display='none';res.style.display='none';
+  const r=await api('/api-keys/generate',{method:'POST',body:JSON.stringify({vertical:v,descricao:d||null})});
+  if(r?.ok){document.getElementById('ak-key').textContent=r.api_key;res.style.display='block';loadApiKeys();}
+  else{msg.textContent=r?.error||'Erro';msg.className='form-msg er';msg.style.display='block';}
+}
+
+// ── LOGOUT ────────────────────────────────────────────────
+async function doLogout(){
+  await sb.auth.signOut();
+  staffInfo=null;session=null;allPessoas=[];tierFilter=null;leadVertical=null;
+  document.getElementById('login-form').style.display='';
+  document.getElementById('check-wrap').style.display='none';
+  document.getElementById('l-btn').disabled=false;
+  document.getElementById('l-btn').textContent='Entrar →';
+  setErr('');show('s-login');
+}
+
+// Close modals on background click
+document.querySelectorAll('.modal-bg').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('on');}));
+
+// Lazy-load pipeline when navigating there
+document.getElementById('nav-pipeline').addEventListener('click',loadPipeline);
+
+init();
+</script>
+</body>
+</html>
