@@ -6,7 +6,10 @@
 <title>PropTech — Control Centre</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Outfit:wght@300;400;500&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2">
+function toggleTheme(){const l=document.body.classList.toggle('light');const b=document.getElementById('theme-btn');if(b)b.textContent=l?'☾ Escuro':'☀ Claro';try{localStorage.setItem('theme',l?'light':'dark')}catch(e){}}
+(function(){try{if(localStorage.getItem('theme')==='light'){document.body.classList.add('light');const b=document.getElementById('theme-btn');if(b)b.textContent='☾ Escuro'}}catch(e){}})();
+</script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
 <style>
 :root{
@@ -216,6 +219,15 @@ tr:hover td{background:rgba(255,255,255,.015)}
 
 .loading{text-align:center;padding:40px;color:var(--muted);font-family:var(--mono);font-size:11px}
 .empty{text-align:center;padding:32px;color:var(--muted);font-size:12px}
+
+body.light{--bg:#f4f3f0;--surface:#fff;--surface2:#f0eeeb;--surface3:#e8e6e2;--border:rgba(0,0,0,.08);--border2:rgba(0,0,0,.15);--text:#1a1a24;--muted:#6b6880;--dim:#c4c2d0;--blue:#2563eb;--blue-d:rgba(37,99,235,.1);--green:#16a34a;--green-d:rgba(22,163,74,.1);--gold:#92680a;--gold-d:rgba(146,104,10,.1);--red:#dc2626;--red-d:rgba(220,38,38,.1);--purple:#7c3aed;--purple-d:rgba(124,58,237,.1);--teal:#0d9488;--teal-d:rgba(13,148,136,.1);--orange:#c2410c;--orange-d:rgba(194,65,12,.1);}
+body.light .sb{background:var(--surface);box-shadow:2px 0 8px rgba(0,0,0,.06)}
+body.light .topbar{background:var(--surface);box-shadow:0 1px 4px rgba(0,0,0,.06)}
+body.light .kpi{box-shadow:0 1px 3px rgba(0,0,0,.06)}
+body.light .card{box-shadow:0 1px 3px rgba(0,0,0,.06)}
+body.light table th{background:var(--surface2)}
+.theme-toggle{background:none;border:1px solid var(--border2);color:var(--muted);font-family:var(--mono);font-size:9px;letter-spacing:.1em;padding:4px 10px;cursor:pointer;transition:all .15s;border-radius:3px;display:flex;align-items:center;gap:5px}
+.theme-toggle:hover{border-color:var(--blue);color:var(--blue)}
 </style>
 </head>
 <body>
@@ -274,10 +286,10 @@ tr:hover td{background:rgba(255,255,255,.015)}
     </nav>
     <div class="sb-ext">
       <div class="sb-ext-t">Links</div>
-      <a class="ext-a" href="https://hkmvszkpxjbxmnixzqbl.supabase.co" target="_blank"><span class="dot" style="background:var(--green)"></span>V1 Core Hub</a>
-      <a class="ext-a" href="https://eozklslwfaqujaijvdnl.supabase.co" target="_blank"><span class="dot" style="background:var(--blue)"></span>V2 Condo Hub</a>
+      <a class="ext-a" href="https://supabase.com/dashboard/project/hkmvszkpxjbxmnixzqbl" target="_blank"><span class="dot" style="background:var(--green)"></span>V1 Core Hub</a>
+      <a class="ext-a" href="https://supabase.com/dashboard/project/eozklslwfaqujaijvdnl" target="_blank"><span class="dot" style="background:var(--blue)"></span>V2 Condo Hub</a>
       <a class="ext-a" href="https://www.notion.so/34184147fa6081b1b72ce4e6878656bb" target="_blank"><span class="dot" style="background:var(--purple)"></span>Developer Guide</a>
-      <a class="ext-a" href="https://app.netlify.com" target="_blank"><span class="dot" style="background:var(--gold)"></span>Netlify</a>
+      <a class="ext-a" href="https://app.netlify.com/projects/proptech-owners-club" target="_blank" target="_blank"><span class="dot" style="background:var(--gold)"></span>Netlify</a>
       <a class="ext-a" href="../" target="_blank"><span class="dot" style="background:var(--gold)"></span>Portal Cliente</a>
     </div>
     <div class="sb-foot">
@@ -290,6 +302,7 @@ tr:hover td{background:rgba(255,255,255,.015)}
     <div class="topbar">
       <div class="tb-l" id="tb-time">—</div>
       <div class="tb-r">
+        <button class="theme-toggle" onclick="toggleTheme()" id="theme-btn">☀ Claro</button>
         <div id="tb-scope" style="display:none" class="sb-tag">—</div>
         <div class="rb" id="tb-role">—</div>
         <div style="font-size:12px;color:var(--muted)" id="tb-name">—</div>
@@ -516,8 +529,8 @@ headers: {
           <div class="dev-card-t">🗄️ Supabase Projects</div>
           <div class="dev-card-s">Uma BD por vertical</div>
           <div class="dev-links">
-            <a class="dev-link" href="https://hkmvszkpxjbxmnixzqbl.supabase.co" target="_blank"><span>V1 Core Hub</span><span class="dev-arr">↗</span></a>
-            <a class="dev-link" href="https://eozklslwfaqujaijvdnl.supabase.co" target="_blank"><span>V2 Condo Hub</span><span class="dev-arr">↗</span></a>
+            <a class="dev-link" href="https://supabase.com/dashboard/project/hkmvszkpxjbxmnixzqbl" target="_blank"><span>V1 Core Hub</span><span class="dev-arr">↗</span></a>
+            <a class="dev-link" href="https://supabase.com/dashboard/project/eozklslwfaqujaijvdnl" target="_blank"><span>V2 Condo Hub</span><span class="dev-arr">↗</span></a>
             <div class="dev-link" style="opacity:.35;cursor:default"><span>V3-V7 — a criar</span></div>
           </div>
         </div>
@@ -917,9 +930,9 @@ async function deleteOferta(id){if(!confirm('Apagar esta oferta?'))return;await 
 
 // ── STAFF ─────────────────────────────────────────────────
 async function loadStaff(){
-  const{data}=await sb.schema('core').from('staff').select('*').order('nome');
+  const data=await api('/staff/list');
   const tb=document.getElementById('staff-tbody');
-  if(!data){tb.innerHTML='<tr><td colspan="6" class="loading">Erro</td></tr>';return;}
+  if(!data||data.error){tb.innerHTML='<tr><td colspan="6" class="loading">Erro</td></tr>';return;}
   tb.innerHTML=data.map(s=>`<tr>
     <td style="font-weight:400">${s.nome_display||s.nome}</td>
     <td style="font-family:var(--mono);font-size:10px;color:var(--muted)">${s.email}</td>
