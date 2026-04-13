@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Owners Club — Área de Cliente</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=DM+Mono:wght@300;400&family=Outfit:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root {
+  --bg: #0c0c0c;
+  --surface: #141414;
+  --surface2: #1c1c1c;
+  --border: rgba(255,255,255,0.07);
+  --text: #e8e6e0;
+  --muted: #6b6860;
+  --gold: #c9a84c;
+  --gold-light: #e8c96a;
+  --silver: #9baab8;
+  --silver-light: #c8d6e4;
+  --member: #5a5a5a;
+  --member-light: #8a8a8a;
+  --accent: #c9a84c;
+  --font-display: 'Cormorant Garamond', serif;
+  --font-body: 'Outfit', sans-serif;
+  --font-mono: 'DM Mono', monospace;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: var(--bg); color: var(--text); font-family: var(--font-body); font-size: 14px; font-weight: 300; min-height: 100vh; overflow-x: hidden; }
+
+/* ── SCREENS ────────────────────────────────────────────── */
+.screen { display: none; min-height: 100vh; }
+.screen.active { display: flex; }
+
+/* ── LOGIN SCREEN ───────────────────────────────────────── */
+#screen-login {
+  align-items: center; justify-content: center;
+  background: radial-gradient(ellipse at 30% 50%, rgba(201,168,76,0.04) 0%, transparent 60%),
+              radial-gradient(ellipse at 70% 20%, rgba(201,168,76,0.03) 0%, transparent 50%),
+              var(--bg);
+}
+.login-box {
+  width: 420px; max-width: calc(100vw - 48px);
+  padding: 56px 48px; border: 1px solid var(--border);
+  background: var(--surface);
+}
+.login-logo {
+  font-family: var(--font-display); font-size: 13px;
+  letter-spacing: 0.4em; text-transform: uppercase;
+  color: var(--gold); margin-bottom: 48px; text-align: center;
+}
+.login-logo span { color: var(--muted); }
+.login-title {
+  font-family: var(--font-display); font-size: 36px; font-weight: 300;
+  line-height: 1.1; margin-bottom: 8px;
+}
+.login-title em { font-style: italic; color: var(--gold); }
+.login-sub { color: var(--muted); font-size: 13px; margin-bottom: 40px; }
+.login-label {
+  font-family: var(--font-mono); font-size: 9px;
+  letter-spacing: 0.2em; text-transform: uppercase;
+  color: var(--muted); margin-bottom: 8px; display: block;
+}
+.login-input {
+  width: 100%; background: var(--surface2); border: 1px solid var(--border);
+  color: var(--text); font-family: var(--font-body); font-size: 14px; font-weight: 300;
+  padding: 14px 16px; outline: none; transition: border-color 0.2s;
+  margin-bottom: 24px;
+}
+.login-input:focus { border-color: rgba(201,168,76,0.4); }
+.login-btn {
+  width: 100%; background: transparent; border: 1px solid var(--gold);
+  color: var(--gold); font-family: var(--font-mono); font-size: 10px;
+  letter-spacing: 0.2em; text-transform: uppercase; padding: 14px;
+  cursor: pointer; transition: all 0.2s; position: relative; overflow: hidden;
+}
+.login-btn:hover:not(:disabled) { background: rgba(201,168,76,0.08); }
+.login-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.login-error {
+  font-size: 12px; color: #e05555; font-family: var(--font-mono);
+  letter-spacing: 0.05em; margin-top: 16px; text-align: center; display: none;
+}
+.login-error.visible { display: block; }
+.login-footer { margin-top: 40px; text-align: center; }
+.login-footer-line { width: 40px; height: 1px; background: var(--border); margin: 0 auto 16px; }
+.login-footer p { font-size: 11px; color: var(--muted); line-height: 1.6; }
+
+/* ── CHECK EMAIL SCREEN ─────────────────────────────────── */
+#screen-check { align-items: center; justify-content: center; }
+.check-box { text-align: center; width: 400px; max-width: calc(100vw - 48px); }
+.check-icon {
+  width: 64px; height: 64px; border: 1px solid var(--gold);
+  border-radius: 50%; margin: 0 auto 32px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 24px;
+}
+.check-title { font-family: var(--font-display); font-size: 32px; font-weight: 300; margin-bottom: 12px; }
+.check-sub { color: var(--muted); font-size: 13px; line-height: 1.7; }
+.check-email-display {
+  font-family: var(--font-mono); font-size: 12px; color: var(--gold);
+  margin: 20px 0; letter-spacing: 0.05em;
+}
+.check-back {
+  margin-top: 32px; background: none; border: none; color: var(--muted);
+  font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.15em;
+  text-transform: uppercase; cursor: pointer; text-decoration: underline;
+}
+
+/* ── LOADING SCREEN ─────────────────────────────────────── */
+#screen-loading { align-items: center; justify-content: center; flex-direction: column; gap: 20px; }
+.loading-logo {
+  font-family: var(--font-display); font-size: 16px; letter-spacing: 0.4em;
+  text-transform: uppercase; color: var(--gold);
+}
+.loading-line {
+  width: 120px; height: 1px; background: var(--border); position: relative; overflow: hidden;
+}
+.loading-line::after {
+  content: ''; position: absolute; top: 0; left: -100%;
+  width: 100%; height: 100%; background: var(--gold);
+  animation: loadSlide 1.4s ease-in-out infinite;
+}
+@keyframes loadSlide { 0% { left: -100%; } 100% { left: 100%; } }
+
+/* ── DASHBOARD ──────────────────────────────────────────── */
+#screen-dashboard { flex-direction: column; }
+.topnav {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 20px 32px; border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; background: rgba(12,12,12,0.95);
+  backdrop-filter: blur(12px); z-index: 100;
+}
+.logo { font-family: var(--font-display); font-size: 18px; font-weight: 400; letter-spacing: 0.25em; text-transform: uppercase; color: var(--gold); }
+.logo span { color: var(--text); opacity: 0.5; font-weight: 300; }
+.nav-right { display: flex; align-items: center; gap: 24px; }
+.nav-tier-badge { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.15em; padding: 4px 10px; border: 1px solid var(--gold); color: var(--gold); border-radius: 2px; }
+.nav-avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--surface2); border: 1px solid var(--gold); display: flex; align-items: center; justify-content: center; font-family: var(--font-mono); font-size: 11px; color: var(--gold); cursor: pointer; }
+.container { max-width: 960px; margin: 0 auto; padding: 0 24px; }
+.hero { padding: 48px 0 40px; display: grid; grid-template-columns: 340px 1fr; gap: 48px; align-items: start; }
+@media (max-width: 720px) { .hero { grid-template-columns: 1fr; gap: 32px; } }
+
+/* Digital Card */
+.card-wrap { perspective: 1000px; }
+.digital-card { width: 320px; height: 196px; border-radius: 12px; padding: 28px 28px 24px; position: relative; overflow: hidden; cursor: pointer; transition: transform 0.4s cubic-bezier(.4,0,.2,1); transform-style: preserve-3d; }
+.digital-card:hover { transform: rotateY(-6deg) rotateX(2deg) scale(1.02); }
+.card-member { background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 60%, #242424 100%); border: 1px solid #3a3a3a; }
+.card-silver { background: linear-gradient(135deg, #1e2a35 0%, #131e28 60%, #1a2630 100%); border: 1px solid #2d4055; }
+.card-gold   { background: linear-gradient(135deg, #1a1508 0%, #0e0d0a 60%, #1c1a10 100%); border: 1px solid #3d2f0a; }
+.card-shimmer { position: absolute; inset: 0; background: linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.04) 50%, transparent 60%); background-size: 200% 100%; animation: shimmer 4s ease infinite; pointer-events: none; }
+@keyframes shimmer { 0%,100%{background-position:200% 0} 50%{background-position:-200% 0} }
+.card-pattern { position: absolute; right: -20px; bottom: -20px; width: 160px; height: 160px; border-radius: 50%; opacity: 0.06; }
+.card-member .card-pattern { background: radial-gradient(circle, #fff, transparent 70%); }
+.card-silver .card-pattern { background: radial-gradient(circle, var(--silver-light), transparent 70%); }
+.card-gold   .card-pattern { background: radial-gradient(circle, var(--gold-light), transparent 70%); }
+.card-tag { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.3em; text-transform: uppercase; margin-bottom: 4px; }
+.card-member .card-tag { color: var(--member-light); }
+.card-silver .card-tag { color: var(--silver); }
+.card-gold   .card-tag { color: var(--gold); }
+.card-title { font-family: var(--font-display); font-size: 22px; font-weight: 300; letter-spacing: 0.35em; text-transform: uppercase; line-height: 1.1; }
+.card-member .card-title { color: #c0c0c0; }
+.card-silver .card-title { color: var(--silver-light); }
+.card-gold   .card-title { color: var(--gold-light); }
+.card-body-line { font-family: var(--font-display); font-size: 11px; font-style: italic; letter-spacing: 0.15em; margin-top: 6px; opacity: 0.6; }
+.card-bottom { position: absolute; bottom: 24px; left: 28px; right: 28px; display: flex; justify-content: space-between; align-items: flex-end; }
+.card-name { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; opacity: 0.8; }
+.card-id { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.1em; opacity: 0.4; }
+.card-points { text-align: right; }
+.card-points-val { font-family: var(--font-mono); font-size: 16px; font-weight: 400; }
+.card-member .card-points-val { color: var(--member-light); }
+.card-silver .card-points-val { color: var(--silver-light); }
+.card-gold   .card-points-val { color: var(--gold-light); }
+.card-points-label { font-family: var(--font-mono); font-size: 8px; letter-spacing: 0.2em; opacity: 0.4; text-transform: uppercase; }
+
+/* Hero right */
+.hero-right { padding-top: 8px; }
+.greeting { font-family: var(--font-display); font-size: 32px; font-weight: 300; line-height: 1.2; margin-bottom: 6px; }
+.greeting em { font-style: italic; color: var(--gold); }
+.hero-sub { color: var(--muted); font-size: 13px; letter-spacing: 0.03em; margin-bottom: 28px; }
+
+/* Tier progress */
+.tier-progress { margin-bottom: 28px; }
+.tier-label { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; display: flex; justify-content: space-between; }
+.tier-bar { height: 2px; background: var(--border); position: relative; margin-bottom: 6px; }
+.tier-fill { height: 100%; background: linear-gradient(90deg, var(--gold), var(--gold-light)); transition: width 1s ease; }
+.tier-next { font-size: 11px; color: var(--muted); }
+.tier-next em { color: var(--gold); font-style: normal; }
+
+/* Stats */
+.hero-stats { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; }
+.stat-box { border: 1px solid var(--border); padding: 16px; background: var(--surface); }
+.stat-val { font-family: var(--font-mono); font-size: 18px; color: var(--gold); margin-bottom: 4px; }
+.stat-key { font-size: 11px; color: var(--muted); letter-spacing: 0.05em; }
+
+/* Tabs */
+.tabs { border-bottom: 1px solid var(--border); display: flex; gap: 0; margin-bottom: 32px; padding-top: 8px; }
+.tab { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; padding: 12px 24px; cursor: pointer; color: var(--muted); border-bottom: 1px solid transparent; margin-bottom: -1px; transition: all 0.2s; background: none; border-left: none; border-right: none; border-top: none; }
+.tab:hover { color: var(--text); }
+.tab.active { color: var(--gold); border-bottom-color: var(--gold); }
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+/* Section */
+.section-title { font-family: var(--font-display); font-size: 24px; font-weight: 300; margin-bottom: 4px; }
+.section-sub { color: var(--muted); font-size: 12px; letter-spacing: 0.03em; margin-bottom: 24px; }
+
+/* Services grid */
+.services-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; margin-bottom: 32px; }
+.service-card { border: 1px solid var(--border); padding: 20px; background: var(--surface); transition: border-color 0.2s; }
+.service-card:hover { border-color: rgba(201,168,76,0.2); }
+.service-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.service-icon { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; font-size: 18px; border-radius: 4px; }
+.ic-cond { background: rgba(201,168,76,0.08); }
+.ic-seg  { background: rgba(155,170,184,0.08); }
+.ic-ener { background: rgba(90,180,90,0.08); }
+.ic-maint { background: rgba(180,130,80,0.08); }
+.service-status { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.1em; padding: 3px 8px; border-radius: 2px; }
+.status-active  { background: rgba(60,180,60,0.12); color: #6dcc6d; }
+.status-pending { background: rgba(201,168,76,0.12); color: var(--gold); }
+.service-name { font-size: 14px; font-weight: 400; margin-bottom: 4px; }
+.service-desc { font-size: 11px; color: var(--muted); line-height: 1.5; margin-bottom: 12px; }
+.service-footer { display: flex; align-items: center; justify-content: space-between; padding-top: 12px; border-top: 1px solid var(--border); }
+.service-val { font-family: var(--font-mono); font-size: 13px; color: var(--gold); }
+.service-link { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.1em; color: var(--muted); cursor: pointer; }
+.service-link:hover { color: var(--gold); }
+
+/* Imóveis */
+.imoveis-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px,1fr)); gap: 16px; }
+.imovel-card { border: 1px solid var(--border); padding: 20px; background: var(--surface); }
+.imovel-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+.imovel-fracao { font-family: var(--font-mono); font-size: 18px; color: var(--gold); }
+.imovel-condo { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.1em; color: var(--muted); margin-top: 4px; }
+.imovel-tipo { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.12em; padding: 3px 8px; border: 1px solid var(--border); color: var(--muted); }
+.imovel-morada { font-size: 12px; color: var(--muted); line-height: 1.5; }
+
+/* Offers */
+.offers-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px,1fr)); gap: 16px; }
+.offer-card { border: 1px solid var(--border); overflow: hidden; background: var(--surface); transition: border-color 0.2s; }
+.offer-card:hover { border-color: rgba(201,168,76,0.3); }
+.offer-img { height: 80px; display: flex; align-items: center; justify-content: center; font-size: 32px; }
+.offer-bg-1 { background: linear-gradient(135deg, #1a1008, #2a1a0a); }
+.offer-bg-2 { background: linear-gradient(135deg, #081828, #0a2038); }
+.offer-bg-3 { background: linear-gradient(135deg, #101808, #182808); }
+.offer-bg-4 { background: linear-gradient(135deg, #180818, #280a28); }
+.offer-bg-5 { background: linear-gradient(135deg, #181008, #281808); }
+.offer-bg-6 { background: linear-gradient(135deg, #080818, #0a0a28); }
+.offer-body { padding: 16px; }
+.offer-tag { font-family: var(--font-mono); font-size: 8px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+.offer-title { font-size: 13px; font-weight: 400; margin-bottom: 6px; }
+.offer-desc { font-size: 11px; color: var(--muted); line-height: 1.5; margin-bottom: 12px; }
+.offer-footer { display: flex; align-items: center; justify-content: space-between; }
+.offer-discount { font-family: var(--font-mono); font-size: 12px; color: var(--gold); }
+.offer-min-tier { font-family: var(--font-mono); font-size: 8px; letter-spacing: 0.1em; padding: 2px 6px; border-radius: 2px; }
+.mt-all    { border: 1px solid var(--member-light); color: var(--member-light); }
+.mt-silver { border: 1px solid var(--silver); color: var(--silver); }
+.mt-gold   { border: 1px solid var(--gold); color: var(--gold); }
+
+/* Timeline */
+.timeline { display: flex; flex-direction: column; gap: 0; }
+.tl-item { display: grid; grid-template-columns: 12px 90px 1fr auto; gap: 16px; align-items: start; padding: 16px 0; border-bottom: 1px solid var(--border); }
+.tl-dot { width: 8px; height: 8px; border-radius: 50%; margin-top: 4px; flex-shrink: 0; }
+.dot-gold  { background: var(--gold); box-shadow: 0 0 6px rgba(201,168,76,0.4); }
+.dot-blue  { background: var(--silver); }
+.dot-green { background: #5ca85c; }
+.tl-date { font-family: var(--font-mono); font-size: 10px; color: var(--muted); letter-spacing: 0.05em; white-space: nowrap; }
+.tl-title { font-size: 13px; font-weight: 400; margin-bottom: 3px; }
+.tl-sub { font-size: 11px; color: var(--muted); }
+.tl-badge { font-family: var(--font-mono); font-size: 8px; letter-spacing: 0.1em; padding: 3px 8px; white-space: nowrap; }
+
+/* Footer */
+.footer { display: flex; align-items: center; justify-content: space-between; padding: 24px 32px; border-top: 1px solid var(--border); margin-top: 48px; }
+.footer-left { font-family: var(--font-mono); font-size: 10px; color: var(--muted); letter-spacing: 0.08em; }
+.footer-right { display: flex; gap: 24px; }
+.footer-link { font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.1em; color: var(--muted); cursor: pointer; text-transform: uppercase; }
+.footer-link:hover { color: var(--gold); }
+
+/* Concierge */
+.concierge-btn { position: fixed; bottom: 24px; right: 24px; display: flex; align-items: center; gap: 10px; background: var(--surface); border: 1px solid var(--gold); color: var(--gold); font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.1em; padding: 10px 18px; cursor: pointer; transition: all 0.2s; z-index: 200; }
+.concierge-btn:hover { background: rgba(201,168,76,0.08); }
+.concierge-dot { width: 6px; height: 6px; background: #5ca85c; border-radius: 50%; animation: pulse 2s ease infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+</style>
+</head>
+<body>
+
+<!-- ── LOGIN ──────────────────────────────────────────────── -->
+<div id="screen-login" class="screen active">
+  <div class="login-box">
+    <div class="login-logo">Owners<span>'</span>Club</div>
+    <h1 class="login-title">Bem-vindo de<br><em>regresso</em></h1>
+    <p class="login-sub">Introduza o seu email para aceder à área de membro.</p>
+    <label class="login-label">Email</label>
+    <input type="email" id="login-email" class="login-input" placeholder="o.seu@email.pt" autocomplete="email">
+    <button class="login-btn" id="login-btn" onclick="handleLogin()">Continuar →</button>
+    <div class="login-error" id="login-error"></div>
+    <div class="login-footer">
+      <div class="login-footer-line"></div>
+      <p>Acesso reservado a membros do Owners Club.<br>Acesso por magic link — sem palavra-passe.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ── CHECK EMAIL ────────────────────────────────────────── -->
+<div id="screen-check" class="screen">
+  <div class="check-box">
+    <div class="check-icon">✉</div>
+    <h2 class="check-title">Verifique o seu email</h2>
+    <p class="check-sub">Enviámos um link de acesso para</p>
+    <div class="check-email-display" id="check-email-display"></div>
+    <p class="check-sub">Clique no link para entrar no portal.<br>O link expira em 24 horas.</p>
+    <button class="check-back" onclick="showScreen('login')">← Usar outro email</button>
+  </div>
+</div>
+
+<!-- ── LOADING ────────────────────────────────────────────── -->
+<div id="screen-loading" class="screen">
+  <div class="loading-logo">Owners' Club</div>
+  <div class="loading-line"></div>
+</div>
+
+<!-- ── DASHBOARD ──────────────────────────────────────────── -->
+<div id="screen-dashboard" class="screen">
+  <nav class="topnav">
+    <div class="logo">Owners<span>'</span>Club</div>
+    <div class="nav-right">
+      <div class="nav-tier-badge" id="nav-tier">Member</div>
+      <div class="nav-avatar" id="nav-avatar" title="Sair" onclick="handleLogout()">?</div>
+    </div>
+  </nav>
+
+  <div class="container">
+    <!-- Hero -->
+    <div class="hero">
+      <div class="card-wrap">
+        <div class="digital-card card-member" id="theCard">
+          <div class="card-shimmer"></div>
+          <div class="card-pattern"></div>
+          <div class="card-tag" id="cardTag">Live Your Best Life</div>
+          <div class="card-title" id="cardTitle">Owners'<br>Club</div>
+          <div class="card-body-line" id="cardLine">Member</div>
+          <div class="card-bottom">
+            <div>
+              <div class="card-name" id="cardName">—</div>
+              <div class="card-id" id="cardId">OC-000000</div>
+            </div>
+            <div class="card-points">
+              <div class="card-points-val" id="cardPts">0</div>
+              <div class="card-points-label">pontos</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="hero-right">
+        <div class="greeting">Olá, <em id="greeting-name">Membro</em></div>
+        <p class="hero-sub" id="hero-sub">Bem-vindo ao seu Owners Club.</p>
+
+        <div class="tier-progress">
+          <div class="tier-label">
+            <span>Nível actual</span>
+            <span id="tier-label-val">Member</span>
+          </div>
+          <div class="tier-bar"><div class="tier-fill" id="tier-bar-fill" style="width:33%"></div></div>
+          <div class="tier-next" id="tier-next-txt"></div>
+        </div>
+
+        <div class="hero-stats">
+          <div class="stat-box">
+            <div class="stat-val" id="stat-pontos">0</div>
+            <div class="stat-key">Pontos</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-val" id="stat-servicos">0</div>
+            <div class="stat-key">Serviços activos</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-val" id="stat-imoveis">0</div>
+            <div class="stat-key">Imóveis</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab active" onclick="showTab('servicos',this)">Serviços</button>
+      <button class="tab" onclick="showTab('imoveis',this)">Imóveis</button>
+      <button class="tab" onclick="showTab('ofertas',this)">Ofertas</button>
+      <button class="tab" onclick="showTab('historico',this)">Histórico</button>
+    </div>
+
+    <!-- Serviços -->
+    <div class="tab-content active" id="tab-servicos">
+      <div class="section-title">Os seus serviços</div>
+      <div class="section-sub" id="servicos-sub">Serviços activos na plataforma</div>
+      <div class="services-grid" id="servicos-grid"></div>
+    </div>
+
+    <!-- Imóveis -->
+    <div class="tab-content" id="tab-imoveis">
+      <div class="section-title">Os seus imóveis</div>
+      <div class="section-sub">Imóveis associados ao seu perfil</div>
+      <div class="imoveis-grid" id="imoveis-grid"></div>
+    </div>
+
+    <!-- Ofertas -->
+    <div class="tab-content" id="tab-ofertas">
+      <div class="section-title">Ofertas Owners Club</div>
+      <div class="section-sub">Protocolos exclusivos · Actualizado mensalmente</div>
+      <div class="offers-grid" id="ofertas-grid"></div>
+    </div>
+
+    <!-- Histórico -->
+    <div class="tab-content" id="tab-historico">
+      <div class="section-title">Histórico de interacções</div>
+      <div class="section-sub">Toda a sua relação connosco, numa timeline</div>
+      <div class="timeline" id="historico-timeline"></div>
+    </div>
+
+    <div class="footer">
+      <div class="footer-left">Owner's Concierge · +351 910 000 000</div>
+      <div class="footer-right">
+        <span class="footer-link">Privacidade</span>
+        <span class="footer-link">RGPD</span>
+        <span class="footer-link">Contactos</span>
+        <span class="footer-link" onclick="handleLogout()">Sair</span>
+      </div>
+    </div>
+  </div>
+
+  <button class="concierge-btn">
+    <div class="concierge-dot"></div>
+    Owner's Concierge
+  </button>
+</div>
+
+<script>
+// ── CONFIG ────────────────────────────────────────────────
+const SUPABASE_URL  = 'https://hkmvszkpxjbxmnixzqbl.supabase.co';
+const SUPABASE_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhrbXZzemtweGpieG1uaXh6cWJsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwMjU5ODcsImV4cCI6MjA5MTYwMTk4N30.kgZGnFKfpJc4hY3TQZjig6WdSsvI-NXDnWrmpISthMw';
+const CORE_API      = `${SUPABASE_URL}/functions/v1/core-api`;
+
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ── SCREENS ───────────────────────────────────────────────
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(`screen-${name}`).classList.add('active');
+}
+
+// ── AUTH ──────────────────────────────────────────────────
+async function init() {
+  // Handle magic link in URL hash
+  const hash = window.location.hash;
+  if (hash.includes('access_token') || hash.includes('error')) {
+    showScreen('loading');
+    const { data: { session }, error } = await sb.auth.getSession();
+    if (session) {
+      window.history.replaceState({}, document.title, window.location.pathname);
+      await loadDashboard(session);
+      return;
+    }
+  }
+
+  // Check existing session
+  const { data: { session } } = await sb.auth.getSession();
+  if (session) {
+    showScreen('loading');
+    await loadDashboard(session);
+  } else {
+    showScreen('login');
+  }
+}
+
+async function handleLogin() {
+  const email = document.getElementById('login-email').value.trim().toLowerCase();
+  if (!email) return showError('Introduza o seu email.');
+
+  const btn = document.getElementById('login-btn');
+  btn.disabled = true;
+  btn.textContent = 'A verificar...';
+  hideError();
+
+  try {
+    // Step 1: Verify email is in Owners Club
+    const checkRes = await fetch(`${CORE_API}/auth/check?email=${encodeURIComponent(email)}`);
+    const checkData = await checkRes.json();
+
+    if (!checkData.exists) {
+      showError('Este email não está registado no Owners Club.');
+      btn.disabled = false; btn.textContent = 'Continuar →';
+      return;
+    }
+
+    // Step 2: Send magic link via Supabase Auth
+    const { error } = await sb.auth.signInWithOtp({
+      email,
+      options: {
+        emailRedirectTo: window.location.origin + window.location.pathname,
+        shouldCreateUser: true,
+      }
+    });
+
+    if (error) {
+      showError(error.message);
+      btn.disabled = false; btn.textContent = 'Continuar →';
+      return;
+    }
+
+    // Show check email screen
+    document.getElementById('check-email-display').textContent = email;
+    showScreen('check');
+
+  } catch (e) {
+    showError('Erro de ligação. Tente novamente.');
+    btn.disabled = false; btn.textContent = 'Continuar →';
+  }
+}
+
+function showError(msg) {
+  const el = document.getElementById('login-error');
+  el.textContent = msg; el.classList.add('visible');
+}
+function hideError() {
+  document.getElementById('login-error').classList.remove('visible');
+}
+
+document.getElementById('login-email').addEventListener('keydown', e => {
+  if (e.key === 'Enter') handleLogin();
+});
+
+async function handleLogout() {
+  await sb.auth.signOut();
+  showScreen('login');
+  document.getElementById('login-btn').disabled = false;
+  document.getElementById('login-btn').textContent = 'Continuar →';
+}
+
+// ── DASHBOARD ─────────────────────────────────────────────
+async function loadDashboard(session) {
+  try {
+    const res = await fetch(`${CORE_API}/auth/me`, {
+      headers: { Authorization: `Bearer ${session.access_token}` }
+    });
+
+    if (!res.ok) {
+      const data = await res.json();
+      showError(data.error ?? 'Erro ao carregar perfil.');
+      showScreen('login'); return;
+    }
+
+    const data = await res.json();
+    renderDashboard(data, session);
+
+    // Load ofertas in parallel
+    loadOfertas(data.pessoa?.tier ?? 'member');
+
+  } catch (e) {
+    console.error(e);
+    showError('Erro de ligação ao servidor.');
+    showScreen('login');
+  }
+}
+
+function renderDashboard(data, session) {
+  const { pessoa, imoveis, servicos, historico, proximo_tier } = data;
+  if (!pessoa) { showScreen('login'); return; }
+
+  const tier  = pessoa.tier ?? 'member';
+  const nome  = pessoa.nome ?? '';
+  const pontos = (pessoa.pontos ?? 0).toLocaleString('pt-PT');
+  const firstName = nome.split('/')[0].trim().split(' ')[0];
+  const initials  = firstName.charAt(0).toUpperCase();
+
+  // Card
+  applyTier(tier);
+  document.getElementById('cardName').textContent = firstName.toUpperCase();
+  document.getElementById('cardPts').textContent  = pontos;
+  document.getElementById('cardId').textContent   = `OC-${pessoa.id?.slice(-6).toUpperCase() ?? '000000'}`;
+
+  // Nav
+  document.getElementById('nav-tier').textContent = tierLabel(tier);
+  document.getElementById('nav-avatar').textContent = initials;
+
+  // Hero
+  document.getElementById('greeting-name').textContent = firstName;
+  document.getElementById('hero-sub').textContent = `${nome} · Prata Lote 2A`;
+
+  // Tier progress
+  document.getElementById('tier-label-val').textContent = tierLabel(tier);
+  const pct = tier === 'gold' ? 100 : tier === 'silver' ? 66 : 33;
+  document.getElementById('tier-bar-fill').style.width = pct + '%';
+  document.getElementById('tier-next-txt').innerHTML =
+    proximo_tier ? `Próximo nível: <em>${proximo_tier}</em>` : '<em>Nível máximo atingido</em>';
+
+  // Stats
+  document.getElementById('stat-pontos').textContent   = pontos;
+  document.getElementById('stat-servicos').textContent = pessoa.n_servicos_activos ?? 0;
+  document.getElementById('stat-imoveis').textContent  = imoveis?.length ?? 0;
+
+  // Render tabs
+  renderServicos(servicos ?? []);
+  renderImoveis(imoveis ?? []);
+  renderHistorico(historico ?? []);
+
+  showScreen('dashboard');
+}
+
+function applyTier(tier) {
+  const card  = document.getElementById('theCard');
+  const line  = document.getElementById('cardLine');
+  const badge = document.getElementById('nav-tier');
+  card.className = `digital-card card-${tier}`;
+  const labels = { member: 'Member', silver: 'Owner Silver', gold: 'Elite Gold Member' };
+  line.textContent = labels[tier] || 'Member';
+}
+
+function tierLabel(tier) {
+  return { member: 'Member', silver: 'Owner Silver', gold: 'Elite Gold' }[tier] ?? 'Member';
+}
+
+// ── RENDER SERVIÇOS ──────────────────────────────────────
+const VERTICAL_META = {
+  condominio:   { icon: '🏢', label: 'Condomínio', cls: 'ic-cond' },
+  seguros:      { icon: '🛡️', label: 'Seguros',    cls: 'ic-seg'  },
+  energia:      { icon: '⚡', label: 'Energia',    cls: 'ic-ener' },
+  manutencao:   { icon: '🔧', label: 'Manutenção', cls: 'ic-maint' },
+  reabilitacao: { icon: '🏚️', label: 'Reabilitação', cls: 'ic-maint' },
+  imoveis:      { icon: '🏠', label: 'Imobiliário', cls: 'ic-cond' },
+};
+
+function renderServicos(servicos) {
+  const grid = document.getElementById('servicos-grid');
+  document.getElementById('servicos-sub').textContent =
+    `${servicos.length} serviço${servicos.length !== 1 ? 's' : ''} activo${servicos.length !== 1 ? 's' : ''} na plataforma`;
+
+  if (!servicos.length) {
+    grid.innerHTML = '<p style="color:var(--muted);font-size:13px">Nenhum serviço activo de momento.</p>';
+    return;
+  }
+
+  grid.innerHTML = servicos.map(s => {
+    const meta = VERTICAL_META[s.vertical] ?? { icon: '📋', label: s.vertical, cls: 'ic-cond' };
+    const val = s.valor_mensal
+      ? `${Number(s.valor_mensal).toFixed(2).replace('.',',')}€/mês`
+      : '—';
+    return `
+    <div class="service-card">
+      <div class="service-header">
+        <div class="service-icon ${meta.cls}">${meta.icon}</div>
+        <div class="service-status status-active">Activo</div>
+      </div>
+      <div class="service-name">${s.produto}</div>
+      <div class="service-desc">${meta.label} · desde ${fmtDate(s.data_inicio)}</div>
+      <div class="service-footer">
+        <div class="service-val">${val}</div>
+        <span class="service-link">Ver detalhes →</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── RENDER IMÓVEIS ────────────────────────────────────────
+function renderImoveis(imoveis) {
+  const grid = document.getElementById('imoveis-grid');
+  if (!imoveis.length) {
+    grid.innerHTML = '<p style="color:var(--muted);font-size:13px">Nenhum imóvel associado.</p>';
+    return;
+  }
+  const colors = ['offer-bg-1','offer-bg-2','offer-bg-3','offer-bg-5'];
+  grid.innerHTML = imoveis.map((im, i) => `
+    <div class="imovel-card">
+      <div class="imovel-header">
+        <div>
+          <div class="imovel-fracao">${im.fraccao ?? '—'}</div>
+          <div class="imovel-condo">${im.condominio_ref ?? 'Condomínio'}</div>
+        </div>
+        <div class="imovel-tipo">${im.tipo?.toUpperCase() ?? 'PRÓPRIO'}</div>
+      </div>
+      <div class="imovel-morada">${im.morada ?? '—'}</div>
+    </div>`).join('');
+}
+
+// ── RENDER OFERTAS ────────────────────────────────────────
+async function loadOfertas(tier) {
+  try {
+    const res = await fetch(`${CORE_API}/ofertas?tier=${tier}`);
+    const ofertas = await res.json();
+    renderOfertas(ofertas ?? []);
+  } catch {}
+}
+
+const OFERTA_ICONS = {
+  'Gastronomia': { icon: '🍷', bg: 'offer-bg-1' },
+  'Stays':       { icon: '🏖️', bg: 'offer-bg-2' },
+  'Lazer':       { icon: '⛳', bg: 'offer-bg-3' },
+  'Bem-estar':   { icon: '💆', bg: 'offer-bg-4' },
+  'Reabilitação':{ icon: '🏠', bg: 'offer-bg-5' },
+};
+
+function renderOfertas(ofertas) {
+  const grid = document.getElementById('ofertas-grid');
+  if (!ofertas || !ofertas.length) {
+    grid.innerHTML = '<p style="color:var(--muted);font-size:13px">Sem ofertas disponíveis de momento.</p>';
+    return;
+  }
+  grid.innerHTML = ofertas.map((o, i) => {
+    const meta = OFERTA_ICONS[o.categoria] ?? { icon: '✨', bg: 'offer-bg-' + ((i % 6) + 1) };
+    const tierCls = { member: 'mt-all', silver: 'mt-silver', gold: 'mt-gold' }[o.tier_minimo] ?? 'mt-all';
+    const tierTxt = { member: 'Todos', silver: 'Silver+', gold: 'Elite Gold' }[o.tier_minimo] ?? 'Todos';
+    return `
+    <div class="offer-card">
+      <div class="offer-img ${meta.bg}">${meta.icon}</div>
+      <div class="offer-body">
+        <div class="offer-tag">Protocolo · ${o.categoria}</div>
+        <div class="offer-title">${o.titulo}</div>
+        <div class="offer-desc">${o.descricao ?? ''}</div>
+        <div class="offer-footer">
+          <div class="offer-discount">${o.desconto_txt ?? ''}</div>
+          <div class="offer-min-tier ${tierCls}">${tierTxt}</div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── RENDER HISTÓRICO ──────────────────────────────────────
+function renderHistorico(eventos) {
+  const tl = document.getElementById('historico-timeline');
+  if (!eventos.length) {
+    tl.innerHTML = '<p style="color:var(--muted);font-size:13px">Nenhuma interacção registada.</p>';
+    return;
+  }
+
+  const dotCls = tipo => {
+    if (tipo.includes('upgrade') || tipo.includes('gold')) return 'dot-gold';
+    if (tipo.includes('servico')) return 'dot-green';
+    return 'dot-blue';
+  };
+
+  const badgeStyle = tipo =>
+    tipo.includes('upgrade') ? 'mt-gold' : tipo.includes('servico') ? 'status-active' : 'mt-all';
+
+  const badgeTxt = (ev) => {
+    if (ev.tipo === 'tier_upgrade') return ev.metadata?.tier_novo?.toUpperCase() ?? 'UPGRADE';
+    if (ev.tipo === 'servico_iniciado') return 'Activo';
+    if (ev.tipo === 'servico_cancelado') return 'Cancelado';
+    return '+' + ev.pontos_ganhos + ' pts';
+  };
+
+  tl.innerHTML = eventos.map(ev => `
+    <div class="tl-item">
+      <div class="tl-dot ${dotCls(ev.tipo)}"></div>
+      <div class="tl-date">${fmtDateLong(ev.created_at)}</div>
+      <div>
+        <div class="tl-title">${ev.descricao}</div>
+        <div class="tl-sub">${ev.vertical} · ${ev.pontos_ganhos > 0 ? '+' + ev.pontos_ganhos + ' pontos' : ''}</div>
+      </div>
+      <div class="tl-badge ${badgeStyle(ev.tipo)}">${badgeTxt(ev)}</div>
+    </div>`).join('');
+}
+
+// ── UTILS ─────────────────────────────────────────────────
+function fmtDate(d) {
+  if (!d) return '—';
+  return new Date(d).toLocaleDateString('pt-PT', { month: 'short', year: 'numeric' });
+}
+
+function fmtDateLong(d) {
+  if (!d) return '—';
+  return new Date(d).toLocaleDateString('pt-PT', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+function showTab(id, btn) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  btn.classList.add('active');
+}
+
+// ── START ─────────────────────────────────────────────────
+init();
+</script>
+</body>
+</html>

@@ -1,0 +1,53 @@
+# netlify.toml
+# PropTech Platform — Single Netlify project, multiple verticals
+# Deploy: arrastar a pasta para netlify.app ou ligar ao GitHub
+
+[build]
+  publish = "."
+
+# ── Redirect: /admin → admin/index.html (SPA mode) ──────────
+[[redirects]]
+  from   = "/admin"
+  to     = "/admin/index.html"
+  status = 200
+
+[[redirects]]
+  from   = "/admin/*"
+  to     = "/admin/index.html"
+  status = 200
+
+# ── Futuras verticais (descomentar quando existirem) ─────────
+# [[redirects]]
+#   from   = "/seguros"
+#   to     = "/seguros/index.html"
+#   status = 200
+#
+# [[redirects]]
+#   from   = "/energia"
+#   to     = "/energia/index.html"
+#   status = 200
+#
+# [[redirects]]
+#   from   = "/manutencao"
+#   to     = "/manutencao/index.html"
+#   status = 200
+
+# ── Portal cliente (root) ────────────────────────────────────
+[[redirects]]
+  from   = "/"
+  to     = "/index.html"
+  status = 200
+
+# ── Headers de segurança ─────────────────────────────────────
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options        = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy        = "strict-origin-when-cross-origin"
+    Permissions-Policy     = "camera=(), microphone=(), geolocation=()"
+
+[[headers]]
+  for = "/admin/*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow"
