@@ -6,9 +6,9 @@
  *  Auth  : Supabase Auth (email + password)
  *  DB    : V1 Core Hub · hkmvszkpxjbxmnixzqbl · schema v4_energia
  *  ─────────────────────────────────────────────────────────────────────
- *  V1 SCOPE (minimalista)
+ *  V1 SCOPE
  *  • Login email/password via Supabase Auth
- *  • Dashboard com 4 KPIs zerados (TODO v2: ligar a queries reais)
+ *  • Dashboard com 4 KPIs ligados a v4_energia.contratos_energia
  *  • Toggle light/dark persistido em localStorage.v4theme
  *  ═══════════════════════════════════════════════════════════════════ */
 
@@ -23,7 +23,31 @@ import { createClient } from '@supabase/supabase-js';
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
+// Client para auth (schema público)
 const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// Client apontado ao schema v4_energia para queries de dados
+const sbV4 = createClient(SUPABASE_URL, SUPABASE_KEY, {
+  db: { schema: 'v4_energia' },
+});
+
+/* ─────────────────────────────────────────────────────────────────────
+ *  HELPERS
+ * ───────────────────────────────────────────────────────────────────── */
+
+// Formata número inteiro sem decimais (ex: 1234 → "1 234")
+function fNum(n) {
+  if (n == null) return '—';
+  return Number(n).toLocaleString('pt-PT', { maximumFractionDigits: 0 });
+}
+
+// Formata valor monetário PT-PT (ex: 1234.5 → "1 235 €")
+function fEur(n) {
+  if (n == null) return '—';
+  return (
+    Number(n).toLocaleString('pt-PT', { maximumFractionDigits: 0 }) + ' €'
+  );
+}
 
 /* ─────────────────────────────────────────────────────────────────────
  *  CSS · design system partilhado com v1-core
@@ -299,35 +323,142 @@ function LoginScreen({ onLogin, theme, onToggleTheme }) {
 
 /* ─────────────────────────────────────────────────────────────────────
  *  DASHBOARD
- *  4 KPIs zerados com comentários TODO para V2.
+ *  4 KPIs ligados a v4_energia.contratos_energia via Supabase.
  *  Sem sidebar — layout flat: header + grid KPIs.
+ *
+ *  Queries:
+ *    KPI 1 — count(*) WHERE estado = 'activo'
+ *    KPI 2 — count(*) WHERE data_pedido >= início do mês actual
+ *    KPI 3 — SUM(poupanca_anual) WHERE estado = 'activo'
+ *    KPI 4 — SUM(comissao) WHERE estado IN ('a_analisar','proposta_enviada','assinado')
+ *
+ *  Estados loading: mostra '—' enquanto aguarda.
+ *  Se query falhar: mantém '—' e regista erro na consola.
+ *  Sem dados (BD vazia): mostra '0' / '0 €' (query bem-sucedida, resultado nulo).
  * ───────────────────────────────────────────────────────────────────── */
 function Dashboard({ session, theme, onToggleTheme, onLogout }) {
   const email = session?.user?.email || '';
 
-  // TODO v2: ligar a v4_energia.contratos_energia (count where estado = 'ativo')
+  // Estado de cada KPI: null = loading, string = valor formatado
+  const [kpiActivos, setKpiActivos] = useState(null);
+  const [kpiLeads, setKpiLeads] = useState(null);
+  const [kpiPoupanca, setKpiPoupanca] = useState(null);
+  const [kpiComissao, setKpiComissao] = useState(null);
+
+  useEffect(() => {
+    carregarKpis();
+  }, []);
+
+  async function carregarKpis() {
+    await Promise.all([
+      carregarContratosActivos(),
+      carregarLeadsEsteMes(),
+      carregarPoupancaGerada(),
+      carregarComissaoPipeline(),
+    ]);
+  }
+
+  // KPI 1 — Contratos activos: count(*) WHERE estado = 'activo'
+  async function carregarContratosActivos() {
+    try {
+      const { count, error } = await sbV4
+        .from('contratos_energia')
+        .select('*', { count: 'exact', head: true })
+        .eq('estado', 'activo');
+
+      if (error) throw error;
+      setKpiActivos(fNum(count ?? 0));
+    } catch (err) {
+      console.error('[V4 KPI] contratos activos:', err.message);
+      setKpiActivos('—');
+    }
+  }
+
+  // KPI 2 — Leads este mês: count(*) WHERE data_pedido >= início do mês
+  async function carregarLeadsEsteMes() {
+    try {
+      const agora = new Date();
+      const inicioMes = new Date(agora.getFullYear(), agora.getMonth(), 1)
+        .toISOString()
+        .split('T')[0]; // YYYY-MM-DD
+
+      const { count, error } = await sbV4
+        .from('contratos_energia')
+        .select('*', { count: 'exact', head: true })
+        .gte('data_pedido', inicioMes);
+
+      if (error) throw error;
+      setKpiLeads(fNum(count ?? 0));
+    } catch (err) {
+      console.error('[V4 KPI] leads este mês:', err.message);
+      setKpiLeads('—');
+    }
+  }
+
+  // KPI 3 — Poupança gerada: SUM(poupanca_anual) WHERE estado = 'activo'
+  async function carregarPoupancaGerada() {
+    try {
+      const { data, error } = await sbV4
+        .from('contratos_energia')
+        .select('poupanca_anual')
+        .eq('estado', 'activo');
+
+      if (error) throw error;
+
+      const soma = (data || []).reduce(
+        (acc, row) => acc + (row.poupanca_anual ?? 0),
+        0
+      );
+      setKpiPoupanca(fEur(soma) + '/ano');
+    } catch (err) {
+      console.error('[V4 KPI] poupança gerada:', err.message);
+      setKpiPoupanca('—');
+    }
+  }
+
+  // KPI 4 — Comissão em pipeline: SUM(comissao) WHERE estado IN (...)
+  async function carregarComissaoPipeline() {
+    try {
+      const { data, error } = await sbV4
+        .from('contratos_energia')
+        .select('comissao')
+        .in('estado', ['a_analisar', 'proposta_enviada', 'assinado']);
+
+      if (error) throw error;
+
+      const soma = (data || []).reduce(
+        (acc, row) => acc + (row.comissao ?? 0),
+        0
+      );
+      setKpiComissao(fEur(soma));
+    } catch (err) {
+      console.error('[V4 KPI] comissão pipeline:', err.message);
+      setKpiComissao('—');
+    }
+  }
+
   const kpis = [
     {
       label: 'Contratos activos',
-      valor: '0',
+      valor: kpiActivos,
       sub: 'contratos em vigor',
       cor: 'c-blue',
     },
     {
       label: 'Leads este mês',
-      valor: '0',
+      valor: kpiLeads,
       sub: 'novos contactos',
       cor: 'c-purple',
     },
     {
       label: 'Poupança gerada',
-      valor: '0 €/ano',
+      valor: kpiPoupanca,
       sub: 'estimativa acumulada',
       cor: 'c-green',
     },
     {
       label: 'Comissão em pipeline',
-      valor: '0 €',
+      valor: kpiComissao,
       sub: 'receita estimada',
       cor: 'c-gold',
     },
@@ -363,7 +494,7 @@ function Dashboard({ session, theme, onToggleTheme, onLogout }) {
           {kpis.map((k) => (
             <div key={k.label} className={`kpi ${k.cor}`}>
               <div className="kpi-l">{k.label}</div>
-              <div className="kpi-v">{k.valor}</div>
+              <div className="kpi-v">{k.valor ?? '—'}</div>
               <div className="kpi-s">{k.sub}</div>
             </div>
           ))}
