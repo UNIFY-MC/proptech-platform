@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 
@@ -8,6 +8,12 @@ export default function Login() {
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
+
+  useEffect(() => {
+    if (import.meta.env.VITE_DEV_BYPASS === 'true') {
+      navigate('/dashboard', { replace: true })
+    }
+  }, [])
 
   async function handleSubmit(e) {
     e.preventDefault()
