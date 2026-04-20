@@ -4,15 +4,19 @@ import { supabase } from './lib/supabase'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 
+const DEV_BYPASS = import.meta.env.VITE_DEV_BYPASS === 'true'
+
 function ProtectedRoute({ session, children }) {
+  if (DEV_BYPASS) return children
   if (session === undefined) return null
   return session ? children : <Navigate to="/" replace />
 }
 
 export default function App() {
-  const [session, setSession] = useState(undefined)
+  const [session, setSession] = useState(DEV_BYPASS ? true : undefined)
 
   useEffect(() => {
+    if (DEV_BYPASS) return
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session)
     })

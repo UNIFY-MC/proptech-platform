@@ -13,7 +13,9 @@ export default function Dashboard() {
   const navigate = useNavigate()
 
   async function handleLogout() {
-    await supabase.auth.signOut()
+    if (import.meta.env.VITE_DEV_BYPASS !== 'true') {
+      await supabase.auth.signOut()
+    }
     navigate('/')
   }
 
