@@ -332,10 +332,13 @@ body.dark .b-gold{background:rgba(227,179,65,.1)}
  *  ROOT APP
  * ─────────────────────────────────────────────────────────────────── */
 
+const DEV_MOCK_SESSION = { access_token: 'dev-bypass', user: { id: 'dev-user', email: 'dev@local' } };
+const DEV_MOCK_STAFF = { is_staff: true, role: 'developer', nome: 'Dev User', id: 'dev-user' };
+
 export default function V1CoreApp() {
-  const [session, setSession] = useState(null);
-  const [staffInfo, setStaffInfo] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [session, setSession] = useState(DEV_MOCK_SESSION);
+  const [staffInfo, setStaffInfo] = useState(DEV_MOCK_STAFF);
+  const [loading, setLoading] = useState(false);
   const [theme, setTheme] = useState(() => localStorage.getItem('v1theme') || 'light');
 
   // Apply theme + inject CSS on mount
