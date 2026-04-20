@@ -1,45 +1,12 @@
-import { useEffect, useState } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import { supabase } from './lib/supabase'
-import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 
-const DEV_BYPASS = import.meta.env.VITE_DEV_BYPASS === 'true'
-
-function ProtectedRoute({ session, children }) {
-  if (DEV_BYPASS) return children
-  if (session === undefined) return null
-  return session ? children : <Navigate to="/" replace />
-}
-
 export default function App() {
-  const [session, setSession] = useState(DEV_BYPASS ? true : undefined)
-
-  useEffect(() => {
-    if (DEV_BYPASS) return
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session)
-    })
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session)
-    })
-
-    return () => subscription.unsubscribe()
-  }, [])
-
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={session ? <Navigate to="/dashboard" replace /> : <Login />} />
-        <Route
-          path="/dashboard"
-          element={
-            <ProtectedRoute session={session}>
-              <Dashboard />
-            </ProtectedRoute>
-          }
-        />
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        <Route path="/dashboard" element={<Dashboard />} />
       </Routes>
     </BrowserRouter>
   )
