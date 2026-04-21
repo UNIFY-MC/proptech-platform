@@ -71,14 +71,18 @@ export async function getServicosCliente(pessoaId) {
 // ── Gestor ─────────────────────────────────────────────────────────────────
 
 export async function getStatsGestor() {
-  const [ordens, prestadores, receita] = await Promise.all([
+  const [ordens, prestadores, servicos, receita] = await Promise.all([
     db()
       .from('ordens_trabalho')
-      .select('id, estado', { count: 'exact' })
+      .select('id', { count: 'exact', head: true })
       .in('estado', ['agendada', 'em_curso']),
     db()
       .from('prestadores')
-      .select('id', { count: 'exact' })
+      .select('id', { count: 'exact', head: true })
+      .eq('estado', 'activo'),
+    db()
+      .from('servicos_mant')
+      .select('id', { count: 'exact', head: true })
       .eq('estado', 'activo'),
     db()
       .from('movimentos_carteira')
@@ -90,9 +94,37 @@ export async function getStatsGestor() {
   const receitaMes = (receita.data ?? []).reduce((sum, m) => sum + Number(m.valor), 0)
 
   return {
-    ordensPendentes:    ordens.count ?? 0,
+    ordensPendentes:    ordens.count    ?? 0,
     prestadoresActivos: prestadores.count ?? 0,
+    servicosActivos:    servicos.count  ?? 0,
     receitaMes,
-    servicosActivos:    0,
   }
+}
+
+export async function getListaPrestadores() {
+  const { data, error } = await db()
+    .from('prestadores')
+    .select('id, nome, nif, iban, localidade, nivel, taxa_plataforma, estado, created_at')
+    .order('created_at', { ascending: false })
+  if (error) { console.error('getListaPrestadores', error); return [] }
+  return data ?? []
+}
+
+export async function insertPrestador(fields) {
+  const { data, error } = await db()
+    .from('prestadores')
+    .insert([fields])
+    .select()
+    .single()
+  if (error) { console.error('insertPrestador', error); return { error } }
+  return { data }
+}
+
+export async function updatePrestadorEstado(id, estado) {
+  const { error } = await db()
+    .from('prestadores')
+    .update({ estado })
+    .eq('id', id)
+  if (error) console.error('updatePrestadorEstado', error)
+  return !error
 }
