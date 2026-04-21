@@ -1,7 +1,7 @@
 // src/App.jsx — v5-manutencao 2026.0420 2221
-// 100% auto-suficiente — zero imports externos. Só React.
 
 import React, { useState, useMemo, useEffect, useRef } from 'react'
+import { createClient } from '@supabase/supabase-js'
 
 /* ══ UI COMPONENTS (inline) ══ */
 function Av({ ini, size = 44, green = true }) {
@@ -459,113 +459,86 @@ function MeusServicos({ servicos = [], bloqueados = [], onBack }) {
 }
 
 /* ══════════════════════════════════
-   SUPABASE AUTH — Cliente, registo, login
-   URL: https://hkmvszkpxjbxmnixzqbl.supabase.co
+   SUPABASE — Cliente oficial + helpers
+   Projecto: hkmvszkpxjbxmnixzqbl · schema: public
 ══════════════════════════════════ */
 const SB_URL = 'https://hkmvszkpxjbxmnixzqbl.supabase.co'
 const SB_KEY = import.meta.env?.VITE_SUPABASE_ANON_KEY || ''
 
-// ── Auth helpers ────────────────────────
-const sbHeaders = (token) => ({
-  'apikey': SB_KEY,
-  'Authorization': `Bearer ${token||SB_KEY}`,
-  'Content-Type': 'application/json',
-})
-
-async function sbSignUp(email, password, meta) {
-  if (!SB_KEY) return {error:'Sem chave Supabase. Modo demo activo.'}
-  try {
-    const r = await fetch(`${SB_URL}/auth/v1/signup`, {
-      method:'POST',
-      headers: sbHeaders(),
-      body: JSON.stringify({ email, password, data: meta }),
+const sb = SB_KEY
+  ? createClient(SB_URL, SB_KEY, {
+      db: { schema: 'public' },
+      auth: { persistSession: true, autoRefreshToken: true },
     })
-    const d = await r.json()
-    if (!r.ok) return {error: d.error_description||d.msg||'Erro no registo'}
-    return {user: d.user, session: d.session}
-  } catch(e) { return {error: e.message} }
+  : null
+
+// ── Auth ─────────────────────────────────────────
+async function sbSignUp(email, password, meta) {
+  if (!sb) return { error: 'Sem chave Supabase. Modo demo activo.' }
+  const { data, error } = await sb.auth.signUp({ email, password, options: { data: meta } })
+  if (error) return { error: error.message }
+  return { user: data.user, session: data.session }
 }
 
 async function sbSignIn(email, password) {
-  if (!SB_KEY) return {error:'Sem chave Supabase. Modo demo activo.'}
-  try {
-    const r = await fetch(`${SB_URL}/auth/v1/token?grant_type=password`, {
-      method:'POST',
-      headers: sbHeaders(),
-      body: JSON.stringify({ email, password }),
-    })
-    const d = await r.json()
-    if (!r.ok) return {error: d.error_description||'Email ou password incorrectos'}
-    return {user: d.user, session: d.access_token, token: d.access_token}
-  } catch(e) { return {error: e.message} }
+  if (!sb) return { error: 'Sem chave Supabase. Modo demo activo.' }
+  const { data, error } = await sb.auth.signInWithPassword({ email, password })
+  if (error) return { error: error.message }
+  return { user: data.user, session: data.session, token: data.session?.access_token }
 }
 
-async function sbSignOut(token) {
-  if (!SB_KEY || !token) return
-  try {
-    await fetch(`${SB_URL}/auth/v1/logout`, {
-      method:'POST', headers: sbHeaders(token),
-    })
-  } catch {}
+async function sbSignOut() {
+  if (!sb) return
+  await sb.auth.signOut()
 }
 
-async function sbGetPerfil(userId, token) {
-  if (!SB_KEY) return null
-  try {
-    const r = await fetch(`${SB_URL}/rest/v1/perfis?id=eq.${userId}&select=*`, {
-      headers: sbHeaders(token)
-    })
-    if (!r.ok) return null
-    const d = await r.json()
-    return d[0] || null
-  } catch { return null }
+// ── Perfis ───────────────────────────────────────
+async function sbGetPerfil(userId) {
+  if (!sb) return null
+  const { data } = await sb.from('perfis').select('*').eq('id', userId).maybeSingle()
+  return data
 }
 
-async function sbUpdatePerfil(data, token) {
-  if (!SB_KEY || !token) return null
-  try {
-    const r = await fetch(`${SB_URL}/rest/v1/perfis?id=eq.${data.id}`, {
-      method:'PATCH',
-      headers: {...sbHeaders(token), 'Prefer':'return=representation'},
-      body: JSON.stringify(data),
-    })
-    if (!r.ok) return null
-    return await r.json()
-  } catch { return null }
+async function sbUpdatePerfil(data) {
+  if (!sb) return null
+  const { data: d, error } = await sb.from('perfis').upsert(data).select().maybeSingle()
+  if (error) console.warn('[Supabase] updatePerfil:', error.message)
+  return d
 }
 
-async function sbGet(table, filter='', token) {
-  if (!SB_KEY) return null
-  try {
-    const r = await fetch(`${SB_URL}/rest/v1/${table}${filter}`, {
-      headers: sbHeaders(token||SB_KEY)
+// ── Genéricos ─────────────────────────────────────
+async function sbGet(table, filter = '') {
+  if (!sb) return null
+  // Suporta filtros simples tipo '?col=eq.val&select=*'
+  let q = sb.from(table).select('*')
+  if (filter) {
+    const params = new URLSearchParams(filter.replace(/^\?/, ''))
+    params.forEach((val, key) => {
+      if (key === 'select') return
+      const [op, v] = val.includes('.') ? val.split('.') : ['eq', val]
+      if (op === 'eq')  q = q.eq(key, v)
+      if (op === 'neq') q = q.neq(key, v)
+      if (op === 'gt')  q = q.gt(key, v)
+      if (op === 'lt')  q = q.lt(key, v)
     })
-    return r.ok ? r.json() : null
-  } catch { return null }
+  }
+  const { data, error } = await q
+  if (error) console.warn(`[Supabase] get ${table}:`, error.message)
+  return data
 }
 
-async function sbSave(table, data, token) {
-  if (!SB_KEY) return null
-  try {
-    const r = await fetch(`${SB_URL}/rest/v1/${table}`, {
-      method:'POST',
-      headers: {...sbHeaders(token||SB_KEY), 'Prefer':'return=representation,resolution=merge-duplicates'},
-      body: JSON.stringify(data),
-    })
-    return r.ok ? r.json() : null
-  } catch { return null }
+async function sbSave(table, data) {
+  if (!sb) return null
+  const { data: d, error } = await sb.from(table).upsert(data, { onConflict: 'id' }).select()
+  if (error) console.warn(`[Supabase] save ${table}:`, error.message)
+  return d
 }
 
-async function sbUpload(bucket, path, file, token) {
-  if (!SB_KEY || !file) return null
-  try {
-    const r = await fetch(`${SB_URL}/storage/v1/object/${bucket}/${path}`, {
-      method:'POST',
-      headers: sbHeaders(token||SB_KEY),
-      body: file,
-    })
-    return r.ok ? `${SB_URL}/storage/v1/object/public/${bucket}/${path}` : null
-  } catch { return null }
+async function sbUpload(bucket, path, file) {
+  if (!sb || !file) return null
+  const { error } = await sb.storage.from(bucket).upload(path, file, { upsert: true })
+  if (error) { console.warn('[Supabase] upload:', error.message); return null }
+  return sb.storage.from(bucket).getPublicUrl(path).data.publicUrl
 }
 
 function SyncBadge({synced,loading}){
@@ -607,7 +580,7 @@ function AuthScreen({ onAuth }) {
   const FONT = 'system-ui,-apple-system,sans-serif'
 
   const signInWithGoogle = async () => {
-    if (!SB_KEY) { demoLogin('cliente'); return }
+    if (!sb) { demoLogin('cliente'); return }
     setLoad(true)
     try {
       const { data, error } = await fetch(`${SB_URL}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(window.location.origin)}`, {
@@ -670,7 +643,7 @@ function AuthScreen({ onAuth }) {
   const chooseRole = (r) => {
     setRole(r)
     if (r === 'prestador') setStep('categories')
-    else { setStep('success'); setTimeout(() => onAuth({user:{id:`u${Date.now()}`},token:null,role:'cliente',nome:contact.split('@')[0]||contact,demo:!SB_KEY}), 1500) }
+    else { setStep('success'); setTimeout(() => onAuth({user:{id:`u${Date.now()}`},token:null,role:'cliente',nome:contact.split('@')[0]||contact,demo:!sb}), 1500) }
   }
 
   const finishPrestador = () => {
@@ -862,23 +835,15 @@ function AuthScreen({ onAuth }) {
           if (inputMode==='email' && !val.includes('@')) { setErr('Insere um email válido.'); return }
           setContact(val); setErr(''); setLoad(true)
           // Supabase: magic link (email) ou OTP SMS (telemóvel)
-          if (SB_KEY) {
+          if (sb) {
             try {
               if (inputMode==='email') {
-                const r = await fetch(`${SB_URL}/auth/v1/otp`, {
-                  method:'POST',
-                  headers:{'apikey':SB_KEY,'Content-Type':'application/json'},
-                  body: JSON.stringify({email:val, create_user:true})
-                })
-                if (!r.ok) { const d=await r.json(); setErr(d.msg||'Erro ao enviar email.'); setLoad(false); return }
+                const { error } = await sb.auth.signInWithOtp({ email: val, options: { shouldCreateUser: true } })
+                if (error) { setErr(error.message||'Erro ao enviar email.'); setLoad(false); return }
               } else {
                 const tel = '+351'+val.replace(/\s/g,'')
-                const r = await fetch(`${SB_URL}/auth/v1/otp`, {
-                  method:'POST',
-                  headers:{'apikey':SB_KEY,'Content-Type':'application/json'},
-                  body: JSON.stringify({phone:tel, create_user:true})
-                })
-                if (!r.ok) { const d=await r.json(); setErr(d.msg||'Erro ao enviar SMS. Verifica a configuração Twilio.'); setLoad(false); return }
+                const { error } = await sb.auth.signInWithOtp({ phone: tel, options: { shouldCreateUser: true } })
+                if (error) { setErr(error.message||'Erro ao enviar SMS. Verifica a configuração Twilio.'); setLoad(false); return }
               }
             } catch(e) { setErr('Erro de rede. Tenta novamente.'); setLoad(false); return }
           }
@@ -891,7 +856,7 @@ function AuthScreen({ onAuth }) {
           : inputMode==='email' ? 'Enviar link de acesso →' : 'Enviar código SMS →'}
       </button>
 
-      {!SB_KEY && <div style={{textAlign:'center',fontSize:11,color:'#94a3b8',padding:'8px',background:'#f1f5f9',borderRadius:9}}>
+      {!sb && <div style={{textAlign:'center',fontSize:11,color:'#94a3b8',padding:'8px',background:'#f1f5f9',borderRadius:9}}>
         🔧 Modo demo — sem Supabase key. <span style={{color:'#16a34a',fontWeight:700,cursor:'pointer'}} onClick={()=>setStep('otp_code')}>Continuar sem código</span>
       </div>}
     </div>
@@ -1017,8 +982,8 @@ function AuthScreen({ onAuth }) {
       </div>
       <div style={{flex:1,minHeight:24}}/>
       <div style={{display:'flex',gap:10}}>
-        <Btn ghost onClick={()=>{setStep('success');setTimeout(()=>onAuth({user:{id:`c${Date.now()}`},token:null,role:'cliente',nome:contact||'Cliente',demo:!SB_KEY}),1500)}}>Saltar</Btn>
-        <Btn onClick={()=>{setStep('success');setTimeout(()=>onAuth({user:{id:`c${Date.now()}`},token:null,role:'cliente',nome:contact||'Cliente',demo:!SB_KEY}),1500)}}>Concluir</Btn>
+        <Btn ghost onClick={()=>{setStep('success');setTimeout(()=>onAuth({user:{id:`c${Date.now()}`},token:null,role:'cliente',nome:contact||'Cliente',demo:!sb}),1500)}}>Saltar</Btn>
+        <Btn onClick={()=>{setStep('success');setTimeout(()=>onAuth({user:{id:`c${Date.now()}`},token:null,role:'cliente',nome:contact||'Cliente',demo:!sb}),1500)}}>Concluir</Btn>
       </div>
     </LightScreen>
   )
@@ -1090,7 +1055,7 @@ function AuthScreen({ onAuth }) {
   if (step==='pending') return (
     <LightScreen>
       <div style={{display:'flex',justifyContent:'flex-end'}}>
-        <button onClick={()=>onAuth({user:{id:`p${Date.now()}`},token:null,role:'prestador',nome:contact||'Prestador',demo:!SB_KEY,cats})} style={{background:'none',border:'none',cursor:'pointer',fontFamily:FONT,fontSize:13,color:SP.gray,fontWeight:600}}>Sair</button>
+        <button onClick={()=>onAuth({user:{id:`p${Date.now()}`},token:null,role:'prestador',nome:contact||'Prestador',demo:!sb,cats})} style={{background:'none',border:'none',cursor:'pointer',fontFamily:FONT,fontSize:13,color:SP.gray,fontWeight:600}}>Sair</button>
       </div>
       <div style={{marginTop:20,display:'flex',justifyContent:'center'}}>
         <div style={{width:96,height:96,borderRadius:'50%',background:SP.greenSoft,display:'flex',alignItems:'center',justifyContent:'center',position:'relative'}}>
@@ -1121,7 +1086,7 @@ function AuthScreen({ onAuth }) {
         })}
       </div>
       <div style={{flex:1,minHeight:32}}/>
-      <Btn onClick={()=>onAuth({user:{id:`p${Date.now()}`},token:null,role:'prestador',nome:contact||'Prestador',demo:!SB_KEY,cats})}>Completar o meu perfil</Btn>
+      <Btn onClick={()=>onAuth({user:{id:`p${Date.now()}`},token:null,role:'prestador',nome:contact||'Prestador',demo:!sb,cats})}>Completar o meu perfil</Btn>
       <div style={{textAlign:'center',fontFamily:FONT,fontSize:13,color:SP.gray,fontWeight:500,marginTop:10}}>Avisamos-te por SMS assim que fores aprovado</div>
     </LightScreen>
   )
@@ -1169,15 +1134,33 @@ const CATS = [
   {id:'obra',       l:'Pós-Obra',    ic:'🏗️', cor:'#78716c'},
 ]
 const SVCS = [
-  {id:'s1',cat:'limpeza',    n:'Plano Anual Preventivo', p:49, u:'/mês',    d:'Recorrente',r:4.9,rv:312,badge:'Destaque',ic:'🛡️'},
-  {id:'s2',cat:'limpeza',    n:'Limpeza Mensal',         p:75, u:'/visita', d:'3–5h',      r:4.8,rv:840,badge:null,      ic:'🧹'},
-  {id:'s3',cat:'limpeza',    n:'Limpeza Pós-Obra',       p:120,u:'fixo',    d:'4–8h',      r:4.9,rv:220,badge:'Popular', ic:'🏗️'},
-  {id:'s4',cat:'jardim',     n:'Manutenção de Jardim',   p:45, u:'/visita', d:'2–3h',      r:4.7,rv:190,badge:null,      ic:'🌿'},
-  {id:'s5',cat:'piscina',    n:'Manutenção de Piscina',  p:55, u:'/visita', d:'1–2h',      r:4.8,rv:140,badge:null,      ic:'🏊'},
-  {id:'s6',cat:'canalizacao',n:'Urgência Canalização',   p:65, u:'fixo',    d:'1–2h',      r:4.9,rv:390,badge:'Urgente', ic:'🚿'},
-  {id:'s7',cat:'eletrica',   n:'Instalação Elétrica',    p:80, u:'fixo',    d:'2–4h',      r:4.8,rv:210,badge:null,      ic:'⚡'},
-  {id:'s8',cat:'pintura',    n:'Pintura de Divisão',     p:90, u:'fixo',    d:'4–6h',      r:4.7,rv:160,badge:null,      ic:'🎨'},
+  {id:'s1',cat:'limpeza',    n:'Plano Anual Preventivo', p:49, u:'/mês',    d:'Recorrente',r:4.9,rv:312,badge:'Destaque',ic:'🛡️',
+   checklist:['Inspecção geral de todos os compartimentos','Verificação de instalações eléctricas e hidráulicas','Limpeza de áreas comuns','Registo de anomalias detectadas','Elaborar relatório de visita','Confirmação com o cliente']},
+  {id:'s2',cat:'limpeza',    n:'Limpeza Mensal',         p:75, u:'/visita', d:'3–5h',      r:4.8,rv:840,badge:null,      ic:'🧹',
+   checklist:['Limpeza do pó em todas as divisões','Limpeza e desinfecção de superfícies','Limpeza de casa de banho e sanitários','Aspiração de pavimentos','Limpeza do mobiliário visível','Retirar e substituir sacos do lixo']},
+  {id:'s3',cat:'limpeza',    n:'Limpeza Pós-Obra',       p:120,u:'fixo',    d:'4–8h',      r:4.9,rv:220,badge:'Popular', ic:'🏗️',
+   checklist:['Remoção de entulho e resíduos de obra','Limpeza de pó fino de obra','Limpeza de janelas e vidros','Limpeza de pavimentos e rodapés','Desinfecção de casas de banho e cozinha','Verificação final com o cliente']},
+  {id:'s4',cat:'jardim',     n:'Manutenção de Jardim',   p:45, u:'/visita', d:'2–3h',      r:4.7,rv:190,badge:null,      ic:'🌿',
+   checklist:['Corte e aparamento de relva','Poda de arbustos e sebes','Limpeza de folhas e resíduos','Adubação ou rega se necessário','Recolha e ensacamento de resíduos vegetais','Verificação do sistema de rega']},
+  {id:'s5',cat:'piscina',    n:'Manutenção de Piscina',  p:55, u:'/visita', d:'1–2h',      r:4.8,rv:140,badge:null,      ic:'🏊',
+   checklist:['Aspiração do fundo e paredes','Análise de pH e cloro da água','Ajuste de produtos químicos','Limpeza de skimmers e filtros','Remoção de algas visíveis','Registo de qualidade da água']},
+  {id:'s6',cat:'canalizacao',n:'Urgência Canalização',   p:65, u:'fixo',    d:'1–2h',      r:4.9,rv:390,badge:'Urgente', ic:'🚿',
+   checklist:['Diagnóstico e localização da avaria','Reparação da fuga ou entupimento','Teste de pressão após intervenção','Verificação de zonas adjacentes','Limpeza da área de trabalho','Garantia de 30 dias comunicada']},
+  {id:'s7',cat:'eletrica',   n:'Instalação Elétrica',    p:80, u:'fixo',    d:'2–4h',      r:4.8,rv:210,badge:null,      ic:'⚡',
+   checklist:['Diagnóstico do circuito afectado','Intervenção realizada com segurança','Teste de funcionamento','Verificação do quadro eléctrico','Confirmação de conformidade','Limpeza da área de trabalho']},
+  {id:'s8',cat:'pintura',    n:'Pintura de Divisão',     p:90, u:'fixo',    d:'4–6h',      r:4.7,rv:160,badge:null,      ic:'🎨',
+   checklist:['Preparação e protecção de superfícies e pavimentos','Lixagem e primário aplicados','1.ª demão de tinta aplicada e seca','2.ª demão de tinta aplicada e seca','Retirada de protecções e limpeza final','Verificação visual com o cliente']},
 ]
+const SVC_DETALHES = {
+  s1:{desc:'Plano completo de manutenção preventiva anual. Técnico fixo dedicado, visitas regulares e prioridade em urgências.',inclui:['12 visitas anuais incluídas','Técnico fixo atribuído','Relatório mensal de estado','Prioridade no agendamento','Assistência urgente incluída']},
+  s2:{desc:'Limpeza regular do teu espaço com técnico de confiança. Agendamento flexível e material de limpeza incluído.',inclui:['Limpeza de todas as divisões','Aspiração e lavagem de pavimentos','Casa de banho e cozinha','Material de limpeza incluído']},
+  s3:{desc:'Limpeza especializada após obras, remoção de poeiras finas, restos de materiais e preparação do espaço para habitação.',inclui:['Remoção de pó de obra','Limpeza de janelas e vidros','Limpeza de pavimentos e rodapés','Casas de banho e cozinha','Remoção de resíduos incluída']},
+  s4:{desc:'Manutenção regular de jardim: corte de relva, poda, adubação e tratamento de plantas.',inclui:['Corte e aparamento de relva','Poda de arbustos e sebes','Adubação sazonal','Limpeza de folhas e resíduos','Tratamento fitossanitário básico']},
+  s5:{desc:'Manutenção completa de piscina: limpeza, análise de água e ajuste de químicos para água cristalina.',inclui:['Aspiração do fundo e paredes','Análise e ajuste de pH e cloro','Limpeza de skimmers e filtros','Remoção de algas','Relatório de qualidade da água']},
+  s6:{desc:'Intervenção urgente em canalizações: fugas, entupimentos e avarias. Resposta em menos de 2 horas.',inclui:['Deslocação prioritária','Diagnóstico e localização de fuga','Reparação de avaria','Teste de pressão após intervenção','Garantia de 30 dias na reparação']},
+  s7:{desc:'Instalação e reparação de circuitos elétricos, tomadas, iluminação e quadros elétricos por técnico certificado.',inclui:['Diagnóstico elétrico completo','Instalação/substituição de tomadas','Montagem de iluminação','Certificado de conformidade','Material incluído até €50']},
+  s8:{desc:'Pintura profissional de divisões interiores com preparação de superfícies e material premium incluído.',inclui:['Preparação e lixagem de paredes','Primário e massa corrida','2 demãos de tinta premium','Protecção de pavimentos e móveis','Limpeza final incluída']},
+}
 const TECNICOS = [
   {id:'p1',n:'António Ferreira',ini:'AF',
    morada:'Rua das Flores, 23',cp:'2500-123',cidade:'Caldas da Rainha',
@@ -1720,6 +1703,7 @@ function CNovaOrdem({ svcI, onBack, onOk }) {
   const [hora,setHora] = useState(null)
   const [morada,setMorada] = useState('')
   const [notas,setNotas]   = useState('')
+  const [detailSvc,setDetailSvc] = useState(null)
   const s    = svcById(sid)
   const tecs = s ? TECNICOS.filter(t=>t.cats.includes(s.cat)) : []
   const hoje = new Date()
@@ -1743,11 +1727,56 @@ function CNovaOrdem({ svcI, onBack, onOk }) {
           <Card key={sv.id} style={{ padding:13, marginBottom:7, border: sid===sv.id ? `2px solid ${C.g}` : undefined }} onClick={() => setSid(sv.id)}>
             <div style={{ display:'flex', gap:10, alignItems:'center' }}>
               <span style={{ fontSize:22 }}>{sv.ic}</span>
-              <div style={{ flex:1 }}><div style={{ fontSize:13, fontWeight:700, color:C.navy }}>{sv.n}</div><div style={{ fontSize:11, color:C.slate }}>€{sv.p} {sv.u}</div></div>
+              <div style={{ flex:1 }}>
+                <div style={{ display:'flex', alignItems:'center', gap:5 }}>
+                  <span style={{ fontSize:13, fontWeight:700, color:C.navy }}>{sv.n}</span>
+                  {sv.badge && <span style={{ fontSize:8, fontWeight:800, background:sv.badge==='Urgente'?'#fee2e2':sv.badge==='Destaque'?'#fef9c3':'#dcfce7', color:sv.badge==='Urgente'?'#dc2626':sv.badge==='Destaque'?'#854d0e':'#15803d', padding:'1px 5px', borderRadius:4 }}>{sv.badge}</span>}
+                </div>
+                <div style={{ fontSize:11, color:C.slate }}>€{sv.p} {sv.u} · {sv.d}</div>
+              </div>
+              <button onClick={e=>{e.stopPropagation();setDetailSvc(sv)}} style={{ background:'#f1f5f9', border:'none', borderRadius:'50%', width:26, height:26, fontSize:12, cursor:'pointer', color:'#64748b', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center' }}>ℹ</button>
               {sid===sv.id && <span style={{ color:C.g, fontSize:17 }}>✓</span>}
             </div>
           </Card>
         ))}
+        {/* Bottom sheet — detalhes do serviço */}
+        {detailSvc && <>
+          <div onClick={()=>setDetailSvc(null)} style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.4)', zIndex:50 }}/>
+          <div style={{ position:'fixed', left:0, right:0, bottom:0, zIndex:51, background:'#fff', borderRadius:'20px 20px 0 0', padding:'20px 20px 36px', maxHeight:'80vh', overflowY:'auto', boxShadow:'0 -8px 40px rgba(0,0,0,0.18)' }}>
+            <div style={{ width:36, height:4, borderRadius:2, background:'#e2e8f0', margin:'0 auto 16px' }}/>
+            <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:14 }}>
+              <span style={{ fontSize:32 }}>{detailSvc.ic}</span>
+              <div>
+                <div style={{ fontSize:15, fontWeight:800, color:C.navy }}>{detailSvc.n}</div>
+                <div style={{ display:'flex', alignItems:'center', gap:6, marginTop:2 }}>
+                  <Stars v={detailSvc.r} s={11}/>
+                  <span style={{ fontSize:11, color:C.slate }}>{detailSvc.r} · {detailSvc.rv} avaliações</span>
+                </div>
+              </div>
+            </div>
+            <div style={{ display:'flex', gap:8, marginBottom:14 }}>
+              <div style={{ flex:1, background:'#f8fafc', borderRadius:10, padding:'10px 12px', textAlign:'center' }}>
+                <div style={{ fontSize:16, fontWeight:800, color:C.g }}>€{detailSvc.p}</div>
+                <div style={{ fontSize:10, color:C.slate }}>{detailSvc.u}</div>
+              </div>
+              <div style={{ flex:1, background:'#f8fafc', borderRadius:10, padding:'10px 12px', textAlign:'center' }}>
+                <div style={{ fontSize:16, fontWeight:800, color:C.navy }}>{detailSvc.d}</div>
+                <div style={{ fontSize:10, color:C.slate }}>duração</div>
+              </div>
+            </div>
+            <p style={{ fontSize:13, color:C.slate, lineHeight:1.6, margin:'0 0 14px' }}>{SVC_DETALHES[detailSvc.id]?.desc}</p>
+            <div style={{ fontSize:11, fontWeight:700, color:C.navy, textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:8 }}>O que está incluído</div>
+            {(SVC_DETALHES[detailSvc.id]?.inclui||[]).map((item,i) => (
+              <div key={i} style={{ display:'flex', alignItems:'center', gap:8, padding:'6px 0', borderBottom:'1px solid #f1f5f9' }}>
+                <span style={{ color:C.g, fontSize:13 }}>✓</span>
+                <span style={{ fontSize:13, color:C.navy }}>{item}</span>
+              </div>
+            ))}
+            <button onClick={()=>{setSid(detailSvc.id);setDetailSvc(null)}} style={{ width:'100%', marginTop:18, padding:'14px', background:C.g, color:'#fff', border:'none', borderRadius:13, fontSize:14, fontWeight:800, cursor:'pointer' }}>
+              {sid===detailSvc.id ? '✓ Seleccionado' : 'Selecionar este serviço'}
+            </button>
+          </div>
+        </>}
         {step===2 && <>
           <p style={{ fontSize:12, color:C.slate, margin:'0 0 12px', lineHeight:1.5 }}>Escolha o técnico. Todos verificados e com histórico na rede.</p>
           {tecs.map(t => (
@@ -1807,17 +1836,75 @@ function CNovaOrdem({ svcI, onBack, onOk }) {
   )
 }
 
+function haversine(lat1, lng1, lat2, lng2) {
+  const R = 6371
+  const dLat = (lat2-lat1) * Math.PI/180
+  const dLng = (lng2-lng1) * Math.PI/180
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2
+  return R * 2 * Math.asin(Math.sqrt(a))
+}
+
 function COrdem({ o, onBack, onChat }) {
   const [aval, setAval] = useState(o.aval)
+  const [cancelModal, setCancelModal] = useState(false)
+  const [cancelado, setCancelado] = useState(false)
+  const [gpsDemo, setGpsDemo] = useState(null)
   const s = svcById(o.sid); const t = tecById(o.tid)
+
+  // Demo: simula prestador a caminho após 4s quando em_curso ou agendado
+  useEffect(() => {
+    if (!['em_curso','agendado'].includes(o.st)) return
+    const timer = setTimeout(() => setGpsDemo({ lat:39.42, lng:-9.14, online:true }), 4000)
+    return () => clearTimeout(timer)
+  }, [o.st])
+
+  const cliLat = 39.40, cliLng = -9.13
+  const distancia = gpsDemo ? haversine(gpsDemo.lat, gpsDemo.lng, cliLat, cliLng) : null
+  const minGps = distancia ? Math.round(distancia / 40 * 60) : null
+  const mapUrl = gpsDemo ? `https://www.google.com/maps/dir/${gpsDemo.lat},${gpsDemo.lng}/${encodeURIComponent(o.morada+', Portugal')}` : null
+
+  function minutosAteServico() {
+    if (!o.data || !o.hora) return 9999
+    const [h, m] = (o.hora || '00:00').split(':').map(Number)
+    let base
+    if (o.data === 'Hoje')   { base = new Date() }
+    else if (o.data === 'Amanhã') { base = new Date(); base.setDate(base.getDate()+1) }
+    else { base = new Date(o.data); if (isNaN(base)) return 9999 }
+    base.setHours(h, m, 0, 0)
+    return Math.floor((base - new Date()) / 60000)
+  }
+
+  const mins = minutosAteServico()
+  const valorBase = o.val || s?.p || 0
+  const taxaCancelamento = mins < 120 ? parseFloat((valorBase * 0.5).toFixed(2)) : 0
+  const podeCancelar = !['concluida','faturada','cancelada'].includes(o.st) && !cancelado
+
   return (
     <div style={{ minHeight:'100vh', background:C.mist }}>
       <div style={{ background:C.white, padding:'13px 16px', display:'flex', alignItems:'center', gap:10, borderBottom:`1px solid ${C.border}`, position:'sticky', top:0, zIndex:20 }}>
         <button onClick={onBack} style={{ background:'none', border:'none', fontSize:22, cursor:'pointer', color:C.navy }}>←</button>
         <div style={{ flex:1 }}><div style={{ fontSize:14, fontWeight:700, color:C.navy }}>{s?.n}</div><div style={{ fontSize:10, color:C.slate }}>{o.data}</div></div>
-        <EstBadge st={o.st}/>
+        <EstBadge st={cancelado ? 'cancelada' : o.st}/>
       </div>
       <div style={{ padding:'14px 16px 40px' }}>
+
+        {/* GPS tracking card */}
+        {gpsDemo?.online && !cancelado && (
+          <div style={{ background:'#f0fdf4', border:'1px solid #16a34a', borderRadius:16, padding:16, marginBottom:12 }}>
+            <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:6 }}>
+              <div style={{ width:9, height:9, borderRadius:'50%', background:'#16a34a', flexShrink:0, boxShadow:'0 0 0 3px rgba(22,163,74,0.25)' }}/>
+              <span style={{ fontSize:13, fontWeight:700, color:'#14532d' }}>Prestador a caminho</span>
+              <span style={{ marginLeft:'auto', background:'#16a34a', color:'#fff', fontSize:11, fontWeight:700, padding:'2px 10px', borderRadius:10 }}>{minGps} min</span>
+            </div>
+            <div style={{ fontSize:12, color:C.slate, marginBottom:12 }}>
+              {t?.n||'O prestador'} está a {distancia?.toFixed(1)} km de si
+            </div>
+            <button onClick={() => window.open(mapUrl,'_blank')} style={{ width:'100%', padding:'11px', background:'#16a34a', color:'#fff', border:'none', borderRadius:10, fontWeight:700, cursor:'pointer', fontSize:13 }}>
+              🗺️ Ver percurso em tempo real
+            </button>
+          </div>
+        )}
+
         {t && <Card style={{ padding:15, marginBottom:10 }}>
           <div style={{ fontSize:10, fontWeight:700, color:C.slate, textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:9 }}>Técnico atribuído</div>
           <div style={{ display:'flex', gap:10, alignItems:'center' }}>
@@ -1832,22 +1919,71 @@ function COrdem({ o, onBack, onChat }) {
             </div>
           </div>
         </Card>}
+
         <Card style={{ padding:15, marginBottom:10 }}>
-          {[['Morada',o.morada],['Valor',`€${s?.p} ${s?.u}`],o.notas&&['Notas',o.notas]].filter(Boolean).map(([l,v]) => (
+          {[['Morada',o.morada],['Valor',`€${valorBase}`],o.notas&&['Notas',o.notas]].filter(Boolean).map(([l,v]) => (
             <div key={l} style={{ display:'flex', justifyContent:'space-between', padding:'7px 0', borderBottom:'1px solid #f1f5f9' }}><span style={{ fontSize:11, color:C.slate }}>{l}</span><span style={{ fontSize:11, fontWeight:700, color:C.navy, maxWidth:200, textAlign:'right' }}>{v}</span></div>
           ))}
         </Card>
+
         {o.fotos.length>0 && <Card style={{ padding:15, marginBottom:10 }}>
           <div style={{ fontSize:10, fontWeight:700, color:C.slate, textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:9 }}>Relatório fotográfico</div>
           <div style={{ display:'flex', gap:7, marginBottom:8 }}>{o.fotos.map((f,i) => <div key={i} style={{ width:68, height:68, borderRadius:10, background:'#f1f5f9', display:'flex', alignItems:'center', justifyContent:'center', fontSize:24, border:`1px solid ${C.border}` }}>{f}</div>)}</div>
           {o.ass && <div style={{ fontSize:11, color:C.g, fontWeight:600, background:C.gl, padding:'6px 10px', borderRadius:7 }}>✅ Assinado digitalmente</div>}
         </Card>}
-        {o.st==='concluida' && <Card style={{ padding:15 }}>
+
+        {o.st==='concluida' && <Card style={{ padding:15, marginBottom:10 }}>
           <div style={{ fontSize:10, fontWeight:700, color:C.slate, textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:9 }}>A sua avaliação</div>
           <div style={{ display:'flex', gap:5, justifyContent:'center' }}>{[1,2,3,4,5].map(i => <button key={i} onClick={() => setAval(i)} style={{ fontSize:26, background:'none', border:'none', cursor:'pointer', filter: i<=(aval||0) ? 'none' : 'grayscale(1)' }}>⭐</button>)}</div>
           {aval && <p style={{ textAlign:'center', fontSize:11, color:C.g, marginTop:6, fontWeight:600 }}>Obrigado pela avaliação!</p>}
         </Card>}
+
+        {cancelado && <div style={{ background:'#fef2f2', border:'1px solid #ef4444', borderRadius:12, padding:14, textAlign:'center', marginBottom:10 }}>
+          <div style={{ fontSize:26, marginBottom:6 }}>❌</div>
+          <div style={{ fontSize:13, fontWeight:700, color:'#ef4444' }}>Serviço cancelado</div>
+          {taxaCancelamento > 0 && <div style={{ fontSize:11, color:C.slate, marginTop:4 }}>Taxa de cancelamento cobrada: <strong>€{taxaCancelamento}</strong></div>}
+        </div>}
+
+        {podeCancelar && (
+          <button onClick={() => setCancelModal(true)} style={{ width:'100%', marginTop:4, padding:'12px', border:'1.5px solid #ef4444', borderRadius:12, background:'#fff', color:'#ef4444', fontSize:13, fontWeight:700, cursor:'pointer' }}>
+            Cancelar serviço
+          </button>
+        )}
       </div>
+
+      {/* Modal de cancelamento */}
+      {cancelModal && <>
+        <div onClick={() => setCancelModal(false)} style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.45)', zIndex:50 }}/>
+        <div style={{ position:'fixed', bottom:0, left:'50%', transform:'translateX(-50%)', width:'100%', maxWidth:430, background:'#fff', borderRadius:'22px 22px 0 0', zIndex:51, padding:'24px 20px 36px' }}>
+          <div style={{ width:36, height:4, borderRadius:2, background:'#e2e8f0', margin:'0 auto 20px' }}/>
+          {mins < 120
+            ? <>
+                <div style={{ textAlign:'center', marginBottom:20 }}>
+                  <div style={{ fontSize:40, marginBottom:10 }}>⚠️</div>
+                  <h3 style={{ fontSize:16, fontWeight:800, color:C.navy, marginBottom:8 }}>Cancelamento tardio</h3>
+                  <p style={{ fontSize:13, color:C.slate, lineHeight:1.6 }}>
+                    O serviço está marcado para menos de 2 horas.<br/>
+                    Será cobrada uma taxa de <strong style={{ color:'#ef4444' }}>€{taxaCancelamento}</strong> (50% do serviço) para compensar o prestador.
+                  </p>
+                </div>
+                <div style={{ display:'flex', gap:10 }}>
+                  <button onClick={() => setCancelModal(false)} style={{ flex:1, padding:'13px', border:`1.5px solid ${C.border}`, borderRadius:12, background:'#fff', color:C.navy, fontSize:13, fontWeight:600, cursor:'pointer' }}>Manter agendamento</button>
+                  <button onClick={() => { setCancelado(true); setCancelModal(false) }} style={{ flex:1, padding:'13px', border:'none', borderRadius:12, background:'#ef4444', color:'#fff', fontSize:13, fontWeight:700, cursor:'pointer' }}>Confirmar · pagar €{taxaCancelamento}</button>
+                </div>
+              </>
+            : <>
+                <div style={{ textAlign:'center', marginBottom:20 }}>
+                  <h3 style={{ fontSize:16, fontWeight:800, color:C.navy, marginBottom:8 }}>Cancelar serviço?</h3>
+                  <p style={{ fontSize:13, color:C.slate, lineHeight:1.6 }}>O cancelamento é gratuito. O serviço será anulado sem qualquer custo.</p>
+                </div>
+                <div style={{ display:'flex', gap:10 }}>
+                  <button onClick={() => setCancelModal(false)} style={{ flex:1, padding:'13px', border:`1.5px solid ${C.border}`, borderRadius:12, background:'#fff', color:C.navy, fontSize:13, fontWeight:600, cursor:'pointer' }}>Voltar</button>
+                  <button onClick={() => { setCancelado(true); setCancelModal(false) }} style={{ flex:1, padding:'13px', border:'none', borderRadius:12, background:'#ef4444', color:'#fff', fontSize:13, fontWeight:700, cursor:'pointer' }}>Confirmar cancelamento</button>
+                </div>
+              </>
+          }
+        </div>
+      </>}
     </div>
   )
 }
@@ -1940,13 +2076,62 @@ function PExec({ o, onBack, onUpdate, onChat }) {
   const s = svcById(o.sid)
   const [fase,    setFase]    = useState(o.st==='em_curso'?'exec':o.st==='concluida'?'done':'aceitar')
   const [fotos,   setFotos]   = useState(o.fotos||[])
-  const [novaHora,setNovaHora]= useState(false)   // sheet de propor hora
+  const [novaHora,setNovaHora]= useState(false)
   const [horaProp,setHoraProp]= useState(o.hora||'')
   const [motivo,  setMotivo]  = useState('')
   const [propEnviada,setPropEnviada] = useState(false)
 
-  const FL = ['Aceitar','Executar','Fotos','Assinar','Concluído']
-  const fi = ['aceitar','exec','fotos','assinar','done'].indexOf(fase)
+  // GPS tracking
+  const [gpsActivo, setGpsActivo] = useState(false)
+  const [gpsPos,    setGpsPos]    = useState(null)
+  const gpsWatchRef = useRef(null)
+
+  // Checklist
+  const [showChecklist, setShowChecklist] = useState(false)
+  const [ckChecked,     setCkChecked]     = useState([])
+  const [ckFotos,       setCkFotos]       = useState([])
+  const [ckObs,         setCkObs]         = useState('')
+  const [ckSaving,      setCkSaving]      = useState(false)
+
+  useEffect(() => () => {
+    if (gpsWatchRef.current) navigator.geolocation.clearWatch(gpsWatchRef.current)
+  }, [])
+
+  const iniciarViagem = () => {
+    if (!navigator.geolocation) { alert('GPS não disponível neste dispositivo'); return }
+    setGpsActivo(true)
+    onUpdate && onUpdate({...o, prestador_online:true})
+    gpsWatchRef.current = navigator.geolocation.watchPosition(
+      pos => {
+        const { latitude: lat, longitude: lng } = pos.coords
+        setGpsPos({ lat, lng })
+        onUpdate && onUpdate({...o, prestador_online:true, prestador_lat:lat, prestador_lng:lng})
+      },
+      err => console.warn('GPS error:', err.message),
+      { enableHighAccuracy:true, maximumAge:10000, timeout:15000 }
+    )
+  }
+
+  const pararGps = () => {
+    if (gpsWatchRef.current) { navigator.geolocation.clearWatch(gpsWatchRef.current); gpsWatchRef.current = null }
+    setGpsActivo(false); setGpsPos(null)
+    onUpdate && onUpdate({...o, prestador_online:false})
+  }
+
+  const submeterChecklist = () => {
+    setCkSaving(true)
+    setTimeout(() => {
+      setFotos(ckFotos.length ? ckFotos : ['📷'])
+      pararGps()
+      setFase('aguarda_val')
+      onUpdate && onUpdate({...o, st:'aguarda_validacao', checklist_completo:true, fotos:ckFotos.length ? ckFotos : ['📷']})
+      setShowChecklist(false)
+      setCkSaving(false)
+    }, 700)
+  }
+
+  const FL = ['Aceitar','Executar','Checklist','Assinar','Concluído']
+  const fi = ['aceitar','exec','aguarda_val','assinar','done'].indexOf(fase)
 
   const abrirMapa = () => {
     const q = encodeURIComponent(`${o.morada}, Portugal`)
@@ -2046,7 +2231,36 @@ function PExec({ o, onBack, onUpdate, onChat }) {
           <div style={{ background:C.gl, borderRadius:11, padding:12, border:'1px solid rgba(22,163,74,0.2)', marginBottom:12 }}>
             <p style={{ fontSize:12, color:C.g, fontWeight:600, margin:0 }}>✅ Em execução — avance quando terminar</p>
           </div>
-          <Btn full onClick={() => setFase('fotos')}>📸 Relatório fotográfico →</Btn>
+
+          {/* GPS tracking */}
+          {!gpsActivo
+            ? <button onClick={iniciarViagem} style={{ width:'100%', padding:'12px', border:`1.5px solid ${C.g}`, borderRadius:12, background:C.gl, color:C.gd, fontSize:13, fontWeight:700, cursor:'pointer', marginBottom:10, display:'flex', alignItems:'center', justifyContent:'center', gap:8 }}>
+                🚗 Iniciar Viagem — Activar GPS
+              </button>
+            : <div style={{ background:'#eff6ff', border:'1px solid #3b82f6', borderRadius:12, padding:13, marginBottom:10 }}>
+                <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:8 }}>
+                  <div style={{ width:8, height:8, borderRadius:'50%', background:'#3b82f6', flexShrink:0 }}/>
+                  <span style={{ fontSize:12, fontWeight:700, color:'#1d4ed8' }}>GPS activo — A caminho</span>
+                  {gpsPos && <span style={{ fontSize:10, color:C.slate, marginLeft:'auto' }}>📍 {gpsPos.lat.toFixed(4)}, {gpsPos.lng.toFixed(4)}</span>}
+                </div>
+                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:8 }}>
+                  <button onClick={() => { const q=encodeURIComponent(o.morada+', Portugal'); window.open(`https://www.google.com/maps/search/?api=1&query=${q}`,'_blank') }}
+                    style={{ padding:'9px', border:`1.5px solid ${C.border}`, borderRadius:10, background:'#fff', fontSize:12, fontWeight:600, cursor:'pointer' }}>
+                    🗺️ Ver no mapa
+                  </button>
+                  <button onClick={pararGps} style={{ padding:'9px', border:'1.5px solid #ef4444', borderRadius:10, background:'#fff', color:'#ef4444', fontSize:12, fontWeight:600, cursor:'pointer' }}>
+                    ⛔ Parar GPS
+                  </button>
+                </div>
+                <button onClick={() => { pararGps(); setFase('fotos') }} style={{ width:'100%', padding:'10px', border:'none', borderRadius:10, background:'#1d4ed8', color:'#fff', fontSize:12, fontWeight:700, cursor:'pointer' }}>
+                  ✅ Chegou à porta — Iniciar serviço
+                </button>
+              </div>
+          }
+
+          <Btn full onClick={() => { setCkChecked([]); setCkFotos([]); setCkObs(''); setShowChecklist(true) }}>
+            📋 Concluir — Submeter checklist →
+          </Btn>
         </>}
 
         {/* FASE: Fotos */}
@@ -2072,6 +2286,24 @@ function PExec({ o, onBack, onUpdate, onChat }) {
             </div>
           </Card>
           <Btn v='green' full onClick={() => { const upd={...o,st:'concluida',fotos,ass:true}; onUpdate&&onUpdate(upd); setFase('done') }}>Simular assinatura recebida ✓</Btn>
+        </>}
+
+        {/* FASE: A aguardar validação do cliente */}
+        {fase==='aguarda_val' && <>
+          <div style={{ textAlign:'center', padding:'16px 0 8px' }}>
+            <div style={{ width:72, height:72, borderRadius:'50%', background:'#fef3c7', display:'flex', alignItems:'center', justifyContent:'center', fontSize:32, margin:'0 auto 12px' }}>⏳</div>
+            <h2 style={{ fontSize:17, fontWeight:800, color:C.navy, marginBottom:5 }}>A aguardar validação</h2>
+            <p style={{ fontSize:12, color:C.slate, lineHeight:1.5 }}>Checklist submetido com sucesso.<br/>O cliente irá verificar e assinar o relatório.</p>
+          </div>
+          <div style={{ background:'#fef3c7', border:'1px solid #f59e0b', borderRadius:12, padding:14, marginTop:8, textAlign:'center' }}>
+            <div style={{ fontSize:12, color:'#92400e', fontWeight:600 }}>✅ Checklist concluído · 📸 Fotos enviadas</div>
+            <div style={{ fontSize:11, color:'#78350f', marginTop:4 }}>Aguarda confirmação de {o.cli}</div>
+          </div>
+          <div style={{ marginTop:12 }}>
+            <Btn v='green' full onClick={() => { const upd={...o,st:'concluida',fotos,ass:true}; onUpdate&&onUpdate(upd); setFase('done') }}>
+              Simular validação recebida ✓
+            </Btn>
+          </div>
         </>}
 
         {/* FASE: Concluído */}
@@ -2100,6 +2332,59 @@ function PExec({ o, onBack, onUpdate, onChat }) {
           </Card>
         </>}
       </div>
+
+      {/* Bottom sheet — Checklist de conclusão */}
+      {showChecklist && <>
+        <div onClick={() => setShowChecklist(false)} style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', zIndex:50 }}/>
+        <div style={{ position:'fixed', bottom:0, left:'50%', transform:'translateX(-50%)', width:'100%', maxWidth:430, background:C.white, borderRadius:'22px 22px 0 0', zIndex:51, padding:'20px 20px 32px', maxHeight:'88vh', overflowY:'auto' }}>
+          <div style={{ width:36, height:4, borderRadius:2, background:'#e2e8f0', margin:'0 auto 16px' }}/>
+          <h3 style={{ fontSize:16, fontWeight:800, color:C.navy, marginBottom:4 }}>Confirmar tarefas realizadas</h3>
+          <p style={{ fontSize:12, color:C.slate, marginBottom:16, lineHeight:1.5 }}>Assinale todas as tarefas antes de submeter o relatório.</p>
+
+          {(s?.checklist||['Verificar trabalho realizado','Limpeza da área de trabalho','Confirmação com o cliente']).map((task, i) => (
+            <div key={i}
+              onClick={() => setCkChecked(prev => prev.includes(i) ? prev.filter(x=>x!==i) : [...prev, i])}
+              style={{ display:'flex', alignItems:'center', gap:12, padding:'12px 0', borderBottom:'1px solid #f1f5f9', cursor:'pointer' }}>
+              <div style={{ width:22, height:22, borderRadius:6, border:`2px solid ${ckChecked.includes(i)?C.g:C.border}`, background:ckChecked.includes(i)?C.g:'#fff', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, transition:'all 0.15s' }}>
+                {ckChecked.includes(i) && <span style={{ color:'#fff', fontSize:12, fontWeight:900 }}>✓</span>}
+              </div>
+              <span style={{ fontSize:13, color:ckChecked.includes(i)?C.gd:C.navy, fontWeight:ckChecked.includes(i)?600:400 }}>{task}</span>
+            </div>
+          ))}
+
+          <div style={{ marginTop:18 }}>
+            <div style={{ fontSize:11, fontWeight:700, color:C.slate, textTransform:'uppercase', letterSpacing:'0.04em', marginBottom:8 }}>Fotos de conclusão <span style={{ color:'#ef4444' }}>*</span></div>
+            <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginBottom:4 }}>
+              {ckFotos.map((f,i) => (
+                <div key={i} style={{ width:64, height:64, borderRadius:10, background:'#f1f5f9', display:'flex', alignItems:'center', justifyContent:'center', fontSize:22, border:`1px solid ${C.border}` }}>{f}</div>
+              ))}
+              <button onClick={() => setCkFotos(prev=>[...prev,'📷'])} style={{ width:64, height:64, borderRadius:10, border:`2px dashed ${C.g}`, background:'transparent', fontSize:20, cursor:'pointer', color:C.g }}>+</button>
+            </div>
+            <p style={{ fontSize:10, color:C.slate, margin:0 }}>Mínimo 1 foto obrigatória</p>
+          </div>
+
+          <div style={{ marginTop:14, marginBottom:18 }}>
+            <div style={{ fontSize:11, fontWeight:700, color:C.slate, textTransform:'uppercase', letterSpacing:'0.04em', marginBottom:6 }}>Observações (opcional)</div>
+            <textarea value={ckObs} onChange={e=>setCkObs(e.target.value)}
+              placeholder='Ex: Notei uma fissura na parede que deve ser verificada...'
+              style={{ width:'100%', border:`1.5px solid ${C.border}`, borderRadius:10, padding:'9px 12px', fontSize:13, outline:'none', resize:'vertical', minHeight:64, fontFamily:'inherit', boxSizing:'border-box', color:C.navy }}/>
+          </div>
+
+          {(() => {
+            const totalTasks = (s?.checklist||['a','b','c']).length
+            const allDone = ckChecked.length === totalTasks
+            const hasFoto = ckFotos.length > 0
+            const canSubmit = allDone && hasFoto
+            const faltam = totalTasks - ckChecked.length
+            return (
+              <button onClick={canSubmit && !ckSaving ? submeterChecklist : null}
+                style={{ width:'100%', padding:'14px', border:'none', borderRadius:12, background:canSubmit?C.g:'#cbd5e1', color:'#fff', fontSize:14, fontWeight:800, cursor:canSubmit?'pointer':'not-allowed' }}>
+                {ckSaving ? 'A submeter…' : canSubmit ? '✅ Submeter checklist' : faltam > 0 ? `Faltam ${faltam} tarefa${faltam>1?'s':''} por confirmar` : '📸 Adicione pelo menos 1 foto'}
+              </button>
+            )
+          })()}
+        </div>
+      </>}
 
       {/* Bottom sheet — Propor nova hora */}
       {novaHora && <>
@@ -4655,7 +4940,7 @@ export default function App() {
     setEcra('home')
     setTab('pedidos')
     // Guarda no Supabase em background
-    if (SB_KEY) {
+    if (sb) {
       await sbSave('ordens', {
         servico_id:    d.sid,
         cliente_id:    authUser?.user?.id || null,
@@ -4669,7 +4954,7 @@ export default function App() {
         valor_plataforma: ((svc?.p||0) * 0.18).toFixed(2),
         valor_prestador:  ((svc?.p||0) * 0.82).toFixed(2),
         notas:         d.notas || '',
-      }, authUser?.token)
+      })
       .then(r => r && console.log('[Supabase] Ordem guardada:', r[0]?.id))
       .catch(e => console.warn('[Supabase] Erro ao guardar ordem:', e))
     }
@@ -4687,7 +4972,7 @@ export default function App() {
   }
 
   const onLogout = async () => {
-    if (authUser?.token) await sbSignOut(authUser.token)
+    await sbSignOut()
     setAuthUser(null); setRole('prestador'); setAdminAuth(false)
   }
 
