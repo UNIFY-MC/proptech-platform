@@ -1205,7 +1205,11 @@ const ORDENS_INIT = [
   {id:'ot6',sid:'s7',cli:'Sr. Martins',  cliId:'cl5',morada:'Ed. Atlântico, Caldas',       km:2.9, data:'24 Abr', hora:'14:00',tid:'p2',st:'proposta_hora',      fotos:[],               ass:false,aval:null,notas:'Quadro antigo',  pago:true,  val:80,  taxa:20,hora_proposta:'16:00',dt_pedido:'21 Abr 08:00'},
   {id:'ot7',sid:'s1',cli:'Sr. Ferreira', cliId:'cl1',morada:'Rua das Flores, 23, Caldas',  km:2.1, data:'25 Abr', hora:'10:00',tid:'p1',st:'aguarda_validacao',  fotos:['📷','📷','📷'],ass:false,aval:null,notas:'',              pago:true,  val:49,  taxa:18,dt_pedido:'19 Abr 09:00'},
   {id:'ot8',sid:'s5',cli:'Cond. Sol',    cliId:'cl4',morada:'Rua do Sol, 5, Caldas',       km:3.8, data:'18 Abr', hora:'11:00',tid:'p4',st:'concluida',          fotos:['🏊','📷'],     ass:true, aval:4,   notas:'',              pago:true,  val:55,  taxa:20,dt_pedido:'16 Abr 10:00'},
-  {id:'ot9',sid:'s8',cli:'Sra. Alves',   cliId:'cl3',morada:'Quinta Rosas, Óbidos',        km:12.4,data:'10 Abr', hora:'09:00',tid:'p4',st:'faturada',           fotos:['🎨','📷','📷'],ass:true, aval:5,   notas:'Sala + quarto',  pago:true,  val:90,  taxa:20,dt_pedido:'8 Abr 15:00'},
+  {id:'ot9', sid:'s8',cli:'Sra. Alves',   cliId:'cl3',morada:'Quinta Rosas, Óbidos',        km:12.4,data:'10 Abr', hora:'09:00',tid:'p4',st:'faturada',           fotos:['🎨','📷','📷'],ass:true, aval:5,   notas:'Sala + quarto',  pago:true,  val:90,  taxa:20,dt_pedido:'8 Abr 15:00'},
+  // Task 8 — ordem com avaliação baixa para p1 (despoleta aviso de rating)
+  {id:'ot10',sid:'s2',cli:'Sr. Costa',    cliId:'cl7',morada:'Rua Nova, 12, Caldas',         km:3.1, data:'16 Abr', hora:'10:00',tid:'p1',st:'concluida',          fotos:['📷','📷'],     ass:true, aval:2,   notas:'',              pago:true,  val:75,  taxa:18,dt_pedido:'14 Abr 09:00'},
+  // Task 7 — ordem de rectificação de ot10
+  {id:'ot11',sid:'s2',cli:'Sr. Costa',    cliId:'cl7',morada:'Rua Nova, 12, Caldas',         km:3.1, data:'23 Abr', hora:'09:00',tid:'p1',st:'pendente',tipo:'rectificacao',ordem_original_id:'ot10',prazo_rectificacao:'25 Abr',fotos:[],ass:false,aval:null,notas:'Janelas não foram limpas — precisam de refazer.',pago:false,val:0,taxa:18,dt_pedido:'20 Abr 16:00'},
 ]
 const MOVS = [
   {id:'m1',tipo:'credito', v:57.00, d:'Limpeza Mensal — Rua das Flores', dt:'Hoje 14:32',  st:'disponivel',oid:'ot1'},
@@ -1847,12 +1851,17 @@ function haversine(lat1, lng1, lat2, lng2) {
   return R * 2 * Math.asin(Math.sqrt(a))
 }
 
-function COrdem({ o, onBack, onChat, onUpdate }) {
+function COrdem({ o, onBack, onChat, onUpdate, onRectificacao }) {
   const [aval, setAval] = useState(o.aval)
   const [cancelModal, setCancelModal] = useState(false)
   const [cancelado, setCancelado] = useState(false)
   const [gpsDemo, setGpsDemo] = useState(null)
   const [propostaEstado, setPropostaEstado] = useState(o.proposta_estado)
+  // Task 7: Rectificação
+  const [showRect,      setShowRect]      = useState(false)
+  const [rectDesc,      setRectDesc]      = useState('')
+  const [rectPrazo,     setRectPrazo]     = useState('')
+  const [rectSolicitado,setRectSolicitado]= useState(false)
   const s = svcById(o.sid); const t = tecById(o.tid)
 
   // Demo: simula prestador a caminho após 4s quando em_curso ou agendado
@@ -1976,6 +1985,21 @@ function COrdem({ o, onBack, onChat, onUpdate }) {
           {aval && <p style={{ textAlign:'center', fontSize:11, color:C.g, marginTop:6, fontWeight:600 }}>Obrigado pela avaliação!</p>}
         </Card>}
 
+        {/* Task 7: Botão de rectificação (só aparece após avaliação ≤ 3) */}
+        {o.st==='concluida' && aval && aval <= 3 && (
+          rectSolicitado
+            ? <div style={{ background:'#fef3c7', border:'1px solid #f59e0b', borderRadius:12, padding:'12px 14px', marginBottom:10, display:'flex', alignItems:'center', gap:10 }}>
+                <span style={{ fontSize:20 }}>🔄</span>
+                <div>
+                  <div style={{ fontSize:12, fontWeight:700, color:'#92400e' }}>Rectificação solicitada</div>
+                  <div style={{ fontSize:11, color:C.slate }}>O prestador irá contactar em breve para reagendar.</div>
+                </div>
+              </div>
+            : <button onClick={()=>setShowRect(true)} style={{ width:'100%', marginBottom:10, padding:'13px', border:'1.5px solid #f59e0b', borderRadius:12, background:'#fffbeb', color:'#92400e', fontSize:13, fontWeight:700, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:8 }}>
+                🔄 Solicitar rectificação do serviço
+              </button>
+        )}
+
         {cancelado && <div style={{ background:'#fef2f2', border:'1px solid #ef4444', borderRadius:12, padding:14, textAlign:'center', marginBottom:10 }}>
           <div style={{ fontSize:26, marginBottom:6 }}>❌</div>
           <div style={{ fontSize:13, fontWeight:700, color:'#ef4444' }}>Serviço cancelado</div>
@@ -1988,6 +2012,54 @@ function COrdem({ o, onBack, onChat, onUpdate }) {
           </button>
         )}
       </div>
+
+      {/* Task 7: Bottom sheet — Solicitar rectificação */}
+      {showRect && <>
+        <div onClick={()=>setShowRect(false)} style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', zIndex:50 }}/>
+        <div style={{ position:'fixed', bottom:0, left:'50%', transform:'translateX(-50%)', width:'100%', maxWidth:430, background:C.white, borderRadius:'22px 22px 0 0', zIndex:51, padding:'22px 20px 36px' }}>
+          <div style={{ width:36, height:4, borderRadius:2, background:'#e2e8f0', margin:'0 auto 18px' }}/>
+          <div style={{ textAlign:'center', marginBottom:18 }}>
+            <div style={{ fontSize:32, marginBottom:8 }}>🔄</div>
+            <h3 style={{ fontSize:16, fontWeight:800, color:C.navy, marginBottom:4 }}>Solicitar rectificação</h3>
+            <p style={{ fontSize:12, color:C.slate, lineHeight:1.5 }}>Descreva o que não ficou bem. O prestador irá corrigir sem custo adicional.</p>
+          </div>
+
+          <div style={{ marginBottom:14 }}>
+            <label style={{ fontSize:11, fontWeight:700, color:C.slate, display:'block', marginBottom:6, textTransform:'uppercase', letterSpacing:'0.04em' }}>O que precisa de rectificação? <span style={{ color:'#ef4444' }}>*</span></label>
+            <textarea value={rectDesc} onChange={e=>setRectDesc(e.target.value)}
+              placeholder='Ex: As janelas da sala não foram limpas. O pó debaixo do sofá não foi aspirado...'
+              style={{ width:'100%', border:`1.5px solid ${rectDesc?C.g:C.border}`, borderRadius:10, padding:'10px 12px', fontSize:13, outline:'none', resize:'vertical', minHeight:90, fontFamily:'inherit', boxSizing:'border-box', color:C.navy }}/>
+          </div>
+
+          <div style={{ marginBottom:20 }}>
+            <label style={{ fontSize:11, fontWeight:700, color:C.slate, display:'block', marginBottom:6, textTransform:'uppercase', letterSpacing:'0.04em' }}>Prazo pretendido</label>
+            <input type='date' value={rectPrazo} min={new Date().toISOString().split('T')[0]}
+              onChange={e=>setRectPrazo(e.target.value)}
+              style={{ width:'100%', border:`1.5px solid ${rectPrazo?C.g:C.border}`, borderRadius:10, padding:'10px 12px', fontSize:13, outline:'none', color:C.navy, background:rectPrazo?'#f0fdf4':'#f8fafc', boxSizing:'border-box', cursor:'pointer' }}/>
+          </div>
+
+          <div style={{ display:'flex', gap:9 }}>
+            <button onClick={()=>setShowRect(false)} style={{ flex:1, padding:'13px', border:`1.5px solid ${C.border}`, borderRadius:12, background:C.white, color:C.navy, fontSize:13, fontWeight:600, cursor:'pointer' }}>Cancelar</button>
+            <button disabled={!rectDesc.trim()} onClick={()=>{
+              onRectificacao && onRectificacao({
+                sid: o.sid,
+                tipo: 'rectificacao',
+                ordem_original_id: o.id,
+                prazo_rectificacao: rectPrazo || null,
+                morada: o.morada,
+                tid: o.tid,
+                notas: rectDesc,
+                data: null,
+                hora: '09:00',
+              })
+              setRectSolicitado(true)
+              setShowRect(false)
+            }} style={{ flex:2, padding:'13px', border:'none', borderRadius:12, background:rectDesc.trim()?'#f59e0b':'#cbd5e1', color:'#fff', fontSize:13, fontWeight:800, cursor:rectDesc.trim()?'pointer':'default' }}>
+              ✓ Enviar pedido de rectificação
+            </button>
+          </div>
+        </div>
+      </>}
 
       {/* Modal de cancelamento */}
       {cancelModal && <>
@@ -2250,6 +2322,23 @@ function PExec({ o, onBack, onUpdate, onChat }) {
       </div>
 
       <div style={{ padding:'14px 16px 110px' }}>
+
+        {/* Task 7: Badge de rectificação */}
+        {o.tipo === 'rectificacao' && (
+          <div style={{ background:'#fef3c7', border:'1.5px solid #f59e0b', borderRadius:12, padding:'12px 16px', marginBottom:12, display:'flex', alignItems:'center', gap:10 }}>
+            <span style={{ fontSize:22, flexShrink:0 }}>🔄</span>
+            <div style={{ flex:1 }}>
+              <div style={{ fontSize:13, fontWeight:800, color:'#92400e' }}>RECTIFICAÇÃO</div>
+              <div style={{ fontSize:11, color:C.slate }}>
+                Ordem original: <strong>#{o.ordem_original_id}</strong>
+                {o.prazo_rectificacao && ` · Prazo: ${o.prazo_rectificacao}`}
+              </div>
+              {o.notas && <div style={{ fontSize:11, color:'#92400e', marginTop:4, fontStyle:'italic' }}>"{o.notas}"</div>}
+            </div>
+            <span style={{ background:'#f59e0b', color:'#fff', fontSize:10, fontWeight:800, padding:'3px 8px', borderRadius:6, flexShrink:0 }}>SEM CUSTO</span>
+          </div>
+        )}
+
         {/* Ficha da ordem */}
         <Card style={{ padding:14, marginBottom:12 }}>
           {[
@@ -3671,6 +3760,13 @@ function PDashV2({ ordens, onOrdem, onCarteira, onChat, onNavMenu }) {
   const pc      = prox ? NIVEIS[prox] : null
   const faltam  = pc ? Math.max(0, pc.min - eu.jobs) : 0
 
+  // Task 8: Rating mínimo com aviso automático
+  const avaliacoes  = minhas.filter(o => o.aval && o.st === 'concluida').map(o => o.aval)
+  const ratingLive  = avaliacoes.length ? parseFloat((avaliacoes.reduce((s,v)=>s+v,0)/avaliacoes.length).toFixed(1)) : eu.r
+  const mrMin       = NIVEIS[eu.nivel]?.mr || 0
+  const ratingCritico = ratingLive < 3.5
+  const ratingAviso   = mrMin > 0 && ratingLive < mrMin
+
   // Lista de ordens conforme KPI activo — calculada FORA do JSX para evitar IIFE
   const ordensFiltradas = filtroKpi==='aceites'   ? abertas
     : filtroKpi==='propostas'  ? pendentes
@@ -3742,6 +3838,24 @@ function PDashV2({ ordens, onOrdem, onCarteira, onChat, onNavMenu }) {
           <span style={{ fontSize:9, color:'#86efac', fontWeight:700, background:'rgba(34,197,94,0.15)', padding:'4px 9px', borderRadius:9 }}>{nc.ic} {nc.l} · {nc.taxa}%</span>
         </div>
 
+        {/* Task 8: Aviso de rating abaixo do mínimo */}
+        {(ratingCritico || ratingAviso) && (
+          <div style={{ background: ratingCritico?'#fef2f2':'#fffbeb', border:`1.5px solid ${ratingCritico?'#ef4444':'#f59e0b'}`, borderRadius:12, padding:'12px 14px', marginBottom:12, display:'flex', alignItems:'center', gap:10 }}>
+            <span style={{ fontSize:22, flexShrink:0 }}>{ratingCritico?'⛔':'⚠️'}</span>
+            <div style={{ flex:1 }}>
+              <div style={{ fontSize:12, fontWeight:800, color:ratingCritico?'#b91c1c':'#92400e' }}>
+                {ratingCritico ? 'Avaliação crítica — conta em risco de suspensão' : `Avaliação abaixo do mínimo ${NIVEIS[eu.nivel].l}`}
+              </div>
+              <div style={{ fontSize:11, color:C.slate, marginTop:2 }}>
+                Média actual: <strong>{ratingLive}★</strong>
+                {ratingAviso && !ratingCritico && ` · Mínimo exigido: ${mrMin}★`}
+                {ratingCritico ? ' · Abaixo de 3.5 — requer atenção imediata' : ''}
+              </div>
+            </div>
+            <button onClick={()=>onNavMenu?.('nivel_p')} style={{ flexShrink:0, padding:'6px 10px', border:`1.5px solid ${ratingCritico?'#ef4444':'#f59e0b'}`, borderRadius:8, background:'transparent', color:ratingCritico?'#b91c1c':'#92400e', fontSize:11, fontWeight:700, cursor:'pointer' }}>Ver nível</button>
+          </div>
+        )}
+
         {/* KPIs clicáveis */}
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:8, marginBottom:14 }}>
           {[
@@ -3771,13 +3885,17 @@ function PDashV2({ ordens, onOrdem, onCarteira, onChat, onNavMenu }) {
                 <div style={{ display:'flex', gap:10, alignItems:'center' }}>
                   <span style={{ fontSize:20 }}>{sv?.ic||'🔧'}</span>
                   <div style={{ flex:1 }}>
-                    <div style={{ display:'flex', justifyContent:'space-between' }}>
-                      <span style={{ fontSize:13, fontWeight:700, color:C.navy }}>{sv?.n}</span>
+                    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                      <div style={{ display:'flex', alignItems:'center', gap:5 }}>
+                        <span style={{ fontSize:13, fontWeight:700, color:C.navy }}>{sv?.n}</span>
+                        {ord.tipo==='rectificacao' && <span style={{ fontSize:9, fontWeight:800, background:'#fef3c7', color:'#92400e', padding:'1px 5px', borderRadius:4 }}>🔄 REC</span>}
+                      </div>
                       <EstBadge st={ord.st}/>
                     </div>
                     <div style={{ fontSize:11, color:C.slate, marginTop:2 }}>📍 {ord.morada}</div>
                     <div style={{ display:'flex', gap:8, marginTop:3, alignItems:'center' }}>
                       <span style={{ fontSize:11, color:C.g, fontWeight:600 }}>🕐 {ord.data}{ord.hora?' '+ord.hora:''}</span>
+                      {ord.tipo==='rectificacao' && ord.prazo_rectificacao && <span style={{ fontSize:10, background:'#fef3c7', color:'#92400e', padding:'1px 6px', borderRadius:8, fontWeight:700 }}>prazo {ord.prazo_rectificacao}</span>}
                       {ord.km && <span style={{ fontSize:10, background:C.gl, color:C.gd, padding:'1px 6px', borderRadius:8, fontWeight:700 }}>📏 {ord.km} km</span>}
                     </div>
                   </div>
@@ -5117,6 +5235,9 @@ export default function App() {
       hora:     d.hora || '09:00',
       tid:      d.tid || null,
       st:       'pendente',
+      tipo:     d.tipo || 'fixo',
+      ordem_original_id: d.ordem_original_id || null,
+      prazo_rectificacao: d.prazo_rectificacao || null,
       fotos:    [],
       ass:      false,
       aval:     null,
@@ -5124,7 +5245,7 @@ export default function App() {
       val:      svc?.p || 0,
       taxa:     18,
       dt_pedido: new Date().toLocaleString('pt-PT', {day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}),
-      pago:     true,
+      pago:     d.tipo === 'rectificacao' ? false : true,
     }
     // Guarda localmente primeiro (UI imediata)
     setOrdens(p => [n, ...p])
@@ -5137,6 +5258,9 @@ export default function App() {
         cliente_id:    authUser?.user?.id || null,
         prestador_id:  d.tid || null,
         estado:        'pendente',
+        tipo:          d.tipo || 'fixo',
+        ordem_original_id: d.ordem_original_id || null,
+        prazo_rectificacao: d.prazo_rectificacao || null,
         morada:        d.morada,
         hora_agendada: d.hora || '09:00',
         data_agendada: d.data ? d.data.toISOString().split('T')[0] : null,
@@ -5223,7 +5347,7 @@ export default function App() {
         {/* ── CLIENTE ── */}
         {role==='cliente' && <>
           {ecra==='nova'        && <CNovaOrdem svcI={svcNova} onBack={()=>setEcra('home')} onOk={add}/>}
-          {ecra==='ordem'       && sel && <COrdem o={sel} onBack={()=>setEcra('home')} onChat={()=>setEcra('chat_ordem_c')} onUpdate={o=>{upd(o);setSel(o)}}/>}
+          {ecra==='ordem'       && sel && <COrdem o={sel} onBack={()=>setEcra('home')} onChat={()=>setEcra('chat_ordem_c')} onUpdate={o=>{upd(o);setSel(o)}} onRectificacao={d=>{add(d);setEcra('pedidos')}}/>}
           {ecra==='chat_c'      && <Chat titulo='Suporte' msgs={CHAT_C} lado='cliente' onBack={()=>setEcra('home')}/>}
           {ecra==='chat_ordem_c'&& sel && <OrderChat ordem={sel} role='cliente' prest={TECNICOS.find(t=>t.id===sel.tid)} onBack={()=>setEcra('ordem')} onUpdate={o=>{upd(o);setSel(o)}}/>}
           {!cliOver && <>
