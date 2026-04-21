@@ -40,3 +40,4 @@ desktop.ini
 *.pem
 *.key
 .mcp.json
+.claude/settings.json
