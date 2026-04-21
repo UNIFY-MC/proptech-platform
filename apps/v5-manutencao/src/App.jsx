@@ -1,7 +1,7 @@
 // src/App.jsx — v5-manutencao 2026.0420 2221
-// 100% auto-suficiente — zero imports externos. Só React.
 
 import React, { useState, useMemo, useEffect, useRef } from 'react'
+import { createClient } from '@supabase/supabase-js'
 
 /* ══ UI COMPONENTS (inline) ══ */
 function Av({ ini, size = 44, green = true }) {
@@ -459,113 +459,86 @@ function MeusServicos({ servicos = [], bloqueados = [], onBack }) {
 }
 
 /* ══════════════════════════════════
-   SUPABASE AUTH — Cliente, registo, login
-   URL: https://hkmvszkpxjbxmnixzqbl.supabase.co
+   SUPABASE — Cliente oficial + helpers
+   Projecto: hkmvszkpxjbxmnixzqbl · schema: public
 ══════════════════════════════════ */
 const SB_URL = 'https://hkmvszkpxjbxmnixzqbl.supabase.co'
 const SB_KEY = import.meta.env?.VITE_SUPABASE_ANON_KEY || ''
 
-// ── Auth helpers ────────────────────────
-const sbHeaders = (token) => ({
-  'apikey': SB_KEY,
-  'Authorization': `Bearer ${token||SB_KEY}`,
-  'Content-Type': 'application/json',
-})
-
-async function sbSignUp(email, password, meta) {
-  if (!SB_KEY) return {error:'Sem chave Supabase. Modo demo activo.'}
-  try {
-    const r = await fetch(`${SB_URL}/auth/v1/signup`, {
-      method:'POST',
-      headers: sbHeaders(),
-      body: JSON.stringify({ email, password, data: meta }),
+const sb = SB_KEY
+  ? createClient(SB_URL, SB_KEY, {
+      db: { schema: 'public' },
+      auth: { persistSession: true, autoRefreshToken: true },
     })
-    const d = await r.json()
-    if (!r.ok) return {error: d.error_description||d.msg||'Erro no registo'}
-    return {user: d.user, session: d.session}
-  } catch(e) { return {error: e.message} }
+  : null
+
+// ── Auth ─────────────────────────────────────────
+async function sbSignUp(email, password, meta) {
+  if (!sb) return { error: 'Sem chave Supabase. Modo demo activo.' }
+  const { data, error } = await sb.auth.signUp({ email, password, options: { data: meta } })
+  if (error) return { error: error.message }
+  return { user: data.user, session: data.session }
 }
 
 async function sbSignIn(email, password) {
-  if (!SB_KEY) return {error:'Sem chave Supabase. Modo demo activo.'}
-  try {
-    const r = await fetch(`${SB_URL}/auth/v1/token?grant_type=password`, {
-      method:'POST',
-      headers: sbHeaders(),
-      body: JSON.stringify({ email, password }),
-    })
-    const d = await r.json()
-    if (!r.ok) return {error: d.error_description||'Email ou password incorrectos'}
-    return {user: d.user, session: d.access_token, token: d.access_token}
-  } catch(e) { return {error: e.message} }
+  if (!sb) return { error: 'Sem chave Supabase. Modo demo activo.' }
+  const { data, error } = await sb.auth.signInWithPassword({ email, password })
+  if (error) return { error: error.message }
+  return { user: data.user, session: data.session, token: data.session?.access_token }
 }
 
-async function sbSignOut(token) {
-  if (!SB_KEY || !token) return
-  try {
-    await fetch(`${SB_URL}/auth/v1/logout`, {
-      method:'POST', headers: sbHeaders(token),
-    })
-  } catch {}
+async function sbSignOut() {
+  if (!sb) return
+  await sb.auth.signOut()
 }
 
-async function sbGetPerfil(userId, token) {
-  if (!SB_KEY) return null
-  try {
-    const r = await fetch(`${SB_URL}/rest/v1/perfis?id=eq.${userId}&select=*`, {
-      headers: sbHeaders(token)
-    })
-    if (!r.ok) return null
-    const d = await r.json()
-    return d[0] || null
-  } catch { return null }
+// ── Perfis ───────────────────────────────────────
+async function sbGetPerfil(userId) {
+  if (!sb) return null
+  const { data } = await sb.from('perfis').select('*').eq('id', userId).maybeSingle()
+  return data
 }
 
-async function sbUpdatePerfil(data, token) {
-  if (!SB_KEY || !token) return null
-  try {
-    const r = await fetch(`${SB_URL}/rest/v1/perfis?id=eq.${data.id}`, {
-      method:'PATCH',
-      headers: {...sbHeaders(token), 'Prefer':'return=representation'},
-      body: JSON.stringify(data),
-    })
-    if (!r.ok) return null
-    return await r.json()
-  } catch { return null }
+async function sbUpdatePerfil(data) {
+  if (!sb) return null
+  const { data: d, error } = await sb.from('perfis').upsert(data).select().maybeSingle()
+  if (error) console.warn('[Supabase] updatePerfil:', error.message)
+  return d
 }
 
-async function sbGet(table, filter='', token) {
-  if (!SB_KEY) return null
-  try {
-    const r = await fetch(`${SB_URL}/rest/v1/${table}${filter}`, {
-      headers: sbHeaders(token||SB_KEY)
+// ── Genéricos ─────────────────────────────────────
+async function sbGet(table, filter = '') {
+  if (!sb) return null
+  // Suporta filtros simples tipo '?col=eq.val&select=*'
+  let q = sb.from(table).select('*')
+  if (filter) {
+    const params = new URLSearchParams(filter.replace(/^\?/, ''))
+    params.forEach((val, key) => {
+      if (key === 'select') return
+      const [op, v] = val.includes('.') ? val.split('.') : ['eq', val]
+      if (op === 'eq')  q = q.eq(key, v)
+      if (op === 'neq') q = q.neq(key, v)
+      if (op === 'gt')  q = q.gt(key, v)
+      if (op === 'lt')  q = q.lt(key, v)
     })
-    return r.ok ? r.json() : null
-  } catch { return null }
+  }
+  const { data, error } = await q
+  if (error) console.warn(`[Supabase] get ${table}:`, error.message)
+  return data
 }
 
-async function sbSave(table, data, token) {
-  if (!SB_KEY) return null
-  try {
-    const r = await fetch(`${SB_URL}/rest/v1/${table}`, {
-      method:'POST',
-      headers: {...sbHeaders(token||SB_KEY), 'Prefer':'return=representation,resolution=merge-duplicates'},
-      body: JSON.stringify(data),
-    })
-    return r.ok ? r.json() : null
-  } catch { return null }
+async function sbSave(table, data) {
+  if (!sb) return null
+  const { data: d, error } = await sb.from(table).upsert(data, { onConflict: 'id' }).select()
+  if (error) console.warn(`[Supabase] save ${table}:`, error.message)
+  return d
 }
 
-async function sbUpload(bucket, path, file, token) {
-  if (!SB_KEY || !file) return null
-  try {
-    const r = await fetch(`${SB_URL}/storage/v1/object/${bucket}/${path}`, {
-      method:'POST',
-      headers: sbHeaders(token||SB_KEY),
-      body: file,
-    })
-    return r.ok ? `${SB_URL}/storage/v1/object/public/${bucket}/${path}` : null
-  } catch { return null }
+async function sbUpload(bucket, path, file) {
+  if (!sb || !file) return null
+  const { error } = await sb.storage.from(bucket).upload(path, file, { upsert: true })
+  if (error) { console.warn('[Supabase] upload:', error.message); return null }
+  return sb.storage.from(bucket).getPublicUrl(path).data.publicUrl
 }
 
 function SyncBadge({synced,loading}){
@@ -607,7 +580,7 @@ function AuthScreen({ onAuth }) {
   const FONT = 'system-ui,-apple-system,sans-serif'
 
   const signInWithGoogle = async () => {
-    if (!SB_KEY) { demoLogin('cliente'); return }
+    if (!sb) { demoLogin('cliente'); return }
     setLoad(true)
     try {
       const { data, error } = await fetch(`${SB_URL}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(window.location.origin)}`, {
@@ -670,7 +643,7 @@ function AuthScreen({ onAuth }) {
   const chooseRole = (r) => {
     setRole(r)
     if (r === 'prestador') setStep('categories')
-    else { setStep('success'); setTimeout(() => onAuth({user:{id:`u${Date.now()}`},token:null,role:'cliente',nome:contact.split('@')[0]||contact,demo:!SB_KEY}), 1500) }
+    else { setStep('success'); setTimeout(() => onAuth({user:{id:`u${Date.now()}`},token:null,role:'cliente',nome:contact.split('@')[0]||contact,demo:!sb}), 1500) }
   }
 
   const finishPrestador = () => {
@@ -862,23 +835,15 @@ function AuthScreen({ onAuth }) {
           if (inputMode==='email' && !val.includes('@')) { setErr('Insere um email válido.'); return }
           setContact(val); setErr(''); setLoad(true)
           // Supabase: magic link (email) ou OTP SMS (telemóvel)
-          if (SB_KEY) {
+          if (sb) {
             try {
               if (inputMode==='email') {
-                const r = await fetch(`${SB_URL}/auth/v1/otp`, {
-                  method:'POST',
-                  headers:{'apikey':SB_KEY,'Content-Type':'application/json'},
-                  body: JSON.stringify({email:val, create_user:true})
-                })
-                if (!r.ok) { const d=await r.json(); setErr(d.msg||'Erro ao enviar email.'); setLoad(false); return }
+                const { error } = await sb.auth.signInWithOtp({ email: val, options: { shouldCreateUser: true } })
+                if (error) { setErr(error.message||'Erro ao enviar email.'); setLoad(false); return }
               } else {
                 const tel = '+351'+val.replace(/\s/g,'')
-                const r = await fetch(`${SB_URL}/auth/v1/otp`, {
-                  method:'POST',
-                  headers:{'apikey':SB_KEY,'Content-Type':'application/json'},
-                  body: JSON.stringify({phone:tel, create_user:true})
-                })
-                if (!r.ok) { const d=await r.json(); setErr(d.msg||'Erro ao enviar SMS. Verifica a configuração Twilio.'); setLoad(false); return }
+                const { error } = await sb.auth.signInWithOtp({ phone: tel, options: { shouldCreateUser: true } })
+                if (error) { setErr(error.message||'Erro ao enviar SMS. Verifica a configuração Twilio.'); setLoad(false); return }
               }
             } catch(e) { setErr('Erro de rede. Tenta novamente.'); setLoad(false); return }
           }
@@ -891,7 +856,7 @@ function AuthScreen({ onAuth }) {
           : inputMode==='email' ? 'Enviar link de acesso →' : 'Enviar código SMS →'}
       </button>
 
-      {!SB_KEY && <div style={{textAlign:'center',fontSize:11,color:'#94a3b8',padding:'8px',background:'#f1f5f9',borderRadius:9}}>
+      {!sb && <div style={{textAlign:'center',fontSize:11,color:'#94a3b8',padding:'8px',background:'#f1f5f9',borderRadius:9}}>
         🔧 Modo demo — sem Supabase key. <span style={{color:'#16a34a',fontWeight:700,cursor:'pointer'}} onClick={()=>setStep('otp_code')}>Continuar sem código</span>
       </div>}
     </div>
@@ -1017,8 +982,8 @@ function AuthScreen({ onAuth }) {
       </div>
       <div style={{flex:1,minHeight:24}}/>
       <div style={{display:'flex',gap:10}}>
-        <Btn ghost onClick={()=>{setStep('success');setTimeout(()=>onAuth({user:{id:`c${Date.now()}`},token:null,role:'cliente',nome:contact||'Cliente',demo:!SB_KEY}),1500)}}>Saltar</Btn>
-        <Btn onClick={()=>{setStep('success');setTimeout(()=>onAuth({user:{id:`c${Date.now()}`},token:null,role:'cliente',nome:contact||'Cliente',demo:!SB_KEY}),1500)}}>Concluir</Btn>
+        <Btn ghost onClick={()=>{setStep('success');setTimeout(()=>onAuth({user:{id:`c${Date.now()}`},token:null,role:'cliente',nome:contact||'Cliente',demo:!sb}),1500)}}>Saltar</Btn>
+        <Btn onClick={()=>{setStep('success');setTimeout(()=>onAuth({user:{id:`c${Date.now()}`},token:null,role:'cliente',nome:contact||'Cliente',demo:!sb}),1500)}}>Concluir</Btn>
       </div>
     </LightScreen>
   )
@@ -1090,7 +1055,7 @@ function AuthScreen({ onAuth }) {
   if (step==='pending') return (
     <LightScreen>
       <div style={{display:'flex',justifyContent:'flex-end'}}>
-        <button onClick={()=>onAuth({user:{id:`p${Date.now()}`},token:null,role:'prestador',nome:contact||'Prestador',demo:!SB_KEY,cats})} style={{background:'none',border:'none',cursor:'pointer',fontFamily:FONT,fontSize:13,color:SP.gray,fontWeight:600}}>Sair</button>
+        <button onClick={()=>onAuth({user:{id:`p${Date.now()}`},token:null,role:'prestador',nome:contact||'Prestador',demo:!sb,cats})} style={{background:'none',border:'none',cursor:'pointer',fontFamily:FONT,fontSize:13,color:SP.gray,fontWeight:600}}>Sair</button>
       </div>
       <div style={{marginTop:20,display:'flex',justifyContent:'center'}}>
         <div style={{width:96,height:96,borderRadius:'50%',background:SP.greenSoft,display:'flex',alignItems:'center',justifyContent:'center',position:'relative'}}>
@@ -1121,7 +1086,7 @@ function AuthScreen({ onAuth }) {
         })}
       </div>
       <div style={{flex:1,minHeight:32}}/>
-      <Btn onClick={()=>onAuth({user:{id:`p${Date.now()}`},token:null,role:'prestador',nome:contact||'Prestador',demo:!SB_KEY,cats})}>Completar o meu perfil</Btn>
+      <Btn onClick={()=>onAuth({user:{id:`p${Date.now()}`},token:null,role:'prestador',nome:contact||'Prestador',demo:!sb,cats})}>Completar o meu perfil</Btn>
       <div style={{textAlign:'center',fontFamily:FONT,fontSize:13,color:SP.gray,fontWeight:500,marginTop:10}}>Avisamos-te por SMS assim que fores aprovado</div>
     </LightScreen>
   )
@@ -4975,7 +4940,7 @@ export default function App() {
     setEcra('home')
     setTab('pedidos')
     // Guarda no Supabase em background
-    if (SB_KEY) {
+    if (sb) {
       await sbSave('ordens', {
         servico_id:    d.sid,
         cliente_id:    authUser?.user?.id || null,
@@ -4989,7 +4954,7 @@ export default function App() {
         valor_plataforma: ((svc?.p||0) * 0.18).toFixed(2),
         valor_prestador:  ((svc?.p||0) * 0.82).toFixed(2),
         notas:         d.notas || '',
-      }, authUser?.token)
+      })
       .then(r => r && console.log('[Supabase] Ordem guardada:', r[0]?.id))
       .catch(e => console.warn('[Supabase] Erro ao guardar ordem:', e))
     }
@@ -5007,7 +4972,7 @@ export default function App() {
   }
 
   const onLogout = async () => {
-    if (authUser?.token) await sbSignOut(authUser.token)
+    await sbSignOut()
     setAuthUser(null); setRole('prestador'); setAdminAuth(false)
   }
 
