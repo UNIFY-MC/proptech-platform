@@ -1169,14 +1169,22 @@ const CATS = [
   {id:'obra',       l:'Pós-Obra',    ic:'🏗️', cor:'#78716c'},
 ]
 const SVCS = [
-  {id:'s1',cat:'limpeza',    n:'Plano Anual Preventivo', p:49, u:'/mês',    d:'Recorrente',r:4.9,rv:312,badge:'Destaque',ic:'🛡️'},
-  {id:'s2',cat:'limpeza',    n:'Limpeza Mensal',         p:75, u:'/visita', d:'3–5h',      r:4.8,rv:840,badge:null,      ic:'🧹'},
-  {id:'s3',cat:'limpeza',    n:'Limpeza Pós-Obra',       p:120,u:'fixo',    d:'4–8h',      r:4.9,rv:220,badge:'Popular', ic:'🏗️'},
-  {id:'s4',cat:'jardim',     n:'Manutenção de Jardim',   p:45, u:'/visita', d:'2–3h',      r:4.7,rv:190,badge:null,      ic:'🌿'},
-  {id:'s5',cat:'piscina',    n:'Manutenção de Piscina',  p:55, u:'/visita', d:'1–2h',      r:4.8,rv:140,badge:null,      ic:'🏊'},
-  {id:'s6',cat:'canalizacao',n:'Urgência Canalização',   p:65, u:'fixo',    d:'1–2h',      r:4.9,rv:390,badge:'Urgente', ic:'🚿'},
-  {id:'s7',cat:'eletrica',   n:'Instalação Elétrica',    p:80, u:'fixo',    d:'2–4h',      r:4.8,rv:210,badge:null,      ic:'⚡'},
-  {id:'s8',cat:'pintura',    n:'Pintura de Divisão',     p:90, u:'fixo',    d:'4–6h',      r:4.7,rv:160,badge:null,      ic:'🎨'},
+  {id:'s1',cat:'limpeza',    n:'Plano Anual Preventivo', p:49, u:'/mês',    d:'Recorrente',r:4.9,rv:312,badge:'Destaque',ic:'🛡️',
+   checklist:['Inspecção geral de todos os compartimentos','Verificação de instalações eléctricas e hidráulicas','Limpeza de áreas comuns','Registo de anomalias detectadas','Elaborar relatório de visita','Confirmação com o cliente']},
+  {id:'s2',cat:'limpeza',    n:'Limpeza Mensal',         p:75, u:'/visita', d:'3–5h',      r:4.8,rv:840,badge:null,      ic:'🧹',
+   checklist:['Limpeza do pó em todas as divisões','Limpeza e desinfecção de superfícies','Limpeza de casa de banho e sanitários','Aspiração de pavimentos','Limpeza do mobiliário visível','Retirar e substituir sacos do lixo']},
+  {id:'s3',cat:'limpeza',    n:'Limpeza Pós-Obra',       p:120,u:'fixo',    d:'4–8h',      r:4.9,rv:220,badge:'Popular', ic:'🏗️',
+   checklist:['Remoção de entulho e resíduos de obra','Limpeza de pó fino de obra','Limpeza de janelas e vidros','Limpeza de pavimentos e rodapés','Desinfecção de casas de banho e cozinha','Verificação final com o cliente']},
+  {id:'s4',cat:'jardim',     n:'Manutenção de Jardim',   p:45, u:'/visita', d:'2–3h',      r:4.7,rv:190,badge:null,      ic:'🌿',
+   checklist:['Corte e aparamento de relva','Poda de arbustos e sebes','Limpeza de folhas e resíduos','Adubação ou rega se necessário','Recolha e ensacamento de resíduos vegetais','Verificação do sistema de rega']},
+  {id:'s5',cat:'piscina',    n:'Manutenção de Piscina',  p:55, u:'/visita', d:'1–2h',      r:4.8,rv:140,badge:null,      ic:'🏊',
+   checklist:['Aspiração do fundo e paredes','Análise de pH e cloro da água','Ajuste de produtos químicos','Limpeza de skimmers e filtros','Remoção de algas visíveis','Registo de qualidade da água']},
+  {id:'s6',cat:'canalizacao',n:'Urgência Canalização',   p:65, u:'fixo',    d:'1–2h',      r:4.9,rv:390,badge:'Urgente', ic:'🚿',
+   checklist:['Diagnóstico e localização da avaria','Reparação da fuga ou entupimento','Teste de pressão após intervenção','Verificação de zonas adjacentes','Limpeza da área de trabalho','Garantia de 30 dias comunicada']},
+  {id:'s7',cat:'eletrica',   n:'Instalação Elétrica',    p:80, u:'fixo',    d:'2–4h',      r:4.8,rv:210,badge:null,      ic:'⚡',
+   checklist:['Diagnóstico do circuito afectado','Intervenção realizada com segurança','Teste de funcionamento','Verificação do quadro eléctrico','Confirmação de conformidade','Limpeza da área de trabalho']},
+  {id:'s8',cat:'pintura',    n:'Pintura de Divisão',     p:90, u:'fixo',    d:'4–6h',      r:4.7,rv:160,badge:null,      ic:'🎨',
+   checklist:['Preparação e protecção de superfícies e pavimentos','Lixagem e primário aplicados','1.ª demão de tinta aplicada e seca','2.ª demão de tinta aplicada e seca','Retirada de protecções e limpeza final','Verificação visual com o cliente']},
 ]
 const SVC_DETALHES = {
   s1:{desc:'Plano completo de manutenção preventiva anual. Técnico fixo dedicado, visitas regulares e prioridade em urgências.',inclui:['12 visitas anuais incluídas','Técnico fixo atribuído','Relatório mensal de estado','Prioridade no agendamento','Assistência urgente incluída']},
@@ -1863,17 +1871,75 @@ function CNovaOrdem({ svcI, onBack, onOk }) {
   )
 }
 
+function haversine(lat1, lng1, lat2, lng2) {
+  const R = 6371
+  const dLat = (lat2-lat1) * Math.PI/180
+  const dLng = (lng2-lng1) * Math.PI/180
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2
+  return R * 2 * Math.asin(Math.sqrt(a))
+}
+
 function COrdem({ o, onBack, onChat }) {
   const [aval, setAval] = useState(o.aval)
+  const [cancelModal, setCancelModal] = useState(false)
+  const [cancelado, setCancelado] = useState(false)
+  const [gpsDemo, setGpsDemo] = useState(null)
   const s = svcById(o.sid); const t = tecById(o.tid)
+
+  // Demo: simula prestador a caminho após 4s quando em_curso ou agendado
+  useEffect(() => {
+    if (!['em_curso','agendado'].includes(o.st)) return
+    const timer = setTimeout(() => setGpsDemo({ lat:39.42, lng:-9.14, online:true }), 4000)
+    return () => clearTimeout(timer)
+  }, [o.st])
+
+  const cliLat = 39.40, cliLng = -9.13
+  const distancia = gpsDemo ? haversine(gpsDemo.lat, gpsDemo.lng, cliLat, cliLng) : null
+  const minGps = distancia ? Math.round(distancia / 40 * 60) : null
+  const mapUrl = gpsDemo ? `https://www.google.com/maps/dir/${gpsDemo.lat},${gpsDemo.lng}/${encodeURIComponent(o.morada+', Portugal')}` : null
+
+  function minutosAteServico() {
+    if (!o.data || !o.hora) return 9999
+    const [h, m] = (o.hora || '00:00').split(':').map(Number)
+    let base
+    if (o.data === 'Hoje')   { base = new Date() }
+    else if (o.data === 'Amanhã') { base = new Date(); base.setDate(base.getDate()+1) }
+    else { base = new Date(o.data); if (isNaN(base)) return 9999 }
+    base.setHours(h, m, 0, 0)
+    return Math.floor((base - new Date()) / 60000)
+  }
+
+  const mins = minutosAteServico()
+  const valorBase = o.val || s?.p || 0
+  const taxaCancelamento = mins < 120 ? parseFloat((valorBase * 0.5).toFixed(2)) : 0
+  const podeCancelar = !['concluida','faturada','cancelada'].includes(o.st) && !cancelado
+
   return (
     <div style={{ minHeight:'100vh', background:C.mist }}>
       <div style={{ background:C.white, padding:'13px 16px', display:'flex', alignItems:'center', gap:10, borderBottom:`1px solid ${C.border}`, position:'sticky', top:0, zIndex:20 }}>
         <button onClick={onBack} style={{ background:'none', border:'none', fontSize:22, cursor:'pointer', color:C.navy }}>←</button>
         <div style={{ flex:1 }}><div style={{ fontSize:14, fontWeight:700, color:C.navy }}>{s?.n}</div><div style={{ fontSize:10, color:C.slate }}>{o.data}</div></div>
-        <EstBadge st={o.st}/>
+        <EstBadge st={cancelado ? 'cancelada' : o.st}/>
       </div>
       <div style={{ padding:'14px 16px 40px' }}>
+
+        {/* GPS tracking card */}
+        {gpsDemo?.online && !cancelado && (
+          <div style={{ background:'#f0fdf4', border:'1px solid #16a34a', borderRadius:16, padding:16, marginBottom:12 }}>
+            <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:6 }}>
+              <div style={{ width:9, height:9, borderRadius:'50%', background:'#16a34a', flexShrink:0, boxShadow:'0 0 0 3px rgba(22,163,74,0.25)' }}/>
+              <span style={{ fontSize:13, fontWeight:700, color:'#14532d' }}>Prestador a caminho</span>
+              <span style={{ marginLeft:'auto', background:'#16a34a', color:'#fff', fontSize:11, fontWeight:700, padding:'2px 10px', borderRadius:10 }}>{minGps} min</span>
+            </div>
+            <div style={{ fontSize:12, color:C.slate, marginBottom:12 }}>
+              {t?.n||'O prestador'} está a {distancia?.toFixed(1)} km de si
+            </div>
+            <button onClick={() => window.open(mapUrl,'_blank')} style={{ width:'100%', padding:'11px', background:'#16a34a', color:'#fff', border:'none', borderRadius:10, fontWeight:700, cursor:'pointer', fontSize:13 }}>
+              🗺️ Ver percurso em tempo real
+            </button>
+          </div>
+        )}
+
         {t && <Card style={{ padding:15, marginBottom:10 }}>
           <div style={{ fontSize:10, fontWeight:700, color:C.slate, textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:9 }}>Técnico atribuído</div>
           <div style={{ display:'flex', gap:10, alignItems:'center' }}>
@@ -1888,22 +1954,71 @@ function COrdem({ o, onBack, onChat }) {
             </div>
           </div>
         </Card>}
+
         <Card style={{ padding:15, marginBottom:10 }}>
-          {[['Morada',o.morada],['Valor',`€${s?.p} ${s?.u}`],o.notas&&['Notas',o.notas]].filter(Boolean).map(([l,v]) => (
+          {[['Morada',o.morada],['Valor',`€${valorBase}`],o.notas&&['Notas',o.notas]].filter(Boolean).map(([l,v]) => (
             <div key={l} style={{ display:'flex', justifyContent:'space-between', padding:'7px 0', borderBottom:'1px solid #f1f5f9' }}><span style={{ fontSize:11, color:C.slate }}>{l}</span><span style={{ fontSize:11, fontWeight:700, color:C.navy, maxWidth:200, textAlign:'right' }}>{v}</span></div>
           ))}
         </Card>
+
         {o.fotos.length>0 && <Card style={{ padding:15, marginBottom:10 }}>
           <div style={{ fontSize:10, fontWeight:700, color:C.slate, textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:9 }}>Relatório fotográfico</div>
           <div style={{ display:'flex', gap:7, marginBottom:8 }}>{o.fotos.map((f,i) => <div key={i} style={{ width:68, height:68, borderRadius:10, background:'#f1f5f9', display:'flex', alignItems:'center', justifyContent:'center', fontSize:24, border:`1px solid ${C.border}` }}>{f}</div>)}</div>
           {o.ass && <div style={{ fontSize:11, color:C.g, fontWeight:600, background:C.gl, padding:'6px 10px', borderRadius:7 }}>✅ Assinado digitalmente</div>}
         </Card>}
-        {o.st==='concluida' && <Card style={{ padding:15 }}>
+
+        {o.st==='concluida' && <Card style={{ padding:15, marginBottom:10 }}>
           <div style={{ fontSize:10, fontWeight:700, color:C.slate, textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:9 }}>A sua avaliação</div>
           <div style={{ display:'flex', gap:5, justifyContent:'center' }}>{[1,2,3,4,5].map(i => <button key={i} onClick={() => setAval(i)} style={{ fontSize:26, background:'none', border:'none', cursor:'pointer', filter: i<=(aval||0) ? 'none' : 'grayscale(1)' }}>⭐</button>)}</div>
           {aval && <p style={{ textAlign:'center', fontSize:11, color:C.g, marginTop:6, fontWeight:600 }}>Obrigado pela avaliação!</p>}
         </Card>}
+
+        {cancelado && <div style={{ background:'#fef2f2', border:'1px solid #ef4444', borderRadius:12, padding:14, textAlign:'center', marginBottom:10 }}>
+          <div style={{ fontSize:26, marginBottom:6 }}>❌</div>
+          <div style={{ fontSize:13, fontWeight:700, color:'#ef4444' }}>Serviço cancelado</div>
+          {taxaCancelamento > 0 && <div style={{ fontSize:11, color:C.slate, marginTop:4 }}>Taxa de cancelamento cobrada: <strong>€{taxaCancelamento}</strong></div>}
+        </div>}
+
+        {podeCancelar && (
+          <button onClick={() => setCancelModal(true)} style={{ width:'100%', marginTop:4, padding:'12px', border:'1.5px solid #ef4444', borderRadius:12, background:'#fff', color:'#ef4444', fontSize:13, fontWeight:700, cursor:'pointer' }}>
+            Cancelar serviço
+          </button>
+        )}
       </div>
+
+      {/* Modal de cancelamento */}
+      {cancelModal && <>
+        <div onClick={() => setCancelModal(false)} style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.45)', zIndex:50 }}/>
+        <div style={{ position:'fixed', bottom:0, left:'50%', transform:'translateX(-50%)', width:'100%', maxWidth:430, background:'#fff', borderRadius:'22px 22px 0 0', zIndex:51, padding:'24px 20px 36px' }}>
+          <div style={{ width:36, height:4, borderRadius:2, background:'#e2e8f0', margin:'0 auto 20px' }}/>
+          {mins < 120
+            ? <>
+                <div style={{ textAlign:'center', marginBottom:20 }}>
+                  <div style={{ fontSize:40, marginBottom:10 }}>⚠️</div>
+                  <h3 style={{ fontSize:16, fontWeight:800, color:C.navy, marginBottom:8 }}>Cancelamento tardio</h3>
+                  <p style={{ fontSize:13, color:C.slate, lineHeight:1.6 }}>
+                    O serviço está marcado para menos de 2 horas.<br/>
+                    Será cobrada uma taxa de <strong style={{ color:'#ef4444' }}>€{taxaCancelamento}</strong> (50% do serviço) para compensar o prestador.
+                  </p>
+                </div>
+                <div style={{ display:'flex', gap:10 }}>
+                  <button onClick={() => setCancelModal(false)} style={{ flex:1, padding:'13px', border:`1.5px solid ${C.border}`, borderRadius:12, background:'#fff', color:C.navy, fontSize:13, fontWeight:600, cursor:'pointer' }}>Manter agendamento</button>
+                  <button onClick={() => { setCancelado(true); setCancelModal(false) }} style={{ flex:1, padding:'13px', border:'none', borderRadius:12, background:'#ef4444', color:'#fff', fontSize:13, fontWeight:700, cursor:'pointer' }}>Confirmar · pagar €{taxaCancelamento}</button>
+                </div>
+              </>
+            : <>
+                <div style={{ textAlign:'center', marginBottom:20 }}>
+                  <h3 style={{ fontSize:16, fontWeight:800, color:C.navy, marginBottom:8 }}>Cancelar serviço?</h3>
+                  <p style={{ fontSize:13, color:C.slate, lineHeight:1.6 }}>O cancelamento é gratuito. O serviço será anulado sem qualquer custo.</p>
+                </div>
+                <div style={{ display:'flex', gap:10 }}>
+                  <button onClick={() => setCancelModal(false)} style={{ flex:1, padding:'13px', border:`1.5px solid ${C.border}`, borderRadius:12, background:'#fff', color:C.navy, fontSize:13, fontWeight:600, cursor:'pointer' }}>Voltar</button>
+                  <button onClick={() => { setCancelado(true); setCancelModal(false) }} style={{ flex:1, padding:'13px', border:'none', borderRadius:12, background:'#ef4444', color:'#fff', fontSize:13, fontWeight:700, cursor:'pointer' }}>Confirmar cancelamento</button>
+                </div>
+              </>
+          }
+        </div>
+      </>}
     </div>
   )
 }
@@ -1996,13 +2111,62 @@ function PExec({ o, onBack, onUpdate, onChat }) {
   const s = svcById(o.sid)
   const [fase,    setFase]    = useState(o.st==='em_curso'?'exec':o.st==='concluida'?'done':'aceitar')
   const [fotos,   setFotos]   = useState(o.fotos||[])
-  const [novaHora,setNovaHora]= useState(false)   // sheet de propor hora
+  const [novaHora,setNovaHora]= useState(false)
   const [horaProp,setHoraProp]= useState(o.hora||'')
   const [motivo,  setMotivo]  = useState('')
   const [propEnviada,setPropEnviada] = useState(false)
 
-  const FL = ['Aceitar','Executar','Fotos','Assinar','Concluído']
-  const fi = ['aceitar','exec','fotos','assinar','done'].indexOf(fase)
+  // GPS tracking
+  const [gpsActivo, setGpsActivo] = useState(false)
+  const [gpsPos,    setGpsPos]    = useState(null)
+  const gpsWatchRef = useRef(null)
+
+  // Checklist
+  const [showChecklist, setShowChecklist] = useState(false)
+  const [ckChecked,     setCkChecked]     = useState([])
+  const [ckFotos,       setCkFotos]       = useState([])
+  const [ckObs,         setCkObs]         = useState('')
+  const [ckSaving,      setCkSaving]      = useState(false)
+
+  useEffect(() => () => {
+    if (gpsWatchRef.current) navigator.geolocation.clearWatch(gpsWatchRef.current)
+  }, [])
+
+  const iniciarViagem = () => {
+    if (!navigator.geolocation) { alert('GPS não disponível neste dispositivo'); return }
+    setGpsActivo(true)
+    onUpdate && onUpdate({...o, prestador_online:true})
+    gpsWatchRef.current = navigator.geolocation.watchPosition(
+      pos => {
+        const { latitude: lat, longitude: lng } = pos.coords
+        setGpsPos({ lat, lng })
+        onUpdate && onUpdate({...o, prestador_online:true, prestador_lat:lat, prestador_lng:lng})
+      },
+      err => console.warn('GPS error:', err.message),
+      { enableHighAccuracy:true, maximumAge:10000, timeout:15000 }
+    )
+  }
+
+  const pararGps = () => {
+    if (gpsWatchRef.current) { navigator.geolocation.clearWatch(gpsWatchRef.current); gpsWatchRef.current = null }
+    setGpsActivo(false); setGpsPos(null)
+    onUpdate && onUpdate({...o, prestador_online:false})
+  }
+
+  const submeterChecklist = () => {
+    setCkSaving(true)
+    setTimeout(() => {
+      setFotos(ckFotos.length ? ckFotos : ['📷'])
+      pararGps()
+      setFase('aguarda_val')
+      onUpdate && onUpdate({...o, st:'aguarda_validacao', checklist_completo:true, fotos:ckFotos.length ? ckFotos : ['📷']})
+      setShowChecklist(false)
+      setCkSaving(false)
+    }, 700)
+  }
+
+  const FL = ['Aceitar','Executar','Checklist','Assinar','Concluído']
+  const fi = ['aceitar','exec','aguarda_val','assinar','done'].indexOf(fase)
 
   const abrirMapa = () => {
     const q = encodeURIComponent(`${o.morada}, Portugal`)
@@ -2102,7 +2266,36 @@ function PExec({ o, onBack, onUpdate, onChat }) {
           <div style={{ background:C.gl, borderRadius:11, padding:12, border:'1px solid rgba(22,163,74,0.2)', marginBottom:12 }}>
             <p style={{ fontSize:12, color:C.g, fontWeight:600, margin:0 }}>✅ Em execução — avance quando terminar</p>
           </div>
-          <Btn full onClick={() => setFase('fotos')}>📸 Relatório fotográfico →</Btn>
+
+          {/* GPS tracking */}
+          {!gpsActivo
+            ? <button onClick={iniciarViagem} style={{ width:'100%', padding:'12px', border:`1.5px solid ${C.g}`, borderRadius:12, background:C.gl, color:C.gd, fontSize:13, fontWeight:700, cursor:'pointer', marginBottom:10, display:'flex', alignItems:'center', justifyContent:'center', gap:8 }}>
+                🚗 Iniciar Viagem — Activar GPS
+              </button>
+            : <div style={{ background:'#eff6ff', border:'1px solid #3b82f6', borderRadius:12, padding:13, marginBottom:10 }}>
+                <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:8 }}>
+                  <div style={{ width:8, height:8, borderRadius:'50%', background:'#3b82f6', flexShrink:0 }}/>
+                  <span style={{ fontSize:12, fontWeight:700, color:'#1d4ed8' }}>GPS activo — A caminho</span>
+                  {gpsPos && <span style={{ fontSize:10, color:C.slate, marginLeft:'auto' }}>📍 {gpsPos.lat.toFixed(4)}, {gpsPos.lng.toFixed(4)}</span>}
+                </div>
+                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginBottom:8 }}>
+                  <button onClick={() => { const q=encodeURIComponent(o.morada+', Portugal'); window.open(`https://www.google.com/maps/search/?api=1&query=${q}`,'_blank') }}
+                    style={{ padding:'9px', border:`1.5px solid ${C.border}`, borderRadius:10, background:'#fff', fontSize:12, fontWeight:600, cursor:'pointer' }}>
+                    🗺️ Ver no mapa
+                  </button>
+                  <button onClick={pararGps} style={{ padding:'9px', border:'1.5px solid #ef4444', borderRadius:10, background:'#fff', color:'#ef4444', fontSize:12, fontWeight:600, cursor:'pointer' }}>
+                    ⛔ Parar GPS
+                  </button>
+                </div>
+                <button onClick={() => { pararGps(); setFase('fotos') }} style={{ width:'100%', padding:'10px', border:'none', borderRadius:10, background:'#1d4ed8', color:'#fff', fontSize:12, fontWeight:700, cursor:'pointer' }}>
+                  ✅ Chegou à porta — Iniciar serviço
+                </button>
+              </div>
+          }
+
+          <Btn full onClick={() => { setCkChecked([]); setCkFotos([]); setCkObs(''); setShowChecklist(true) }}>
+            📋 Concluir — Submeter checklist →
+          </Btn>
         </>}
 
         {/* FASE: Fotos */}
@@ -2128,6 +2321,24 @@ function PExec({ o, onBack, onUpdate, onChat }) {
             </div>
           </Card>
           <Btn v='green' full onClick={() => { const upd={...o,st:'concluida',fotos,ass:true}; onUpdate&&onUpdate(upd); setFase('done') }}>Simular assinatura recebida ✓</Btn>
+        </>}
+
+        {/* FASE: A aguardar validação do cliente */}
+        {fase==='aguarda_val' && <>
+          <div style={{ textAlign:'center', padding:'16px 0 8px' }}>
+            <div style={{ width:72, height:72, borderRadius:'50%', background:'#fef3c7', display:'flex', alignItems:'center', justifyContent:'center', fontSize:32, margin:'0 auto 12px' }}>⏳</div>
+            <h2 style={{ fontSize:17, fontWeight:800, color:C.navy, marginBottom:5 }}>A aguardar validação</h2>
+            <p style={{ fontSize:12, color:C.slate, lineHeight:1.5 }}>Checklist submetido com sucesso.<br/>O cliente irá verificar e assinar o relatório.</p>
+          </div>
+          <div style={{ background:'#fef3c7', border:'1px solid #f59e0b', borderRadius:12, padding:14, marginTop:8, textAlign:'center' }}>
+            <div style={{ fontSize:12, color:'#92400e', fontWeight:600 }}>✅ Checklist concluído · 📸 Fotos enviadas</div>
+            <div style={{ fontSize:11, color:'#78350f', marginTop:4 }}>Aguarda confirmação de {o.cli}</div>
+          </div>
+          <div style={{ marginTop:12 }}>
+            <Btn v='green' full onClick={() => { const upd={...o,st:'concluida',fotos,ass:true}; onUpdate&&onUpdate(upd); setFase('done') }}>
+              Simular validação recebida ✓
+            </Btn>
+          </div>
         </>}
 
         {/* FASE: Concluído */}
@@ -2156,6 +2367,59 @@ function PExec({ o, onBack, onUpdate, onChat }) {
           </Card>
         </>}
       </div>
+
+      {/* Bottom sheet — Checklist de conclusão */}
+      {showChecklist && <>
+        <div onClick={() => setShowChecklist(false)} style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', zIndex:50 }}/>
+        <div style={{ position:'fixed', bottom:0, left:'50%', transform:'translateX(-50%)', width:'100%', maxWidth:430, background:C.white, borderRadius:'22px 22px 0 0', zIndex:51, padding:'20px 20px 32px', maxHeight:'88vh', overflowY:'auto' }}>
+          <div style={{ width:36, height:4, borderRadius:2, background:'#e2e8f0', margin:'0 auto 16px' }}/>
+          <h3 style={{ fontSize:16, fontWeight:800, color:C.navy, marginBottom:4 }}>Confirmar tarefas realizadas</h3>
+          <p style={{ fontSize:12, color:C.slate, marginBottom:16, lineHeight:1.5 }}>Assinale todas as tarefas antes de submeter o relatório.</p>
+
+          {(s?.checklist||['Verificar trabalho realizado','Limpeza da área de trabalho','Confirmação com o cliente']).map((task, i) => (
+            <div key={i}
+              onClick={() => setCkChecked(prev => prev.includes(i) ? prev.filter(x=>x!==i) : [...prev, i])}
+              style={{ display:'flex', alignItems:'center', gap:12, padding:'12px 0', borderBottom:'1px solid #f1f5f9', cursor:'pointer' }}>
+              <div style={{ width:22, height:22, borderRadius:6, border:`2px solid ${ckChecked.includes(i)?C.g:C.border}`, background:ckChecked.includes(i)?C.g:'#fff', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, transition:'all 0.15s' }}>
+                {ckChecked.includes(i) && <span style={{ color:'#fff', fontSize:12, fontWeight:900 }}>✓</span>}
+              </div>
+              <span style={{ fontSize:13, color:ckChecked.includes(i)?C.gd:C.navy, fontWeight:ckChecked.includes(i)?600:400 }}>{task}</span>
+            </div>
+          ))}
+
+          <div style={{ marginTop:18 }}>
+            <div style={{ fontSize:11, fontWeight:700, color:C.slate, textTransform:'uppercase', letterSpacing:'0.04em', marginBottom:8 }}>Fotos de conclusão <span style={{ color:'#ef4444' }}>*</span></div>
+            <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginBottom:4 }}>
+              {ckFotos.map((f,i) => (
+                <div key={i} style={{ width:64, height:64, borderRadius:10, background:'#f1f5f9', display:'flex', alignItems:'center', justifyContent:'center', fontSize:22, border:`1px solid ${C.border}` }}>{f}</div>
+              ))}
+              <button onClick={() => setCkFotos(prev=>[...prev,'📷'])} style={{ width:64, height:64, borderRadius:10, border:`2px dashed ${C.g}`, background:'transparent', fontSize:20, cursor:'pointer', color:C.g }}>+</button>
+            </div>
+            <p style={{ fontSize:10, color:C.slate, margin:0 }}>Mínimo 1 foto obrigatória</p>
+          </div>
+
+          <div style={{ marginTop:14, marginBottom:18 }}>
+            <div style={{ fontSize:11, fontWeight:700, color:C.slate, textTransform:'uppercase', letterSpacing:'0.04em', marginBottom:6 }}>Observações (opcional)</div>
+            <textarea value={ckObs} onChange={e=>setCkObs(e.target.value)}
+              placeholder='Ex: Notei uma fissura na parede que deve ser verificada...'
+              style={{ width:'100%', border:`1.5px solid ${C.border}`, borderRadius:10, padding:'9px 12px', fontSize:13, outline:'none', resize:'vertical', minHeight:64, fontFamily:'inherit', boxSizing:'border-box', color:C.navy }}/>
+          </div>
+
+          {(() => {
+            const totalTasks = (s?.checklist||['a','b','c']).length
+            const allDone = ckChecked.length === totalTasks
+            const hasFoto = ckFotos.length > 0
+            const canSubmit = allDone && hasFoto
+            const faltam = totalTasks - ckChecked.length
+            return (
+              <button onClick={canSubmit && !ckSaving ? submeterChecklist : null}
+                style={{ width:'100%', padding:'14px', border:'none', borderRadius:12, background:canSubmit?C.g:'#cbd5e1', color:'#fff', fontSize:14, fontWeight:800, cursor:canSubmit?'pointer':'not-allowed' }}>
+                {ckSaving ? 'A submeter…' : canSubmit ? '✅ Submeter checklist' : faltam > 0 ? `Faltam ${faltam} tarefa${faltam>1?'s':''} por confirmar` : '📸 Adicione pelo menos 1 foto'}
+              </button>
+            )
+          })()}
+        </div>
+      </>}
 
       {/* Bottom sheet — Propor nova hora */}
       {novaHora && <>
