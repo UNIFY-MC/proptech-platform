@@ -12,8 +12,8 @@ Solo founder: **Mário Carvalho** (TOC — contabilista certificado · licença 
 | **V1** | Core Hub | 🟦 Horizontal | A construir (Supabase vazio) |
 | **V2** | Condomínios | 🟩 Vertical | **Produção viva** (`prataowners.pt`) |
 | **V3** | Seguros | 🟩 Vertical | A construir |
-| **V4** | Energia | 🟩 Vertical | **Próxima** |
-| **V5** | Manutenção | 🟩 Vertical | Futura |
+| **V4** | Energia | 🟩 Vertical | Scaffold (515 linhas) · pausada |
+| **V5** | Manutenção | 🟩 Vertical | 🟧 **Em desenvolvimento** — Fases 1-3 merged (GPS, checklist, cronómetro, materiais extra, rectificação, rating mínimo) |
 | **V6** | Reabilitação | 🟩 Vertical | Futura |
 | **V7** | Real Estate | 🟩 Vertical | Futura |
 | **V8** | Rentals | 🟩 Vertical | Futura |
@@ -57,16 +57,21 @@ proptech-platform/
 ├── index.html                   ← 🔒 V9 Portal cliente (NÃO TOCAR)
 ├── netlify.toml                 ← 🔒 Deploy config (NÃO TOCAR sem aprovação)
 ├── .github/workflows/
-│   └── deploy.yml               ← Auto-deploy Netlify (inalterado)
-├── .gitignore                   ← Ignora node_modules/, .env, dist/, builds
+│   └── deploy.yml               ← (removido em ba521c6 — Netlify faz deploy directo)
+├── .mcp.json                    ← Config MCP local (Supabase + Notion) · no .gitignore
+├── .claude/settings.json        ← Tokens MCP · no .gitignore (ver commit d6aa63d)
+├── .gitignore                   ← Ignora node_modules/, .env, dist/, .mcp.json, .claude/settings.json
 ├── CLAUDE.md                    ← Este ficheiro
 └── apps/
     ├── v1-core/                 ← React (Vite) · port do admin/index.html
-    │   ├── src/App.jsx          ← 1941 linhas · Supabase + Chart.js
-    │   ├── src/main.jsx
-    │   ├── package.json
-    │   └── vite.config.js
-    └── (v3-seguros, v4-energia, ... a construir)
+    │   └── src/App.jsx          ← 1941 linhas · Supabase + Chart.js
+    ├── core/                    ← React (Vite) · porta 5171 · dashboard horizontal
+    ├── v4-energia/              ← React (Vite) · scaffold 515 linhas · pausado
+    └── v5-manutencao/           ← React (Vite) · porta 5175 · ServiçoPRO
+        ├── src/App.jsx          ← 5393 linhas · Fases 1-3 merged
+        ├── schema.sql           ← v5_manutencao.* (plano) · ainda não aplicado em produção
+        ├── netlify.toml         ← base=apps/v5-manutencao publish=dist
+        └── vite.config.js       ← port:5175 strictPort (dev + preview)
 ```
 
 ---
@@ -87,10 +92,34 @@ proptech-platform/
 ## 💾 Supabase
 
 ### V1 Core Hub — `hkmvszkpxjbxmnixzqbl`
-- Estado: **VAZIO** (só tabela `file_deploy` sem dados)
 - Propósito: hub horizontal · CRM, MRR, Owners Club, ofertas, API keys
-- Schemas a criar: `core`, `v3_seguros`, `v4_energia`, `v5_manutencao`, `v9_swan`, `v10_owners_club`
+- Schemas planeados: `core`, `v3_seguros`, `v4_energia`, `v5_manutencao`, `v9_swan`, `v10_owners_club`
 - Região: `eu-west-3` (Paris)
+- **Estado actual (canónico · pragmático):** V5 está em produção demo a usar tabelas **`public.ordens`** e **`public.prestadores`** (não `v5_manutencao.*`). Razão: agilidade durante Fases 1-3. A migração para o schema `v5_manutencao` está por fazer quando o V5 estabilizar.
+
+#### Colunas V5 adicionadas às tabelas `public.*` (Fases 2-3)
+
+Estas colunas **precisam de existir no Supabase** para o `App.jsx` funcionar sem erros:
+
+```sql
+-- Fase 2 · Tarefa 4 — Disponibilidade horária do prestador
+ALTER TABLE public.prestadores ADD COLUMN IF NOT EXISTS disponibilidade JSONB DEFAULT '{}'::jsonb;
+
+-- Fase 2 · Tarefa 5 — Serviço por hora + cronómetro
+ALTER TABLE public.ordens ADD COLUMN IF NOT EXISTS tipo        TEXT;
+ALTER TABLE public.ordens ADD COLUMN IF NOT EXISTS horas_reais NUMERIC(6,2);
+
+-- Fase 2 · Tarefa 6 — Proposta de materiais extra
+ALTER TABLE public.ordens ADD COLUMN IF NOT EXISTS proposta_materiais JSONB;
+ALTER TABLE public.ordens ADD COLUMN IF NOT EXISTS proposta_estado    TEXT;
+ALTER TABLE public.ordens ADD COLUMN IF NOT EXISTS valor_materiais    NUMERIC(10,2);
+
+-- Fase 3 · Tarefa 7 — Rectificação de serviço
+ALTER TABLE public.ordens ADD COLUMN IF NOT EXISTS ordem_original_id  TEXT;
+ALTER TABLE public.ordens ADD COLUMN IF NOT EXISTS prazo_rectificacao TEXT;
+```
+
+Regra: qualquer `ALTER TABLE` aplicado manualmente deve ser registado aqui **e** espelhado em `apps/v5-manutencao/schema.sql` ou numa pasta `apps/v5-manutencao/migrations/`.
 
 ### V2 Condo Hub — `eozklslwfaqujaijvdnl`
 - Estado: **PRODUÇÃO VIVA** — não tocar em dados
@@ -101,6 +130,22 @@ proptech-platform/
 - Schemas por vertical: `v3_seguros`, `v4_energia`, `v5_manutencao`, `v10_owners_club`
 - Tabelas limpas dentro de cada schema: `apolices`, não `v3_apolices`
 - Schema `core` para transversal: `pessoas`, `imoveis`, `empresas`, `servicos_ativos`, `leads`, `oportunidades`, `interacoes`, `ofertas`, `api_keys`, `staff`
+- **Excepção corrente:** V5 usa `public.*` até estabilizar (ver secção acima). Plano é migrar quando RLS + auth estiverem prontos.
+
+---
+
+## 🔌 Portas dev (Vite)
+
+Cada app tem `strictPort: true` — se a porta estiver ocupada, o dev server **falha** em vez de saltar:
+
+| App | Porta | Ficheiro |
+|---|---|---|
+| `apps/core` | 5171 | `vite.config.js` |
+| `apps/v1-core` | default (5173) | sem override |
+| `apps/v4-energia` | default (5173) | sem override |
+| `apps/v5-manutencao` | **5175** | `vite.config.js` (dev + preview) |
+
+Se aparecer `Error: Port XXXX is already in use`, mata o processo: `taskkill /IM node.exe /F` (Windows) ou `pkill -f vite` (Linux/Mac).
 
 ---
 
@@ -195,19 +240,23 @@ body.dark {
 
 ## 🎯 Missão actual
 
-**Construir V4 Energia** em `apps/v4-energia/` (Vite + React).
+**Estabilizar V5 Manutenção** em `apps/v5-manutencao/` (Vite + React + Supabase).
 
-Contexto V4 no Notion:
-- Principal: `34284147-fa60-81f3-8028-d475371682fa` (relatório estratégico)
-- Claude Project: `34184147-fa60-814a-9239-d3c54a0a062d`
-- Tipologias: `34384147-fa60-81a4-84a6-e0b20ccd9ff2`
-- Competitiva: `34284147-fa60-8177-a35c-ef819dd16cac`
-- Spock.es: `34284147-fa60-81c1-97b1-f366c27254f9`
+### Estado V5 (21 Abr 2026)
+- `App.jsx` com 5393 linhas · header `v5-manutencao 2026.0420 2221`
+- **Fase 1** ✅ (merged) — GPS tracking, checklist obrigatório, cliente Supabase oficial (`@supabase/supabase-js`)
+- **Fase 2** ✅ (merged) — Disponibilidade horária (JSONB), serviço por hora `s9` com cronómetro HH:MM:SS, proposta de materiais extra
+- **Fase 3** ✅ (merged) — Rectificação de serviço (`tipo:'rectificacao'`, `ordem_original_id`, `prazo_rectificacao`), rating mínimo com avisos amarelo/vermelho
+- Deploy: Netlify via `apps/v5-manutencao/netlify.toml` (sem GitHub Actions desde `ba521c6`)
+- Dev server: `npm run dev --prefix apps/v5-manutencao` → `http://localhost:5175`
 
-Abordagem:
-1. Estrutura idêntica a `apps/v1-core/`
-2. Design system partilhado (mesmas fontes, mesmos tokens)
-3. Schema Supabase em `v4_energia` no V1 Core Hub
-4. Scope v1: simulador tarifas + contratos + formulário de mudança de comercializador
+### Próximos passos V5
+1. Aplicar no Supabase os `ALTER TABLE` listados na secção 💾 Supabase
+2. Criar `apps/v5-manutencao/migrations/` versionado
+3. Migrar de `public.*` para schema `v5_manutencao.*` quando auth + RLS estiverem prontos
+4. (Depois) retomar V4 Energia — scaffold existe em `apps/v4-energia/` (515 linhas)
 
-**NUNCA começar V4 sem antes consultar o relatório estratégico (página Notion 34284147-fa60-81f3-8028-d475371682fa) para saber o modelo de negócio, parceiros e scope agreed.**
+### Contexto V4 Energia (pausado)
+Notion: relatório estratégico `34284147-fa60-81f3-8028-d475371682fa` · Claude Project `34184147-fa60-814a-9239-d3c54a0a062d` · Tipologias `34384147-fa60-81a4-84a6-e0b20ccd9ff2` · Competitiva `34284147-fa60-8177-a35c-ef819dd16cac` · Spock.es `34284147-fa60-81c1-97b1-f366c27254f9`.
+
+Scope v1 acordado: simulador tarifas + contratos + formulário de mudança de comercializador. **NUNCA retomar V4 sem antes consultar o relatório estratégico no Notion.**
