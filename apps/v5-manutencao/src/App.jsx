@@ -4089,7 +4089,26 @@ function AdminPrestadores({prest,setPrest,niveis}){
   const [q,setQ]=useState(''), [fNivel,setFNivel]=useState('all'), [sel,setSel]=useState(null), [form,setForm]=useState({}), [tabF,setTabF]=useState('perfil')
   const [ibanDoc,setIbanDoc]=useState(null), [ibanDocNome,setIbanDocNome]=useState('')
   const [syncing,setSyncing]=useState(false)
+  const [convModal,setConvModal]=useState(false)
+  const [convForm,setConvForm]=useState({n:'',email:'',tel:'',indicativo:'+351 🇵🇹',nivel:'base'})
+  const [convResult,setConvResult]=useState(null)
+  const [convSaving,setConvSaving]=useState(false)
+  const [convCopied,setConvCopied]=useState(false)
   const filtered=prest.filter(p=>(fNivel==='all'||p.nivel===fNivel)&&(p.n+' '+(p.cidade||p.loc||'')).toLowerCase().includes(q.toLowerCase()))
+  const handleConvidar=async e=>{
+    e.preventDefault()
+    if(!convForm.n.trim()||!convForm.email.trim())return
+    setConvSaving(true)
+    const ini=convForm.n.trim().split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()
+    const nc=niveis[convForm.nivel]
+    const novo={id:`p${Date.now()}`,n:convForm.n.trim(),email:convForm.email.trim(),tel:convForm.tel.trim(),indicativo:convForm.indicativo.split(' ')[0],nivel:convForm.nivel,taxa_plataforma:nc?.taxa,ok:false,st:'activo',ini}
+    await sbSave('prestadores',novo)
+    setPrest(p=>[novo,...p])
+    setConvResult(novo)
+    setConvSaving(false)
+  }
+  const convLink=convResult?`${window.location.origin}/convite/${convResult.id}`:''
+  const copyConvLink=()=>{navigator.clipboard.writeText(convLink).then(()=>{setConvCopied(true);setTimeout(()=>setConvCopied(false),2000)})}
   const save=async()=>{
     setSyncing(true)
     const updated={...form}
@@ -4103,7 +4122,7 @@ function AdminPrestadores({prest,setPrest,niveis}){
   return(
     <>
       <ATopBar title='👷 Prestadores' sub={`${prest.length} prestadores · ${prest.filter(p=>!p.ok).length} por verificar`}>
-        <APrimBtn ch='+ Convidar prestador'/>
+        <APrimBtn ch='+ Convidar prestador' onClick={()=>{setConvModal(true);setConvResult(null);setConvForm({n:'',email:'',tel:'',indicativo:'+351 🇵🇹',nivel:'base'})}}/>
       </ATopBar>
       <div style={{padding:24}}>
         <div style={{display:'flex',gap:10,marginBottom:16,background:A.white,padding:'12px 16px',borderRadius:11,border:`1px solid ${A.border}`}}>
@@ -4228,6 +4247,42 @@ function AdminPrestadores({prest,setPrest,niveis}){
           <SyncBadge synced={false} loading={syncing}/>
           <div style={{display:'flex',gap:8}}><ASecBtn ch='Cancelar' onClick={()=>setSel(null)}/><APrimBtn ch={syncing?'A guardar…':'💾 Guardar no Supabase'} onClick={save} disabled={syncing}/></div>
         </div>
+      </AModal>}
+      {convModal&&<AModal title='Convidar prestador' onClose={()=>setConvModal(false)}>
+        {!convResult
+          ?<form onSubmit={handleConvidar}>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:14}}>
+              <AFRow label='Nome *'>{ainp(convForm.n,v=>setConvForm(f=>({...f,n:v})),'text','Nome completo')}</AFRow>
+              <AFRow label='Email *'>{ainp(convForm.email,v=>setConvForm(f=>({...f,email:v})),'email','email@exemplo.com')}</AFRow>
+              <AFRow label='Indicativo' half>
+                <select value={convForm.indicativo} onChange={e=>setConvForm(f=>({...f,indicativo:e.target.value}))} style={{width:'100%',border:`1.5px solid ${A.border}`,borderRadius:8,padding:'8px 11px',fontSize:13,outline:'none',color:A.navy,background:A.white,boxSizing:'border-box'}}>
+                  {INDICATIVOS.map(i=><option key={i}>{i}</option>)}
+                </select>
+              </AFRow>
+              <AFRow label='Telefone' half>{ainp(convForm.tel,v=>setConvForm(f=>({...f,tel:v})),'tel','914 000 000')}</AFRow>
+              <AFRow label='Nível inicial'>{asel(convForm.nivel,v=>setConvForm(f=>({...f,nivel:v})),Object.entries(niveis).map(([k,n])=>[k,`${n.ic} ${n.l} · ${n.taxa}%`]))}</AFRow>
+            </div>
+            <div style={{display:'flex',gap:8,marginTop:18,justifyContent:'flex-end'}}>
+              <ASecBtn ch='Cancelar' onClick={()=>setConvModal(false)}/>
+              <APrimBtn ch={convSaving?'A criar…':'Criar convite'} onClick={handleConvidar} disabled={convSaving||!convForm.n.trim()||!convForm.email.trim()}/>
+            </div>
+          </form>
+          :<div>
+            <div style={{display:'flex',alignItems:'center',gap:10,background:'#f0fdf4',border:'1px solid rgba(22,163,74,0.25)',borderRadius:11,padding:'12px 16px',marginBottom:16}}>
+              <span style={{fontSize:22}}>✓</span>
+              <div><div style={{fontWeight:700,fontSize:13,color:'#15803d'}}>Convite criado para {convResult.n}</div><div style={{fontSize:11,color:'#16a34a',marginTop:2}}>Partilha o link abaixo com o prestador</div></div>
+            </div>
+            <div style={{display:'flex',alignItems:'center',gap:8,background:A.bg,border:`1px solid ${A.border}`,borderRadius:9,padding:'10px 14px',marginBottom:14}}>
+              <span style={{flex:1,fontSize:11,color:A.slate,fontFamily:'monospace',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{convLink}</span>
+              <button onClick={copyConvLink} style={{background:convCopied?A.accent:'#e2e8f0',color:convCopied?'#fff':A.navy,border:'none',borderRadius:7,padding:'6px 12px',fontSize:11,fontWeight:700,cursor:'pointer',whiteSpace:'nowrap',transition:'all 0.15s'}}>{convCopied?'Copiado!':'Copiar'}</button>
+            </div>
+            <div style={{display:'flex',gap:8}}>
+              <button onClick={()=>{const msg=encodeURIComponent(`Olá ${convResult.n}! Foste convidado/a para a plataforma ServiçoPRO. Regista-te aqui: ${convLink}`);const ph=convResult.tel?.replace(/\D/g,'');window.open(ph?`https://wa.me/351${ph}?text=${msg}`:`https://wa.me/?text=${msg}`,'_blank')}} style={{flex:1,background:'#25D366',color:'#fff',border:'none',borderRadius:9,padding:'10px',fontSize:13,fontWeight:700,cursor:'pointer'}}>WhatsApp</button>
+              {convResult.email&&<button onClick={()=>{const s=encodeURIComponent('Convite — ServiçoPRO');const b=encodeURIComponent(`Olá ${convResult.n},\n\nForam-te enviadas as tuas credenciais de acesso à plataforma ServiçoPRO.\n\nRegista-te através deste link:\n${convLink}\n\nCumprimentos,\nEquipa ServiçoPRO`);window.open(`mailto:${convResult.email}?subject=${s}&body=${b}`,'_blank')}} style={{flex:1,background:A.accent,color:'#fff',border:'none',borderRadius:9,padding:'10px',fontSize:13,fontWeight:700,cursor:'pointer'}}>Email</button>}
+              <ASecBtn ch='Fechar' onClick={()=>setConvModal(false)}/>
+            </div>
+          </div>
+        }
       </AModal>}
     </>
   )
