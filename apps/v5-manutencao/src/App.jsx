@@ -1,76 +1,4791 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import Login from './pages/Login'
-import DashboardCliente from './pages/DashboardCliente'
-import DashboardPrestador from './pages/DashboardPrestador'
-import DashboardGestor from './pages/DashboardGestor'
-import { supabase } from './lib/supabase'
-import { useEffect, useState } from 'react'
+// src/App.jsx — v5-manutencao 2026.0420 2221
+// 100% auto-suficiente — zero imports externos. Só React.
 
-const DEV_BYPASS = import.meta.env.VITE_DEV_BYPASS === 'true'
+import React, { useState, useMemo, useEffect, useRef } from 'react'
 
-function AuthGuard({ children, requiredRole }) {
-  const [checking, setChecking] = useState(true)
-  const [allowed, setAllowed] = useState(false)
+/* ══ UI COMPONENTS (inline) ══ */
+function Av({ ini, size = 44, green = true }) {
+  const bg = green ? `linear-gradient(135deg,#16a34a,#22c55e)` : `linear-gradient(135deg,#C17E3A,#E8A857)`
+  return <div style={{ width:size, height:size, borderRadius:'50%', flexShrink:0, background:bg, display:'flex', alignItems:'center', justifyContent:'center', fontSize:size*.34, fontWeight:800, color:'#fff', boxShadow:'0 2px 8px rgba(0,0,0,0.2)' }}>{ini}</div>
+}
+function Stars({ v, s = 12 }) {
+  return <span>{[1,2,3,4,5].map(i => <span key={i} style={{ color: i<=Math.round(v) ? '#f59e0b' : '#e2e8f0', fontSize:s }}>★</span>)}</span>
+}
+function Card({ children, style, onClick }) {
+  return <div onClick={onClick} style={{ background:'#fff', borderRadius:16, border:'1px solid #e2e8f0', boxShadow:'0 1px 3px rgba(0,0,0,0.05)', cursor: onClick?'pointer':'default', ...style }}>{children}</div>
+}
+function Pill({ text, bg, col }) {
+  return <span style={{ fontSize:10, fontWeight:800, background:bg, color:col, padding:'2px 8px', borderRadius:20, textTransform:'uppercase', letterSpacing:'0.04em' }}>{text}</span>
+}
+function EstBadge({ st }) {
+  const m = { pendente:{l:'Pendente',bg:'#fef3c7',c:'#92400e'}, atribuida:{l:'Atribuída',bg:'#eff6ff',c:'#1d4ed8'}, em_curso:{l:'Em curso',bg:'#dcfce7',c:'#14532d'}, concluida:{l:'Concluída',bg:'#f8fafc',c:'#64748b'} }
+  const s = m[st]||m.pendente
+  return <span style={{ fontSize:11, fontWeight:700, background:s.bg, color:s.c, padding:'3px 10px', borderRadius:20 }}>{s.l}</span>
+}
+function Btn({ children, onClick, v='navy', full, sm, dis }) {
+  const bg = {navy:'#0f172a',green:'#16a34a',ghost:'#fff',red:'#ef4444'}[v]||'#0f172a'
+  const col = v==='ghost' ? '#0f172a' : '#fff'
+  return <button onClick={dis?null:onClick} style={{ background:dis?'#e2e8f0':bg, color:dis?'#64748b':col, border:v==='ghost'?'1.5px solid #e2e8f0':'none', borderRadius:12, fontWeight:700, cursor:dis?'not-allowed':'pointer', padding:sm?'8px 14px':'13px 20px', fontSize:sm?12:14, width:full?'100%':'auto', opacity:dis?.7:1 }}>{children}</button>
+}
+function Header({ title, sub, onBack, right }) {
+  return <div style={{ background:'#0f172a', padding:'14px 16px', position:'sticky', top:0, zIndex:20, display:'flex', alignItems:'center', gap:10 }}>
+    {onBack && <button onClick={onBack} style={{ background:'none', border:'none', color:'#fff', fontSize:22, cursor:'pointer', padding:0, flexShrink:0 }}>←</button>}
+    <div style={{ flex:1 }}><div style={{ fontSize:15, fontWeight:700, color:'#fff' }}>{title}</div>{sub&&<div style={{ fontSize:11, color:'#8FA8BB' }}>{sub}</div>}</div>
+    {right}
+  </div>
+}
+function FixedBottom({ children }) {
+  return <div style={{ position:'fixed', bottom:0, left:'50%', transform:'translateX(-50%)', width:'100%', maxWidth:430, background:'#fff', padding:'12px 16px 20px', borderTop:'1px solid #e2e8f0', zIndex:30 }}>{children}</div>
+}
+function SectTitle({ t, action, onAction }) {
+  return <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', margin:'16px 0 10px' }}>
+    <h2 style={{ fontSize:14, fontWeight:800, color:'#0f172a' }}>{t}</h2>
+    {action && <button onClick={onAction} style={{ fontSize:11, color:'#16a34a', fontWeight:600, background:'none', border:'none', cursor:'pointer' }}>{action}</button>}
+  </div>
+}
 
+/* ══ DRAWER MENU (inline) ══ */
+const MENU_ITEMS = [
+  { id:'rating',         ic:'⭐', l:'Rating' },
+  { id:'servicos_ativos',ic:'🔧', l:'Serviços ativos' },
+  { id:'meus_servicos',  ic:'📅', l:'Os meus serviços' },
+  { id:'carteira',       ic:'💰', l:'A minha Carteira' },
+  { id:'perfil',         ic:'👤', l:'Perfil' },
+  { id:'estatisticas',   ic:'📊', l:'Estatísticas' },
+  { id:'tarefas',        ic:'🛠️', l:'Tarefas' },
+  { id:'disponibilidade',ic:'🕐', l:'A tua disponibilidade' },
+  { id:'ajuda',          ic:'ℹ️', l:'Ajuda' },
+  { id:'sair',           ic:'🚪', l:'Sair' },
+]
+function DrawerMenu({ open, onClose, onNavigate, user, activeItem }) {
+  const ref = useRef(null)
+  const nivel = user?.nivel
+  const nc = nivel ? NIVEIS[nivel] : null
   useEffect(() => {
-    if (DEV_BYPASS) {
-      setAllowed(true)
-      setChecking(false)
-      return
-    }
+    if (!open) return
+    const h = e => { if (ref.current && !ref.current.contains(e.target)) onClose() }
+    document.addEventListener('mousedown', h)
+    return () => document.removeEventListener('mousedown', h)
+  }, [open, onClose])
+  useEffect(() => { document.body.style.overflow = open ? 'hidden' : ''; return () => { document.body.style.overflow = '' } }, [open])
+  const handle = id => {
+    if (id==='sair') { if (window.confirm('Tens a certeza que queres sair?')) { onNavigate?.(id); onClose() }; return }
+    onNavigate?.(id); onClose()
+  }
+  const cL = 'max(0px, calc(50vw - 215px))'
+  return <>
+    <div onClick={onClose} style={{ position:'fixed', top:0, bottom:0, left:cL, width:'min(100vw,430px)', zIndex:40, background:'rgba(0,0,0,0.55)', opacity:open?1:0, pointerEvents:open?'auto':'none', transition:'opacity 0.25s ease' }}/>
+    <div ref={ref} style={{ position:'fixed', top:0, bottom:0, left:cL, width:Math.min(290, window.innerWidth), zIndex:50, background:'#fff', transform:open?'translateX(0)':'translateX(-100%)', transition:'transform 0.28s cubic-bezier(0.4,0,0.2,1)', display:'flex', flexDirection:'column', boxShadow:'4px 0 32px rgba(0,0,0,0.22)', overflowY:'auto' }}>
+      {/* Avatar clicável → ficha do prestador */}
+      <div style={{ background:'linear-gradient(145deg,#0f172a,#14532d)', padding:'52px 22px 24px', display:'flex', flexDirection:'column', alignItems:'center', gap:10, flexShrink:0 }}>
+        <button onClick={()=>handle('perfil')} style={{ background:'none', border:'none', cursor:'pointer', padding:0 }}>
+          <div style={{ width:80, height:80, borderRadius:'50%', background:'linear-gradient(135deg,#16a34a,#22c55e)', border:'3px solid rgba(255,255,255,0.25)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:30, color:'#fff', fontWeight:800 }}>{user?.ini||'👤'}</div>
+        </button>
+        <div style={{ textAlign:'center' }}>
+          <div style={{ color:'#fff', fontSize:15, fontWeight:700, marginBottom:3, letterSpacing:'-0.01em' }}>{user?.n||'Prestador'}</div>
+          <div style={{ color:'#94a3b8', fontSize:11, fontWeight:500 }}>{user?.id_num||'—'}</div>
+          {nc && <div style={{ marginTop:8, display:'inline-flex', alignItems:'center', gap:5, background:'rgba(255,255,255,0.1)', borderRadius:20, padding:'4px 12px', fontSize:11, color:'#bbf7d0', fontWeight:600 }}>{nc.ic} {nc.l} · {nc.taxa}%</div>}
+        </div>
+      </div>
+      {/* Nav — mesma tipografia do resto da app */}
+      <nav style={{ flex:1, padding:'8px 0' }}>
+        {MENU_ITEMS.map(item => {
+          const isActive = activeItem===item.id
+          const isDanger = item.id==='sair'
+          return (
+            <button key={item.id} onClick={()=>handle(item.id)}
+              style={{ width:'100%', display:'flex', alignItems:'center', gap:14, padding:'13px 22px', border:'none', cursor:'pointer', background:isActive?'#f0fdf4':'transparent', borderLeft:isActive?`3px solid #16a34a`:'3px solid transparent', color:isDanger?'#ef4444':isActive?'#16a34a':'#1e293b', fontSize:13, fontWeight:isActive?700:500, textAlign:'left', fontFamily:'inherit' }}
+              onMouseEnter={e=>{ if(!isActive) e.currentTarget.style.background='#f8fafc' }}
+              onMouseLeave={e=>{ if(!isActive) e.currentTarget.style.background='transparent' }}>
+              <span style={{ fontSize:17, width:22, textAlign:'center', flexShrink:0 }}>{item.ic}</span>
+              <span style={{ fontSize:13, fontWeight:isActive?700:500 }}>{item.l}</span>
+            </button>
+          )
+        })}
+      </nav>
+      <div style={{ padding:'12px 22px 24px', borderTop:'1px solid #e2e8f0' }}>
+        <div style={{ fontSize:10, color:'#94a3b8', fontWeight:500 }}>v5-manutenção · PropTech Platform</div>
+        <div style={{ fontSize:10, color:'#cbd5e1', marginTop:2 }}>Legal · Privacidade</div>
+      </div>
+    </div>
+  </>
+}
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      const role = localStorage.getItem('role')
-      if (session && role === requiredRole) {
-        setAllowed(true)
-      }
-      setChecking(false)
+/* ══ MEUS SERVIÇOS CALENDÁRIO (inline) ══ */
+const ESTADO_CAL = {
+  pendente:    { l:'Pendente',               cor:'#ef4444' },
+  concluido:   { l:'Concluído',              cor:'#16a34a' },
+  agendado:    { l:'Agendado',               cor:'#3b82f6' },
+  a_confirmar: { l:'A aguardar confirmação', cor:'#8b5cf6' },
+  bloqueado:   { l:'Bloqueado',              cor:'#94a3b8' },
+  em_curso:    { l:'Em curso',               cor:'#16a34a' },
+}
+const DN_CAL   = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb']
+const MESES_CAL= ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro']
+const p2 = n => String(n).padStart(2,'0')
+const toStr = (y,m,d) => `${y}-${p2(m+1)}-${p2(d)}`
+
+function MeusServicos({ servicos = [], bloqueados = [], onBack }) {
+  const hoje = new Date()
+  const [vista, setVista] = useState('mes') // dia|semana|mes|ano|lista
+  const [ano,   setAno]   = useState(hoje.getFullYear())
+  const [mes,   setMes]   = useState(hoje.getMonth())
+  const [dia,   setDia]   = useState(hoje.getDate())
+  const [selSvc,setSelSvc]= useState(null)
+
+  const porData = useMemo(() => { const m={}; servicos.forEach(s=>{ (m[s.data]=m[s.data]||[]).push(s) }); return m }, [servicos])
+  const toStr_ = (d) => typeof d==='string' ? d : d.toISOString().split('T')[0]
+
+  // Gerar eventos de bloqueio para o período
+  const eventosBloq = useMemo(() => {
+    const evs=[]
+    bloqueados.forEach(b => {
+      if (!b.range) return
+      // simplificado: extrair datas do range
+      const inicio = b.range.includes('→') ? b.range.split('→')[0].trim() : b.range
+      evs.push({...b, dataStr: inicio})
     })
-  }, [requiredRole])
+    return evs
+  }, [bloqueados])
 
-  if (checking) {
+  // ── Detalhe do serviço ──
+  if (selSvc) {
+    const cfg = ESTADO_CAL[selSvc.estado]||ESTADO_CAL.agendado
+    const isBloq = selSvc._bloq
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <span className="text-gray-400 text-sm">A carregar…</span>
+      <div style={{ minHeight:'100vh', background:C.mist }}>
+        <Header title={isBloq?selSvc.desc:selSvc.nome} sub={isBloq?selSvc.range:`${selSvc.hora}h · ${selSvc.dur||'—'}`} onBack={()=>setSelSvc(null)}/>
+        <div style={{ padding:'16px 16px 60px' }}>
+          {!isBloq && <>
+            <div style={{ display:'flex', justifyContent:'center', marginBottom:14 }}>
+              <span style={{ fontSize:12, fontWeight:700, background:cfg.cor+'22', color:cfg.cor, padding:'5px 14px', borderRadius:20 }}>● {cfg.l}</span>
+            </div>
+            <div style={{ background:`linear-gradient(135deg,${C.navy},${C.gd})`, borderRadius:14, padding:16, marginBottom:12 }}>
+              <div style={{ fontSize:9, color:'#86efac', fontWeight:700, textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:5 }}>📍 Localização</div>
+              <div style={{ fontSize:14, fontWeight:700, color:'#fff', marginBottom:6 }}>{selSvc.local}</div>
+              <span style={{ background:'rgba(34,197,94,0.2)', borderRadius:9, padding:'4px 10px', fontSize:12, fontWeight:800, color:'#86efac' }}>📏 {selSvc.km} km de distância</span>
+            </div>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:9, marginBottom:12 }}>
+              {[['👤','Cliente',selSvc.cliente],['🕐','Hora',selSvc.hora+'h'],['⏱️','Duração',selSvc.dur||'—'],['💶','Valor',`€${selSvc.valor}`]].map(([ic,l,v])=>(
+                <div key={l} style={{ background:C.white, borderRadius:12, padding:'12px', border:`1px solid ${C.border}` }}>
+                  <div style={{ fontSize:16, marginBottom:3 }}>{ic}</div>
+                  <div style={{ fontSize:9, color:C.slate, fontWeight:600, textTransform:'uppercase', letterSpacing:'0.04em', marginBottom:2 }}>{l}</div>
+                  <div style={{ fontSize:13, fontWeight:700, color:C.navy }}>{v}</div>
+                </div>
+              ))}
+            </div>
+            <div style={{ background:C.gl, borderRadius:12, padding:'13px 16px', border:'1px solid rgba(22,163,74,0.2)' }}>
+              <div style={{ display:'flex', justifyContent:'space-between' }}>
+                <div><div style={{ fontSize:11, color:C.slate }}>O teu ganho (18% taxa)</div><div style={{ fontSize:20, fontWeight:800, color:C.g }}>€{(selSvc.valor*0.82).toFixed(2)}</div></div>
+                <div style={{ textAlign:'right' }}><div style={{ fontSize:10, color:C.slate }}>Plataforma</div><div style={{ fontSize:13, fontWeight:700, color:C.slate }}>€{(selSvc.valor*0.18).toFixed(2)}</div></div>
+              </div>
+            </div>
+          </>}
+          {isBloq && <div style={{ background:selSvc.bg||C.mist, borderRadius:14, padding:20, border:`2px solid ${selSvc.cor||C.border}44`, textAlign:'center' }}>
+            <div style={{ fontSize:48, marginBottom:10 }}>{selSvc.ic}</div>
+            <div style={{ fontSize:16, fontWeight:800, color:C.navy, marginBottom:4 }}>{selSvc.desc}</div>
+            <div style={{ fontSize:13, color:selSvc.cor||C.slate, fontWeight:600 }}>{selSvc.range}</div>
+            <div style={{ fontSize:11, color:C.slate, marginTop:4 }}>{selSvc.dias} dia{selSvc.dias>1?'s':''} bloqueado{selSvc.dias>1?'s':''}</div>
+          </div>}
+        </div>
       </div>
     )
   }
 
-  if (!allowed) return <Navigate to="/" replace />
-  return children
+  const prevPeriod = () => {
+    if (vista==='dia')    { const d=new Date(ano,mes,dia-1); setAno(d.getFullYear());setMes(d.getMonth());setDia(d.getDate()) }
+    if (vista==='semana') { const d=new Date(ano,mes,dia-7); setAno(d.getFullYear());setMes(d.getMonth());setDia(d.getDate()) }
+    if (vista==='mes')    { mes===0?(setAno(a=>a-1),setMes(11)):setMes(m=>m-1) }
+    if (vista==='ano')    { setAno(a=>a-1) }
+    if (vista==='lista')  { mes===0?(setAno(a=>a-1),setMes(11)):setMes(m=>m-1) }
+  }
+  const nextPeriod = () => {
+    if (vista==='dia')    { const d=new Date(ano,mes,dia+1); setAno(d.getFullYear());setMes(d.getMonth());setDia(d.getDate()) }
+    if (vista==='semana') { const d=new Date(ano,mes,dia+7); setAno(d.getFullYear());setMes(d.getMonth());setDia(d.getDate()) }
+    if (vista==='mes')    { mes===11?(setAno(a=>a+1),setMes(0)):setMes(m=>m+1) }
+    if (vista==='ano')    { setAno(a=>a+1) }
+    if (vista==='lista')  { mes===11?(setAno(a=>a+1),setMes(0)):setMes(m=>m+1) }
+  }
+
+  const periodoLabel = () => {
+    if (vista==='dia')    return new Date(ano,mes,dia).toLocaleDateString('pt-PT',{weekday:'short',day:'2-digit',month:'short'})
+    if (vista==='semana') { const d=new Date(ano,mes,dia); const m0=new Date(d); m0.setDate(d.getDate()-(d.getDay()||7)+1); const m6=new Date(m0); m6.setDate(m0.getDate()+6); return `${m0.getDate()} – ${m6.getDate()} ${MESES_CAL[m6.getMonth()].substring(0,3)}` }
+    if (vista==='mes')    return `${MESES_CAL[mes]} ${ano}`
+    if (vista==='ano')    return `${ano}`
+    if (vista==='lista')  return `${MESES_CAL[mes]} ${ano}`
+  }
+
+  const primeiroDia = new Date(ano,mes,1).getDay()
+  const totalDias   = new Date(ano,mes+1,0).getDate()
+  const linhas      = Math.ceil((primeiroDia+totalDias)/7)
+  const dataSel     = toStr(ano,mes,dia)
+  const servicosDia = (porData[dataSel]||[]).sort((a,b)=>a.hora.localeCompare(b.hora))
+
+  // Semana actual (segunda a domingo)
+  const semana = (() => {
+    const d = new Date(ano,mes,dia)
+    const dow = d.getDay()
+    const seg = new Date(d); seg.setDate(d.getDate()-(dow===0?6:dow-1))
+    return Array.from({length:7},(_,i)=>{ const dd=new Date(seg); dd.setDate(seg.getDate()+i); return dd })
+  })()
+
+  const EventChip = ({s, isBloq}) => {
+    const cfg = isBloq ? {cor:s.cor||C.amber} : (ESTADO_CAL[s.estado]||ESTADO_CAL.agendado)
+    return (
+      <div onClick={()=>setSelSvc(isBloq?{...s,_bloq:true}:s)} style={{ background:cfg.cor+'20', borderLeft:`3px solid ${cfg.cor}`, borderRadius:'0 6px 6px 0', padding:'3px 6px', marginBottom:2, cursor:'pointer', minHeight:20 }}>
+        <div style={{ fontSize:10, fontWeight:700, color:cfg.cor, lineHeight:1.2 }}>{isBloq?s.ic+' '+s.desc:s.hora+' '+s.nome}</div>
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ minHeight:'100vh', background:'#fff', display:'flex', flexDirection:'column' }}>
+      {/* Header */}
+      <Header title='Os meus serviços' onBack={onBack}/>
+
+      {/* Vista selector */}
+      <div style={{ display:'flex', borderBottom:`1px solid ${C.border}`, background:C.white, position:'sticky', top:56, zIndex:10 }}>
+        {[{id:'dia',l:'Dia'},{id:'semana',l:'Semana'},{id:'mes',l:'Mês'},{id:'ano',l:'Ano'},{id:'lista',l:'Lista'}].map(v=>(
+          <button key={v.id} onClick={()=>setVista(v.id)} style={{ flex:1, padding:'10px 0', border:'none', background:'none', cursor:'pointer', borderBottom: vista===v.id?`2px solid ${C.g}`:'2px solid transparent', color:vista===v.id?C.g:C.slate, fontSize:11, fontWeight:vista===v.id?700:500 }}>{v.l}</button>
+        ))}
+      </div>
+
+      {/* Navegação período */}
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'10px 16px 4px' }}>
+        <button onClick={prevPeriod} style={{ background:'none', border:'none', cursor:'pointer', fontSize:22, color:C.navy, padding:'4px 10px', fontWeight:700 }}>‹</button>
+        <span style={{ fontSize:14, fontWeight:700, color:C.navy }}>{periodoLabel()}</span>
+        <button onClick={nextPeriod} style={{ background:'none', border:'none', cursor:'pointer', fontSize:22, color:C.navy, padding:'4px 10px', fontWeight:700 }}>›</button>
+      </div>
+
+      {/* ── VISTA: MÊS ── */}
+      {vista==='mes' && <div style={{ flex:1, padding:'0 6px' }}>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(7,1fr)', marginBottom:2 }}>
+          {DN_CAL.map(d=><div key={d} style={{ textAlign:'center', fontSize:10, color:C.slate, fontWeight:600, padding:'3px 0' }}>{d}</div>)}
+        </div>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(7,1fr)' }}>
+          {Array.from({length:linhas*7}).map((_,i) => {
+            const d=i-primeiroDia+1, eMes=d>=1&&d<=totalDias
+            const dStr=eMes?toStr(ano,mes,d):null
+            const svcs=dStr?(porData[dStr]||[]):[]
+            const ests=[...new Set(svcs.map(s=>s.estado))]
+            const isHj=eMes&&d===hoje.getDate()&&mes===hoje.getMonth()&&ano===hoje.getFullYear()
+            const isSel=eMes&&d===dia
+            let show=d; if(d<1) show=new Date(ano,mes,0).getDate()+d; else if(d>totalDias) show=d-totalDias
+            const hasBloq = bloqueados.some(b=>b.range&&b.range.includes(d+''))
+            return <div key={i} onClick={()=>eMes&&setDia(d)} style={{ minHeight:52, padding:'2px 1px', cursor:eMes?'pointer':'default', borderBottom:`1px solid ${C.border}`, borderRight:`1px solid ${C.border}` }}>
+              <div style={{ width:26, height:26, borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, fontWeight:isSel||isHj?700:400, background:isSel?C.navy:isHj?C.gl:'transparent', color:isSel?'#fff':!eMes?'#cbd5e1':isHj?C.g:C.navy, border:isHj&&!isSel?`1.5px solid ${C.g}`:'none', margin:'1px auto' }}>{Math.abs(show)||show}</div>
+              {eMes && <>
+                {hasBloq && <div style={{ height:3, background:C.amber, borderRadius:2, margin:'0 2px 1px' }}/>}
+                <div style={{ display:'flex', gap:1, padding:'0 2px', flexWrap:'wrap' }}>
+                  {ests.slice(0,2).map(e=><div key={e} style={{ width:5, height:5, borderRadius:'50%', background:ESTADO_CAL[e]?.cor||C.slate, flexShrink:0 }}/>)}
+                  {svcs.length>2&&<div style={{ fontSize:8, color:C.slate }}>+{svcs.length-2}</div>}
+                </div>
+              </>}
+            </div>
+          })}
+        </div>
+        {/* Legenda + lista do dia sel */}
+        <div style={{ padding:'8px 10px', borderTop:`1px solid ${C.border}`, display:'flex', flexWrap:'wrap', gap:'4px 12px' }}>
+          {Object.entries(ESTADO_CAL).filter(([k])=>k!=='em_curso').map(([id,cfg])=>(
+            <div key={id} style={{ display:'flex', alignItems:'center', gap:4 }}>
+              <div style={{ width:7, height:7, borderRadius:'50%', background:cfg.cor }}/>
+              <span style={{ fontSize:9, color:C.slate }}>{cfg.l}</span>
+            </div>
+          ))}
+        </div>
+        <div style={{ padding:'0 0 80px' }}>
+          <div style={{ padding:'8px 14px 6px', fontSize:10, fontWeight:800, color:C.slate, textTransform:'uppercase', letterSpacing:'0.06em' }}>
+            {DN_CAL[new Date(ano,mes,dia).getDay()]}-FEIRA, {MESES_CAL[mes].substring(0,3).toUpperCase()} {p2(dia)}
+          </div>
+          {servicosDia.length===0
+            ? <div style={{ padding:'20px', textAlign:'center', color:'#94a3b8', fontSize:12 }}>Sem serviços neste dia</div>
+            : servicosDia.map((s,i)=>{ const cfg=ESTADO_CAL[s.estado]||ESTADO_CAL.agendado; return (
+              <div key={s.id} onClick={()=>setSelSvc(s)} style={{ display:'flex', alignItems:'flex-start', gap:12, padding:'12px 16px', borderBottom:i<servicosDia.length-1?`1px solid ${C.border}`:'none', cursor:'pointer' }}>
+                <div style={{ width:44, textAlign:'right', flexShrink:0, paddingTop:2 }}><span style={{ fontSize:12, color:C.slate }}>{s.hora}h</span></div>
+                <div style={{ width:9, height:9, borderRadius:'50%', background:cfg.cor, flexShrink:0, marginTop:4 }}/>
+                <div style={{ flex:1 }}>
+                  <div style={{ fontSize:13, fontWeight:700, color:C.navy }}>{s.nome}</div>
+                  <div style={{ fontSize:11, color:C.slate, marginTop:1 }}>{cfg.l}</div>
+                  <div style={{ display:'flex', gap:8, marginTop:3 }}>
+                    <span style={{ fontSize:10, color:C.slate }}>📍 {s.local}</span>
+                    {s.km&&<span style={{ fontSize:10, background:C.gl, color:C.gd, padding:'1px 6px', borderRadius:7, fontWeight:700 }}>📏 {s.km} km</span>}
+                  </div>
+                </div>
+                <span style={{ color:C.border, fontSize:16 }}>›</span>
+              </div>
+            )})}
+        </div>
+      </div>}
+
+      {/* ── VISTA: SEMANA ── */}
+      {vista==='semana' && <div style={{ flex:1, overflowX:'auto', paddingBottom:80 }}>
+        {/* Cabeçalho dos dias */}
+        <div style={{ display:'flex', borderBottom:`2px solid ${C.border}`, background:C.white, position:'sticky', top:0, zIndex:3 }}>
+          <div style={{ width:44, flexShrink:0 }}/>
+          {semana.map((d,i)=>{
+            const isHj = d.toDateString()===hoje.toDateString()
+            const dStr = toStr(d.getFullYear(),d.getMonth(),d.getDate())
+            const temEvs = (porData[dStr]||[]).length > 0
+            return (
+              <div key={i} onClick={()=>{setAno(d.getFullYear());setMes(d.getMonth());setDia(d.getDate());setVista('dia')}} style={{ flex:1, textAlign:'center', padding:'8px 2px', borderLeft:`1px solid ${C.border}`, cursor:'pointer', background:isHj?C.gl:'transparent' }}>
+                <div style={{ fontSize:9, color:isHj?C.g:C.slate, textTransform:'uppercase', fontWeight:700 }}>{DN_CAL[d.getDay()]}</div>
+                <div style={{ width:26, height:26, borderRadius:'50%', background:isHj?C.g:'transparent', color:isHj?'#fff':C.navy, fontSize:12, fontWeight:700, display:'flex', alignItems:'center', justifyContent:'center', margin:'3px auto 2px' }}>{d.getDate()}</div>
+                {temEvs && <div style={{ width:5, height:5, borderRadius:'50%', background:isHj?C.g:C.slate, margin:'0 auto' }}/>}
+              </div>
+            )
+          })}
+        </div>
+        {/* Grelha de horas */}
+        {['08','09','10','11','12','13','14','15','16','17','18','19','20'].map(h => (
+          <div key={h} style={{ display:'flex', borderBottom:`1px solid #f1f5f9`, minHeight:48 }}>
+            {/* Label da hora */}
+            <div style={{ width:44, flexShrink:0, textAlign:'right', padding:'6px 6px 0 0', fontSize:9, color:'#94a3b8' }}>{h}h</div>
+            {/* Células por dia */}
+            {semana.map((d,di) => {
+              const dStr = toStr(d.getFullYear(),d.getMonth(),d.getDate())
+              const svcs = (porData[dStr]||[]).filter(s => s.hora && s.hora.startsWith(h))
+              return (
+                <div key={di} style={{ flex:1, borderLeft:`1px solid ${C.border}`, padding:2, minHeight:48 }}>
+                  {svcs.map(s => {
+                    const cfg = ESTADO_CAL[s.estado]||ESTADO_CAL.agendado
+                    return (
+                      <div key={s.id} onClick={()=>setSelSvc(s)} style={{ background:cfg.cor+'22', borderLeft:`2.5px solid ${cfg.cor}`, borderRadius:'0 5px 5px 0', padding:'2px 3px', marginBottom:1, cursor:'pointer' }}>
+                        <div style={{ fontSize:8, fontWeight:700, color:cfg.cor, overflow:'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis', lineHeight:1.3 }}>{s.nome}</div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )
+            })}
+          </div>
+        ))}
+      </div>}
+
+      {/* ── VISTA: DIA ── */}
+      {vista==='dia' && <div style={{ flex:1, paddingBottom:80 }}>
+        <div style={{ padding:'8px 16px', display:'flex', gap:8, overflowX:'auto' }}>
+          {bloqueados.filter(b=>b.dias>0).map(b=>(
+            <div key={b.id} style={{ flexShrink:0, background:b.bg||C.mist, borderRadius:9, padding:'5px 10px', border:`1px solid ${b.cor||C.border}44` }}>
+              <span style={{ fontSize:11, fontWeight:700, color:b.cor||C.slate }}>{b.ic} {b.desc}</span>
+            </div>
+          ))}
+        </div>
+        {['08','09','10','11','12','13','14','15','16','17','18','19','20'].map(h=>{
+          const svcs=(porData[dataSel]||[]).filter(s=>s.hora.startsWith(h))
+          return <div key={h} style={{ display:'flex', minHeight:60, borderBottom:`1px solid ${C.border}` }}>
+            <div style={{ width:50, textAlign:'right', padding:'8px 10px 0 0', fontSize:12, color:C.slate, flexShrink:0 }}>{h}:00</div>
+            <div style={{ flex:1, padding:'4px 8px 4px 0' }}>
+              {svcs.map(s=>{ const cfg=ESTADO_CAL[s.estado]||ESTADO_CAL.agendado; return (
+                <div key={s.id} onClick={()=>setSelSvc(s)} style={{ background:cfg.cor+'18', border:`1.5px solid ${cfg.cor}`, borderRadius:10, padding:'8px 12px', marginBottom:4, cursor:'pointer' }}>
+                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                    <div style={{ fontSize:13, fontWeight:700, color:C.navy }}>{s.nome}</div>
+                    <span style={{ fontSize:10, background:cfg.cor+'30', color:cfg.cor, padding:'2px 7px', borderRadius:9, fontWeight:700 }}>{ESTADO_CAL[s.estado]?.l}</span>
+                  </div>
+                  <div style={{ fontSize:11, color:C.slate, marginTop:2 }}>📍 {s.local}</div>
+                  {s.km&&<div style={{ display:'inline-block', marginTop:4, background:C.gl, borderRadius:8, padding:'2px 8px' }}><span style={{ fontSize:10, fontWeight:700, color:C.gd }}>📏 {s.km} km</span></div>}
+                </div>
+              )})}
+            </div>
+          </div>
+        })}
+      </div>}
+
+      {/* ── VISTA: ANO ── */}
+      {vista==='ano' && <div style={{ flex:1, padding:'8px 10px 80px', display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+        {Array.from({length:12},(_,mi)=>{
+          const pD=new Date(ano,mi,1).getDay(), tD=new Date(ano,mi+1,0).getDate()
+          const lns=Math.ceil((pD+tD)/7)
+          return <div key={mi} style={{ background:mi===mes?C.gl:C.white, borderRadius:12, padding:'8px', border:`1.5px solid ${mi===mes?C.g:C.border}`, cursor:'pointer' }} onClick={()=>{setMes(mi);setVista('mes')}}>
+            <div style={{ fontSize:11, fontWeight:700, color:mi===mes?C.g:C.navy, marginBottom:4, textAlign:'center' }}>{MESES_CAL[mi].substring(0,3).toUpperCase()}</div>
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(7,1fr)', gap:0 }}>
+              {Array.from({length:lns*7}).map((_,i)=>{ const d=i-pD+1; const eMes=d>=1&&d<=tD; const dStr=eMes?toStr(ano,mi,d):null; const svcs=dStr?(porData[dStr]||[]):[]
+                const isHj=eMes&&d===hoje.getDate()&&mi===hoje.getMonth()&&ano===hoje.getFullYear()
+                return <div key={i} style={{ textAlign:'center', height:14, display:'flex', alignItems:'center', justifyContent:'center' }}>
+                  {eMes&&<div style={{ width:13, height:13, borderRadius:'50%', background:isHj?C.g:svcs.length>0?C.gm+'44':'transparent', fontSize:7, color:isHj?'#fff':eMes?C.navy:'transparent', fontWeight:isHj?700:400, display:'flex', alignItems:'center', justifyContent:'center' }}>{d}</div>}
+                </div>
+              })}
+            </div>
+          </div>
+        })}
+      </div>}
+
+      {/* ── VISTA: LISTA ── */}
+      {vista==='lista' && <div style={{ flex:1, paddingBottom:80 }}>
+        {/* Bloqueados */}
+        {bloqueados.length>0&&<>
+          <div style={{ padding:'10px 16px 4px', fontSize:10, fontWeight:800, color:C.amber, textTransform:'uppercase', letterSpacing:'0.06em' }}>🚫 Períodos Bloqueados</div>
+          {bloqueados.map(b=>(
+            <div key={b.id} onClick={()=>setSelSvc({...b,_bloq:true})} style={{ display:'flex', gap:12, padding:'11px 16px', borderBottom:`1px solid ${C.border}`, cursor:'pointer', background:b.bg||C.mist, alignItems:'center' }}>
+              <span style={{ fontSize:24 }}>{b.ic}</span>
+              <div style={{ flex:1 }}>
+                <div style={{ fontSize:13, fontWeight:700, color:C.navy }}>{b.desc}</div>
+                <div style={{ fontSize:11, color:b.cor||C.slate, fontWeight:600 }}>{b.range}</div>
+                <div style={{ fontSize:10, color:C.slate }}>{b.dias} dias bloqueados</div>
+              </div>
+              <span style={{ color:C.border, fontSize:16 }}>›</span>
+            </div>
+          ))}
+        </>}
+        {/* Serviços agrupados por data */}
+        {Object.entries(porData).sort(([a],[b])=>a.localeCompare(b)).map(([data,svcs])=>(
+          <div key={data}>
+            <div style={{ padding:'10px 16px 4px', fontSize:10, fontWeight:800, color:C.slate, textTransform:'uppercase', letterSpacing:'0.06em', background:C.mist }}>
+              {new Date(data+'T00:00').toLocaleDateString('pt-PT',{weekday:'long',day:'2-digit',month:'long'})}
+            </div>
+            {svcs.map((s,i)=>{ const cfg=ESTADO_CAL[s.estado]||ESTADO_CAL.agendado; return (
+              <div key={s.id} onClick={()=>setSelSvc(s)} style={{ display:'flex', alignItems:'flex-start', gap:12, padding:'12px 16px', borderBottom:`1px solid ${C.border}`, cursor:'pointer' }}>
+                <div style={{ width:44, textAlign:'right', flexShrink:0, paddingTop:2 }}><span style={{ fontSize:12, color:C.slate, fontWeight:500 }}>{s.hora}h</span></div>
+                <div style={{ width:9, height:9, borderRadius:'50%', background:cfg.cor, flexShrink:0, marginTop:5 }}/>
+                <div style={{ flex:1 }}>
+                  <div style={{ fontSize:13, fontWeight:700, color:C.navy }}>{s.nome}</div>
+                  <div style={{ fontSize:11, color:C.slate, marginTop:1 }}>{cfg.l}</div>
+                  <div style={{ display:'flex', gap:8, marginTop:3 }}>
+                    <span style={{ fontSize:10, color:C.slate }}>📍 {s.local}</span>
+                    {s.km&&<span style={{ fontSize:10, background:C.gl, color:C.gd, padding:'1px 6px', borderRadius:7, fontWeight:700 }}>📏 {s.km} km</span>}
+                  </div>
+                </div>
+                <span style={{ color:C.border, fontSize:16 }}>›</span>
+              </div>
+            )})}
+          </div>
+        ))}
+        {Object.keys(porData).length===0&&bloqueados.length===0&&<div style={{ padding:'60px 0', textAlign:'center', color:C.slate }}>
+          <div style={{ fontSize:40, marginBottom:10 }}>📅</div>
+          <div style={{ fontSize:13, fontWeight:500 }}>Sem eventos futuros</div>
+        </div>}
+      </div>}
+    </div>
+  )
 }
 
-export default function App() {
+/* ══════════════════════════════════
+   SUPABASE AUTH — Cliente, registo, login
+   URL: https://hkmvszkpxjbxmnixzqbl.supabase.co
+══════════════════════════════════ */
+const SB_URL = 'https://hkmvszkpxjbxmnixzqbl.supabase.co'
+const SB_KEY = import.meta.env?.VITE_SUPABASE_ANON_KEY || ''
+
+// ── Auth helpers ────────────────────────
+const sbHeaders = (token) => ({
+  'apikey': SB_KEY,
+  'Authorization': `Bearer ${token||SB_KEY}`,
+  'Content-Type': 'application/json',
+})
+
+async function sbSignUp(email, password, meta) {
+  if (!SB_KEY) return {error:'Sem chave Supabase. Modo demo activo.'}
+  try {
+    const r = await fetch(`${SB_URL}/auth/v1/signup`, {
+      method:'POST',
+      headers: sbHeaders(),
+      body: JSON.stringify({ email, password, data: meta }),
+    })
+    const d = await r.json()
+    if (!r.ok) return {error: d.error_description||d.msg||'Erro no registo'}
+    return {user: d.user, session: d.session}
+  } catch(e) { return {error: e.message} }
+}
+
+async function sbSignIn(email, password) {
+  if (!SB_KEY) return {error:'Sem chave Supabase. Modo demo activo.'}
+  try {
+    const r = await fetch(`${SB_URL}/auth/v1/token?grant_type=password`, {
+      method:'POST',
+      headers: sbHeaders(),
+      body: JSON.stringify({ email, password }),
+    })
+    const d = await r.json()
+    if (!r.ok) return {error: d.error_description||'Email ou password incorrectos'}
+    return {user: d.user, session: d.access_token, token: d.access_token}
+  } catch(e) { return {error: e.message} }
+}
+
+async function sbSignOut(token) {
+  if (!SB_KEY || !token) return
+  try {
+    await fetch(`${SB_URL}/auth/v1/logout`, {
+      method:'POST', headers: sbHeaders(token),
+    })
+  } catch {}
+}
+
+async function sbGetPerfil(userId, token) {
+  if (!SB_KEY) return null
+  try {
+    const r = await fetch(`${SB_URL}/rest/v1/perfis?id=eq.${userId}&select=*`, {
+      headers: sbHeaders(token)
+    })
+    if (!r.ok) return null
+    const d = await r.json()
+    return d[0] || null
+  } catch { return null }
+}
+
+async function sbUpdatePerfil(data, token) {
+  if (!SB_KEY || !token) return null
+  try {
+    const r = await fetch(`${SB_URL}/rest/v1/perfis?id=eq.${data.id}`, {
+      method:'PATCH',
+      headers: {...sbHeaders(token), 'Prefer':'return=representation'},
+      body: JSON.stringify(data),
+    })
+    if (!r.ok) return null
+    return await r.json()
+  } catch { return null }
+}
+
+async function sbGet(table, filter='', token) {
+  if (!SB_KEY) return null
+  try {
+    const r = await fetch(`${SB_URL}/rest/v1/${table}${filter}`, {
+      headers: sbHeaders(token||SB_KEY)
+    })
+    return r.ok ? r.json() : null
+  } catch { return null }
+}
+
+async function sbSave(table, data, token) {
+  if (!SB_KEY) return null
+  try {
+    const r = await fetch(`${SB_URL}/rest/v1/${table}`, {
+      method:'POST',
+      headers: {...sbHeaders(token||SB_KEY), 'Prefer':'return=representation,resolution=merge-duplicates'},
+      body: JSON.stringify(data),
+    })
+    return r.ok ? r.json() : null
+  } catch { return null }
+}
+
+async function sbUpload(bucket, path, file, token) {
+  if (!SB_KEY || !file) return null
+  try {
+    const r = await fetch(`${SB_URL}/storage/v1/object/${bucket}/${path}`, {
+      method:'POST',
+      headers: sbHeaders(token||SB_KEY),
+      body: file,
+    })
+    return r.ok ? `${SB_URL}/storage/v1/object/public/${bucket}/${path}` : null
+  } catch { return null }
+}
+
+function SyncBadge({synced,loading}){
+  if(loading)return<span style={{fontSize:10,color:'#64748b'}}>⟳ A sincronizar…</span>
+  if(synced)return<span style={{fontSize:10,color:'#16a34a',fontWeight:600}}>● Supabase</span>
+  return<span style={{fontSize:10,color:'#f59e0b',fontWeight:600}}>○ Demo local</span>
+}
+
+// ── Ecrã de Autenticação — design ServiçoPRO ──────────────────
+function AuthScreen({ onAuth }) {
+  // step: 'welcome' | 'otp_input' | 'otp_code' | 'role' | 'categories' | 'pending' | 'success'
+  const [step,    setStep]    = useState('welcome')
+  const [inputMode, setInputMode] = useState('phone') // 'phone' | 'email'
+  const [contact, setContact] = useState('')
+  const [code,    setCode]    = useState(['','','','','',''])
+  const [role,    setRole]    = useState(null)  // 'cliente' | 'prestador'
+  const [cats,    setCats]    = useState([])
+  const [loading, setLoad]    = useState(false)
+  const [err,     setErr]     = useState('')
+  const [timer,   setTimer]   = useState(58)
+
+  // Timer OTP
+  React.useEffect(() => {
+    if (step !== 'otp_code') return
+    const t = setInterval(() => setTimer(n => n > 0 ? n-1 : 0), 1000)
+    return () => clearInterval(t)
+  }, [step])
+
+  const isPhone = contact.startsWith('+') || /^[239]\d/.test(contact)
+  const isEmail = contact.includes('@')
+  const contactValid = isPhone || isEmail
+
+  const SP = {
+    green:'#16a34a', greenDeep:'#14532d', greenSoft:'#dcfce7',
+    navy:'#0f172a',  gray:'#64748b',      grayLight:'#94a3b8',
+    border:'#e2e8f0',amber:'#f59e0b',     red:'#dc2626',
+    redSoft:'#fee2e2', bg:'#f8fafc',      ink:'#0f172a',
+  }
+  const FONT = 'system-ui,-apple-system,sans-serif'
+
+  const signInWithGoogle = async () => {
+    if (!SB_KEY) { demoLogin('cliente'); return }
+    setLoad(true)
+    try {
+      const { data, error } = await fetch(`${SB_URL}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(window.location.origin)}`, {
+        method: 'GET',
+        headers: { 'apikey': SB_KEY },
+        redirect: 'manual',
+      }).then(async r => {
+        // Supabase returns a redirect — open it
+        const body = await r.text()
+        const urlMatch = body.match(/href="([^"]+)"/) || body.match(/url=([^\s&"]+)/)
+        return { data: { url: r.url || urlMatch?.[1] }, error: null }
+      }).catch(e => ({ data: null, error: e }))
+
+      // Simpler: just redirect directly to Supabase OAuth URL
+      const oauthUrl = `${SB_URL}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(window.location.origin)}`
+      window.location.href = oauthUrl
+    } catch(e) {
+      setErr('Erro ao iniciar Google OAuth. Verifica a configuração.')
+      setLoad(false)
+    }
+  }
+
+  // Check for OAuth callback (hash contains access_token)
+  React.useEffect(() => {
+    const hash = window.location.hash
+    if (hash.includes('access_token')) {
+      const params = new URLSearchParams(hash.substring(1))
+      const token = params.get('access_token')
+      const type  = params.get('type')
+      if (token) {
+        // Clear hash from URL
+        window.history.replaceState(null, '', window.location.pathname)
+        // Get user info
+        fetch(`${SB_URL}/auth/v1/user`, {
+          headers: { 'apikey': SB_KEY, 'Authorization': `Bearer ${token}` }
+        }).then(r => r.json()).then(user => {
+          const role = user.user_metadata?.role || 'cliente'
+          const nome = user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split('@')[0] || 'Utilizador'
+          onAuth({ user, token, role, nome, perfil: { role, nome, email: user.email } })
+        }).catch(() => {
+          onAuth({ user: { id: token }, token, role: 'cliente', nome: 'Utilizador Google', demo: false })
+        })
+      }
+    }
+  }, [])
+
+  const sendCode = async () => {
+    if (!contact || contact.length < 9) { setErr('Insere um número válido de 9 dígitos.'); return }
+    setErr(''); setLoad(true)
+    await new Promise(r => setTimeout(r, 900)) // simula envio SMS
+    setLoad(false); setTimer(58); setStep('otp_code')
+  }
+
+  const verifyCode = async () => {
+    setLoad(true)
+    await new Promise(r=>setTimeout(r,800))
+    setLoad(false); setStep('role')
+  }
+
+  const chooseRole = (r) => {
+    setRole(r)
+    if (r === 'prestador') setStep('categories')
+    else { setStep('success'); setTimeout(() => onAuth({user:{id:`u${Date.now()}`},token:null,role:'cliente',nome:contact.split('@')[0]||contact,demo:!SB_KEY}), 1500) }
+  }
+
+  const finishPrestador = () => {
+    setStep('pending')
+  }
+
+  const demoLogin = (r) => {
+    const demos = {
+      cliente:   {id:'demo-cli',  nome:'Maria Santos'},
+      prestador: {id:'demo-prest',nome:'António Ferreira'},
+    }
+    onAuth({user:demos[r],token:null,role:r,nome:demos[r].nome,demo:true})
+  }
+
+  // Componentes UI ────────────────────────────────
+  const Logo = ({size=64,light=false}) => (
+    <div style={{width:size,height:size,borderRadius:'50%',background:light?'#fff':SP.green,display:'flex',alignItems:'center',justifyContent:'center',boxShadow:light?'none':`0 8px 24px rgba(22,163,74,0.35)`}}>
+      <svg width={size*.45} height={size*.45} viewBox="0 0 24 24" fill="none">
+        <path d="M3 11l9-8 9 8v9a2 2 0 01-2 2h-4v-7h-6v7H5a2 2 0 01-2-2v-9z" stroke={light?SP.green:'#fff'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+      </svg>
+    </div>
+  )
+
+  const Btn = ({children,ghost=false,light=false,onClick,disabled,isLoading}) => (
+    <button onClick={onClick} disabled={disabled||isLoading}
+      style={{width:'100%',height:52,borderRadius:14,border:ghost?`1.5px solid ${light?'rgba(255,255,255,0.4)':SP.border}`:'none',background:ghost?'transparent':light?'#fff':SP.green,color:ghost?(light?'#fff':SP.ink):(light?SP.ink:'#fff'),fontFamily:FONT,fontSize:15,fontWeight:800,cursor:disabled?'default':'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:10,opacity:disabled&&!isLoading?.6:1,transition:'opacity 0.2s'}}>
+      {isLoading
+        ? <div style={{width:20,height:20,borderRadius:'50%',border:'2.5px solid rgba(255,255,255,0.3)',borderTopColor:'#fff',animation:'spin .8s linear infinite'}}/>
+        : children}
+    </button>
+  )
+
+  const BackBtn = ({onClick}) => (
+    <button onClick={onClick} style={{width:40,height:40,borderRadius:12,background:'#fff',border:`1px solid ${SP.border}`,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer'}}>
+      <svg width="14" height="14" viewBox="0 0 14 14"><path d="M9 1L3 7l6 6" stroke={SP.ink} strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg>
+    </button>
+  )
+
+  // Containers ─────────────────────────────────────
+  const DarkScreen = ({children}) => (
+    <div style={{minHeight:'100vh',background:`linear-gradient(160deg,${SP.navy} 0%,${SP.greenDeep} 100%)`,display:'flex',alignItems:'center',justifyContent:'center',padding:16}}>
+      <div style={{position:'absolute',top:'15%',left:'50%',transform:'translateX(-50%)',width:500,height:500,borderRadius:'50%',background:'radial-gradient(circle,rgba(22,163,74,0.2) 0%,transparent 70%)',pointerEvents:'none'}}/>
+      <div style={{width:'100%',maxWidth:390,position:'relative',padding:'60px 24px 32px',display:'flex',flexDirection:'column',minHeight:'85vh'}}>{children}</div>
+    </div>
+  )
+
+  const LightScreen = ({children}) => (
+    <div style={{minHeight:'100vh',background:SP.bg,display:'flex',alignItems:'center',justifyContent:'center',padding:16}}>
+      <div style={{width:'100%',maxWidth:390,padding:'32px 24px',display:'flex',flexDirection:'column',minHeight:'85vh'}}>{children}</div>
+    </div>
+  )
+
+  // ── WELCOME ─────────────────────────────────────
+  if (step==='welcome') return (
+    <DarkScreen>
+      <div style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',textAlign:'center',marginBottom:32}}>
+        <Logo size={72}/>
+        <div style={{fontFamily:FONT,fontSize:28,fontWeight:900,color:'#fff',marginTop:20,letterSpacing:'-0.5px'}}>ServiçoPRO</div>
+        <div style={{fontFamily:FONT,fontSize:14,color:'rgba(255,255,255,0.65)',marginTop:6}}>Serviços domésticos de confiança</div>
+      </div>
+
+      <div style={{display:'flex',flexDirection:'column',gap:10,marginBottom:18}}>
+        <Btn onClick={signInWithGoogle} isLoading={loading}>
+          <svg width="18" height="18" viewBox="0 0 18 18"><path d="M17.64 9.2c0-.64-.06-1.25-.17-1.84H9v3.49h4.84a4.14 4.14 0 01-1.8 2.72v2.26h2.92C16.66 14.02 17.64 11.71 17.64 9.2z" fill="#fff"/><path d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.91-2.26c-.81.54-1.84.86-3.05.86-2.34 0-4.32-1.58-5.03-3.71H.96v2.33A9 9 0 009 18z" fill="#fff"/><path d="M3.97 10.71a5.41 5.41 0 010-3.42V4.96H.96a9 9 0 000 8.08l3.01-2.33z" fill="#fff"/><path d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.58A9 9 0 00.96 4.96l3.01 2.33C4.68 5.16 6.66 3.58 9 3.58z" fill="#fff"/></svg>
+          Entrar com Google
+        </Btn>
+        <Btn ghost light onClick={()=>{}}>
+          <svg width="16" height="18" viewBox="0 0 16 18" fill="#fff"><path d="M13.1 9.6c0-2.2 1.8-3.3 1.9-3.3-1-1.5-2.7-1.7-3.3-1.7-1.4-.1-2.7.8-3.4.8-.7 0-1.8-.8-3-.8-1.5 0-3 .9-3.8 2.3-1.6 2.8-.4 7 1.2 9.3.8 1.1 1.7 2.4 2.9 2.3 1.2 0 1.6-.7 3-.7s1.8.7 3 .7c1.2 0 2-1.1 2.8-2.3.9-1.3 1.3-2.6 1.3-2.7-.1 0-2.6-1-2.6-3.9zM10.9 3.1c.6-.8 1-1.9.9-3-.9 0-2 .6-2.7 1.4-.6.7-1.1 1.8-.9 2.9 1.1.1 2.1-.5 2.7-1.3z"/></svg>
+          Entrar com Apple
+        </Btn>
+        <button onClick={()=>setStep('otp_input')} style={{background:'none',border:'none',cursor:'pointer',fontFamily:FONT,fontSize:13,color:'rgba(255,255,255,0.7)',fontWeight:500,padding:'8px 0',textAlign:'center'}}>
+          Entrar com <span style={{color:'#fff',textDecoration:'underline'}}>email</span> ou <span style={{color:'#fff',textDecoration:'underline'}}>telemóvel</span>
+        </button>
+      </div>
+
+      <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:16}}>
+        <div style={{flex:1,height:1,background:'rgba(255,255,255,0.12)'}}/>
+        <div style={{fontFamily:FONT,fontSize:10,color:'rgba(255,255,255,0.5)',letterSpacing:'1.5px',fontWeight:700}}>NOVO AQUI?</div>
+        <div style={{flex:1,height:1,background:'rgba(255,255,255,0.12)'}}/>
+      </div>
+
+      <div style={{display:'flex',gap:10,marginBottom:14}}>
+        {[{r:'cliente',ic:'👤',l:'Sou cliente'},{r:'prestador',ic:'👷',l:'Sou prestador'}].map(({r,ic,l})=>(
+          <button key={r} onClick={()=>setStep('otp_input')} style={{flex:1,padding:'14px 12px',borderRadius:16,background:'rgba(255,255,255,0.08)',border:'1px solid rgba(255,255,255,0.12)',display:'flex',alignItems:'center',gap:10,cursor:'pointer'}}>
+            <span style={{fontSize:22}}>{ic}</span>
+            <span style={{fontFamily:FONT,fontSize:13,fontWeight:700,color:'#fff'}}>{l}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* ── Bypass de teste — sempre visível ── */}
+      <div style={{background:'rgba(255,255,255,0.05)',borderRadius:14,padding:'14px 16px',border:'1px solid rgba(255,255,255,0.1)',marginBottom:12}}>
+        <div style={{fontFamily:FONT,fontSize:10,color:'rgba(255,255,255,0.4)',textAlign:'center',marginBottom:10,textTransform:'uppercase',letterSpacing:'1px',fontWeight:700}}>
+          🔧 Acesso directo para testar
+        </div>
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:8}}>
+          <button onClick={()=>demoLogin('cliente')} style={{padding:'11px 8px',background:'rgba(22,163,74,0.2)',border:'1px solid rgba(22,163,74,0.4)',borderRadius:10,color:'#86efac',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:FONT}}>
+            👤 Cliente demo
+          </button>
+          <button onClick={()=>demoLogin('prestador')} style={{padding:'11px 8px',background:'rgba(22,163,74,0.2)',border:'1px solid rgba(22,163,74,0.4)',borderRadius:10,color:'#86efac',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:FONT}}>
+            👷 Prestador demo
+          </button>
+        </div>
+        <button onClick={()=>onAuth({user:{id:'admin'},token:null,role:'admin',nome:'Admin',demo:true})} style={{width:'100%',padding:'8px',background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.08)',borderRadius:9,color:'rgba(255,255,255,0.4)',fontSize:11,cursor:'pointer',fontFamily:FONT,fontWeight:600}}>
+          ⚙️ Painel Admin
+        </button>
+      </div>
+
+      <div style={{textAlign:'center',fontFamily:FONT,fontSize:11,color:'rgba(255,255,255,0.35)',lineHeight:1.5}}>
+        Ao continuar aceitas os <span style={{textDecoration:'underline'}}>Termos</span> e a <span style={{textDecoration:'underline'}}>Privacidade</span>
+      </div>
+    </DarkScreen>
+  )
+
+  // ── OTP INPUT — telefone + email ──────────────────
+  if (step==='otp_input') {
+    const isEmailMode = contact.includes('@') || step==='otp_input' && inputMode==='email'
+    return (
+    <div style={{minHeight:'100vh',background:'#f8fafc',padding:'24px 20px',display:'flex',flexDirection:'column'}}>
+      <BackBtn onClick={()=>setStep('welcome')}/>
+      <div style={{marginTop:32,marginBottom:28}}>
+        <div style={{fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:'1.2px',color:'#64748b',marginBottom:8}}>Passo 1 de 2</div>
+        <div style={{fontSize:26,fontWeight:900,color:'#0f172a',letterSpacing:'-0.4px',lineHeight:1.2,marginBottom:6}}>
+          {inputMode==='email' ? 'Qual o teu email?' : 'Qual o teu telemóvel?'}
+        </div>
+        <div style={{fontSize:14,color:'#64748b',lineHeight:1.5}}>
+          {inputMode==='email' ? 'Enviamos um link de acesso para o teu email.' : 'Enviamos um código de 6 dígitos por SMS.'}
+        </div>
+      </div>
+
+      {/* Toggle SMS / Email */}
+      <div style={{display:'flex',background:'#e2e8f0',borderRadius:12,padding:3,marginBottom:20}}>
+        {[{id:'phone',l:'📱 Telemóvel'},{id:'email',l:'✉️ Email'}].map(m=>(
+          <button key={m.id} onClick={()=>setInputMode(m.id)} style={{flex:1,padding:'9px',borderRadius:10,border:'none',background:inputMode===m.id?'#fff':'transparent',color:inputMode===m.id?'#0f172a':'#64748b',fontSize:13,fontWeight:inputMode===m.id?700:500,cursor:'pointer',transition:'all 0.15s',boxShadow:inputMode===m.id?'0 1px 3px rgba(0,0,0,0.1)':'none'}}>
+            {m.l}
+          </button>
+        ))}
+      </div>
+
+      {inputMode==='phone' ? (
+        <div>
+          <div style={{fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:'1.2px',color:'#64748b',marginBottom:8}}>Telemóvel</div>
+          <div style={{display:'flex',gap:8}}>
+            <div style={{background:'#fff',border:'1.5px solid #e2e8f0',borderRadius:12,padding:'14px 12px',display:'flex',alignItems:'center',gap:6,flexShrink:0,cursor:'pointer'}}>
+              <span style={{fontSize:20}}>🇵🇹</span>
+              <span style={{fontSize:15,color:'#0f172a',fontWeight:700}}>+351</span>
+              <svg width="10" height="6" viewBox="0 0 10 6"><path d="M1 1l4 4 4-4" stroke="#94a3b8" strokeWidth="1.8" fill="none" strokeLinecap="round"/></svg>
+            </div>
+            <input
+              key="phone-input"
+              type="tel"
+              inputMode="numeric"
+              maxLength={9}
+              placeholder="912 345 678"
+              style={{flex:1,background:'#fff',border:`1.5px solid ${err?'#dc2626':'#e2e8f0'}`,borderRadius:12,padding:'14px 16px',fontSize:18,fontWeight:500,color:'#0f172a',outline:'none',letterSpacing:'1px',WebkitAppearance:'none'}}
+              autoFocus
+              id="contact-input"
+            />
+          </div>
+        </div>
+      ) : (
+        <div>
+          <div style={{fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:'1.2px',color:'#64748b',marginBottom:8}}>Email</div>
+          <input
+            key="email-input"
+            type="email"
+            inputMode="email"
+            placeholder="o.teu@email.pt"
+            style={{width:'100%',background:'#fff',border:`1.5px solid ${err?'#dc2626':'#e2e8f0'}`,borderRadius:12,padding:'14px 16px',fontSize:16,color:'#0f172a',outline:'none',boxSizing:'border-box',WebkitAppearance:'none'}}
+            autoFocus
+            id="contact-input"
+          />
+        </div>
+      )}
+
+      {err && <div style={{marginTop:8,fontSize:13,color:'#dc2626',fontWeight:600,display:'flex',alignItems:'center',gap:6}}>
+        <svg width="14" height="14" viewBox="0 0 14 14"><circle cx="7" cy="7" r="6" fill="#dc2626"/><path d="M7 4v3M7 9.5v.5" stroke="#fff" strokeWidth="1.5" strokeLinecap="round"/></svg>
+        {err}
+      </div>}
+
+      <div style={{flex:1,minHeight:24}}/>
+
+      <button
+        onClick={async () => {
+          const el = document.getElementById('contact-input')
+          const val = el?.value?.trim() || ''
+          if (!val) { setErr('Preenche o campo antes de continuar.'); return }
+          if (inputMode==='phone' && val.replace(/\s/g,'').length < 9) { setErr('Insere 9 dígitos sem espaços.'); return }
+          if (inputMode==='email' && !val.includes('@')) { setErr('Insere um email válido.'); return }
+          setContact(val); setErr(''); setLoad(true)
+          // Supabase: magic link (email) ou OTP SMS (telemóvel)
+          if (SB_KEY) {
+            try {
+              if (inputMode==='email') {
+                const r = await fetch(`${SB_URL}/auth/v1/otp`, {
+                  method:'POST',
+                  headers:{'apikey':SB_KEY,'Content-Type':'application/json'},
+                  body: JSON.stringify({email:val, create_user:true})
+                })
+                if (!r.ok) { const d=await r.json(); setErr(d.msg||'Erro ao enviar email.'); setLoad(false); return }
+              } else {
+                const tel = '+351'+val.replace(/\s/g,'')
+                const r = await fetch(`${SB_URL}/auth/v1/otp`, {
+                  method:'POST',
+                  headers:{'apikey':SB_KEY,'Content-Type':'application/json'},
+                  body: JSON.stringify({phone:tel, create_user:true})
+                })
+                if (!r.ok) { const d=await r.json(); setErr(d.msg||'Erro ao enviar SMS. Verifica a configuração Twilio.'); setLoad(false); return }
+              }
+            } catch(e) { setErr('Erro de rede. Tenta novamente.'); setLoad(false); return }
+          }
+          setLoad(false); setTimer(58); setStep('otp_code')
+        }}
+        disabled={loading}
+        style={{width:'100%',height:54,borderRadius:14,border:'none',background:loading?'#94a3b8':'#16a34a',color:'#fff',fontSize:16,fontWeight:800,cursor:loading?'default':'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:10,marginBottom:12}}>
+        {loading
+          ? <div style={{width:20,height:20,borderRadius:'50%',border:'2.5px solid rgba(255,255,255,0.3)',borderTopColor:'#fff',animation:'spin .8s linear infinite'}}/>
+          : inputMode==='email' ? 'Enviar link de acesso →' : 'Enviar código SMS →'}
+      </button>
+
+      {!SB_KEY && <div style={{textAlign:'center',fontSize:11,color:'#94a3b8',padding:'8px',background:'#f1f5f9',borderRadius:9}}>
+        🔧 Modo demo — sem Supabase key. <span style={{color:'#16a34a',fontWeight:700,cursor:'pointer'}} onClick={()=>setStep('otp_code')}>Continuar sem código</span>
+      </div>}
+    </div>
+  )}
+
+  // ── OTP CODE ─────────────────────────────────────
+  if (step==='otp_code') return (
+    <LightScreen>
+      <BackBtn onClick={()=>setStep('otp_input')}/>
+      <div style={{marginTop:28}}>
+        <div style={{fontFamily:FONT,fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:'1.2px',color:SP.gray}}>Passo 1 de 2</div>
+        <div style={{fontFamily:FONT,fontSize:24,fontWeight:900,color:SP.ink,marginTop:8,letterSpacing:'-0.4px'}}>Código enviado</div>
+        <div style={{fontFamily:FONT,fontSize:14,color:SP.gray,marginTop:6,lineHeight:1.5}}>Enviámos para <b style={{color:SP.ink}}>+351 {contact}</b></div>
+      </div>
+      <div style={{marginTop:28,display:'flex',gap:8}}>
+        {code.map((d,i)=>{
+          const active=d===''&&code.slice(0,i).every(x=>x!=='')
+          return(
+            <div key={i} style={{flex:1,aspectRatio:'1/1.1',background:'#fff',borderRadius:10,border:`1.5px solid ${active?SP.green:SP.border}`,boxShadow:active?`0 0 0 4px ${SP.greenSoft}`:'none',display:'flex',alignItems:'center',justifyContent:'center',fontFamily:FONT,fontSize:24,fontWeight:900,color:SP.ink,position:'relative'}}>
+              {d}
+              {active&&<span style={{width:2,height:22,background:SP.green,animation:'blink 1s infinite'}}/>}
+            </div>
+          )
+        })}
+      </div>
+      <input value={code.join('')} onChange={e=>{const v=e.target.value.replace(/\D/g,'').slice(0,6);setCode(Array.from({length:6},(_,i)=>v[i]||''))}} style={{position:'absolute',opacity:0,pointerEvents:'none'}} autoFocus/>
+      <div style={{marginTop:20,display:'flex',justifyContent:'space-between',fontFamily:FONT,fontSize:13}}>
+        <div style={{color:SP.gray}}>Reenviar em <b style={{color:SP.ink}}>00:{String(timer).padStart(2,'0')}</b></div>
+        <div style={{color:SP.green,fontWeight:700,cursor:'pointer'}} onClick={()=>setStep('otp_input')}>Mudar contacto</div>
+      </div>
+      <div style={{flex:1,minHeight:40}}/>
+      <Btn onClick={verifyCode} disabled={code.filter(Boolean).length<6} isLoading={loading}>Verificar</Btn>
+    </LightScreen>
+  )
+
+  // ── ROLE SELECTION ────────────────────────────────
+  if (step==='role') return (
+    <LightScreen>
+      <BackBtn onClick={()=>setStep('otp_code')}/>
+      <div style={{marginTop:28}}>
+        <div style={{fontFamily:FONT,fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:'1.2px',color:SP.gray}}>Perfil</div>
+        <div style={{fontFamily:FONT,fontSize:24,fontWeight:900,color:SP.ink,marginTop:8,letterSpacing:'-0.4px',lineHeight:1.15}}>Como queres usar o ServiçoPRO?</div>
+        <div style={{fontFamily:FONT,fontSize:14,color:SP.gray,marginTop:6,lineHeight:1.5}}>Podes mudar mais tarde nas definições.</div>
+      </div>
+      <div style={{marginTop:28,display:'flex',flexDirection:'column',gap:12}}>
+        {[{r:'cliente',ic:'👤',t:'Preciso de serviços',d:'Agenda limpeza, jardim e muito mais'},{r:'prestador',ic:'👷',t:'Quero prestar serviços',d:'Recebe ordens e gere o teu negócio'}].map(({r,ic,t,d})=>{
+          const sel=role===r
+          return(
+            <button key={r} onClick={()=>setRole(r)} style={{padding:20,borderRadius:16,background:'#fff',border:`${sel?2:1}px solid ${sel?SP.green:SP.border}`,boxShadow:sel?'0 8px 24px rgba(22,163,74,0.12)':'none',display:'flex',gap:14,alignItems:'center',cursor:'pointer',width:'100%',textAlign:'left'}}>
+              <div style={{width:52,height:52,borderRadius:14,background:sel?SP.greenSoft:'#f1f5f9',display:'flex',alignItems:'center',justifyContent:'center',fontSize:28,flexShrink:0}}>{ic}</div>
+              <div style={{flex:1}}><div style={{fontFamily:FONT,fontSize:16,fontWeight:800,color:SP.ink}}>{t}</div><div style={{fontFamily:FONT,fontSize:13,color:SP.gray,marginTop:2,lineHeight:1.4}}>{d}</div></div>
+              <div style={{width:22,height:22,borderRadius:'50%',background:sel?SP.green:'transparent',border:sel?'none':`1.5px solid ${SP.border}`,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+                {sel&&<svg width="12" height="12" viewBox="0 0 12 12"><path d="M2 6l3 3 5-6" stroke="#fff" strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+              </div>
+            </button>
+          )
+        })}
+      </div>
+      <div style={{flex:1,minHeight:40}}/>
+      <Btn onClick={()=>{if(role==='cliente')setStep('cli_morada');else setStep('categories')}} disabled={!role}>Continuar</Btn>
+    </LightScreen>
+  )
+
+  // ── CLIENTE: MORADA ───────────────────────────────
+  if (step==='cli_morada') return (
+    <LightScreen>
+      <BackBtn onClick={()=>setStep('role')}/>
+      <div style={{marginTop:28}}>
+        <div style={{fontFamily:FONT,fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:'1.2px',color:SP.gray}}>Passo 1 de 2 · Cliente</div>
+        <div style={{fontFamily:FONT,fontSize:24,fontWeight:900,color:SP.ink,marginTop:8,letterSpacing:'-0.4px',lineHeight:1.15}}>Onde precisas dos serviços?</div>
+        <div style={{fontFamily:FONT,fontSize:14,color:SP.gray,marginTop:6,lineHeight:1.5}}>Adicionamos moradas extra mais tarde.</div>
+      </div>
+      <div style={{marginTop:24}}>
+        <div style={{fontFamily:FONT,fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:'1.2px',color:SP.gray,marginBottom:8}}>Morada</div>
+        <div style={{background:'#fff',border:`1.5px solid ${SP.green}`,borderRadius:10,padding:'12px 14px',boxShadow:`0 0 0 4px ${SP.greenSoft}`,display:'flex',alignItems:'center',gap:10}}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 2a7 7 0 00-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 00-7-7z" stroke={SP.green} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><circle cx="12" cy="9" r="2.5" stroke={SP.green} strokeWidth="2"/></svg>
+          <input placeholder="Rua Augusta, Lisboa" style={{flex:1,border:'none',outline:'none',fontFamily:FONT,fontSize:15,color:SP.ink,fontWeight:500,background:'transparent'}}/>
+          <span style={{width:2,height:18,background:SP.green,animation:'blink 1s infinite'}}/>
+        </div>
+        {/* Sugestões */}
+        <div style={{marginTop:10,background:'#fff',border:`1px solid ${SP.border}`,borderRadius:12,overflow:'hidden'}}>
+          {['Rua Augusta 42 · 1100-048 Lisboa','Rua Augusta Rosa · 2775-618 Carcavelos','Avenida da Liberdade · 1250-096 Lisboa'].map((s,i)=>(
+            <div key={i} style={{padding:'12px 14px',display:'flex',alignItems:'center',gap:12,borderTop:i===0?'none':`1px solid ${SP.border}`,cursor:'pointer'}}
+              onMouseEnter={e=>e.currentTarget.style.background='#f8fafc'} onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
+              <div style={{width:28,height:28,borderRadius:8,background:'#f1f5f9',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>📍</div>
+              <div><div style={{fontFamily:FONT,fontSize:14,fontWeight:600,color:SP.ink}}>{s.split('·')[0]}</div><div style={{fontFamily:FONT,fontSize:12,color:SP.gray}}>{s.split('·')[1]}</div></div>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div style={{marginTop:14,padding:'10px 12px',borderRadius:10,background:SP.greenSoft,display:'flex',alignItems:'center',gap:8}}>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke={SP.greenDeep} strokeWidth="2"/><path d="M12 8v4l3 2" stroke={SP.greenDeep} strokeWidth="2" strokeLinecap="round"/></svg>
+        <div style={{fontFamily:FONT,fontSize:12,color:SP.greenDeep,fontWeight:600}}>24 profissionais disponíveis nesta zona</div>
+      </div>
+      <div style={{flex:1,minHeight:24}}/>
+      <Btn onClick={()=>setStep('cli_servicos')}>Continuar</Btn>
+    </LightScreen>
+  )
+
+  // ── CLIENTE: SERVIÇOS PREFERIDOS ──────────────────
+  if (step==='cli_servicos') return (
+    <LightScreen>
+      <BackBtn onClick={()=>setStep('cli_morada')}/>
+      <div style={{marginTop:28}}>
+        <div style={{fontFamily:FONT,fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:'1.2px',color:SP.gray}}>Passo 2 de 2 · Cliente</div>
+        <div style={{fontFamily:FONT,fontSize:24,fontWeight:900,color:SP.ink,marginTop:8,letterSpacing:'-0.4px',lineHeight:1.15}}>O que costumas precisar?</div>
+        <div style={{fontFamily:FONT,fontSize:14,color:SP.gray,marginTop:6,lineHeight:1.5}}>Opcional — para te mostrar resultados mais relevantes.</div>
+      </div>
+      <div style={{marginTop:20,display:'flex',flexDirection:'column',gap:8}}>
+        {[{ic:'🧹',l:'Limpeza',sub:'Semanal · quinzenal'},{ic:'🌿',l:'Jardim',sub:'Manutenção · poda'},{ic:'🚿',l:'Canalização',sub:'Reparação · urgências'},{ic:'⚡',l:'Elétrica',sub:'Instalação · avarias'},{ic:'🎨',l:'Pintura',sub:'Interior · exterior'},{ic:'🏗️',l:'Pós-Obra',sub:'Limpeza profunda'}].map((s,i)=>{
+          const sel=cats.includes(s.l)
+          return(
+            <button key={s.l} onClick={()=>setCats(p=>sel?p.filter(x=>x!==s.l):[...p,s.l])}
+              style={{padding:'12px 14px',borderRadius:14,background:sel?SP.greenSoft:'#fff',border:`${sel?1.5:1}px solid ${sel?SP.green:SP.border}`,display:'flex',alignItems:'center',gap:12,cursor:'pointer',width:'100%',textAlign:'left'}}>
+              <div style={{width:40,height:40,borderRadius:10,background:sel?'#fff':'#f1f5f9',display:'flex',alignItems:'center',justifyContent:'center',fontSize:20,flexShrink:0}}>{s.ic}</div>
+              <div style={{flex:1}}><div style={{fontFamily:FONT,fontSize:14,fontWeight:700,color:SP.ink}}>{s.l}</div><div style={{fontFamily:FONT,fontSize:12,color:SP.gray,marginTop:1}}>{s.sub}</div></div>
+              <div style={{width:20,height:20,borderRadius:6,background:sel?SP.green:'transparent',border:sel?'none':`1.5px solid ${SP.border}`,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+                {sel&&<svg width="11" height="11" viewBox="0 0 12 12"><path d="M2 6l3 3 5-6" stroke="#fff" strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+              </div>
+            </button>
+          )
+        })}
+      </div>
+      <div style={{flex:1,minHeight:24}}/>
+      <div style={{display:'flex',gap:10}}>
+        <Btn ghost onClick={()=>{setStep('success');setTimeout(()=>onAuth({user:{id:`c${Date.now()}`},token:null,role:'cliente',nome:contact||'Cliente',demo:!SB_KEY}),1500)}}>Saltar</Btn>
+        <Btn onClick={()=>{setStep('success');setTimeout(()=>onAuth({user:{id:`c${Date.now()}`},token:null,role:'cliente',nome:contact||'Cliente',demo:!SB_KEY}),1500)}}>Concluir</Btn>
+      </div>
+    </LightScreen>
+  )
+
+  // ── CATEGORIES (prestador) ────────────────────────
+  if (step==='categories') return (
+    <LightScreen>
+      <BackBtn onClick={()=>setStep('role')}/>
+      <div style={{marginTop:28}}>
+        <div style={{fontFamily:FONT,fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:'1.2px',color:SP.gray}}>Passo 1 de 3 · Prestador</div>
+        <div style={{fontFamily:FONT,fontSize:24,fontWeight:900,color:SP.ink,marginTop:8,letterSpacing:'-0.4px'}}>Que serviços prestas?</div>
+        <div style={{fontFamily:FONT,fontSize:14,color:SP.gray,marginTop:6,lineHeight:1.5}}>Escolhe uma ou mais. Podes adicionar depois.</div>
+      </div>
+      <div style={{marginTop:28,display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
+        {[{id:'limpeza',ic:'🧹',l:'Limpeza'},{id:'jardim',ic:'🌿',l:'Jardim'},{id:'canalizacao',ic:'🚿',l:'Canalização'},{id:'eletrica',ic:'⚡',l:'Elétrica'},{id:'pintura',ic:'🎨',l:'Pintura'},{id:'obra',ic:'🏗️',l:'Pós-Obra'}].map(c=>{
+          const sel=cats.includes(c.id)
+          return(
+            <button key={c.id} onClick={()=>setCats(p=>sel?p.filter(x=>x!==c.id):[...p,c.id])}
+              style={{padding:'14px 12px',borderRadius:14,background:sel?SP.greenSoft:'#fff',border:`${sel?1.5:1}px solid ${sel?SP.green:SP.border}`,display:'flex',flexDirection:'column',alignItems:'flex-start',gap:6,cursor:'pointer',textAlign:'left'}}>
+              <span style={{fontSize:22}}>{c.ic}</span>
+              <span style={{fontFamily:FONT,fontSize:13,fontWeight:700,color:sel?SP.greenDeep:SP.ink}}>{c.l}</span>
+            </button>
+          )
+        })}
+      </div>
+      {cats.length>0&&<div style={{marginTop:12}}><span style={{background:SP.greenSoft,color:SP.greenDeep,padding:'3px 10px',borderRadius:6,fontSize:11,fontWeight:700}}>{cats.length} seleccionado{cats.length>1?'s':''}</span></div>}
+      <div style={{flex:1,minHeight:24}}/>
+      <Btn onClick={()=>setStep('prest_docs')} disabled={cats.length===0}>Continuar</Btn>
+    </LightScreen>
+  )
+
+  // ── PRESTADOR: DOCUMENTOS (v2 novo) ───────────────
+  if (step==='prest_docs') return (
+    <LightScreen>
+      <BackBtn onClick={()=>setStep('categories')}/>
+      <div style={{marginTop:28}}>
+        <div style={{fontFamily:FONT,fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:'1.2px',color:SP.gray}}>Passo 2 de 3 · Prestador</div>
+        <div style={{fontFamily:FONT,fontSize:24,fontWeight:900,color:SP.ink,marginTop:8,letterSpacing:'-0.4px',lineHeight:1.15}}>Documentos <span style={{color:SP.green}}>(opcional)</span></div>
+        <div style={{fontFamily:FONT,fontSize:14,color:SP.gray,marginTop:6,lineHeight:1.5}}>Podes enviar agora ou depois. Se faltar algo, pedimos-te na aprovação.</div>
+      </div>
+      <div style={{marginTop:22,display:'flex',flexDirection:'column',gap:10}}>
+        {[{ic:'🪪',t:'Cartão de Cidadão',sub:'Verificado · frente + verso',st:'done'},{ic:'📋',t:'NIF / atividade aberta',sub:'123 456 789',st:'done'},{ic:'🛡️',t:'Seguro resp. civil',sub:'Recomendado',st:'pending'},{ic:'🏅',t:'Certificações',sub:'Ex: CAP, IEFP',st:'pending'}].map(d=>(
+          <div key={d.t} style={{padding:'12px 14px',borderRadius:14,background:'#fff',border:`1px solid ${SP.border}`,display:'flex',alignItems:'center',gap:12}}>
+            <div style={{width:40,height:40,borderRadius:10,background:d.st==='done'?SP.greenSoft:'#f1f5f9',display:'flex',alignItems:'center',justifyContent:'center',fontSize:20,flexShrink:0}}>{d.ic}</div>
+            <div style={{flex:1}}>
+              <div style={{fontFamily:FONT,fontSize:14,fontWeight:700,color:SP.ink}}>{d.t}</div>
+              <div style={{fontFamily:FONT,fontSize:12,marginTop:2,fontWeight:500,color:d.st==='done'?SP.green:SP.grayLight}}>{d.sub}</div>
+            </div>
+            {d.st==='done'
+              ?<div style={{width:24,height:24,borderRadius:'50%',background:SP.green,display:'flex',alignItems:'center',justifyContent:'center'}}><svg width="12" height="12" viewBox="0 0 12 12"><path d="M2 6l3 3 5-6" stroke="#fff" strokeWidth="2.2" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg></div>
+              :<div style={{fontFamily:FONT,fontSize:12,color:SP.green,fontWeight:700,cursor:'pointer'}}>Adicionar</div>
+            }
+          </div>
+        ))}
+      </div>
+      <div style={{marginTop:14,padding:'10px 12px',borderRadius:10,background:SP.greenSoft,display:'flex',alignItems:'flex-start',gap:8}}>
+        <svg width="14" height="14" viewBox="0 0 14 14" style={{flexShrink:0,marginTop:2}}><circle cx="7" cy="7" r="6" fill={SP.green}/><path d="M4 7l2 2 4-4" stroke="#fff" strokeWidth="1.8" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg>
+        <div style={{fontFamily:FONT,fontSize:12,color:SP.greenDeep,lineHeight:1.45}}>Só precisas de CC + NIF para avançar. O resto pode ser adicionado mais tarde.</div>
+      </div>
+      <div style={{flex:1,minHeight:24}}/>
+      <div style={{display:'flex',gap:10}}>
+        <Btn ghost onClick={()=>setStep('pending')}>Saltar por agora</Btn>
+        <Btn onClick={()=>setStep('pending')}>Continuar</Btn>
+      </div>
+    </LightScreen>
+  )
+
+  // ── PENDING (prestador) ────────────────────────────
+  if (step==='pending') return (
+    <LightScreen>
+      <div style={{display:'flex',justifyContent:'flex-end'}}>
+        <button onClick={()=>onAuth({user:{id:`p${Date.now()}`},token:null,role:'prestador',nome:contact||'Prestador',demo:!SB_KEY,cats})} style={{background:'none',border:'none',cursor:'pointer',fontFamily:FONT,fontSize:13,color:SP.gray,fontWeight:600}}>Sair</button>
+      </div>
+      <div style={{marginTop:20,display:'flex',justifyContent:'center'}}>
+        <div style={{width:96,height:96,borderRadius:'50%',background:SP.greenSoft,display:'flex',alignItems:'center',justifyContent:'center',position:'relative'}}>
+          <div style={{position:'absolute',inset:-6,borderRadius:'50%',border:`3px solid ${SP.green}`,borderTopColor:'transparent',borderRightColor:'transparent',animation:'spin 2s linear infinite'}}/>
+          <svg width="44" height="44" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke={SP.green} strokeWidth="2"/><path d="M12 7v5l3 2" stroke={SP.green} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+        </div>
+      </div>
+      <div style={{marginTop:24,textAlign:'center'}}>
+        <div style={{fontFamily:FONT,fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:'1.2px',color:SP.amber,display:'flex',alignItems:'center',justifyContent:'center',gap:4}}>● Em análise</div>
+        <div style={{fontFamily:FONT,fontSize:24,fontWeight:900,color:SP.ink,marginTop:8,letterSpacing:'-0.4px'}}>Conta em análise</div>
+        <div style={{fontFamily:FONT,fontSize:14,color:SP.gray,marginTop:8,lineHeight:1.5,maxWidth:280,margin:'8px auto 0'}}>Estamos a verificar os teus dados. Normalmente em menos de 24h.</div>
+      </div>
+      <div style={{marginTop:32,background:'#fff',border:`1px solid ${SP.border}`,borderRadius:16,padding:20}}>
+        {[{ic:'✅',t:'Registo',d:'Concluído · hoje',st:'done'},{ic:'⏳',t:'Verificação',d:'A decorrer · até 24h',st:'active'},{ic:'🔒',t:'Activo',d:'Recebe as primeiras ordens',st:'pending',last:true}].map(s=>{
+          const col=s.st==='done'?SP.green:s.st==='active'?SP.amber:SP.grayLight
+          return(
+            <div key={s.t} style={{display:'flex',gap:14,position:'relative',paddingBottom:s.last?0:18}}>
+              <div style={{display:'flex',flexDirection:'column',alignItems:'center'}}>
+                <div style={{width:32,height:32,borderRadius:'50%',background:s.st==='done'?SP.greenSoft:s.st==='active'?'#fef3c7':'#f1f5f9',display:'flex',alignItems:'center',justifyContent:'center',fontSize:15,flexShrink:0}}>{s.ic}</div>
+                {!s.last&&<div style={{width:2,flex:1,marginTop:4,background:s.st==='done'?SP.green:SP.border}}/>}
+              </div>
+              <div style={{flex:1,paddingTop:4}}>
+                <div style={{fontFamily:FONT,fontSize:14,fontWeight:700,color:SP.ink}}>{s.t}</div>
+                <div style={{fontFamily:FONT,fontSize:12,color:col,marginTop:2,fontWeight:600}}>{s.d}</div>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+      <div style={{flex:1,minHeight:32}}/>
+      <Btn onClick={()=>onAuth({user:{id:`p${Date.now()}`},token:null,role:'prestador',nome:contact||'Prestador',demo:!SB_KEY,cats})}>Completar o meu perfil</Btn>
+      <div style={{textAlign:'center',fontFamily:FONT,fontSize:13,color:SP.gray,fontWeight:500,marginTop:10}}>Avisamos-te por SMS assim que fores aprovado</div>
+    </LightScreen>
+  )
+
+  // ── SUCCESS (cliente) ──────────────────────────────
+  if (step==='success') return (
+    <div style={{minHeight:'100vh',background:`linear-gradient(160deg,${SP.green} 0%,${SP.greenDeep} 100%)`,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:24}}>
+      <div style={{position:'relative',width:140,height:140,display:'flex',alignItems:'center',justifyContent:'center',animation:'popIn 0.4s ease'}}>
+        {[1,.72,.48].map((s,i)=><div key={i} style={{position:'absolute',width:140*s,height:140*s,borderRadius:'50%',border:`2px solid rgba(255,255,255,${0.15+i*.1})`}}/>)}
+        <div style={{width:72,height:72,borderRadius:'50%',background:'#fff',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 12px 40px rgba(0,0,0,0.2)'}}>
+          <svg width="34" height="26" viewBox="0 0 40 30" fill="none"><path d="M3 15l11 11L37 3" stroke={SP.green} strokeWidth="5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+        </div>
+      </div>
+      <div style={{fontFamily:FONT,fontSize:26,fontWeight:900,color:'#fff',marginTop:32,letterSpacing:'-0.4px',textAlign:'center'}}>Bem-vinda!</div>
+      <div style={{fontFamily:FONT,fontSize:14,color:'rgba(255,255,255,0.8)',marginTop:8,lineHeight:1.5,textAlign:'center',maxWidth:280}}>A tua conta está pronta. <b style={{color:'#fff'}}>24 profissionais</b> na tua zona.</div>
+      <div style={{marginTop:28,width:'100%',maxWidth:360,background:'rgba(255,255,255,0.1)',backdropFilter:'blur(10px)',border:'1px solid rgba(255,255,255,0.15)',borderRadius:16,padding:16}}>
+        <div style={{fontFamily:FONT,fontSize:10,fontWeight:700,letterSpacing:'1.2px',color:'rgba(255,255,255,0.6)',textTransform:'uppercase',marginBottom:10}}>Próximo passo</div>
+        <div style={{fontFamily:FONT,fontSize:15,fontWeight:700,color:'#fff',marginBottom:4}}>Primeira marcação grátis</div>
+        <div style={{fontFamily:FONT,fontSize:13,color:'rgba(255,255,255,0.75)',lineHeight:1.5}}>Usa o código <b style={{color:'#fff'}}>BEMVINDA</b> até 31 de Maio.</div>
+      </div>
+    </div>
+  )
+
+  return null
+}
+
+/* ══ PALETA ══ */
+const C = {
+  g:'#16a34a', gd:'#14532d', gl:'#dcfce7', gm:'#22c55e',
+  navy:'#0f172a', navyM:'#1e293b', slate:'#64748b',
+  border:'#e2e8f0', mist:'#f8fafc', white:'#fff',
+  amber:'#f59e0b', red:'#ef4444',
+  copper:'#C17E3A', copperL:'#E8A857',
+}
+
+/* ══ DADOS ══ */
+const CATS = [
+  {id:'limpeza',    l:'Limpeza',     ic:'🧹', cor:'#16a34a'},
+  {id:'manutencao', l:'Manutenção',  ic:'🔧', cor:'#0ea5e9'},
+  {id:'jardim',     l:'Jardim',      ic:'🌿', cor:'#22c55e'},
+  {id:'piscina',    l:'Piscina',     ic:'🏊', cor:'#06b6d4'},
+  {id:'pintura',    l:'Pintura',     ic:'🎨', cor:'#f97316'},
+  {id:'eletrica',   l:'Elétrica',    ic:'⚡', cor:'#eab308'},
+  {id:'canalizacao',l:'Canalização', ic:'🚿', cor:'#8b5cf6'},
+  {id:'obra',       l:'Pós-Obra',    ic:'🏗️', cor:'#78716c'},
+]
+const SVCS = [
+  {id:'s1',cat:'limpeza',    n:'Plano Anual Preventivo', p:49, u:'/mês',    d:'Recorrente',r:4.9,rv:312,badge:'Destaque',ic:'🛡️'},
+  {id:'s2',cat:'limpeza',    n:'Limpeza Mensal',         p:75, u:'/visita', d:'3–5h',      r:4.8,rv:840,badge:null,      ic:'🧹'},
+  {id:'s3',cat:'limpeza',    n:'Limpeza Pós-Obra',       p:120,u:'fixo',    d:'4–8h',      r:4.9,rv:220,badge:'Popular', ic:'🏗️'},
+  {id:'s4',cat:'jardim',     n:'Manutenção de Jardim',   p:45, u:'/visita', d:'2–3h',      r:4.7,rv:190,badge:null,      ic:'🌿'},
+  {id:'s5',cat:'piscina',    n:'Manutenção de Piscina',  p:55, u:'/visita', d:'1–2h',      r:4.8,rv:140,badge:null,      ic:'🏊'},
+  {id:'s6',cat:'canalizacao',n:'Urgência Canalização',   p:65, u:'fixo',    d:'1–2h',      r:4.9,rv:390,badge:'Urgente', ic:'🚿'},
+  {id:'s7',cat:'eletrica',   n:'Instalação Elétrica',    p:80, u:'fixo',    d:'2–4h',      r:4.8,rv:210,badge:null,      ic:'⚡'},
+  {id:'s8',cat:'pintura',    n:'Pintura de Divisão',     p:90, u:'fixo',    d:'4–6h',      r:4.7,rv:160,badge:null,      ic:'🎨'},
+]
+const TECNICOS = [
+  {id:'p1',n:'António Ferreira',ini:'AF',
+   morada:'Rua das Flores, 23',cp:'2500-123',cidade:'Caldas da Rainha',
+   nif:'123 456 789',indicativo:'+351',tel:'914 000 001',email:'antonio.ferreira@email.com',
+   foto:null, comprovativo_iban:null,
+   bio:'Especialista em limpeza residencial e pós-obra com 8 anos de experiência em Caldas da Rainha e arredores.',
+   cats:['limpeza','obra'],r:4.9,jobs:340,anos:8,loc:'Caldas da Rainha',st:'activo',ok:true,
+   iban:'PT50 0035 0000 1111 0001 0',nivel:'gold',saldo:105},
+  {id:'p2',n:'Ricardo Gomes',ini:'RG',
+   morada:'Rua do Castelo, 5',cp:'2510-089',cidade:'Óbidos',
+   nif:'234 567 890',indicativo:'+351',tel:'914 000 002',email:'ricardo.gomes@email.com',
+   foto:null,comprovativo_iban:null,bio:'Canalizador e eletricista com 12 anos de experiência. Disponível para urgências.',
+   cats:['canalizacao','eletrica'],r:4.8,jobs:520,anos:12,loc:'Óbidos',st:'activo',ok:true,
+   iban:'PT50 0010 0000 2222 0002 0',nivel:'silver',saldo:210},
+  {id:'p3',n:'Sandra Matos',ini:'SM',
+   morada:'Av. Central, 88',cp:'2500-456',cidade:'Caldas da Rainha',
+   nif:'345 678 901',indicativo:'+351',tel:'914 000 003',email:'sandra.matos@email.com',
+   foto:null,comprovativo_iban:null,bio:'Especialista em limpeza profissional. Rigor, pontualidade e qualidade garantidas.',
+   cats:['limpeza'],r:5.0,jobs:190,anos:6,loc:'Caldas da Rainha',st:'activo',ok:true,
+   iban:'PT50 0033 0000 3333 0003 0',nivel:'base',saldo:68},
+  {id:'p4',n:'Manuel Costa',ini:'MC',
+   morada:'Rua do Jardim, 12',cp:'2460-123',cidade:'Alcobaça',
+   nif:'456 789 012',indicativo:'+351',tel:'914 000 004',email:'manuel.costa@email.com',
+   foto:null,comprovativo_iban:null,bio:'Jardinagem e manutenção de piscinas. Projetos residenciais e condominiais.',
+   cats:['jardim','piscina'],r:4.7,jobs:210,anos:9,loc:'Alcobaça',st:'ocupado',ok:true,
+   iban:'PT50 0020 0000 4444 0004 0',nivel:'silver',saldo:34},
+]
+const REVIEWS = [
+  {n:'Ana S.',    c:'Caldas da Rainha',t:'Serviço incrível! O técnico foi pontual e muito cuidadoso.',         r:5,svc:'Limpeza Mensal',      tec:'António F.'},
+  {n:'Carlos M.', c:'Óbidos',          t:'Urgência de canalização resolvida em 1h. Muito profissional.',       r:5,svc:'Urgência Canalização', tec:'Ricardo G.'},
+  {n:'Maria A.',  c:'Leiria',          t:'Já sou cliente há 2 anos. Sempre o mesmo técnico, sempre excelente.',r:5,svc:'Plano Anual',           tec:'Sandra M.'},
+]
+const ORDENS_INIT = [
+  {id:'ot1',sid:'s2',cli:'Sr. Ferreira', cliId:'cl1',morada:'Rua das Flores, 23, Caldas',  km:2.1, data:'Hoje',   hora:'14:00',tid:'p1',st:'em_curso',          fotos:[],               ass:false,aval:null,notas:'3.º andar',      pago:true,  val:75,  taxa:18,dt_pedido:'21 Abr 09:12'},
+  {id:'ot2',sid:'s6',cli:'Cond. Verde',  cliId:'cl2',morada:'Av. da Liberdade, 10, Caldas',km:5.3, data:'Amanhã', hora:'10:00',tid:null,st:'pendente',           fotos:[],               ass:false,aval:null,notas:'Fuga na cave',   pago:true,  val:65,  taxa:18,dt_pedido:'21 Abr 10:05'},
+  {id:'ot3',sid:'s4',cli:'Sra. Alves',   cliId:'cl3',morada:'Quinta Rosas, Óbidos',        km:12.4,data:'12 Abr', hora:'10:00',tid:'p4',st:'paga',               fotos:['🌿','📷','📷'],ass:true, aval:5,   notas:'',              pago:true,  val:45,  taxa:20,dt_pedido:'10 Abr 14:30'},
+  {id:'ot4',sid:'s2',cli:'Cond. Sol',    cliId:'cl4',morada:'Rua do Sol, 5, Caldas',       km:3.8, data:'22 Abr', hora:'11:00',tid:null,st:'pendente',           fotos:[],               ass:false,aval:null,notas:'',              pago:true,  val:75,  taxa:18,dt_pedido:'21 Abr 11:47'},
+  {id:'ot5',sid:'s3',cli:'Ed. Atlântico',cliId:'cl6',morada:'Rua do Porto, 1, Caldas',     km:4.1, data:'23 Abr', hora:'09:00',tid:'p3',st:'agendado',           fotos:[],               ass:false,aval:null,notas:'4 apartamentos',pago:true,  val:120, taxa:22,dt_pedido:'20 Abr 16:22'},
+  {id:'ot6',sid:'s7',cli:'Sr. Martins',  cliId:'cl5',morada:'Ed. Atlântico, Caldas',       km:2.9, data:'24 Abr', hora:'14:00',tid:'p2',st:'proposta_hora',      fotos:[],               ass:false,aval:null,notas:'Quadro antigo',  pago:true,  val:80,  taxa:20,hora_proposta:'16:00',dt_pedido:'21 Abr 08:00'},
+  {id:'ot7',sid:'s1',cli:'Sr. Ferreira', cliId:'cl1',morada:'Rua das Flores, 23, Caldas',  km:2.1, data:'25 Abr', hora:'10:00',tid:'p1',st:'aguarda_validacao',  fotos:['📷','📷','📷'],ass:false,aval:null,notas:'',              pago:true,  val:49,  taxa:18,dt_pedido:'19 Abr 09:00'},
+  {id:'ot8',sid:'s5',cli:'Cond. Sol',    cliId:'cl4',morada:'Rua do Sol, 5, Caldas',       km:3.8, data:'18 Abr', hora:'11:00',tid:'p4',st:'concluida',          fotos:['🏊','📷'],     ass:true, aval:4,   notas:'',              pago:true,  val:55,  taxa:20,dt_pedido:'16 Abr 10:00'},
+  {id:'ot9',sid:'s8',cli:'Sra. Alves',   cliId:'cl3',morada:'Quinta Rosas, Óbidos',        km:12.4,data:'10 Abr', hora:'09:00',tid:'p4',st:'faturada',           fotos:['🎨','📷','📷'],ass:true, aval:5,   notas:'Sala + quarto',  pago:true,  val:90,  taxa:20,dt_pedido:'8 Abr 15:00'},
+]
+const MOVS = [
+  {id:'m1',tipo:'credito', v:57.00, d:'Limpeza Mensal — Rua das Flores', dt:'Hoje 14:32',  st:'disponivel',oid:'ot1'},
+  {id:'m2',tipo:'credito', v:57.00, d:'Limpeza Mensal — Av. Brasil',     dt:'Ontem 11:15', st:'disponivel',oid:'ot2'},
+  {id:'m3',tipo:'credito', v:91.00, d:'Limpeza Pós-Obra — Ed. Roma',     dt:'12 Abr',      st:'disponivel',oid:'ot3'},
+  {id:'m4',tipo:'levantar',v:-145.00,d:'Levantamento IBAN pessoal',      dt:'10 Abr',      st:'processado', oid:null},
+  {id:'m5',tipo:'bonus',   v:10.00, d:'Bónus avaliação perfeita — Março',dt:'1 Abr',       st:'disponivel',oid:null},
+  {id:'m6',tipo:'seguro',  v:-8.50, d:'Seguro RC Grupo — Abril',         dt:'1 Abr',       st:'processado', oid:null},
+  {id:'m7',tipo:'credito', v:34.00, d:'Manutenção Jardim — Sra. Alves',  dt:'28 Mar',      st:'disponivel',oid:'ot4'},
+]
+// Mensagens de chat por ordem (sistema + utilizadores)
+const CHAT_INIT = {
+  ot1:[
+    {id:'c1',tipo:'system_auto',texto:'💳 Pagamento confirmado. Ordem criada com sucesso.',dt:'21 Abr 09:12'},
+    {id:'c2',tipo:'system_auto',texto:'👷 António Ferreira aceitou o serviço. Data: Hoje · 14:00.',dt:'21 Abr 09:35'},
+    {id:'c3',tipo:'user_provider',autor:'António F.',texto:'Bom dia! Estarei aí às 14h. Tenho todos os materiais. Alguma instrução especial?',dt:'21 Abr 09:40'},
+    {id:'c4',tipo:'user_client',autor:'Sr. Ferreira',texto:'Bom dia! 3.º andar, código da porta é 1234. Obrigado!',dt:'21 Abr 09:45'},
+    {id:'c5',tipo:'system_auto',texto:'⏰ Lembrete: o seu serviço começa em 2 horas.',dt:'21 Abr 12:00'},
+    {id:'c6',tipo:'system_auto',texto:'🔧 António Ferreira chegou ao local e iniciou o trabalho.',dt:'21 Abr 14:02'},
+  ],
+  ot2:[
+    {id:'c10',tipo:'system_auto',texto:'💳 Pagamento confirmado. À procura de técnico disponível...',dt:'21 Abr 10:05'},
+    {id:'c11',tipo:'system_auto',texto:'📬 Ordem em aberto. Notificámos 3 prestadores disponíveis na sua zona.',dt:'21 Abr 10:05'},
+  ],
+  ot5:[
+    {id:'c20',tipo:'system_auto',texto:'💳 Pagamento confirmado. Ordem criada.',dt:'20 Abr 16:22'},
+    {id:'c21',tipo:'system_auto',texto:'👷 Sandra Matos aceitou o serviço. Data: 23 Abr · 09:00.',dt:'20 Abr 16:45'},
+    {id:'c22',tipo:'user_provider',autor:'Sandra M.',texto:'Olá! Para a limpeza pós-obra de 4 apartamentos vou precisar de trazer a minha equipa (2 pessoas). Está bem?',dt:'20 Abr 17:00'},
+    {id:'c23',tipo:'user_client',autor:'Ed. Atlântico',texto:'Sim claro! Combinado. O condomínio abre às 08:30.',dt:'20 Abr 17:10'},
+    {id:'c24',tipo:'user_provider',autor:'Sandra M.',texto:'Perfeito, estamos às 09:00. Precisa de algum produto específico?',dt:'20 Abr 17:12'},
+    {id:'c25',tipo:'user_client',autor:'Ed. Atlântico',texto:'Não, tragam tudo. Apartamentos têm muita sujidade de obra.',dt:'20 Abr 17:15'},
+    {id:'c26',tipo:'system_auto',texto:'⏰ Lembrete: o serviço é amanhã às 09:00. Sandra Matos · +351 914 000 003',dt:'22 Abr 09:00'},
+  ],
+  ot6:[
+    {id:'c30',tipo:'system_auto',texto:'💳 Pagamento confirmado. Ordem criada.',dt:'21 Abr 08:00'},
+    {id:'c31',tipo:'system_auto',texto:'👷 Ricardo Gomes aceitou mas propôs nova hora.',dt:'21 Abr 08:20'},
+    {id:'c32',tipo:'user_provider',autor:'Ricardo G.',texto:'Bom dia! Tenho outro serviço até às 15h. Consigo estar consigo às 16h em vez das 14h. Serve?',dt:'21 Abr 08:22'},
+    {id:'c33',tipo:'action',texto:'Ricardo Gomes propôs nova hora: 16:00. O que prefere?',dt:'21 Abr 08:22',payload:{tipo:'proposta_hora',hora:'16:00'}},
+  ],
+}
+const NIVEIS = {
+  base:  {l:'Base',  ic:'🟤',cor:'#92400e',bg:'#fef3c7',taxa:22,min:0,   mr:0},
+  silver:{l:'Silver',ic:'⚪',cor:'#64748b',bg:'#f1f5f9',taxa:20,min:50,  mr:4.5},
+  gold:  {l:'Gold',  ic:'🟡',cor:'#b45309',bg:'#fef3c7',taxa:18,min:200, mr:4.7},
+  elite: {l:'Elite', ic:'🟢',cor:'#14532d',bg:'#dcfce7',taxa:16,min:500, mr:4.8},
+}
+const BENEFICIOS = [
+  {id:'b1',n:'Seguro RC em Grupo',  ic:'🛡️',d:'Apólice negociada para a rede. Poupança de 35% face ao mercado.',                        nivel:'silver',preco:'€8,50/mês'},
+  {id:'b2',n:'Fundo de Equipamento',ic:'🔧',d:'Adiantamento para ferramentas profissionais, sem juros. Desconto automático nas ordens.',nivel:'gold',  preco:'Sem juros'},
+  {id:'b3',n:'Formação Certificada',ic:'📜',d:'Certificações (gás, electricidade, AVAC) com desconto de 40%.',                          nivel:'base',  preco:'Desde €45'},
+  {id:'b4',n:'Cartão Combustível',  ic:'⛽',d:'Desconto de 4% em combustível e portagens com parceiro da rede.',                        nivel:'silver',preco:'Sem custo'},
+]
+const SERVICOS_CAL = [
+  {id:'c1',data:'2026-04-20',hora:'14:00',nome:'Limpeza Mensal',    estado:'em_curso',   local:'Rua das Flores, 23, Caldas', km:2.1, cliente:'Sr. Ferreira',   valor:75,  dur:'3–4h', ic:'🧹'},
+  {id:'c2',data:'2026-04-22',hora:'09:00',nome:'Manutenção Jardim', estado:'agendado',   local:'Quinta Rosas, Óbidos',       km:12.4,cliente:'Sra. Alves',     valor:45,  dur:'2–3h', ic:'🌿'},
+  {id:'c3',data:'2026-04-22',hora:'14:00',nome:'Limpeza Mensal',    estado:'a_confirmar',local:'Rua do Sol, 5, Caldas',      km:3.8, cliente:'Cond. Sol',      valor:75,  dur:'3–4h', ic:'🧹'},
+  {id:'c4',data:'2026-04-25',hora:'11:00',nome:'Manutenção Piscina',estado:'agendado',   local:'Av. Central, 45, Caldas',    km:1.5, cliente:'Ed. Atlântico',  valor:55,  dur:'1–2h', ic:'🏊'},
+  {id:'c5',data:'2026-04-27',hora:'09:00',nome:'Limpeza Mensal',    estado:'agendado',   local:'Rua Nova, 12, Óbidos',       km:14.2,cliente:'Cond. Verde',    valor:75,  dur:'3–4h', ic:'🧹'},
+  {id:'c6',data:'2026-04-12',hora:'10:00',nome:'Manutenção Jardim', estado:'concluido',  local:'Quinta Rosas, Óbidos',       km:12.4,cliente:'Sra. Alves',     valor:45,  dur:'2h',   ic:'🌿'},
+  {id:'c7',data:'2026-04-20',hora:'09:00',nome:'Limpeza Pós-Obra',  estado:'concluido',  local:'Rua da Liberdade, 8, Caldas',km:0.9, cliente:'Sr. Martins',    valor:120, dur:'5h',   ic:'🏗️'},
+]
+
+/* ══ HELPERS ══ */
+const svcById = id => SVCS.find(s => s.id === id)
+const tecById = id => TECNICOS.find(t => t.id === id)
+const catById = id => CATS.find(c => c.id === id)
+
+const CHAT_C = [
+  {de:'plat',   t:'O António está confirmado para amanhã às 10h. Tenha acesso à entrada disponível.',h:'09:32'},
+  {de:'cliente',t:'Perfeito, obrigado!',h:'09:45'},
+]
+const CHAT_P = [
+  {de:'plat',     t:'António, urgência na Av. Brasil, 10. Podes ir quinta às 9h?',h:'08:15'},
+  {de:'prestador',t:'Confirmado, estarei lá.',h:'08:22'},
+]
+
+/* ══ COMPONENTES LOCAIS ══ */
+
+/* ── OrderChat — Chat partilhado cliente/prestador ── */
+function OrderChat({ ordem, role='cliente', prest, onBack, onUpdate }) {
+  const s = SVCS.find(sv=>sv.id===ordem.sid)
+  const p = prest || TECNICOS.find(t=>t.id===ordem.tid)
+  const [msgs, setMsgs] = useState(CHAT_INIT[ordem.id]||[
+    {id:'c_init',tipo:'system_auto',texto:`💳 Pagamento confirmado. Ordem de "${s?.n}" criada.`,dt:'Agora'},
+    {id:'c_init2',tipo:'system_auto',texto:'📬 À procura de técnico disponível na sua zona...',dt:'Agora'},
+  ])
+  const [txt, setTxt] = useState('')
+  const [horaProp, setHoraProp] = useState(null)
+  const [showHoras, setShowHoras] = useState(false)
+  const endRef = useState(null)[0]
+
+  const SLOTS = ['08:00','08:30','09:00','09:30','10:00','10:30','11:00','11:30',
+                 '12:00','13:00','14:00','14:30','15:00','15:30','16:00','16:30','17:00','18:00']
+
+  const addMsg = (tipo, texto, payload=null) => {
+    const m = {id:`c${Date.now()}`,tipo,autor:role==='prestador'?p?.n||'Prestador':'Cliente',texto,dt:new Date().toLocaleTimeString('pt-PT',{hour:'2-digit',minute:'2-digit'}),payload}
+    setMsgs(ms=>[...ms,m])
+  }
+  const addSys = texto => setMsgs(ms=>[...ms,{id:`s${Date.now()}`,tipo:'system_auto',texto,dt:new Date().toLocaleTimeString('pt-PT',{hour:'2-digit',minute:'2-digit'})}])
+
+  const enviar = () => {
+    if(!txt.trim()) return
+    addMsg(role==='prestador'?'user_provider':'user_client', txt.trim())
+    setTxt('')
+  }
+
+  const proporHora = (h) => {
+    setHoraProp(h); setShowHoras(false)
+    addMsg('user_provider',`Prefiro às ${h}. Serve-te?`,{tipo:'proposta_hora',hora:h})
+    addSys(`🕐 Proposta de nova hora enviada ao cliente: ${h}`)
+    if(onUpdate) onUpdate({...ordem, st:'proposta_hora', hora_proposta:h})
+  }
+
+  const confirmarHora = (h) => {
+    addMsg('user_client',`✅ Perfeito, confirmo às ${h}!`)
+    addSys(`✅ Hora confirmada: ${h}. Ordem agendada.`)
+    if(onUpdate) onUpdate({...ordem, st:'agendado', hora:h})
+  }
+
+  const aceitarOrdem = () => {
+    addSys(`✅ Serviço aceite por ${p?.n||'Prestador'}. Data: ${ordem.data} · ${ordem.hora}`)
+    if(onUpdate) onUpdate({...ordem, st:'agendado', tid: p?.id || ordem.tid})
+  }
+
+  const ST = {
+    pendente:          {l:'Pendente',         col:C.amber, bg:'#fef3c7'},
+    proposta_hora:     {l:'Proposta de hora', col:'#8b5cf6',bg:'#f5f3ff'},
+    agendado:          {l:'Agendado',         col:C.g,      bg:C.gl},
+    em_curso:          {l:'Em execução',      col:'#0ea5e9',bg:'#e0f2fe'},
+    aguarda_validacao: {l:'Aguarda validação',col:C.amber,  bg:'#fff7ed'},
+    concluida:         {l:'Concluído',        col:C.g,      bg:C.gl},
+    faturada:          {l:'Faturado',         col:C.gd,     bg:C.gl},
+    paga:              {l:'Pago',             col:C.gd,     bg:C.gl},
+  }
+  const st = ST[ordem.st]||{l:ordem.st,col:C.slate,bg:'#f1f5f9'}
+
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Login />} />
-        <Route
-          path="/cliente"
-          element={
-            <AuthGuard requiredRole="cliente">
-              <DashboardCliente />
-            </AuthGuard>
+    <div style={{display:'flex',flexDirection:'column',height:'100vh',background:C.mist}}>
+      {/* Header */}
+      <div style={{background:C.navy,padding:'10px 14px',display:'flex',alignItems:'center',gap:10,flexShrink:0}}>
+        <button onClick={onBack} style={{background:'none',border:'none',color:'#94a3b8',fontSize:20,cursor:'pointer',lineHeight:1,padding:0}}>←</button>
+        <div style={{flex:1}}>
+          <div style={{fontSize:13,fontWeight:800,color:'#fff'}}>{s?.n}</div>
+          <div style={{fontSize:10,color:'#94a3b8'}}>{ordem.cli} · {ordem.morada?.split(',')[0]}</div>
+        </div>
+        <div style={{textAlign:'right'}}>
+          <span style={{fontSize:10,fontWeight:700,background:st.bg,color:st.col,padding:'3px 9px',borderRadius:12}}>{st.l}</span>
+          <div style={{fontSize:10,color:'#94a3b8',marginTop:2}}>{ordem.data} · {ordem.hora}</div>
+        </div>
+      </div>
+
+      {/* Info card prestador (se atribuído) */}
+      {p && (
+        <div style={{background:'#0f2a1a',padding:'10px 14px',display:'flex',alignItems:'center',gap:10,flexShrink:0,borderBottom:'1px solid rgba(34,197,94,0.2)'}}>
+          <div style={{width:34,height:34,borderRadius:'50%',background:`linear-gradient(135deg,${C.g},${C.gm})`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:12,color:'#fff',fontWeight:800,flexShrink:0}}>{p.ini}</div>
+          <div style={{flex:1}}>
+            <div style={{fontSize:12,fontWeight:700,color:'#86efac'}}>{p.n}</div>
+            <div style={{fontSize:10,color:'#4ade80'}}>⭐ {p.r} · {p.indicativo} {p.tel}</div>
+          </div>
+          <div style={{fontSize:10,color:'#4ade80',fontWeight:600}}>🔗 Em linha</div>
+        </div>
+      )}
+
+      {/* Mensagens */}
+      <div style={{flex:1,overflowY:'auto',padding:'12px 14px',display:'flex',flexDirection:'column',gap:8}}>
+        {msgs.map(m => {
+          const isMe = (role==='cliente'&&m.tipo==='user_client') || (role==='prestador'&&m.tipo==='user_provider')
+          const isSys = m.tipo==='system_auto'||m.tipo==='system_alert'
+          const isAction = m.tipo==='action'
+
+          if(isSys) return (
+            <div key={m.id} style={{textAlign:'center',margin:'4px 0'}}>
+              <span style={{fontSize:10,color:C.slate,background:'rgba(0,0,0,0.06)',padding:'4px 10px',borderRadius:12,display:'inline-block'}}>{m.texto}</span>
+              <div style={{fontSize:9,color:C.muted,marginTop:2}}>{m.dt}</div>
+            </div>
+          )
+
+          if(isAction&&m.payload?.tipo==='proposta_hora') return (
+            <div key={m.id} style={{background:C.white,borderRadius:12,padding:12,border:'2px solid #8b5cf6',margin:'4px 0'}}>
+              <div style={{fontSize:12,fontWeight:700,color:'#7c3aed',marginBottom:8}}>🕐 {m.texto}</div>
+              {role==='cliente'&&ordem.st==='proposta_hora'&&(
+                <div style={{display:'flex',gap:7}}>
+                  <button onClick={()=>confirmarHora(m.payload.hora)} style={{flex:1,padding:'8px',border:'none',borderRadius:8,background:C.g,color:'#fff',fontSize:12,fontWeight:700,cursor:'pointer'}}>✅ Aceitar {m.payload.hora}</button>
+                  <button onClick={()=>setShowHoras(true)} style={{flex:1,padding:'8px',border:`1.5px solid ${C.border}`,borderRadius:8,background:C.white,fontSize:12,fontWeight:600,cursor:'pointer'}}>Propor outra</button>
+                </div>
+              )}
+              <div style={{fontSize:9,color:C.slate,marginTop:6,textAlign:'right'}}>{m.dt}</div>
+            </div>
+          )
+
+          return (
+            <div key={m.id} style={{display:'flex',flexDirection:isMe?'row-reverse':'row',gap:7,alignItems:'flex-end'}}>
+              {!isMe&&<div style={{width:26,height:26,borderRadius:'50%',background:`linear-gradient(135deg,${C.g},${C.gm})`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:9,color:'#fff',fontWeight:800,flexShrink:0}}>{m.autor?.[0]||'?'}</div>}
+              <div style={{maxWidth:'75%'}}>
+                {!isMe&&<div style={{fontSize:9,color:C.slate,marginBottom:2}}>{m.autor}</div>}
+                <div style={{background:isMe?C.navy:C.white,color:isMe?'#fff':C.navy,padding:'9px 12px',borderRadius:isMe?'16px 16px 4px 16px':'16px 16px 16px 4px',fontSize:13,lineHeight:1.5,boxShadow:'0 1px 3px rgba(0,0,0,0.08)'}}>{m.texto}</div>
+                <div style={{fontSize:9,color:C.slate,marginTop:2,textAlign:isMe?'right':'left'}}>{m.dt}</div>
+              </div>
+            </div>
+          )
+        })}
+
+        {/* Botões de acção rápida para prestador */}
+        {role==='prestador'&&ordem.st==='pendente'&&(
+          <div style={{background:C.white,borderRadius:12,padding:12,border:`2px solid ${C.g}`,marginTop:4}}>
+            <div style={{fontSize:12,fontWeight:700,color:C.navy,marginBottom:8}}>📬 Nova ordem disponível</div>
+            <div style={{display:'flex',gap:7}}>
+              <button onClick={aceitarOrdem} style={{flex:2,padding:'9px',border:'none',borderRadius:9,background:C.g,color:'#fff',fontSize:12,fontWeight:700,cursor:'pointer'}}>✅ Aceitar</button>
+              <button onClick={()=>setShowHoras(true)} style={{flex:1,padding:'9px',border:`1.5px solid ${C.border}`,borderRadius:9,background:C.white,fontSize:12,fontWeight:600,cursor:'pointer'}}>🕐 Propor hora</button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Selector de horas (proposta) */}
+      {showHoras&&<>
+        <div onClick={()=>setShowHoras(false)} style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.4)',zIndex:40}}/>
+        <div style={{position:'fixed',bottom:70,left:'50%',transform:'translateX(-50%)',width:'100%',maxWidth:430,background:C.white,borderRadius:'16px 16px 0 0',zIndex:41,padding:'16px 14px 20px'}}>
+          <div style={{fontSize:13,fontWeight:700,color:C.navy,marginBottom:10}}>🕐 Propor nova hora</div>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:7}}>
+            {SLOTS.map(h=><button key={h} onClick={()=>proporHora(h)} style={{padding:'8px',borderRadius:9,border:`1.5px solid ${C.border}`,background:C.white,fontSize:12,fontWeight:600,cursor:'pointer'}}>{h}</button>)}
+          </div>
+        </div>
+      </>}
+
+      {/* Input de mensagem */}
+      <div style={{padding:'10px 12px',background:C.white,borderTop:`1px solid ${C.border}`,display:'flex',gap:8,alignItems:'flex-end',flexShrink:0}}>
+        <div style={{flex:1,background:'#f8fafc',borderRadius:20,padding:'9px 14px',border:`1.5px solid ${C.border}`,display:'flex',alignItems:'center',gap:8}}>
+          <input value={txt} onChange={e=>setTxt(e.target.value)} onKeyDown={e=>e.key==='Enter'&&enviar()} placeholder='Escreve uma mensagem…' style={{flex:1,border:'none',background:'transparent',fontSize:14,outline:'none',color:C.navy}}/>
+        </div>
+        <button onClick={enviar} disabled={!txt.trim()} style={{width:42,height:42,borderRadius:'50%',border:'none',background:txt.trim()?C.g:'#e2e8f0',color:'#fff',fontSize:18,cursor:txt.trim()?'pointer':'default',flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center'}}>↑</button>
+      </div>
+    </div>
+  )
+}
+function RoleBar({ role, onChange }) {
+  return (
+    <div style={{ background:'#0f172a', padding:'8px 12px', display:'flex', gap:6, position:'sticky', top:0, zIndex:60 }}>
+      <span style={{ fontSize:9, color:'#475569', fontWeight:700, alignSelf:'center', whiteSpace:'nowrap', marginRight:2 }}>MODO</span>
+      {[{id:'cliente',l:'👤 Cliente'},{id:'prestador',l:'👷 Prestador'},{id:'gestor',l:'🏢 Gestor'}].map(r => (
+        <button key={r.id} onClick={() => onChange(r.id)} style={{
+          flex:1, padding:'7px 4px', borderRadius:8, border:'none', cursor:'pointer',
+          background: role===r.id ? C.g : 'rgba(255,255,255,0.07)',
+          color: role===r.id ? '#fff' : '#94a3b8', fontSize:11, fontWeight:700,
+        }}>{r.l}</button>
+      ))}
+    </div>
+  )
+}
+
+function BNav({ tab, set }) {
+  return (
+    <div style={{ position:'fixed', bottom:0, left:'50%', transform:'translateX(-50%)', width:'100%', maxWidth:430, background:C.white, borderTop:`1px solid ${C.border}`, display:'flex', zIndex:50 }}>
+      {[{id:'inicio',ic:'🏠',l:'Início'},{id:'explorar',ic:'🔍',l:'Explorar'},{id:'pedidos',ic:'📋',l:'Pedidos'},{id:'perfil',ic:'👤',l:'Perfil'}].map(t => (
+        <button key={t.id} onClick={() => set(t.id)} style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', padding:'8px 0 6px', background:'none', border:'none', cursor:'pointer', gap:2 }}>
+          <span style={{ fontSize:20 }}>{t.ic}</span>
+          <span style={{ fontSize:10, fontWeight:700, color: tab===t.id ? C.g : '#94a3b8' }}>{t.l}</span>
+          {tab===t.id && <div style={{ width:16, height:2, borderRadius:2, background:C.g }}/>}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+function Chat({ titulo, msgs: iM, lado, onBack }) {
+  const [msgs, setMsgs] = useState(iM)
+  const [nova, setNova] = useState('')
+  const env = () => { if (!nova.trim()) return; setMsgs(m => [...m, {de:lado, t:nova, h:'agora'}]); setNova('') }
+  return (
+    <div style={{ minHeight:'100vh', background:C.mist, display:'flex', flexDirection:'column' }}>
+      <Header title={titulo} onBack={onBack}/>
+      <div style={{ flex:1, padding:'12px 14px 90px', display:'flex', flexDirection:'column', gap:8 }}>
+        {msgs.map((m,i) => {
+          const mine = m.de===lado
+          return (
+            <div key={i} style={{ display:'flex', justifyContent: mine ? 'flex-end' : 'flex-start' }}>
+              <div style={{ maxWidth:'78%', background: mine ? C.navy : C.white, color: mine ? '#fff' : C.navy, borderRadius: mine ? '15px 4px 15px 15px' : '4px 15px 15px 15px', padding:'9px 12px', fontSize:13, lineHeight:1.5, border: mine ? 'none' : `1px solid ${C.border}` }}>
+                <p style={{ margin:0 }}>{m.t}</p>
+                <div style={{ fontSize:9, color: mine ? '#8FA8BB' : C.slate, marginTop:3, textAlign:'right' }}>{m.h}</div>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+      <div style={{ position:'fixed', bottom:0, left:'50%', transform:'translateX(-50%)', width:'100%', maxWidth:430, background:C.white, padding:'9px 13px 18px', borderTop:`1px solid ${C.border}`, display:'flex', gap:7 }}>
+        <input value={nova} onChange={e=>setNova(e.target.value)} onKeyDown={e=>e.key==='Enter'&&env()} placeholder='Escrever mensagem...' style={{ flex:1, border:`1.5px solid ${C.border}`, borderRadius:10, padding:'9px 12px', fontSize:13, outline:'none', color:C.navy }}/>
+        <button onClick={env} style={{ background:C.g, color:'#fff', border:'none', borderRadius:10, width:40, height:40, fontSize:16, cursor:'pointer' }}>➤</button>
+      </div>
+    </div>
+  )
+}
+
+/* ══════════════════════════════════
+   CLIENTE
+══════════════════════════════════ */
+function CHome({ ordens, onSvc, onOrdem, authUser }) {
+  const [cat, setCat] = useState(null)
+  const [q,   setQ]   = useState('')
+  const nomeCliente = authUser?.nome || 'Cliente'
+  const meus = ordens.filter(o => o.cli===nomeCliente && o.st!=='concluida')
+  const svcs = SVCS.filter(s => (cat ? s.cat===cat : true) && (q ? s.n.toLowerCase().includes(q.toLowerCase()) : true))
+  return (
+    <div style={{ minHeight:'100vh', background:C.mist, paddingBottom:80 }}>
+      {/* Hero */}
+      <div style={{ background:`linear-gradient(145deg,${C.navy},${C.gd})`, padding:'26px 20px 32px', position:'relative', overflow:'hidden' }}>
+        <div style={{ position:'absolute', top:-50, right:-50, width:180, height:180, borderRadius:'50%', background:'rgba(255,255,255,0.04)' }}/>
+        <div style={{ position:'relative' }}>
+          <div style={{ display:'flex', alignItems:'center', gap:7, marginBottom:10 }}>
+            <span style={{ fontSize:11 }}>🔐</span>
+            <span style={{ color:C.gm, fontSize:10, fontWeight:700, letterSpacing:'0.06em' }}>REDE DE CONFIANÇA — TÉCNICOS NOMINAIS</span>
+          </div>
+          <h1 style={{ color:'#fff', fontSize:24, fontWeight:800, lineHeight:1.2, margin:'0 0 8px', fontFamily:'Georgia,serif' }}>
+            A sua equipa,<br/><span style={{ color:'#86efac' }}>sempre a mesma.</span>
+          </h1>
+          <p style={{ color:'#94a3b8', fontSize:13, margin:'0 0 18px', lineHeight:1.5 }}>Técnico fixo. Relatório fotográfico. Preço garantido.</p>
+          <div style={{ display:'flex', gap:8, background:'rgba(255,255,255,0.08)', borderRadius:14, padding:5 }}>
+            <input value={q} onChange={e=>setQ(e.target.value)} placeholder="Que serviço precisa?" style={{ flex:1, background:C.white, border:'none', borderRadius:10, padding:'10px 14px', fontSize:14, outline:'none', color:C.navy }}/>
+            <button style={{ background:C.g, color:C.white, border:'none', borderRadius:10, padding:'0 14px', fontSize:16, cursor:'pointer' }}>🔍</button>
+          </div>
+          <div style={{ display:'flex', gap:14, marginTop:14 }}>
+            {[['⭐','4.9/5'],['✅','+500 serviços'],['🔐','Técnico fixo']].map(([ic,t]) => (
+              <div key={t} style={{ display:'flex', alignItems:'center', gap:4 }}>
+                <span style={{ fontSize:11 }}>{ic}</span>
+                <span style={{ color:'#bbf7d0', fontSize:10, fontWeight:600 }}>{t}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+      <div style={{ padding:'0 16px' }}>
+        {meus.length>0 && <>
+          <SectTitle t="Os meus pedidos"/>
+          {meus.map(o => { const s=svcById(o.sid); const t=tecById(o.tid); return (
+            <Card key={o.id} style={{ padding:14, marginBottom:8 }} onClick={() => onOrdem(o)}>
+              <div style={{ display:'flex', gap:10, alignItems:'center' }}>
+                <span style={{ fontSize:24 }}>{s?.ic||'🔧'}</span>
+                <div style={{ flex:1 }}>
+                  <div style={{ display:'flex', justifyContent:'space-between' }}>
+                    <span style={{ fontSize:13, fontWeight:700, color:C.navy }}>{s?.n}</span>
+                    <EstBadge st={o.st}/>
+                  </div>
+                  <div style={{ fontSize:11, color:C.slate, marginTop:2 }}>{o.data}{t&&<span style={{ color:C.g, fontWeight:600 }}> · 👤 {t.n}</span>}</div>
+                </div>
+              </div>
+            </Card>
+          )})}
+          <div style={{ height:6 }}/>
+        </>}
+        {/* Categorias */}
+        <SectTitle t="O que precisa?"/>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:8, marginBottom:18 }}>
+          {CATS.map(c => (
+            <button key={c.id} onClick={() => setCat(cat===c.id ? null : c.id)} style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:4, background: cat===c.id ? c.cor : C.white, border:`2px solid ${cat===c.id ? c.cor : C.border}`, borderRadius:13, padding:'10px 4px', cursor:'pointer' }}>
+              <span style={{ fontSize:20 }}>{c.ic}</span>
+              <span style={{ fontSize:9, fontWeight:700, color: cat===c.id ? '#fff' : '#64748b', textAlign:'center', lineHeight:1.2 }}>{c.l}</span>
+            </button>
+          ))}
+        </div>
+        {/* Equipa */}
+        {!cat && !q && <>
+          <SectTitle t="A nossa equipa"/>
+          <div style={{ display:'flex', gap:10, overflowX:'auto', paddingBottom:8, marginBottom:16 }}>
+            {TECNICOS.filter(t=>t.st==='activo').map(t => (
+              <div key={t.id} style={{ flexShrink:0, width:118, background:C.white, borderRadius:14, padding:12, border:`1px solid ${C.border}`, textAlign:'center' }}>
+                <div style={{ display:'flex', justifyContent:'center', marginBottom:7 }}><Av ini={t.ini} size={44}/></div>
+                <div style={{ fontSize:11, fontWeight:700, color:C.navy, lineHeight:1.3 }}>{t.n}</div>
+                <div style={{ fontSize:9, color:C.slate, marginTop:2 }}>{t.cats.map(c=>catById(c)?.ic).join(' ')}</div>
+                <div style={{ display:'flex', justifyContent:'center', marginTop:3 }}><Stars v={t.r} s={10}/></div>
+                <div style={{ fontSize:9, color:C.g, fontWeight:700, marginTop:3, background:C.gl, borderRadius:7, padding:'2px 5px', display:'inline-block' }}>{t.jobs} serviços</div>
+              </div>
+            ))}
+          </div>
+        </>}
+        {/* Serviços */}
+        <SectTitle t={cat ? CATS.find(c=>c.id===cat)?.l||'Serviços' : 'Serviços Populares'} action={cat?'Ver todos':null} onAction={()=>setCat(null)}/>
+        {svcs.map(s => (
+          <Card key={s.id} style={{ padding:15, marginBottom:8, cursor:'pointer' }} onClick={() => onSvc(s)}>
+            <div style={{ display:'flex', gap:12, alignItems:'center' }}>
+              <div style={{ width:50, height:50, borderRadius:13, background:(catById(s.cat)?.cor||C.g)+'18', display:'flex', alignItems:'center', justifyContent:'center', fontSize:22, flexShrink:0 }}>{s.ic}</div>
+              <div style={{ flex:1 }}>
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:6 }}>
+                  <span style={{ fontSize:13, fontWeight:700, color:C.navy, lineHeight:1.3 }}>{s.n}</span>
+                  {s.badge && <Pill text={s.badge} bg={s.badge==='Urgente'?'#fee2e2':s.badge==='Destaque'?'#fef3c7':C.gl} col={s.badge==='Urgente'?C.red:s.badge==='Destaque'?'#92400e':C.gd}/>}
+                </div>
+                <div style={{ display:'flex', alignItems:'center', gap:5, marginTop:3 }}><Stars v={s.r} s={10}/><span style={{ fontSize:10, color:C.slate }}>{s.r} ({s.rv})</span></div>
+                <div style={{ display:'flex', justifyContent:'space-between', marginTop:5 }}>
+                  <span style={{ fontSize:11, color:C.slate }}>⏱ {s.d}</span>
+                  <div><span style={{ fontSize:16, fontWeight:800, color:C.g }}>€{s.p}</span><span style={{ fontSize:10, color:C.slate }}> {s.u}</span></div>
+                </div>
+              </div>
+            </div>
+          </Card>
+        ))}
+        {/* Reviews */}
+        {!cat && !q && <>
+          <SectTitle t="O que dizem os clientes"/>
+          {REVIEWS.map((r,i) => (
+            <Card key={i} style={{ padding:15, marginBottom:8 }}>
+              <div style={{ display:'flex', justifyContent:'space-between', marginBottom:7 }}>
+                <div><span style={{ fontWeight:700, fontSize:13, color:C.navy }}>{r.n}</span><span style={{ color:'#94a3b8', fontSize:11, marginLeft:5 }}>{r.c}</span></div>
+                <Stars v={r.r} s={12}/>
+              </div>
+              <p style={{ margin:'0 0 6px', fontSize:12, color:'#475569', lineHeight:1.5 }}>"{r.t}"</p>
+              <div style={{ display:'flex', justifyContent:'space-between' }}>
+                <span style={{ fontSize:10, color:'#94a3b8' }}>{r.svc}</span>
+                <span style={{ fontSize:10, color:C.g, fontWeight:600 }}>👤 {r.tec}</span>
+              </div>
+            </Card>
+          ))}
+        </>}
+      </div>
+    </div>
+  )
+}
+
+function CExplorar({ onSvc }) {
+  const [cat, setCat] = useState(null)
+  return (
+    <div style={{ minHeight:'100vh', background:C.mist, paddingBottom:80 }}>
+      <div style={{ background:C.white, padding:'18px 16px 14px', borderBottom:`1px solid ${C.border}` }}>
+        <h1 style={{ fontSize:19, fontWeight:800, color:C.navy, marginBottom:12 }}>Explorar serviços</h1>
+        <div style={{ display:'flex', gap:8, overflowX:'auto' }}>
+          {[{id:null,l:'Todos'},...CATS.map(c=>({id:c.id,l:c.l}))].map(f => (
+            <button key={f.id||'t'} onClick={()=>setCat(f.id)} style={{ flexShrink:0, padding:'6px 12px', borderRadius:18, border:'none', cursor:'pointer', background: cat===f.id ? C.g : '#f1f5f9', color: cat===f.id ? '#fff' : '#64748b', fontSize:12, fontWeight:600 }}>{f.l}</button>
+          ))}
+        </div>
+      </div>
+      <div style={{ padding:'14px 16px 20px' }}>
+        {SVCS.filter(s => cat ? s.cat===cat : true).map(s => (
+          <Card key={s.id} style={{ padding:15, marginBottom:8, cursor:'pointer' }} onClick={() => onSvc(s)}>
+            <div style={{ display:'flex', gap:12, alignItems:'center' }}>
+              <div style={{ width:54, height:54, borderRadius:13, background:(catById(s.cat)?.cor||C.g)+'18', display:'flex', alignItems:'center', justifyContent:'center', fontSize:24, flexShrink:0 }}>{s.ic}</div>
+              <div style={{ flex:1 }}>
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}><span style={{ fontSize:13, fontWeight:700, color:C.navy }}>{s.n}</span>{s.badge&&<Pill text={s.badge} bg={s.badge==='Urgente'?'#fee2e2':C.gl} col={s.badge==='Urgente'?C.red:C.gd}/>}</div>
+                <div style={{ display:'flex', alignItems:'center', gap:5, marginTop:2 }}><Stars v={s.r} s={10}/><span style={{ fontSize:10, color:C.slate }}>{s.r} ({s.rv})</span></div>
+                <div style={{ display:'flex', justifyContent:'space-between', marginTop:4 }}><span style={{ fontSize:11, color:C.slate }}>⏱ {s.d}</span><span style={{ fontSize:15, fontWeight:800, color:C.g }}>€{s.p} <span style={{ fontSize:10, fontWeight:500, color:C.slate }}>{s.u}</span></span></div>
+              </div>
+            </div>
+          </Card>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function CPedidos({ ordens, onOrdem, authUser }) {
+  const nomeCliente = authUser?.nome || 'Cliente'
+  const meus = ordens.filter(o => o.cli===nomeCliente)
+  return (
+    <div style={{ minHeight:'100vh', background:C.mist, paddingBottom:80 }}>
+      <div style={{ background:C.white, padding:'18px 16px 14px', borderBottom:`1px solid ${C.border}` }}>
+        <h1 style={{ fontSize:19, fontWeight:800, color:C.navy }}>Os meus pedidos</h1>
+      </div>
+      <div style={{ padding:'14px 16px 20px' }}>
+        {meus.map(o => { const s=svcById(o.sid); const t=tecById(o.tid); return (
+          <Card key={o.id} style={{ padding:15, marginBottom:8 }} onClick={() => onOrdem(o)}>
+            <div style={{ display:'flex', gap:10, alignItems:'center' }}>
+              <span style={{ fontSize:26 }}>{s?.ic||'🔧'}</span>
+              <div style={{ flex:1 }}>
+                <div style={{ display:'flex', justifyContent:'space-between', marginBottom:2 }}><span style={{ fontSize:13, fontWeight:700, color:C.navy }}>{s?.n}</span><EstBadge st={o.st}/></div>
+                <div style={{ fontSize:11, color:C.slate }}>{o.data}</div>
+                {t ? <div style={{ fontSize:10, color:C.g, fontWeight:600, marginTop:1 }}>👤 {t.n}</div> : <div style={{ fontSize:10, color:C.amber, fontWeight:600, marginTop:1 }}>⏳ A atribuir técnico</div>}
+              </div>
+            </div>
+          </Card>
+        )})}
+      </div>
+    </div>
+  )
+}
+
+function CPerfil() {
+  return (
+    <div style={{ minHeight:'100vh', background:C.mist, paddingBottom:80 }}>
+      <div style={{ background:`linear-gradient(135deg,${C.navy},${C.gd})`, padding:'32px 20px 26px', textAlign:'center' }}>
+        <div style={{ width:74, height:74, borderRadius:'50%', background:C.g, display:'flex', alignItems:'center', justifyContent:'center', fontSize:32, margin:'0 auto 10px' }}>👤</div>
+        <h2 style={{ color:'#fff', margin:'0 0 3px', fontSize:18, fontWeight:800 }}>Sr. Ferreira</h2>
+        <p style={{ color:'#94a3b8', margin:'0 0 14px', fontSize:12 }}>ferreira@email.com</p>
+      </div>
+      <div style={{ padding:'14px 16px 20px' }}>
+        {[['📍','As minhas moradas'],['💳','Métodos de pagamento'],['⭐','As minhas avaliações'],['🎁','Código de referência'],['🔔','Notificações'],['❓','Ajuda & Suporte'],['🚪','Terminar sessão']].map(([ic,l]) => (
+          <Card key={l} style={{ padding:'14px 16px', marginBottom:7, display:'flex', alignItems:'center', gap:12, cursor:'pointer' }}>
+            <span style={{ fontSize:19 }}>{ic}</span>
+            <span style={{ flex:1, fontSize:13, color:C.navy, fontWeight:600 }}>{l}</span>
+            <span style={{ color:C.border, fontSize:16 }}>›</span>
+          </Card>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function CNovaOrdem({ svcI, onBack, onOk }) {
+  const [step,setStep] = useState(1)
+  const [sid,setSid]   = useState(svcI?.id||null)
+  const [tid,setTid]   = useState(null)
+  const [data,setData] = useState(null)
+  const [hora,setHora] = useState(null)
+  const [morada,setMorada] = useState('')
+  const [notas,setNotas]   = useState('')
+  const s    = svcById(sid)
+  const tecs = s ? TECNICOS.filter(t=>t.cats.includes(s.cat)) : []
+  const hoje = new Date()
+  const datas = Array.from({length:7},(_,i)=>{ const d=new Date(hoje); d.setDate(hoje.getDate()+i+1); return d })
+  const DN=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'], MN=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
+  const HORAS=['08:00','09:00','10:00','11:00','14:00','15:00','16:00','17:00']
+  const ok = step===1?!!sid : step===2?true : step===3?!!(data&&hora) : morada.length>3
+  const LABS = ['Serviço','Equipa','Quando','Morada']
+  return (
+    <div style={{ minHeight:'100vh', background:C.mist }}>
+      <div style={{ background:C.white, padding:'13px 16px', display:'flex', alignItems:'center', gap:10, borderBottom:`1px solid ${C.border}`, position:'sticky', top:0, zIndex:20 }}>
+        <button onClick={() => step===1 ? onBack() : setStep(p=>p-1)} style={{ background:'none', border:'none', fontSize:22, cursor:'pointer', color:C.navy }}>←</button>
+        <div style={{ flex:1 }}><div style={{ fontSize:14, fontWeight:700, color:C.navy }}>Agendar Serviço</div><div style={{ fontSize:10, color:C.slate }}>Passo {step} de 4</div></div>
+      </div>
+      <div style={{ background:C.white, padding:'0 16px 12px', borderBottom:`1px solid ${C.border}` }}>
+        <div style={{ display:'flex', gap:3, marginBottom:5 }}>{LABS.map((_,i) => <div key={i} style={{ flex:1, height:3, borderRadius:3, background: i+1<=step ? C.g : C.border }}/>)}</div>
+        <div style={{ display:'flex', justifyContent:'space-between' }}>{LABS.map((l,i) => <span key={i} style={{ fontSize:9, fontWeight:700, color: i+1<=step ? C.g : '#94a3b8' }}>{l}</span>)}</div>
+      </div>
+      <div style={{ padding:'14px 16px 100px' }}>
+        {step===1 && SVCS.map(sv => (
+          <Card key={sv.id} style={{ padding:13, marginBottom:7, border: sid===sv.id ? `2px solid ${C.g}` : undefined }} onClick={() => setSid(sv.id)}>
+            <div style={{ display:'flex', gap:10, alignItems:'center' }}>
+              <span style={{ fontSize:22 }}>{sv.ic}</span>
+              <div style={{ flex:1 }}><div style={{ fontSize:13, fontWeight:700, color:C.navy }}>{sv.n}</div><div style={{ fontSize:11, color:C.slate }}>€{sv.p} {sv.u}</div></div>
+              {sid===sv.id && <span style={{ color:C.g, fontSize:17 }}>✓</span>}
+            </div>
+          </Card>
+        ))}
+        {step===2 && <>
+          <p style={{ fontSize:12, color:C.slate, margin:'0 0 12px', lineHeight:1.5 }}>Escolha o técnico. Todos verificados e com histórico na rede.</p>
+          {tecs.map(t => (
+            <Card key={t.id} style={{ padding:13, marginBottom:8, border: tid===t.id ? `2px solid ${C.g}` : undefined }} onClick={() => setTid(t.id)}>
+              <div style={{ display:'flex', gap:10, alignItems:'center' }}>
+                <div style={{ position:'relative' }}><Av ini={t.ini} size={46}/>{t.st==='activo'&&<div style={{ position:'absolute', bottom:0, right:0, width:11, height:11, borderRadius:'50%', background:C.gm, border:'2px solid #fff' }}/>}</div>
+                <div style={{ flex:1 }}>
+                  <div style={{ fontSize:13, fontWeight:700, color:C.navy }}>{t.n}</div>
+                  <div style={{ fontSize:10, color:C.slate }}>📍 {t.loc} · {t.anos} anos</div>
+                  <div style={{ display:'flex', gap:4, marginTop:2 }}><Stars v={t.r} s={10}/><span style={{ fontSize:10, color:C.slate }}>{t.r} · {t.jobs} serviços</span></div>
+                </div>
+                {tid===t.id ? <span style={{ color:C.g, fontSize:16 }}>✓</span> : <span style={{ color:C.border, fontSize:15 }}>›</span>}
+              </div>
+            </Card>
+          ))}
+          <button onClick={() => setStep(3)} style={{ width:'100%', background:'none', border:`1.5px dashed ${C.border}`, borderRadius:11, padding:11, fontSize:12, color:C.slate, cursor:'pointer', marginTop:4 }}>Sem preferência — atribuir automaticamente</button>
+        </>}
+        {step===3 && <>
+          <h3 style={{ fontSize:13, fontWeight:700, color:C.navy, margin:'0 0 10px' }}>Data preferencial</h3>
+          <div style={{ display:'flex', gap:7, overflowX:'auto', paddingBottom:4, marginBottom:18 }}>
+            {datas.map((d,i) => (
+              <button key={i} onClick={() => setData(d)} style={{ flexShrink:0, width:58, padding:'9px 0', borderRadius:12, border:'none', background: data?.toDateString()===d.toDateString() ? C.navy : C.white, boxShadow:'0 1px 3px rgba(0,0,0,0.07)', display:'flex', flexDirection:'column', alignItems:'center', gap:2, cursor:'pointer' }}>
+                <span style={{ fontSize:9, fontWeight:700, color: data?.toDateString()===d.toDateString() ? '#86efac' : C.slate }}>{DN[d.getDay()]}</span>
+                <span style={{ fontSize:18, fontWeight:800, color: data?.toDateString()===d.toDateString() ? '#fff' : C.navy }}>{d.getDate()}</span>
+                <span style={{ fontSize:9, color: data?.toDateString()===d.toDateString() ? '#86efac' : C.slate }}>{MN[d.getMonth()]}</span>
+              </button>
+            ))}
+          </div>
+          <h3 style={{ fontSize:13, fontWeight:700, color:C.navy, margin:'0 0 10px' }}>Hora preferencial</h3>
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:7 }}>
+            {HORAS.map(h => <button key={h} onClick={() => setHora(h)} style={{ padding:'11px 0', borderRadius:10, border:'none', background: hora===h ? C.g : C.white, color: hora===h ? '#fff' : C.navy, fontWeight:700, fontSize:12, cursor:'pointer', boxShadow:'0 1px 3px rgba(0,0,0,0.06)' }}>{h}</button>)}
+          </div>
+        </>}
+        {step===4 && <>
+          <Card style={{ padding:16, marginBottom:12 }}>
+            <div style={{ marginBottom:12 }}>
+              <label style={{ fontSize:11, fontWeight:700, color:C.slate, display:'block', marginBottom:4 }}>Morada completa</label>
+              <input value={morada} onChange={e=>setMorada(e.target.value)} placeholder="Rua das Flores, 23, 2500 Caldas" style={{ width:'100%', border:`1.5px solid ${C.border}`, borderRadius:9, padding:'10px 13px', fontSize:13, outline:'none', boxSizing:'border-box', color:C.navy }}/>
+            </div>
+            <label style={{ fontSize:11, fontWeight:700, color:C.slate, display:'block', marginBottom:4 }}>Notas (opcional)</label>
+            <textarea value={notas} onChange={e=>setNotas(e.target.value)} placeholder="Ex: 3.º andar sem elevador..." style={{ width:'100%', border:`1.5px solid ${C.border}`, borderRadius:9, padding:'9px 13px', fontSize:13, resize:'none', height:64, outline:'none', boxSizing:'border-box', color:C.navy }}/>
+          </Card>
+          {s && <Card style={{ padding:15 }}>
+            <div style={{ fontSize:10, fontWeight:700, color:C.slate, textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:8 }}>Resumo</div>
+            {[['Serviço',s.n],['Valor',`€${s.p} ${s.u}`],['Técnico',tecById(tid)?.n||'A atribuir'],['Data',data?`${DN[data.getDay()]} ${data.getDate()} ${MN[data.getMonth()]} – ${hora}`:'—']].map(([l,v]) => (
+              <div key={l} style={{ display:'flex', justifyContent:'space-between', padding:'7px 0', borderBottom:'1px solid #f1f5f9' }}><span style={{ fontSize:11, color:C.slate }}>{l}</span><span style={{ fontSize:11, fontWeight:700, color:C.navy, maxWidth:190, textAlign:'right' }}>{v}</span></div>
+            ))}
+          </Card>}
+        </>}
+      </div>
+      <FixedBottom>
+        <Btn v='green' full dis={!ok} onClick={() => step<4 ? setStep(p=>p+1) : onOk({sid,tid,data,hora,morada,notas})}>
+          {step===4 ? '✓ Confirmar pedido' : 'Continuar →'}
+        </Btn>
+      </FixedBottom>
+    </div>
+  )
+}
+
+function COrdem({ o, onBack, onChat }) {
+  const [aval, setAval] = useState(o.aval)
+  const s = svcById(o.sid); const t = tecById(o.tid)
+  return (
+    <div style={{ minHeight:'100vh', background:C.mist }}>
+      <div style={{ background:C.white, padding:'13px 16px', display:'flex', alignItems:'center', gap:10, borderBottom:`1px solid ${C.border}`, position:'sticky', top:0, zIndex:20 }}>
+        <button onClick={onBack} style={{ background:'none', border:'none', fontSize:22, cursor:'pointer', color:C.navy }}>←</button>
+        <div style={{ flex:1 }}><div style={{ fontSize:14, fontWeight:700, color:C.navy }}>{s?.n}</div><div style={{ fontSize:10, color:C.slate }}>{o.data}</div></div>
+        <EstBadge st={o.st}/>
+      </div>
+      <div style={{ padding:'14px 16px 40px' }}>
+        {t && <Card style={{ padding:15, marginBottom:10 }}>
+          <div style={{ fontSize:10, fontWeight:700, color:C.slate, textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:9 }}>Técnico atribuído</div>
+          <div style={{ display:'flex', gap:10, alignItems:'center' }}>
+            <Av ini={t.ini} size={46}/>
+            <div style={{ flex:1 }}><div style={{ fontSize:13, fontWeight:700, color:C.navy }}>{t.n}</div><Stars v={t.r}/><div style={{ fontSize:10, color:C.slate, marginTop:1 }}>📍 {t.loc}</div></div>
+            <div style={{ display:'flex', gap:6 }}>
+              <button style={{ background:C.gl, border:'none', borderRadius:8, width:34, height:34, fontSize:14, cursor:'pointer' }}>📞</button>
+              <button onClick={onChat} style={{ background:C.gl, border:'none', borderRadius:8, width:34, height:34, fontSize:14, cursor:'pointer', position:'relative' }}>
+                💬
+                {(CHAT_INIT[o.id]||[]).filter(m=>m.tipo==='user_provider').length>0&&<span style={{position:'absolute',top:-2,right:-2,width:10,height:10,background:C.g,borderRadius:'50%',border:'1.5px solid #fff'}}/>}
+              </button>
+            </div>
+          </div>
+        </Card>}
+        <Card style={{ padding:15, marginBottom:10 }}>
+          {[['Morada',o.morada],['Valor',`€${s?.p} ${s?.u}`],o.notas&&['Notas',o.notas]].filter(Boolean).map(([l,v]) => (
+            <div key={l} style={{ display:'flex', justifyContent:'space-between', padding:'7px 0', borderBottom:'1px solid #f1f5f9' }}><span style={{ fontSize:11, color:C.slate }}>{l}</span><span style={{ fontSize:11, fontWeight:700, color:C.navy, maxWidth:200, textAlign:'right' }}>{v}</span></div>
+          ))}
+        </Card>
+        {o.fotos.length>0 && <Card style={{ padding:15, marginBottom:10 }}>
+          <div style={{ fontSize:10, fontWeight:700, color:C.slate, textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:9 }}>Relatório fotográfico</div>
+          <div style={{ display:'flex', gap:7, marginBottom:8 }}>{o.fotos.map((f,i) => <div key={i} style={{ width:68, height:68, borderRadius:10, background:'#f1f5f9', display:'flex', alignItems:'center', justifyContent:'center', fontSize:24, border:`1px solid ${C.border}` }}>{f}</div>)}</div>
+          {o.ass && <div style={{ fontSize:11, color:C.g, fontWeight:600, background:C.gl, padding:'6px 10px', borderRadius:7 }}>✅ Assinado digitalmente</div>}
+        </Card>}
+        {o.st==='concluida' && <Card style={{ padding:15 }}>
+          <div style={{ fontSize:10, fontWeight:700, color:C.slate, textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:9 }}>A sua avaliação</div>
+          <div style={{ display:'flex', gap:5, justifyContent:'center' }}>{[1,2,3,4,5].map(i => <button key={i} onClick={() => setAval(i)} style={{ fontSize:26, background:'none', border:'none', cursor:'pointer', filter: i<=(aval||0) ? 'none' : 'grayscale(1)' }}>⭐</button>)}</div>
+          {aval && <p style={{ textAlign:'center', fontSize:11, color:C.g, marginTop:6, fontWeight:600 }}>Obrigado pela avaliação!</p>}
+        </Card>}
+      </div>
+    </div>
+  )
+}
+
+/* ══════════════════════════════════
+   PRESTADOR
+══════════════════════════════════ */
+function PDash({ ordens, onOrdem, onCarteira, onChat, onNavMenu }) {
+  const [drawerOpen,  setDrawerOpen]  = useState(false)
+  const [menuActivo,  setMenuActivo]  = useState(null)
+  const eu      = TECNICOS[0]
+  const nc      = NIVEIS[eu.nivel]
+  const minhas  = ordens.filter(o => o.tid===eu.id)
+  const abertas = minhas.filter(o => o.st!=='concluida')
+  const feitas  = minhas.filter(o => o.st==='concluida')
+
+  const handleMenu = id => {
+    setMenuActivo(id)
+    if (id==='carteira')     { onCarteira?.(); return }
+    if (id==='mensagens')    { onChat?.(); return }
+    onNavMenu?.(id)
+  }
+
+  return (
+    <div style={{ minHeight:'100vh', background:C.mist }}>
+      <DrawerMenu open={drawerOpen} onClose={() => setDrawerOpen(false)} onNavigate={handleMenu} user={{ n:eu.n, ini:eu.ini, id_num:'301612811', nivel:eu.nivel }} activeItem={menuActivo}/>
+      <div style={{ background:`linear-gradient(145deg,${C.navy},${C.gd})`, padding:'22px 20px 18px' }}>
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:14 }}>
+          <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+            {/* Hamburguer ☰ */}
+            <button onClick={() => setDrawerOpen(true)} style={{ background:'none', border:'none', cursor:'pointer', padding:6, display:'flex', flexDirection:'column', gap:5 }}>
+              {[0,1,2].map(i => <div key={i} style={{ width:22, height:2, background:'#fff', borderRadius:2 }}/>)}
+            </button>
+            <div>
+              <div style={{ color:'#94a3b8', fontSize:10, marginBottom:2 }}>Bem-vindo,</div>
+              <h1 style={{ color:'#fff', fontSize:18, fontWeight:800, margin:'0 0 3px' }}>{eu.n}</h1>
+              <div style={{ display:'flex', alignItems:'center', gap:4 }}>
+                <span style={{ width:6, height:6, borderRadius:'50%', background:C.gm, display:'inline-block' }}/>
+                <span style={{ color:'#86efac', fontSize:10, fontWeight:600 }}>Disponível</span>
+              </div>
+            </div>
+          </div>
+          <Av ini={eu.ini} size={50}/>
+        </div>
+        <div onClick={onCarteira} style={{ background:'rgba(255,255,255,0.09)', borderRadius:13, padding:'12px 14px', cursor:'pointer', border:'1px solid rgba(255,255,255,0.1)', display:'flex', alignItems:'center', gap:10, marginBottom:12 }}>
+          <span style={{ fontSize:24 }}>💰</span>
+          <div style={{ flex:1 }}>
+            <div style={{ fontSize:10, color:'#94a3b8', marginBottom:1 }}>A minha carteira</div>
+            <div style={{ fontSize:20, fontWeight:800, color:'#fff' }}>€105,00</div>
+            <div style={{ fontSize:9, color:'#94a3b8' }}>+€57,00 pendente · toque para gerir</div>
+          </div>
+          <div style={{ textAlign:'right' }}>
+            <div style={{ fontSize:9, color:'#86efac', fontWeight:700, background:'rgba(34,197,94,0.15)', padding:'3px 7px', borderRadius:7 }}>{nc.ic} {nc.l}</div>
+            <div style={{ fontSize:9, color:'#94a3b8', marginTop:3 }}>{nc.taxa}% taxa</div>
+          </div>
+        </div>
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:7 }}>
+          {[['📋',abertas.length,'Em aberto'],['✅',feitas.length,'Concluídas'],['⭐',eu.r,'Avaliação']].map(([ic,v,l]) => (
+            <div key={l} style={{ background:'rgba(255,255,255,0.07)', borderRadius:10, padding:'10px 7px', textAlign:'center' }}>
+              <div style={{ fontSize:14 }}>{ic}</div><div style={{ color:'#fff', fontSize:16, fontWeight:800 }}>{v}</div><div style={{ color:'#94a3b8', fontSize:8 }}>{l}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div style={{ padding:'14px 16px 20px' }}>
+        <h2 style={{ fontSize:14, fontWeight:700, color:C.navy, margin:'0 0 10px' }}>Ordens atribuídas</h2>
+        {abertas.length===0 && <div style={{ textAlign:'center', padding:24, color:C.slate, fontSize:13 }}>Sem ordens activas</div>}
+        {abertas.map(o => { const s=svcById(o.sid); return (
+          <Card key={o.id} style={{ padding:13, marginBottom:7 }} onClick={() => onOrdem(o)}>
+            <div style={{ display:'flex', gap:9, alignItems:'center' }}>
+              <span style={{ fontSize:22 }}>{s?.ic||'🔧'}</span>
+              <div style={{ flex:1 }}>
+                <div style={{ display:'flex', justifyContent:'space-between' }}><span style={{ fontSize:12, fontWeight:700, color:C.navy }}>{s?.n}</span><EstBadge st={o.st}/></div>
+                <div style={{ fontSize:10, color:C.slate, marginTop:1 }}>📍 {o.morada}</div>
+                <div style={{ fontSize:10, color:C.g, fontWeight:600, marginTop:1 }}>🕐 {o.data}</div>
+              </div>
+            </div>
+          </Card>
+        )})}
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginTop:10 }}>
+          <button onClick={onCarteira} style={{ background:C.navy, color:'#fff', border:'none', borderRadius:11, padding:'12px', fontSize:12, fontWeight:700, cursor:'pointer' }}>💰 Carteira</button>
+          <button onClick={onChat}     style={{ background:C.white, color:C.navy, border:`1.5px solid ${C.border}`, borderRadius:11, padding:'12px', fontSize:12, fontWeight:700, cursor:'pointer' }}>💬 Mensagens</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function PExec({ o, onBack, onUpdate, onChat }) {
+  const s = svcById(o.sid)
+  const [fase,    setFase]    = useState(o.st==='em_curso'?'exec':o.st==='concluida'?'done':'aceitar')
+  const [fotos,   setFotos]   = useState(o.fotos||[])
+  const [novaHora,setNovaHora]= useState(false)   // sheet de propor hora
+  const [horaProp,setHoraProp]= useState(o.hora||'')
+  const [motivo,  setMotivo]  = useState('')
+  const [propEnviada,setPropEnviada] = useState(false)
+
+  const FL = ['Aceitar','Executar','Fotos','Assinar','Concluído']
+  const fi = ['aceitar','exec','fotos','assinar','done'].indexOf(fase)
+
+  const abrirMapa = () => {
+    const q = encodeURIComponent(`${o.morada}, Portugal`)
+    window.open(`https://www.google.com/maps/search/?api=1&query=${q}`, '_blank')
+  }
+
+  const DIAS_PT = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb']
+  const MESES_PT = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
+
+  // Formata data + hora: "Sáb, 15 Abr · 11:00h"
+  const dataFormatada = (() => {
+    if (!o.data) return '—'
+    if (o.data==='Hoje')   { const d=new Date(); return `${DIAS_PT[d.getDay()]}, ${d.getDate()} ${MESES_PT[d.getMonth()]} · ${o.hora||''}` }
+    if (o.data==='Amanhã') { const d=new Date(); d.setDate(d.getDate()+1); return `${DIAS_PT[d.getDay()]}, ${d.getDate()} ${MESES_PT[d.getMonth()]} · ${o.hora||''}` }
+    return `${o.data} · ${o.hora||''}`.trim().replace(/ ·\s*$/, '')
+  })()
+
+  // Gerar slots de hora disponíveis (08:00 → 19:00)
+  const SLOTS_HORA = Array.from({length:24},(_,i)=>{
+    const h = 8 + Math.floor(i/2), m = i%2===0?'00':'30'
+    return `${String(h).padStart(2,'0')}:${m}`
+  }).filter(h=>h<='19:00')
+
+  return (
+    <div style={{ minHeight:'100vh', background:C.mist }}>
+      <Header title={s?.n||'Ordem'} sub={o.morada} onBack={onBack} right={
+        <button onClick={onChat} style={{background:'rgba(255,255,255,0.1)',border:'none',borderRadius:8,padding:'6px 10px',color:'#fff',fontSize:11,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',gap:4}}>
+          💬 Chat {(CHAT_INIT[o.id]||[]).filter(m=>m.tipo!=='system_auto').length>0?<span style={{background:C.g,borderRadius:'50%',width:14,height:14,fontSize:8,display:'flex',alignItems:'center',justifyContent:'center'}}>{(CHAT_INIT[o.id]||[]).filter(m=>m.tipo!=='system_auto').length}</span>:null}
+        </button>
+      }/>
+
+      {/* Stepper */}
+      <div style={{ background:C.navy, padding:'0 16px 12px' }}>
+        <div style={{ display:'flex', alignItems:'center' }}>
+          {FL.map((l,i) => (
+            <React.Fragment key={i}>
+              <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:2 }}>
+                <div style={{ width:22, height:22, borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', fontSize:9, fontWeight:800, background: i<=fi ? C.g : 'rgba(255,255,255,0.1)', color: i<=fi ? '#fff' : '#4A5C6A' }}>{i+1}</div>
+                <span style={{ fontSize:8, color: i<=fi ? '#86efac' : '#4A5C6A', fontWeight:700, whiteSpace:'nowrap' }}>{l}</span>
+              </div>
+              {i<4 && <div style={{ flex:1, height:2, background: i<fi ? C.g : 'rgba(255,255,255,0.1)', margin:'0 3px', marginBottom:12 }}/>}
+            </React.Fragment>
+          ))}
+        </div>
+      </div>
+
+      <div style={{ padding:'14px 16px 110px' }}>
+        {/* Ficha da ordem */}
+        <Card style={{ padding:14, marginBottom:12 }}>
+          {[
+            ['Cliente',  o.cli],
+            ['Morada',   o.morada],
+            ['Data/Hora',dataFormatada],
+            o.km && ['Distância', `📏 ${o.km} km`],
+            o.notas && ['Notas', o.notas],
+          ].filter(Boolean).map(([l,v]) => (
+            <div key={l} style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', padding:'7px 0', borderBottom:'1px solid #f1f5f9' }}>
+              <span style={{ fontSize:11, color:C.slate, flexShrink:0, marginRight:8 }}>{l}</span>
+              <span style={{ fontSize:12, fontWeight:700, color: l==='Distância'?C.g:C.navy, textAlign:'right', maxWidth:220 }}>{v}</span>
+            </div>
+          ))}
+          {/* Botão Ver no Mapa */}
+          <button onClick={abrirMapa} style={{ width:'100%', marginTop:10, padding:'9px', border:`1.5px solid ${C.g}`, borderRadius:10, background:C.gl, color:C.gd, fontSize:12, fontWeight:700, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:6 }}>
+            🗺️ Ver no Google Maps
+          </button>
+        </Card>
+
+        {/* FASE: Aceitar */}
+        {fase==='aceitar' && <>
+          {propEnviada
+            ? <div style={{ background:C.gl, borderRadius:12, padding:'14px 16px', marginBottom:12, border:'1px solid rgba(22,163,74,0.2)', textAlign:'center' }}>
+                <div style={{ fontSize:20, marginBottom:6 }}>✅</div>
+                <div style={{ fontSize:13, fontWeight:700, color:C.gd }}>Proposta enviada ao cliente</div>
+                <div style={{ fontSize:11, color:C.slate, marginTop:3 }}>Nova hora sugerida: <strong>{horaProp}</strong></div>
+                <button onClick={()=>setPropEnviada(false)} style={{ marginTop:8, fontSize:11, color:C.slate, background:'none', border:'none', cursor:'pointer', textDecoration:'underline' }}>Cancelar proposta</button>
+              </div>
+            : <Card style={{ padding:14, marginBottom:10, border:`2px solid ${C.g}` }}>
+                <div style={{ fontSize:13, fontWeight:700, color:C.navy, marginBottom:5 }}>Aceitar esta ordem?</div>
+                <div style={{ fontSize:11, color:C.slate, lineHeight:1.5, marginBottom:0 }}>
+                  Confirme disponibilidade para <strong style={{ color:C.navy }}>{dataFormatada}</strong>
+                </div>
+              </Card>
           }
-        />
-        <Route
-          path="/prestador"
-          element={
-            <AuthGuard requiredRole="prestador">
-              <DashboardPrestador />
-            </AuthGuard>
+          {!propEnviada && <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+            <div style={{ display:'flex', gap:8 }}>
+              <Btn full v='ghost' onClick={onBack}>Recusar</Btn>
+              <Btn full onClick={() => { setFase('exec'); onUpdate&&onUpdate({...o,st:'em_curso'}) }}>Aceitar ✓</Btn>
+            </div>
+            <button onClick={()=>setNovaHora(true)} style={{ width:'100%', padding:'11px', border:`1.5px solid ${C.border}`, borderRadius:12, background:C.white, color:C.slate, fontSize:12, fontWeight:600, cursor:'pointer' }}>
+              🕐 Propor nova hora
+            </button>
+          </div>}
+        </>}
+
+        {/* FASE: Em execução */}
+        {fase==='exec' && <>
+          <div style={{ background:C.gl, borderRadius:11, padding:12, border:'1px solid rgba(22,163,74,0.2)', marginBottom:12 }}>
+            <p style={{ fontSize:12, color:C.g, fontWeight:600, margin:0 }}>✅ Em execução — avance quando terminar</p>
+          </div>
+          <Btn full onClick={() => setFase('fotos')}>📸 Relatório fotográfico →</Btn>
+        </>}
+
+        {/* FASE: Fotos */}
+        {fase==='fotos' && <>
+          <Card style={{ padding:14, marginBottom:10 }}>
+            <div style={{ fontSize:10, fontWeight:700, color:C.slate, textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:9 }}>Relatório fotográfico</div>
+            <div style={{ display:'flex', gap:7, flexWrap:'wrap', marginBottom:8 }}>
+              {fotos.map((f,i) => <div key={i} style={{ width:66, height:66, borderRadius:9, background:'#f1f5f9', display:'flex', alignItems:'center', justifyContent:'center', fontSize:24, border:`1px solid ${C.border}` }}>{f}</div>)}
+              <button onClick={() => setFotos(f=>[...f,'📷'])} style={{ width:66, height:66, borderRadius:9, border:`2px dashed ${C.g}`, background:'transparent', fontSize:18, cursor:'pointer', color:C.g }}>+</button>
+            </div>
+            <p style={{ fontSize:10, color:C.slate, margin:0 }}>Mínimo 2 fotos — antes e depois.</p>
+          </Card>
+          <Btn full dis={fotos.length<2} onClick={() => setFase('assinar')}>Enviar ao cliente para assinar →</Btn>
+        </>}
+
+        {/* FASE: Assinar */}
+        {fase==='assinar' && <>
+          <Card style={{ padding:14, marginBottom:10 }}>
+            <div style={{ fontSize:10, fontWeight:700, color:C.slate, textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:9 }}>Assinatura digital do cliente</div>
+            <div style={{ background:'#f8fafc', borderRadius:10, padding:14, textAlign:'center', border:`1px dashed ${C.border}` }}>
+              <div style={{ fontSize:26, marginBottom:5 }}>✍️</div>
+              <div style={{ fontSize:12, color:C.slate }}>A aguardar assinatura de<br/><strong style={{ color:C.navy }}>{o.cli}</strong></div>
+            </div>
+          </Card>
+          <Btn v='green' full onClick={() => { const upd={...o,st:'concluida',fotos,ass:true}; onUpdate&&onUpdate(upd); setFase('done') }}>Simular assinatura recebida ✓</Btn>
+        </>}
+
+        {/* FASE: Concluído */}
+        {fase==='done' && <>
+          <div style={{ textAlign:'center', padding:'16px 0' }}>
+            <div style={{ width:72, height:72, borderRadius:'50%', background:C.gl, display:'flex', alignItems:'center', justifyContent:'center', fontSize:32, margin:'0 auto 12px' }}>✅</div>
+            <h2 style={{ fontSize:17, fontWeight:800, color:C.navy, marginBottom:5 }}>Serviço Concluído!</h2>
+            <p style={{ fontSize:12, color:C.slate, lineHeight:1.5 }}>Relatório entregue e assinado.<br/>Pagamento em processamento.</p>
+          </div>
+          <Card style={{ padding:14, marginTop:12 }}>
+            <div style={{ fontSize:10, fontWeight:700, color:C.slate, textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:8 }}>Resumo de pagamento</div>
+            {[
+              ['Serviço',     s?.n||'—'],
+              ['Data',        dataFormatada],
+              ['Valor total', `€${s?.p||'—'}`],
+              ['Taxa Gold 18%',`€${((s?.p||0)*0.18).toFixed(2)}`],
+              ['Recebido',    `€${((s?.p||0)*0.82).toFixed(2)}`],
+              ['Via',         'Swan.io SEPA CT'],
+              ['Prazo',       'Disponível em 24h'],
+            ].map(([l,v]) => (
+              <div key={l} style={{ display:'flex', justifyContent:'space-between', padding:'6px 0', borderBottom:'1px solid #f1f5f9' }}>
+                <span style={{ fontSize:11, color:C.slate }}>{l}</span>
+                <span style={{ fontSize:11, fontWeight:700, color: l==='Recebido'?C.g:C.navy }}>{v}</span>
+              </div>
+            ))}
+          </Card>
+        </>}
+      </div>
+
+      {/* Bottom sheet — Propor nova hora */}
+      {novaHora && <>
+        <div onClick={()=>setNovaHora(false)} style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.45)', zIndex:50 }}/>
+        <div style={{ position:'fixed', bottom:0, left:'50%', transform:'translateX(-50%)', width:'100%', maxWidth:430, background:C.white, borderRadius:'22px 22px 0 0', zIndex:51, padding:'20px 20px 32px' }}>
+          <div style={{ width:36, height:4, borderRadius:2, background:'#e2e8f0', margin:'0 auto 16px' }}/>
+          <h3 style={{ fontSize:15, fontWeight:800, color:C.navy, marginBottom:4 }}>Propor nova hora</h3>
+          <p style={{ fontSize:12, color:C.slate, marginBottom:16 }}>Seleciona o horário que preferes para <strong>{o.data}</strong>. O cliente irá receber a proposta.</p>
+
+          {/* Selector de hora em grid */}
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:7, marginBottom:14, maxHeight:200, overflowY:'auto' }}>
+            {SLOTS_HORA.map(h => (
+              <button key={h} onClick={()=>setHoraProp(h)} style={{ padding:'9px 0', borderRadius:10, border:`1.5px solid ${horaProp===h?C.g:C.border}`, background:horaProp===h?C.gl:'#fff', color:horaProp===h?C.gd:C.navy, fontSize:13, fontWeight:horaProp===h?700:500, cursor:'pointer' }}>
+                {h}
+              </button>
+            ))}
+          </div>
+
+          {/* Motivo (opcional) */}
+          <div style={{ marginBottom:14 }}>
+            <label style={{ fontSize:10, fontWeight:700, color:C.slate, display:'block', marginBottom:5, textTransform:'uppercase', letterSpacing:'0.04em' }}>Motivo (opcional)</label>
+            <input value={motivo} onChange={e=>setMotivo(e.target.value)} placeholder='Ex: Tenho outro serviço ao mesmo tempo' style={{ width:'100%', border:`1.5px solid ${C.border}`, borderRadius:10, padding:'9px 12px', fontSize:13, outline:'none', color:C.navy, boxSizing:'border-box' }}/>
+          </div>
+
+          <div style={{ display:'flex', gap:9 }}>
+            <button onClick={()=>setNovaHora(false)} style={{ flex:1, padding:'12px', border:`1.5px solid ${C.border}`, borderRadius:12, background:C.white, color:C.navy, fontSize:13, fontWeight:600, cursor:'pointer' }}>Cancelar</button>
+            <button onClick={()=>{ setNovaHora(false); setPropEnviada(true) }} disabled={!horaProp} style={{ flex:2, padding:'12px', border:'none', borderRadius:12, background:horaProp?C.g:'#cbd5e1', color:'#fff', fontSize:13, fontWeight:800, cursor:horaProp?'pointer':'default' }}>
+              📤 Enviar proposta ({horaProp||'—'})
+            </button>
+          </div>
+        </div>
+      </>}
+    </div>
+  )
+}
+
+function PCarteira({ onBack, ordens=[], onOrdem }) {
+  const [tab,setTab]         = useState('visao')
+  const [showLev,setShowLev] = useState(false)
+  const [valor,setValor]     = useState('')
+  const [ok,setOk]           = useState(false)
+  const [periodoTrans, setPeriodoTrans] = useState(15)  // ← estado do filtro de período
+  const nivel='gold'; const nc=NIVEIS[nivel]
+  const nKeys=Object.keys(NIVEIS); const prox=nKeys[nKeys.indexOf(nivel)+1]; const pc=prox?NIVEIS[prox]:null
+  const saldo=105.00; const pend=57.00
+  const icMov = { credito:{ic:'✅',bg:C.gl,cor:C.g}, levantar:{ic:'💸',bg:'#eff6ff',cor:'#1d4ed8'}, bonus:{ic:'⭐',bg:'#fef3c7',cor:C.amber}, seguro:{ic:'🛡️',bg:C.mist,cor:C.slate} }
+
+  // Dados completos de transações
+  const TODAS_TRANS = [
+    {id:'p1', tipo:'credito', v:57.00,  d:'Limpeza Mensal — Rua das Flores', mes:'Abr 2026', dt:'Hoje 14:32',  st:'pendente'},
+    {id:'p2', tipo:'credito', v:91.00,  d:'Limpeza Pós-Obra — Ed. Roma',     mes:'Abr 2026', dt:'20 Abr',      st:'disponivel'},
+    {id:'p3', tipo:'credito', v:57.00,  d:'Limpeza Mensal — Av. Brasil',     mes:'Abr 2026', dt:'18 Abr',      st:'disponivel'},
+    {id:'p4', tipo:'levantar',v:-145.00,d:'Levantamento IBAN pessoal',       mes:'Abr 2026', dt:'10 Abr',      st:'processado'},
+    {id:'p5', tipo:'bonus',   v:10.00,  d:'Bónus avaliação perfeita',        mes:'Abr 2026', dt:'1 Abr',       st:'disponivel'},
+    {id:'p6', tipo:'credito', v:75.00,  d:'Limpeza Mensal — Cond. Sol',      mes:'Mar 2026', dt:'28 Mar',      st:'disponivel'},
+    {id:'p7', tipo:'levantar',v:-200.00,d:'Levantamento IBAN pessoal',       mes:'Mar 2026', dt:'10 Mar',      st:'processado'},
+    {id:'p8', tipo:'credito', v:45.00,  d:'Manutenção Jardim — Sra. Alves', mes:'Mar 2026', dt:'5 Mar',       st:'disponivel'},
+    {id:'p9', tipo:'seguro',  v:-8.50,  d:'Seguro RC Grupo — Mar',          mes:'Mar 2026', dt:'1 Mar',       st:'processado'},
+    {id:'p10',tipo:'credito', v:80.00,  d:'Instalação Elétrica — Ed. ABC',  mes:'Fev 2026', dt:'22 Fev',      st:'disponivel'},
+    {id:'p11',tipo:'credito', v:57.00,  d:'Limpeza Mensal — Sr. Ferreira',  mes:'Fev 2026', dt:'15 Fev',      st:'disponivel'},
+    {id:'p12',tipo:'levantar',v:-180.00,d:'Levantamento IBAN pessoal',      mes:'Fev 2026', dt:'10 Fev',      st:'processado'},
+    {id:'p13',tipo:'bonus',   v:15.00,  d:'Bónus nível Gold desbloqueado',  mes:'Jan 2026', dt:'31 Jan',      st:'disponivel'},
+    {id:'p14',tipo:'credito', v:57.00,  d:'Limpeza Mensal — Cond. Verde',   mes:'Jan 2026', dt:'20 Jan',      st:'disponivel'},
+    {id:'p15',tipo:'levantar',v:-120.00,d:'Levantamento IBAN pessoal',      mes:'Jan 2026', dt:'10 Jan',      st:'processado'},
+  ]
+  // Transações filtradas pelo período (pendentes sempre incluídas)
+  const MESES_PERIODO = { 15:['Abr 2026'], 30:['Abr 2026','Mar 2026'], 90:['Abr 2026','Mar 2026','Fev 2026'], 365:['Abr 2026','Mar 2026','Fev 2026','Jan 2026'] }
+  const mesesActivos = MESES_PERIODO[periodoTrans] || MESES_PERIODO[15]
+  const transFiltradas = TODAS_TRANS.filter(t => t.st==='pendente' || mesesActivos.includes(t.mes))
+  const totalPeriodo = transFiltradas.filter(t=>t.st!=='pendente').reduce((a,t)=>a+t.v,0)
+  const porMes = transFiltradas.reduce((acc,t) => { const k=t.st==='pendente'?'⏳ Pendentes':t.mes; (acc[k]=acc[k]||[]).push(t); return acc }, {})
+  const ordenaMeses = Object.keys(porMes).sort((a,b)=>a==='⏳ Pendentes'?-1:b==='⏳ Pendentes'?1:0)
+
+  if (ok) return (
+    <div style={{ minHeight:'100vh', background:C.mist, display:'flex', alignItems:'center', justifyContent:'center' }}>
+      <div style={{ textAlign:'center', padding:'30px 20px' }}>
+        <div style={{ width:80, height:80, borderRadius:'50%', background:C.gl, display:'flex', alignItems:'center', justifyContent:'center', fontSize:36, margin:'0 auto 16px' }}>✅</div>
+        <h2 style={{ fontSize:19, fontWeight:800, color:C.navy, marginBottom:6 }}>Levantamento solicitado!</h2>
+        <p style={{ fontSize:13, color:C.slate, lineHeight:1.5, marginBottom:4 }}>€{valor} será transferido para o seu IBAN</p>
+        <p style={{ fontSize:11, color:C.slate, marginBottom:22 }}>Swan.io · SEPA CT · D+1 útil</p>
+        <Btn v='green' full onClick={() => { setOk(false); setShowLev(false); setValor('') }}>Voltar à carteira</Btn>
+      </div>
+    </div>
+  )
+
+  if (showLev) return (
+    <div style={{ minHeight:'100vh', background:C.mist }}>
+      <Header title='Levantar Saldo' onBack={() => setShowLev(false)}/>
+      <div style={{ padding:'18px 16px 40px' }}>
+        <Card style={{ padding:20, marginBottom:14, background:`linear-gradient(135deg,${C.navy},${C.gd})` }}>
+          <div style={{ fontSize:11, color:'#86efac', fontWeight:600, marginBottom:3 }}>Saldo disponível</div>
+          <div style={{ fontSize:36, fontWeight:800, color:'#fff' }}>€{saldo.toFixed(2)}</div>
+          <div style={{ fontSize:10, color:'#94a3b8', marginTop:3 }}>Transferência D+1 via Swan SEPA CT</div>
+        </Card>
+        <Card style={{ padding:14, marginBottom:12 }}>
+          <div style={{ fontSize:10, fontWeight:700, color:C.slate, textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:8 }}>IBAN de Destino</div>
+          <div style={{ background:C.mist, borderRadius:9, padding:'9px 12px', fontFamily:'monospace', fontSize:12, color:C.navy, marginBottom:5 }}>PT50 0035 …</div>
+          <div style={{ fontSize:10, color:C.slate }}>António Ferreira · Conta pessoal</div>
+        </Card>
+        <Card style={{ padding:14, marginBottom:12 }}>
+          <div style={{ fontSize:10, fontWeight:700, color:C.slate, textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:8 }}>Valor a levantar</div>
+          <div style={{ display:'flex', alignItems:'center', background:C.mist, borderRadius:11, padding:'11px 14px', border:`2px solid ${valor?C.g:C.border}`, marginBottom:10 }}>
+            <span style={{ fontSize:20, fontWeight:800, color:C.slate, marginRight:4 }}>€</span>
+            <input type='number' value={valor} onChange={e=>setValor(e.target.value)} placeholder='0.00' style={{ flex:1, background:'transparent', border:'none', outline:'none', fontSize:20, fontWeight:800, color:C.navy }}/>
+          </div>
+          <div style={{ display:'flex', gap:7 }}>
+            {[25,50,100,'Tudo'].map(v => <button key={v} onClick={() => setValor(v==='Tudo'?saldo.toFixed(2):String(Math.min(v,saldo)))} style={{ flex:1, padding:'7px 0', borderRadius:9, border:`1.5px solid ${C.border}`, background:C.white, fontSize:11, fontWeight:700, color:C.navy, cursor:'pointer' }}>{v==='Tudo'?'Tudo':`€${v}`}</button>)}
+          </div>
+        </Card>
+        <Btn full v='green' dis={!valor||parseFloat(valor)<=0||parseFloat(valor)>saldo} onClick={() => setOk(true)}>Confirmar levantamento →</Btn>
+      </div>
+    </div>
+  )
+
+  return (
+    <div style={{ minHeight:'100vh', background:C.mist }}>
+      <div style={{ background:C.navy, padding:'13px 16px 0', position:'sticky', top:0, zIndex:20 }}>
+        <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:12 }}>
+          <button onClick={onBack} style={{ background:'none', border:'none', color:'#fff', fontSize:22, cursor:'pointer', padding:0 }}>←</button>
+          <div style={{ flex:1, fontSize:15, fontWeight:700, color:'#fff' }}>A minha Carteira</div>
+          <span style={{ fontSize:10, background:nc.bg, color:nc.cor, padding:'3px 9px', borderRadius:10, fontWeight:700 }}>{nc.ic} {nc.l}</span>
+        </div>
+        <div style={{ display:'flex' }}>
+          {[{id:'visao',l:'Resumo'},{id:'movimentos',l:'Transações'},{id:'beneficios',l:'Benefícios'},{id:'niveis',l:'Níveis'}].map(t => (
+            <button key={t.id} onClick={() => setTab(t.id)} style={{ flex:1, padding:'8px 0', background:'none', border:'none', borderBottom: tab===t.id ? `2px solid ${C.gm}` : '2px solid transparent', color: tab===t.id ? '#86efac' : '#94a3b8', fontSize:10, fontWeight:700, cursor:'pointer', whiteSpace:'nowrap' }}>{t.l}</button>
+          ))}
+        </div>
+      </div>
+      <div style={{ padding:'14px 16px 40px' }}>
+        {tab==='visao' && <>
+          <div style={{ background:`linear-gradient(135deg,${C.navy},${C.gd})`, borderRadius:18, padding:20, marginBottom:12 }}>
+            <div style={{ fontSize:11, color:'#86efac', fontWeight:600, marginBottom:3 }}>Saldo disponível</div>
+            <div style={{ fontSize:38, fontWeight:800, color:'#fff', marginBottom:14 }}>€{saldo.toFixed(2)}</div>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:9, marginBottom:18 }}>
+              {[['⏳ Pendente',`€${pend.toFixed(2)}`,'Aguarda 24h'],['📊 Total ganho','€892,00','Desde o início']].map(([l,v,s]) => (
+                <div key={l} style={{ background:'rgba(255,255,255,0.08)', borderRadius:10, padding:'9px 10px' }}>
+                  <div style={{ fontSize:10, color:'#94a3b8', marginBottom:2 }}>{l}</div>
+                  <div style={{ fontSize:15, fontWeight:800, color:'#fff' }}>{v}</div>
+                  <div style={{ fontSize:8, color:'#64748b', marginTop:1 }}>{s}</div>
+                </div>
+              ))}
+            </div>
+            <button onClick={() => setShowLev(true)} style={{ width:'100%', background:C.g, color:'#fff', border:'none', borderRadius:11, padding:'12px', fontSize:13, fontWeight:800, cursor:'pointer' }}>💸 Levantar saldo agora</button>
+          </div>
+          {pend>0 && <Card style={{ padding:13, marginBottom:12, border:'1px solid #fcd34d' }}>
+            <div style={{ display:'flex', gap:9, alignItems:'center' }}>
+              <span style={{ fontSize:20 }}>⏳</span>
+              <div style={{ flex:1 }}>
+                <div style={{ fontSize:12, fontWeight:700, color:C.navy }}>€{pend.toFixed(2)} em processamento</div>
+                <div style={{ fontSize:10, color:C.slate }}>Limpeza Mensal — Hoje 14:32 · Confirmação em 24h</div>
+              </div>
+            </div>
+          </Card>}
+          <Card style={{ padding:14, marginBottom:12 }}>
+            <div style={{ fontSize:10, fontWeight:700, color:C.slate, textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:10 }}>ESTE MÊS</div>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:9 }}>
+              {[['6','Serviços','concluídos'],['€342','Ganhos','brutos'],['€205','Levantado','transferido']].map(([v,l,s]) => (
+                <div key={l} style={{ textAlign:'center', background:C.mist, borderRadius:10, padding:'10px 6px' }}>
+                  <div style={{ fontSize:18, fontWeight:800, color:C.navy }}>{v}</div>
+                  <div style={{ fontSize:10, fontWeight:700, color:C.slate }}>{l}</div>
+                  <div style={{ fontSize:8, color:'#94a3b8' }}>{s}</div>
+                </div>
+              ))}
+            </div>
+          </Card>
+          <Card style={{ padding:14 }}>
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10 }}>
+              <div style={{ fontSize:10, fontWeight:700, color:C.slate, textTransform:'uppercase', letterSpacing:'0.05em' }}>ÚLTIMOS MOVIMENTOS</div>
+              <button onClick={() => setTab('movimentos')} style={{ fontSize:10, color:C.g, fontWeight:600, background:'none', border:'none', cursor:'pointer' }}>Ver tudo →</button>
+            </div>
+            {MOVS.slice(0,4).map(m => { const s=icMov[m.tipo]||icMov.credito;
+              const ordemM = m.oid ? ordens.find(o=>o.id===m.oid) : null
+              return (
+              <div key={m.id} onClick={()=>ordemM&&onOrdem&&onOrdem(ordemM)}
+                style={{ display:'flex', gap:9, alignItems:'center', padding:'8px 0', borderBottom:'1px solid #f1f5f9', cursor:ordemM&&onOrdem?'pointer':'default' }}>
+                <div style={{ width:32, height:32, borderRadius:9, background:s.bg, display:'flex', alignItems:'center', justifyContent:'center', fontSize:14, flexShrink:0 }}>{s.ic}</div>
+                <div style={{ flex:1, minWidth:0 }}>
+                  <div style={{ fontSize:11, fontWeight:600, color:C.navy, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{m.d}</div>
+                  <div style={{ fontSize:9, color:C.slate }}>{m.dt}</div>
+                </div>
+                <div style={{ display:'flex', alignItems:'center', gap:5, flexShrink:0 }}>
+                  <div style={{ fontSize:13, fontWeight:800, color: m.v>0 ? C.g : C.slate }}>{m.v>0?'+':''}{m.v.toFixed(2)}€</div>
+                  {ordemM && onOrdem && <span style={{ color:C.border, fontSize:13 }}>›</span>}
+                </div>
+              </div>
+            )})}
+          </Card>
+        </>}
+        {tab==='movimentos' && <>
+          {/* Filtro de período — menor primeiro */}
+          <div style={{ display:'flex', gap:6, marginBottom:14 }}>
+            {[{v:15,l:'15 dias'},{v:30,l:'30 dias'},{v:90,l:'90 dias'},{v:365,l:'Último ano'}].map(p=>(
+              <button key={p.v} onClick={()=>setPeriodoTrans(p.v)} style={{ flex:1, padding:'8px 3px', borderRadius:20, border:`1.5px solid ${periodoTrans===p.v?C.g:C.border}`, background: periodoTrans===p.v?C.gl:C.white, color: periodoTrans===p.v?C.gd:C.slate, fontWeight:700, fontSize:10, cursor:'pointer' }}>{p.l}</button>
+            ))}
+          </div>
+          {/* Total do período */}
+          <div style={{ background:`linear-gradient(135deg,${C.navy},${C.gd})`, borderRadius:14, padding:'14px 16px', marginBottom:14 }}>
+            <div style={{ fontSize:10, color:'#86efac', fontWeight:600, marginBottom:2 }}>Total — últimos {periodoTrans===365?'ano':periodoTrans+' dias'}</div>
+            <div style={{ fontSize:26, fontWeight:800, color:'#fff' }}>{totalPeriodo>=0?'+':''}{totalPeriodo.toFixed(2)}€</div>
+            <div style={{ fontSize:9, color:'#64748b', marginTop:2 }}>{transFiltradas.filter(t=>t.st!=='pendente').length} movimentos</div>
+          </div>
+          {/* Agrupado por mês, pendentes primeiro */}
+          {ordenaMeses.map(mes=>(
+            <div key={mes} style={{ marginBottom:14 }}>
+              <div style={{ fontSize:10, fontWeight:800, color:mes==='⏳ Pendentes'?C.amber:C.slate, textTransform:'uppercase', letterSpacing:'0.06em', margin:'4px 0 8px', display:'flex', alignItems:'center', gap:5 }}>
+                {mes}
+              </div>
+              {porMes[mes].map(m => { const s=icMov[m.tipo]||icMov.credito;
+                const ordemM = m.oid ? ordens.find(o=>o.id===m.oid) : null
+                return (
+                <div key={m.id} onClick={()=>ordemM&&onOrdem&&onOrdem(ordemM)}
+                  style={{ display:'flex', gap:10, alignItems:'center', padding:'10px 0', borderBottom:`1px solid ${C.border}`, cursor:ordemM&&onOrdem?'pointer':'default' }}
+                  onMouseEnter={e=>{ if(ordemM&&onOrdem) e.currentTarget.style.background='#f8fafc' }}
+                  onMouseLeave={e=>{ e.currentTarget.style.background='transparent' }}>
+                  <div style={{ width:36, height:36, borderRadius:10, background:s.bg, display:'flex', alignItems:'center', justifyContent:'center', fontSize:16, flexShrink:0 }}>{s.ic}</div>
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <div style={{ fontSize:12, fontWeight:600, color:C.navy, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{m.d}</div>
+                    <div style={{ fontSize:9, color:C.slate, marginTop:1 }}>{m.dt}</div>
+                  </div>
+                  <div style={{ textAlign:'right', flexShrink:0, display:'flex', alignItems:'center', gap:5 }}>
+                    <div>
+                      <div style={{ fontSize:13, fontWeight:800, color: m.v>0?C.g:'#64748b' }}>{m.v>0?'+':''}{m.v.toFixed(2)}€</div>
+                      <div style={{ fontSize:8, fontWeight:700, color: m.st==='pendente'?C.amber:m.st==='processado'?C.slate:C.g, background: m.st==='pendente'?'#fef3c7':m.st==='processado'?C.mist:C.gl, padding:'1px 5px', borderRadius:5, marginTop:1 }}>
+                        {m.st==='pendente'?'Pendente':m.st==='processado'?'Processado':'Disponível'}
+                      </div>
+                    </div>
+                    {ordemM && onOrdem && <span style={{ color:C.border, fontSize:15 }}>›</span>}
+                  </div>
+                </div>
+              )})}
+            </div>
+          ))}
+        </>}
+        {tab==='beneficios' && <>
+          <p style={{ fontSize:12, color:C.slate, margin:'0 0 14px', lineHeight:1.5 }}>Como membro <strong>{nc.l}</strong>, tem acesso aos seguintes benefícios exclusivos da rede.</p>
+          {BENEFICIOS.map(b => { const bc=NIVEIS[b.nivel]; const bi=nKeys.indexOf(nivel); const bni=nKeys.indexOf(b.nivel); const tem=bi>=bni; return (
+            <Card key={b.id} style={{ padding:14, marginBottom:8, opacity: tem ? 1 : 0.5 }}>
+              <div style={{ display:'flex', gap:10, alignItems:'flex-start' }}>
+                <span style={{ fontSize:26 }}>{b.ic}</span>
+                <div style={{ flex:1 }}>
+                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:3 }}>
+                    <div style={{ fontSize:13, fontWeight:700, color:C.navy }}>{b.n}</div>
+                    <span style={{ fontSize:9, background:bc.bg, color:bc.cor, padding:'2px 7px', borderRadius:8, fontWeight:700 }}>{bc.ic} {bc.l}+</span>
+                  </div>
+                  <p style={{ fontSize:11, color:C.slate, margin:'0 0 8px', lineHeight:1.5 }}>{b.d}</p>
+                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                    <span style={{ fontSize:11, fontWeight:700, color:C.navy }}>{b.preco}</span>
+                    {tem ? <Btn sm v='green' onClick={() => {}}>Activar</Btn> : <span style={{ fontSize:10, color:C.slate }}>Requer {bc.l}</span>}
+                  </div>
+                </div>
+              </div>
+            </Card>
+          )})}
+        </>}
+        {tab==='niveis' && <>
+          <p style={{ fontSize:12, color:C.slate, margin:'0 0 14px', lineHeight:1.5 }}>O nível determina a taxa e os benefícios. Sobe concluindo mais serviços com boa avaliação.</p>
+          <Card style={{ padding:16, marginBottom:14, border:`2px solid ${nc.cor}`, background:nc.bg }}>
+            <div style={{ fontSize:10, fontWeight:700, color:nc.cor, textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:7 }}>Nível actual</div>
+            <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom: pc ? 10 : 0 }}>
+              <span style={{ fontSize:32 }}>{nc.ic}</span>
+              <div><div style={{ fontSize:18, fontWeight:800, color:nc.cor }}>{nc.l}</div><div style={{ fontSize:12, color:nc.cor }}>Taxa: <strong>{nc.taxa}%</strong></div></div>
+            </div>
+            {pc && <div style={{ background:'rgba(255,255,255,0.5)', borderRadius:9, padding:9 }}>
+              <div style={{ fontSize:10, color:nc.cor, fontWeight:600 }}>Para {pc.l}:</div>
+              <div style={{ fontSize:10, color:C.slate, marginTop:3 }}>✓ {pc.min}+ serviços (tem 340) ✓ · Avaliação ≥{pc.mr} (tem 4.9) ✓</div>
+              <div style={{ fontSize:10, color:C.g, fontWeight:700, marginTop:3 }}>Elegível! Revisão em 1 Mai.</div>
+            </div>}
+          </Card>
+          {Object.entries(NIVEIS).map(([id,n]) => { const act=id===nivel; return (
+            <Card key={id} style={{ padding:13, marginBottom:7, border: act ? `2px solid ${n.cor}` : undefined }}>
+              <div style={{ display:'flex', gap:10, alignItems:'center' }}>
+                <span style={{ fontSize:24 }}>{n.ic}</span>
+                <div style={{ flex:1 }}>
+                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                    <div style={{ fontSize:13, fontWeight:700, color:C.navy }}>{n.l}</div>
+                    <span style={{ fontSize:13, fontWeight:800, color:n.cor }}>{n.taxa}%</span>
+                  </div>
+                  <div style={{ fontSize:10, color:C.slate, marginTop:1 }}>{n.min}+ serviços · avaliação ≥{n.mr||'—'}</div>
+                  {act && <span style={{ fontSize:9, background:n.bg, color:n.cor, padding:'1px 7px', borderRadius:7, fontWeight:700, marginTop:3, display:'inline-block' }}>★ Actual</span>}
+                </div>
+              </div>
+            </Card>
+          )})}
+        </>}
+      </div>
+    </div>
+  )
+}
+
+/* ══════════════════════════════════
+   GESTOR
+══════════════════════════════════ */
+/* ══════════════════════════════════
+   PRESTADOR — ECRÃS ADICIONAIS
+   (baseados nas imagens de referência)
+══════════════════════════════════ */
+
+// ── Dados de Tarefas por categoria ──
+const TAREFAS_CATS = [
+  { id:'limpeza',    l:'Limpeza',    ic:'🧹' },
+  { id:'jardim',     l:'Jardim',     ic:'🌿' },
+  { id:'piscina',    l:'Piscina',    ic:'🏊' },
+  { id:'pintura',    l:'Pintura',    ic:'🎨' },
+  { id:'eletrica',   l:'Elétrica',   ic:'⚡' },
+  { id:'canalizacao',l:'Canalização',ic:'🚿' },
+  { id:'manutencao', l:'Montagem',   ic:'🔧' },
+  { id:'obra',       l:'Obras',      ic:'🏗️' },
+]
+const TAREFAS_DATA = {
+  limpeza:    ['Limpeza geral','Limpeza de cozinha','Limpeza de casa de banho','Limpeza pós-obra','Limpeza de vidros','Limpeza de tapetes','Limpeza de escritório','Limpeza industrial'],
+  jardim:     ['Corte de relva','Poda de arbustos','Limpeza de folhas','Plantação','Rega automática','Tratamento de pragas','Desenho de jardins'],
+  piscina:    ['Limpeza de piscina','Tratamento de água','Verificação de equipamentos','Reparação de fugas','Manutenção de bomba'],
+  pintura:    ['Pintura interior','Pintura exterior','Pintura de móveis','Stucco decorativo','Isolamento térmico','Acabamentos finos'],
+  eletrica:   ['Instalação de tomadas','Candeeiros e iluminação','Quadros eléctricos','Intercomunicadores','Sistemas de alarme','Fotovoltaico básico'],
+  canalizacao:['Reparação de fugas','Desentupimento','Instalação de torneiras','Caldeiras e esquentadores','Reparação urgente','Instalação de sanitas'],
+  manutencao: ['Montagem de móveis','Fixar prateleiras','Montagem de cama','Montagem de roupeiro','Instalação de stores','Reparação geral'],
+  obra:       ['Demolição','Alvenaria','Revestimentos','Pavimentos','Saneamento','Impermeabilização'],
+}
+
+// ── Disponibilidade semanal ──
+const DIAS_SEMANA_FULL = ['Segunda','Terça','Quarta','Quinta','Sexta','Sábado','Domingo']
+const DIAS_INI = ['S','T','Q','Q','S','S','D']
+
+function PDisponibilidade({ onBack, bloqueados=[], setBloqueados=()=>{} }) {
+  const [diasSel, setDiasSel]   = useState([0,1,2,3,4])
+  const [horarios, setHorarios] = useState({0:'todo',1:'todo',2:'todo',3:'todo',4:'manha'})
+  const [sheet, setSheet]       = useState(null)
+  const [modalEvento, setModalEvento] = useState(false)
+  const [saved, setSaved]       = useState(false)
+  // Form de novo evento
+  const hoje = new Date().toISOString().split('T')[0]
+  const [evTipo, setEvTipo]     = useState('ferias')
+  const [evInicio, setEvInicio] = useState(hoje)
+  const [evFim, setEvFim]       = useState('')
+  const [evDesc, setEvDesc]     = useState('')
+
+  const TIPOS_EV = [
+    {id:'ferias',  ic:'🏖️', l:'Férias',    cor:C.g,     bg:C.gl},
+    {id:'doenca',  ic:'🤒', l:'Doença',    cor:'#ef4444',bg:'#fee2e2'},
+    {id:'formacao',ic:'📚', l:'Formação',  cor:'#3b82f6',bg:'#eff6ff'},
+    {id:'outro',   ic:'📌', l:'Outro',     cor:C.slate,  bg:C.mist},
+  ]
+
+  const toggleDia = d => {
+    setDiasSel(p => p.includes(d) ? p.filter(x=>x!==d) : [...p,d])
+    if (!diasSel.includes(d)) setHorarios(h=>({...h,[d]:'todo'}))
+  }
+  const setHorario = (d, h) => { setHorarios(p=>({...p,[d]:h})); setSheet(null) }
+
+  const addEvento = () => {
+    if (!evInicio) return
+    const tipo = TIPOS_EV.find(t=>t.id===evTipo)
+    const fmtDate = s => new Date(s).toLocaleDateString('pt-PT',{day:'2-digit',month:'short',year:'numeric'})
+    const range = evFim && evFim > evInicio ? `${fmtDate(evInicio)} → ${fmtDate(evFim)}` : fmtDate(evInicio)
+    const diasCount = evFim && evFim > evInicio ? Math.ceil((new Date(evFim)-new Date(evInicio))/(1000*60*60*24))+1 : 1
+    setBloqueados(p=>[...p,{id:Date.now(), tipo:evTipo, ic:tipo.ic, cor:tipo.cor, bg:tipo.bg, desc:evDesc||tipo.l, range, dias:diasCount}])
+    setModalEvento(false)
+    setEvTipo('ferias'); setEvInicio(hoje); setEvFim(''); setEvDesc('')
+  }
+
+  const HMAP = { todo:'Todo o dia', manha:'Manhã', tarde:'Tarde' }
+
+  return (
+    <div style={{ minHeight:'100vh', background:C.mist }}>
+      <Header title='A tua disponibilidade' onBack={onBack}/>
+      <div style={{ padding:'16px 16px 100px' }}>
+
+        {/* Círculos dos dias — cores da app */}
+        <p style={{ fontSize:13, color:C.slate, marginBottom:14, lineHeight:1.5 }}>
+          Seleciona os dias em que estás disponível para receber propostas.
+        </p>
+        <div style={{ background:C.white, borderRadius:14, padding:'16px', marginBottom:14, border:`1px solid ${C.border}` }}>
+          <div style={{ display:'flex', gap:6, marginBottom:16, justifyContent:'space-between' }}>
+            {DIAS_INI.map((ini,i) => (
+              <button key={i} onClick={() => toggleDia(i)} style={{
+                width:40, height:40, borderRadius:'50%', border:'none', cursor:'pointer', flexShrink:0,
+                background: diasSel.includes(i) ? C.g : '#f1f5f9',
+                color: diasSel.includes(i) ? '#fff' : C.slate,
+                fontSize:13, fontWeight:700,
+                boxShadow: diasSel.includes(i) ? '0 2px 8px rgba(22,163,74,0.3)' : 'none',
+                transition:'all 0.15s'
+              }}>{ini}</button>
+            ))}
+          </div>
+
+          {/* Lista de dias com horário */}
+          {DIAS_SEMANA_FULL.map((dia, i) => (
+            <div key={i} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'11px 0', borderTop:`1px solid ${C.border}` }}>
+              <span style={{ fontSize:13, color: diasSel.includes(i) ? C.navy : '#94a3b8', fontWeight: diasSel.includes(i)?600:400 }}>{dia}</span>
+              {diasSel.includes(i) ? (
+                <button onClick={() => setSheet(i)} style={{ padding:'6px 12px', border:`1.5px solid ${horarios[i]?C.g:C.border}`, borderRadius:20, background: horarios[i]?C.gl:C.white, cursor:'pointer', fontSize:12, color:horarios[i]?C.gd:C.slate, fontWeight:600 }}>
+                  {horarios[i] ? `✓ ${HMAP[horarios[i]]}` : '+ Definir horário'}
+                </button>
+              ) : (
+                <span style={{ fontSize:11, color:'#cbd5e1', fontStyle:'italic' }}>Indisponível</span>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* Períodos bloqueados */}
+        <div style={{ background:C.white, borderRadius:14, padding:'16px', border:`1px solid ${C.border}` }}>
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12 }}>
+            <div>
+              <h2 style={{ fontSize:15, fontWeight:800, color:C.navy, margin:'0 0 2px' }}>Períodos bloqueados</h2>
+              <p style={{ fontSize:11, color:C.slate, margin:0 }}>Férias, formações ou indisponibilidades</p>
+            </div>
+            <button onClick={()=>setModalEvento(true)} style={{ display:'flex', alignItems:'center', gap:5, padding:'8px 12px', border:'none', borderRadius:10, background:C.g, color:'#fff', fontSize:12, fontWeight:700, cursor:'pointer' }}>
+              + Adicionar
+            </button>
+          </div>
+
+          {/* Info box */}
+          <div style={{ background:'#fef9ec', borderRadius:10, padding:'10px 12px', marginBottom:12, border:'1px solid rgba(245,158,11,0.2)' }}>
+            <p style={{ fontSize:11, color:'#92400e', margin:0, lineHeight:1.5 }}>
+              ⚠️ Durante os períodos bloqueados não receberás propostas de serviços.
+            </p>
+          </div>
+
+          {bloqueados.length === 0
+            ? <div style={{ textAlign:'center', padding:'24px 0', color:'#94a3b8' }}>
+                <div style={{ fontSize:32, marginBottom:8 }}>🗓️</div>
+                <p style={{ fontSize:13, fontWeight:600, marginBottom:3 }}>Sem períodos bloqueados</p>
+                <p style={{ fontSize:11 }}>Clica em "+ Adicionar" para bloquear férias ou indisponibilidades</p>
+              </div>
+            : bloqueados.map(b => (
+                <div key={b.id} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'11px 12px', background:b.bg||C.mist, borderRadius:10, marginBottom:7, border:`1.5px solid ${b.cor}22` }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+                    <span style={{ fontSize:22 }}>{b.ic}</span>
+                    <div>
+                      <div style={{ fontSize:13, fontWeight:700, color:C.navy }}>{b.desc}</div>
+                      <div style={{ fontSize:11, color:b.cor, fontWeight:600 }}>{b.range}</div>
+                      <div style={{ fontSize:10, color:C.slate }}>{b.dias} dia{b.dias>1?'s':''} bloqueado{b.dias>1?'s':''}</div>
+                    </div>
+                  </div>
+                  <button onClick={()=>setBloqueados(p=>p.filter(x=>x.id!==b.id))} style={{ background:'rgba(239,68,68,0.1)', border:'none', borderRadius:'50%', width:28, height:28, cursor:'pointer', color:'#ef4444', fontSize:14, display:'flex', alignItems:'center', justifyContent:'center' }}>×</button>
+                </div>
+              ))
           }
-        />
-        <Route
-          path="/gestor"
-          element={
-            <AuthGuard requiredRole="gestor">
-              <DashboardGestor />
-            </AuthGuard>
-          }
-        />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </BrowserRouter>
+        </div>
+      </div>
+
+      {/* CTA */}
+      <div style={{ position:'fixed', bottom:0, left:'50%', transform:'translateX(-50%)', width:'100%', maxWidth:430, padding:'12px 16px 20px', background:C.white, borderTop:`1px solid ${C.border}`, zIndex:30 }}>
+        {saved && <div style={{ textAlign:'center', color:C.g, fontSize:12, fontWeight:600, marginBottom:8 }}>✅ Disponibilidade actualizada!</div>}
+        <button onClick={()=>setSaved(true)} style={{ width:'100%', background:C.g, color:'#fff', border:'none', borderRadius:14, padding:'15px', fontSize:14, fontWeight:800, cursor:'pointer', letterSpacing:'0.03em', boxShadow:'0 4px 14px rgba(22,163,74,0.35)' }}>
+          ATUALIZAR DISPONIBILIDADE
+        </button>
+      </div>
+
+      {/* Bottom sheet — escolha de horário do dia */}
+      {sheet !== null && (
+        <>
+          <div onClick={()=>setSheet(null)} style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.4)', zIndex:50 }}/>
+          <div style={{ position:'fixed', bottom:0, left:'50%', transform:'translateX(-50%)', width:'100%', maxWidth:430, background:C.white, borderRadius:'20px 20px 0 0', zIndex:51, padding:'20px 20px 32px' }}>
+            <div style={{ width:36, height:4, borderRadius:2, background:'#e2e8f0', margin:'0 auto 18px' }}/>
+            <h3 style={{ textAlign:'center', fontSize:15, fontWeight:800, color:C.navy, marginBottom:20 }}>
+              {DIAS_SEMANA_FULL[sheet]}-feira — escolhe o horário
+            </h3>
+            {[['todo','Todo o dia','☀️'],['manha','Manhã (08:00–13:00)','🌅'],['tarde','Tarde (14:00–19:00)','🌇']].map(([k,l,ic])=>(
+              <button key={k} onClick={()=>setHorario(sheet,k)} style={{ width:'100%', display:'flex', justifyContent:'space-between', alignItems:'center', padding:'14px 16px', marginBottom:8, border:`1.5px solid ${horarios[sheet]===k?C.g:C.border}`, borderRadius:12, background:horarios[sheet]===k?C.gl:'#fff', cursor:'pointer' }}>
+                <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+                  <span style={{ fontSize:20 }}>{ic}</span>
+                  <span style={{ fontSize:14, color:horarios[sheet]===k?C.gd:C.navy, fontWeight:horarios[sheet]===k?700:500 }}>{l}</span>
+                </div>
+                <div style={{ width:20, height:20, borderRadius:'50%', border:`2px solid ${horarios[sheet]===k?C.g:C.border}`, background:horarios[sheet]===k?C.g:'transparent', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                  {horarios[sheet]===k && <div style={{ width:8, height:8, borderRadius:'50%', background:'#fff' }}/>}
+                </div>
+              </button>
+            ))}
+            <button onClick={()=>setSheet(null)} style={{ width:'100%', marginTop:8, padding:'13px', border:`1.5px solid ${C.border}`, borderRadius:12, background:C.white, fontSize:13, fontWeight:700, cursor:'pointer', color:C.navy }}>Fechar</button>
+          </div>
+        </>
+      )}
+
+      {/* Modal — Adicionar período bloqueado */}
+      {modalEvento && (
+        <>
+          <div onClick={()=>setModalEvento(false)} style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', zIndex:60 }}/>
+          <div style={{ position:'fixed', bottom:0, left:'50%', transform:'translateX(-50%)', width:'100%', maxWidth:430, background:C.white, borderRadius:'24px 24px 0 0', zIndex:61, padding:'22px 20px 36px', maxHeight:'90vh', overflowY:'auto' }}>
+            <div style={{ width:36, height:4, borderRadius:2, background:'#e2e8f0', margin:'0 auto 18px' }}/>
+            <h2 style={{ fontSize:16, fontWeight:800, color:C.navy, marginBottom:4 }}>Adicionar período bloqueado</h2>
+            <p style={{ fontSize:12, color:C.slate, marginBottom:18 }}>Bloqueia a tua agenda para férias, formação ou outro motivo.</p>
+
+            {/* Tipo de evento */}
+            <div style={{ marginBottom:16 }}>
+              <label style={{ fontSize:11, fontWeight:700, color:C.slate, display:'block', marginBottom:8, textTransform:'uppercase', letterSpacing:'0.04em' }}>Tipo de período</label>
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+                {TIPOS_EV.map(t=>(
+                  <button key={t.id} onClick={()=>setEvTipo(t.id)} style={{ padding:'10px 12px', border:`2px solid ${evTipo===t.id?t.cor:C.border}`, borderRadius:12, background:evTipo===t.id?t.bg:'#fff', cursor:'pointer', textAlign:'left', display:'flex', alignItems:'center', gap:8 }}>
+                    <span style={{ fontSize:20 }}>{t.ic}</span>
+                    <span style={{ fontSize:13, fontWeight:evTipo===t.id?700:500, color:evTipo===t.id?t.cor:C.navy }}>{t.l}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Descrição */}
+            <div style={{ marginBottom:16 }}>
+              <label style={{ fontSize:11, fontWeight:700, color:C.slate, display:'block', marginBottom:6, textTransform:'uppercase', letterSpacing:'0.04em' }}>Descrição (opcional)</label>
+              <input value={evDesc} onChange={e=>setEvDesc(e.target.value)} placeholder={`Ex: ${TIPOS_EV.find(t=>t.id===evTipo)?.l} de Verão`} style={{ width:'100%', border:`1.5px solid ${C.border}`, borderRadius:10, padding:'10px 12px', fontSize:13, outline:'none', color:C.navy, background:'#f8fafc', boxSizing:'border-box' }}/>
+            </div>
+
+            {/* Datas */}
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:20 }}>
+              <div>
+                <label style={{ fontSize:11, fontWeight:700, color:C.slate, display:'block', marginBottom:6, textTransform:'uppercase', letterSpacing:'0.04em' }}>Data de início</label>
+                <input type='date' value={evInicio} min={hoje} onChange={e=>{setEvInicio(e.target.value); if(evFim&&evFim<e.target.value) setEvFim('')}} style={{ width:'100%', border:`1.5px solid ${C.g}`, borderRadius:10, padding:'10px 10px', fontSize:13, outline:'none', color:C.navy, background:'#f0fdf4', boxSizing:'border-box', cursor:'pointer' }}/>
+              </div>
+              <div>
+                <label style={{ fontSize:11, fontWeight:700, color:C.slate, display:'block', marginBottom:6, textTransform:'uppercase', letterSpacing:'0.04em' }}>Data de fim</label>
+                <input type='date' value={evFim} min={evInicio||hoje} onChange={e=>setEvFim(e.target.value)} style={{ width:'100%', border:`1.5px solid ${evFim?C.g:C.border}`, borderRadius:10, padding:'10px 10px', fontSize:13, outline:'none', color:C.navy, background:evFim?'#f0fdf4':'#f8fafc', boxSizing:'border-box', cursor:'pointer' }}/>
+              </div>
+            </div>
+
+            {/* Preview do período */}
+            {evInicio && (
+              <div style={{ background:C.gl, borderRadius:10, padding:'10px 14px', marginBottom:16, border:'1px solid rgba(22,163,74,0.2)' }}>
+                <span style={{ fontSize:12, color:C.gd, fontWeight:600 }}>
+                  {evFim && evFim > evInicio
+                    ? `📅 ${Math.ceil((new Date(evFim)-new Date(evInicio))/(1000*60*60*24))+1} dias bloqueados`
+                    : '📅 1 dia bloqueado'}
+                  {evFim && evFim > evInicio
+                    ? ` · de ${new Date(evInicio).toLocaleDateString('pt-PT',{day:'2-digit',month:'short'})} a ${new Date(evFim).toLocaleDateString('pt-PT',{day:'2-digit',month:'short'})}`
+                    : evInicio ? ` · ${new Date(evInicio).toLocaleDateString('pt-PT',{day:'2-digit',month:'short',year:'numeric'})}` : ''}
+                </span>
+              </div>
+            )}
+
+            <div style={{ display:'flex', gap:9 }}>
+              <button onClick={()=>setModalEvento(false)} style={{ flex:1, padding:'13px', border:`1.5px solid ${C.border}`, borderRadius:12, background:'#fff', fontSize:13, fontWeight:600, cursor:'pointer', color:C.navy }}>Cancelar</button>
+              <button onClick={addEvento} disabled={!evInicio} style={{ flex:2, padding:'13px', border:'none', borderRadius:12, background:evInicio?C.g:'#cbd5e1', color:'#fff', fontSize:13, fontWeight:800, cursor:evInicio?'pointer':'default' }}>
+                ✅ Bloquear período
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
+// ── Tarefas / Serviços que o prestador quer fazer ──
+function PTarefas({ onBack }) {
+  const [catAtiva, setCatAtiva] = useState('limpeza')
+  const [ativas, setAtivas] = useState(() => {
+    const init = {}
+    Object.entries(TAREFAS_DATA).forEach(([cat,tasks]) => { tasks.forEach(t => { init[`${cat}:${t}`] = Math.random()>0.4 }) })
+    return init
+  })
+  const [saved, setSaved] = useState(false)
+  const toggle = (cat, t) => { setAtivas(p=>({...p,[`${cat}:${t}`]:!p[`${cat}:${t}`]})); setSaved(false) }
+  const toggleAll = cat => {
+    const tasks = TAREFAS_DATA[cat]
+    const allOn = tasks.every(t=>ativas[`${cat}:${t}`])
+    setAtivas(p=>{ const n={...p}; tasks.forEach(t=>{n[`${cat}:${t}`]=!allOn}); return n })
+  }
+  const tarefasAtivas = Object.values(ativas).filter(Boolean).length
+
+  return (
+    <div style={{ minHeight:'100vh', background:'#fff' }}>
+      <Header title='Tarefas' onBack={onBack}/>
+      {/* Tabs de categorias */}
+      <div style={{ display:'flex', overflowX:'auto', borderBottom:`1px solid ${C.border}`, background:C.white, position:'sticky', top:56, zIndex:10 }}>
+        {TAREFAS_CATS.map(c=>(
+          <button key={c.id} onClick={()=>setCatAtiva(c.id)} style={{ flexShrink:0, padding:'12px 16px', border:'none', background:'none', cursor:'pointer', borderBottom: catAtiva===c.id ? `2px solid ${C.navy}` : '2px solid transparent', color: catAtiva===c.id ? C.navy : C.slate, fontSize:13, fontWeight: catAtiva===c.id ? 700 : 500, whiteSpace:'nowrap' }}>
+            {c.ic} {c.l}
+          </button>
+        ))}
+      </div>
+      <div style={{ padding:'14px 16px 100px' }}>
+        <p style={{ fontSize:12, color:C.slate, marginBottom:16, lineHeight:1.6 }}>
+          Seleciona as tarefas que pretendes realizar. Ao estares disponível para todo o tipo de tarefas, aumentas o número de propostas recebidas.
+        </p>
+        {/* Header da categoria */}
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12 }}>
+          <h2 style={{ fontSize:18, fontWeight:800, color:C.navy }}>{TAREFAS_CATS.find(c=>c.id===catAtiva)?.l}</h2>
+          <button onClick={()=>toggleAll(catAtiva)} style={{ fontSize:13, color:C.g, fontWeight:600, background:'none', border:'none', cursor:'pointer' }}>Alternar todos</button>
+        </div>
+        {/* Lista de tarefas */}
+        {TAREFAS_DATA[catAtiva]?.map((t,i)=>(
+          <div key={t} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'15px 0', borderBottom:`1px solid ${C.border}` }}>
+            <span style={{ fontSize:15, color:C.navy }}>{t}</span>
+            {/* Toggle switch */}
+            <div onClick={()=>toggle(catAtiva,t)} style={{ width:48, height:28, borderRadius:14, background: ativas[`${catAtiva}:${t}`] ? C.g : '#cbd5e1', cursor:'pointer', position:'relative', transition:'background 0.2s', flexShrink:0 }}>
+              <div style={{ position:'absolute', top:3, left: ativas[`${catAtiva}:${t}`] ? 22 : 2, width:22, height:22, borderRadius:'50%', background:'#fff', boxShadow:'0 1px 4px rgba(0,0,0,0.2)', transition:'left 0.2s' }}/>
+            </div>
+          </div>
+        ))}
+      </div>
+      {/* CTA */}
+      <div style={{ position:'fixed', bottom:0, left:'50%', transform:'translateX(-50%)', width:'100%', maxWidth:430, padding:'12px 16px 20px', background:C.white, borderTop:`1px solid ${C.border}`, zIndex:30 }}>
+        {saved&&<div style={{ textAlign:'center', fontSize:11, color:C.g, fontWeight:600, marginBottom:6 }}>✅ {tarefasAtivas} tarefas guardadas!</div>}
+        <button onClick={()=>setSaved(true)} style={{ width:'100%', background:'#0891b2', color:'#fff', border:'none', borderRadius:14, padding:'15px', fontSize:14, fontWeight:800, cursor:'pointer', letterSpacing:'0.03em' }}>
+          GUARDAR
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// ── Estatísticas / Rating ──
+/* ══ Perfil editável do Prestador ══ */
+function PPrestadorPerfil({ onBack }) {
+  const eu = TECNICOS[0]
+  const nc = NIVEIS[eu.nivel]
+  const [edit,     setEdit]     = useState(false)
+  const [saved,    setSaved]    = useState(false)
+  const [catModal, setCatModal] = useState(false)
+  const [saving,   setSaving]   = useState(false)
+
+  // Dados do prestador (em produção viriam do Supabase)
+  const [nome,      setNome]      = useState(eu.n)
+  const [morada,    setMorada]    = useState('Rua das Flores, 23')
+  const [codPostal, setCodPostal] = useState('2500-123')
+  const [localidade,setLocalidade]= useState(eu.loc)
+  const [nif,       setNif]       = useState('123 456 789')
+  const [telInd,    setTelInd]    = useState('+351')
+  const [telNum,    setTelNum]    = useState('914 000 001')
+  const [email,     setEmail]     = useState('antonio.ferreira@email.com')
+  const [iban,      setIban]      = useState(eu.iban||'PT50 0035 0000 1111 0001 0')
+  const [bio,       setBio]       = useState('Especialista em limpeza residencial e pós-obra com 8 anos de experiência em Caldas da Rainha e arredores.')
+  const [ini,       setIni]       = useState(eu.ini)
+  const [cats,      setCats]      = useState([...eu.cats])
+  const [foto,      setFoto]      = useState(null)    // URL ou base64
+  const [ibanComp,  setIbanComp]  = useState(null)    // URL do comprovativo
+  const [ibanCompNome, setIbanCompNome] = useState(null)
+
+  const fotoRef = useState(null)[0]
+  const ibanRef = useState(null)[0]
+
+  const handleFoto = (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = ev => setFoto(ev.target.result)
+    reader.readAsDataURL(file)
+    // Em produção: uploadFotoPerfil(eu.id, file).then(({url}) => setFoto(url))
+  }
+
+  const handleIbanComp = (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setIbanCompNome(file.name)
+    // Em produção: uploadIbanComprovativo(eu.id, file).then(({url}) => setIbanComp(url))
+    setIbanComp('pendente') // simulado
+  }
+
+  const guardar = async () => {
+    setSaving(true)
+    // Em produção: await updatePrestador(eu.id, { nome, morada, cod_postal, localidade, nif, tel_indicativo: telInd, tel_numero: telNum, email, iban, bio, iniciais: ini, categorias: cats, foto_url: foto })
+    await new Promise(r => setTimeout(r, 600)) // simula latência
+    setSaved(true); setEdit(false); setSaving(false)
+    setTimeout(() => setSaved(false), 2500)
+  }
+
+  const Campo = ({label, value, onEdit, type='text', mono=false, half=false}) => (
+    <div style={{ padding:'11px 0', borderBottom:`1px solid ${C.border}`, gridColumn: half ? '1' : '1 / -1' }}>
+      <div style={{ fontSize:10, color: edit ? C.g : C.slate, fontWeight:600, textTransform:'uppercase', letterSpacing:'0.04em', marginBottom: edit?5:3, transition:'color 0.2s' }}>{label}</div>
+      {edit
+        ? <input type={type} value={value} onChange={e=>onEdit(e.target.value)}
+            style={{ width:'100%', border:'none', borderBottom:`2px solid ${C.g}`, padding:'4px 0', fontSize:14, fontWeight:500, color:C.navy, outline:'none', background:'transparent', fontFamily: mono ? 'monospace' : 'inherit', boxSizing:'border-box' }}/>
+        : <div style={{ fontSize:14, fontWeight:500, color:C.navy, fontFamily: mono ? 'monospace' : 'inherit' }}>{value||'—'}</div>
+      }
+    </div>
+  )
+
+  return (
+    <div style={{ minHeight:'100vh', background:C.mist }}>
+      <Header title='O meu perfil' sub='Dados pessoais e profissionais' onBack={onBack}/>
+      <div style={{ padding:'16px 16px 110px' }}>
+
+        {/* Avatar / Foto de perfil */}
+        <div style={{ background:`linear-gradient(145deg,${C.navy},${C.gd})`, borderRadius:16, padding:'18px 16px', marginBottom:14, display:'flex', alignItems:'center', gap:14 }}>
+          <div style={{ position:'relative', flexShrink:0 }}>
+            {foto
+              ? <img src={foto} alt='Foto' style={{ width:70, height:70, borderRadius:'50%', objectFit:'cover', border:'3px solid rgba(255,255,255,0.3)' }}/>
+              : <div style={{ width:70, height:70, borderRadius:'50%', background:`linear-gradient(135deg,${C.g},${C.gm})`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:26, color:'#fff', fontWeight:800, border:'3px solid rgba(255,255,255,0.25)' }}>
+                  {edit ? <input value={ini} onChange={e=>setIni(e.target.value.toUpperCase().substring(0,2))} maxLength={2} style={{ width:42, background:'transparent', border:'none', outline:'none', textAlign:'center', fontSize:22, color:'#fff', fontWeight:800 }}/> : ini}
+                </div>
+            }
+            {edit && (
+              <label htmlFor='foto-input' style={{ position:'absolute', bottom:-2, right:-2, width:24, height:24, borderRadius:'50%', background:C.g, display:'flex', alignItems:'center', justifyContent:'center', fontSize:12, border:'2px solid #fff', cursor:'pointer' }}>
+                📷
+                <input id='foto-input' type='file' accept='image/*' onChange={handleFoto} style={{ display:'none' }}/>
+              </label>
+            )}
+          </div>
+          <div style={{ flex:1 }}>
+            {edit
+              ? <input value={nome} onChange={e=>setNome(e.target.value)} style={{ background:'transparent', border:'none', borderBottom:'1.5px solid rgba(255,255,255,0.4)', outline:'none', color:'#fff', fontSize:17, fontWeight:800, width:'100%', paddingBottom:2, marginBottom:4 }}/>
+              : <div style={{ color:'#fff', fontSize:17, fontWeight:800, marginBottom:3 }}>{nome}</div>
+            }
+            <div style={{ color:'#94a3b8', fontSize:11, marginBottom:6 }}>{eu.id_num||'301612811'}</div>
+            <div style={{ display:'inline-flex', alignItems:'center', gap:5, background:'rgba(255,255,255,0.1)', borderRadius:20, padding:'4px 10px' }}>
+              <span style={{ fontSize:11, color:'#bbf7d0', fontWeight:600 }}>{nc.ic} {nc.l} · {nc.taxa}% taxa</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Categorias */}
+        <Card style={{ padding:14, marginBottom:12 }}>
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10 }}>
+            <div style={{ fontSize:10, fontWeight:700, color:C.slate, textTransform:'uppercase', letterSpacing:'0.05em' }}>Categorias de serviço</div>
+            <button onClick={()=>setCatModal(true)} style={{ fontSize:11, color:C.g, fontWeight:600, background:C.gl, border:'none', borderRadius:9, padding:'4px 10px', cursor:'pointer' }}>✏️ Editar</button>
+          </div>
+          <div style={{ display:'flex', flexWrap:'wrap', gap:7 }}>
+            {cats.map(c=><span key={c} style={{ padding:'5px 12px', border:`1.5px solid ${C.g}`, borderRadius:20, fontSize:12, color:C.g, fontWeight:600, background:C.gl }}>{catById(c)?.ic} {catById(c)?.l}</span>)}
+            {cats.length===0&&<span style={{ fontSize:12, color:C.slate, fontStyle:'italic' }}>Sem categorias definidas</span>}
+          </div>
+        </Card>
+
+        {/* Dados pessoais */}
+        <Card style={{ padding:'2px 16px', marginBottom:12 }}>
+          <Campo label="NIF" value={nif} onEdit={setNif}/>
+          {/* Telefone — indicativo + número */}
+          <div style={{ padding:'11px 0', borderBottom:`1px solid ${C.border}` }}>
+            <div style={{ fontSize:10, color: edit ? C.g : C.slate, fontWeight:600, textTransform:'uppercase', letterSpacing:'0.04em', marginBottom: edit?5:3 }}>Telefone</div>
+            {edit
+              ? <div style={{ display:'flex', gap:8, alignItems:'center' }}>
+                  <input value={telInd} onChange={e=>setTelInd(e.target.value)} style={{ width:62, border:'none', borderBottom:`2px solid ${C.g}`, padding:'4px 0', fontSize:14, fontWeight:500, color:C.slate, outline:'none', background:'transparent', textAlign:'center' }}/>
+                  <input value={telNum} onChange={e=>setTelNum(e.target.value)} style={{ flex:1, border:'none', borderBottom:`2px solid ${C.g}`, padding:'4px 0', fontSize:14, fontWeight:500, color:C.navy, outline:'none', background:'transparent' }}/>
+                </div>
+              : <div style={{ fontSize:14, fontWeight:500, color:C.navy }}>{telInd} {telNum}</div>
+            }
+          </div>
+          <Campo label="Email" value={email} onEdit={setEmail} type='email'/>
+          <Campo label="Morada" value={morada} onEdit={setMorada}/>
+          {/* Código Postal + Localidade na mesma linha */}
+          <div style={{ padding:'11px 0', borderBottom:`1px solid ${C.border}` }}>
+            <div style={{ fontSize:10, color: edit ? C.g : C.slate, fontWeight:600, textTransform:'uppercase', letterSpacing:'0.04em', marginBottom: edit?5:3 }}>Localidade</div>
+            {edit
+              ? <div style={{ display:'flex', gap:8 }}>
+                  <input value={codPostal} onChange={e=>setCodPostal(e.target.value)} placeholder='0000-000' style={{ width:90, border:'none', borderBottom:`2px solid ${C.g}`, padding:'4px 0', fontSize:14, color:C.slate, outline:'none', background:'transparent' }}/>
+                  <input value={localidade} onChange={e=>setLocalidade(e.target.value)} style={{ flex:1, border:'none', borderBottom:`2px solid ${C.g}`, padding:'4px 0', fontSize:14, color:C.navy, outline:'none', background:'transparent' }}/>
+                </div>
+              : <div style={{ fontSize:14, fontWeight:500, color:C.navy }}>{codPostal} {localidade}</div>
+            }
+          </div>
+          <div style={{ padding:'11px 0', borderBottom:`1px solid ${C.border}` }}>
+            <div style={{ fontSize:10, color: edit ? C.g : C.slate, fontWeight:600, textTransform:'uppercase', letterSpacing:'0.04em', marginBottom: edit?5:4 }}>Sobre mim</div>
+            {edit
+              ? <textarea value={bio} onChange={e=>setBio(e.target.value)} rows={3} style={{ width:'100%', border:'none', borderBottom:`2px solid ${C.g}`, padding:'4px 0', fontSize:13, color:C.navy, outline:'none', resize:'none', background:'transparent', fontFamily:'inherit', boxSizing:'border-box' }}/>
+              : <div style={{ fontSize:13, color:C.navy, lineHeight:1.7 }}>{bio}</div>
+            }
+          </div>
+        </Card>
+
+        {/* Dados bancários */}
+        <Card style={{ padding:'2px 16px', marginBottom:12 }}>
+          <Campo label="IBAN (Swan SEPA CT)" value={iban} onEdit={setIban} mono={true}/>
+          {/* Comprovativo de IBAN */}
+          <div style={{ padding:'12px 0', borderBottom:`1px solid ${C.border}` }}>
+            <div style={{ fontSize:10, color: edit ? C.g : C.slate, fontWeight:600, textTransform:'uppercase', letterSpacing:'0.04em', marginBottom:6 }}>Comprovativo de IBAN</div>
+            {ibanComp
+              ? <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                  <span style={{ fontSize:22 }}>📄</span>
+                  <div style={{ flex:1 }}>
+                    <div style={{ fontSize:12, fontWeight:600, color:C.navy }}>{ibanCompNome||'Comprovativo.pdf'}</div>
+                    <div style={{ fontSize:10, color:C.g, fontWeight:600 }}>✓ Documento carregado</div>
+                  </div>
+                  {edit&&<button onClick={()=>{setIbanComp(null);setIbanCompNome(null)}} style={{ background:'none', border:'none', color:'#94a3b8', fontSize:14, cursor:'pointer' }}>×</button>}
+                </div>
+              : edit
+                ? <label htmlFor='iban-input' style={{ display:'flex', alignItems:'center', gap:8, padding:'10px 14px', border:`1.5px dashed ${C.g}`, borderRadius:10, cursor:'pointer', background:C.gl }}>
+                    <span style={{ fontSize:18 }}>📎</span>
+                    <span style={{ fontSize:12, color:C.gd, fontWeight:600 }}>Anexar comprovativo (PDF ou imagem)</span>
+                    <input id='iban-input' type='file' accept='.pdf,image/*' onChange={handleIbanComp} style={{ display:'none' }}/>
+                  </label>
+                : <div style={{ fontSize:12, color:'#94a3b8', fontStyle:'italic' }}>Sem comprovativo anexado</div>
+            }
+          </div>
+          <div style={{ padding:'12px 0' }}>
+            <div style={{ fontSize:10, color:C.slate, fontWeight:600, textTransform:'uppercase', letterSpacing:'0.04em', marginBottom:3 }}>Anos de experiência</div>
+            <div style={{ fontSize:14, fontWeight:500, color:C.navy }}>{eu.anos} anos</div>
+          </div>
+        </Card>
+
+        {/* Rating */}
+        <Card style={{ padding:14, marginBottom:14 }}>
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+            <div>
+              <div style={{ fontSize:10, fontWeight:700, color:C.slate, textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:5 }}>Pontuação de satisfação</div>
+              <div style={{ fontSize:26, fontWeight:800, color:C.navy }}>{eu.r} <span style={{ color:C.amber }}>★</span></div>
+            </div>
+            <div style={{ textAlign:'right' }}>
+              <div style={{ fontSize:24, fontWeight:800, color:C.navy }}>{eu.jobs}</div>
+              <div style={{ fontSize:10, color:C.slate }}>serviços totais</div>
+            </div>
+          </div>
+        </Card>
+
+        {saved && <div style={{ background:C.gl, borderRadius:10, padding:'11px 14px', marginBottom:12, border:'1px solid rgba(22,163,74,0.2)', textAlign:'center' }}>
+          <span style={{ fontSize:13, color:C.gd, fontWeight:700 }}>✅ Perfil guardado no Supabase!</span>
+        </div>}
+      </div>
+
+      {/* CTA fixo */}
+      <div style={{ position:'fixed', bottom:0, left:'50%', transform:'translateX(-50%)', width:'100%', maxWidth:430, padding:'12px 16px 20px', background:C.white, borderTop:`1px solid ${C.border}`, zIndex:30 }}>
+        {edit
+          ? <div style={{ display:'flex', gap:9 }}>
+              <button onClick={()=>setEdit(false)} style={{ flex:1, padding:'13px', border:`1.5px solid ${C.border}`, borderRadius:12, background:C.white, fontSize:13, fontWeight:600, cursor:'pointer', color:C.slate }}>Cancelar</button>
+              <button onClick={guardar} disabled={saving} style={{ flex:2, padding:'13px', border:'none', borderRadius:12, background:saving?C.border:C.g, color:'#fff', fontSize:13, fontWeight:800, cursor:saving?'default':'pointer', boxShadow:saving?'none':'0 4px 14px rgba(22,163,74,0.35)' }}>
+                {saving?'A guardar...':'💾 Guardar alterações'}
+              </button>
+            </div>
+          : <button onClick={()=>setEdit(true)} style={{ width:'100%', padding:'13px', border:`1.5px solid ${C.border}`, borderRadius:12, background:C.white, fontSize:13, fontWeight:700, cursor:'pointer', color:C.navy, display:'flex', alignItems:'center', justifyContent:'center', gap:8 }}>
+              ✏️ Editar perfil
+            </button>
+        }
+      </div>
+
+      {/* Modal de categorias */}
+      {catModal && <>
+        <div onClick={()=>setCatModal(false)} style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.45)', zIndex:60 }}/>
+        <div style={{ position:'fixed', bottom:0, left:'50%', transform:'translateX(-50%)', width:'100%', maxWidth:430, background:C.white, borderRadius:'22px 22px 0 0', zIndex:61, padding:'20px 18px 32px' }}>
+          <div style={{ width:36, height:4, borderRadius:2, background:'#e2e8f0', margin:'0 auto 16px' }}/>
+          <h3 style={{ fontSize:15, fontWeight:800, color:C.navy, marginBottom:4 }}>Categorias de serviço</h3>
+          <p style={{ fontSize:12, color:C.slate, marginBottom:16 }}>Seleciona as categorias em que prestas serviços.</p>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:9, marginBottom:18 }}>
+            {CATS.map(c => {
+              const sel = cats.includes(c.id)
+              return (
+                <button key={c.id} onClick={()=>setCats(p=>sel?p.filter(x=>x!==c.id):[...p,c.id])}
+                  style={{ padding:'12px', border:`2px solid ${sel?c.cor:C.border}`, borderRadius:12, background:sel?c.cor+'15':'#fff', cursor:'pointer', textAlign:'left', display:'flex', alignItems:'center', gap:8 }}>
+                  <span style={{ fontSize:20 }}>{c.ic}</span>
+                  <div>
+                    <div style={{ fontSize:13, fontWeight:sel?700:500, color:sel?c.cor:C.navy }}>{c.l}</div>
+                    {sel&&<div style={{ fontSize:9, color:c.cor, fontWeight:700 }}>✓ Activa</div>}
+                  </div>
+                </button>
+              )
+            })}
+          </div>
+          <button onClick={()=>setCatModal(false)} style={{ width:'100%', padding:'13px', border:'none', borderRadius:12, background:C.g, color:'#fff', fontSize:13, fontWeight:800, cursor:'pointer' }}>
+            Guardar ({cats.length} categorias)
+          </button>
+        </div>
+      </>}
+    </div>
+  )
+}
+function PEstatisticas({ onBack }) {
+  const eu = TECNICOS[0]
+  const stats30 = [
+    {v:'6',l:'Número de Serviços'},
+    {v:'€342,00',l:'Ganhos'},
+    {v:'0',l:'Cancelamentos do mesmo/dia seguinte'},
+    {v:'0%',l:'Taxa de Cancelamento'},
+    {v:'2',l:'Clientes repetidos'},
+    {v:'83%',l:'Chegada Pontual'},
+  ]
+  return (
+    <div style={{ minHeight:'100vh', background:C.mist }}>
+      <Header title='Estatísticas' sub={eu.n} onBack={onBack}/>
+      <div style={{ padding:'18px 16px 40px' }}>
+        {/* Perfil */}
+        <div style={{ textAlign:'center', marginBottom:20 }}>
+          <div style={{ width:80, height:80, borderRadius:'50%', background:`linear-gradient(135deg,${C.g},${C.gm})`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:32, color:'#fff', fontWeight:800, margin:'0 auto 12px' }}>{eu.ini}</div>
+          <h2 style={{ fontSize:18, fontWeight:800, color:C.navy, marginBottom:3 }}>{eu.n}</h2>
+          <p style={{ fontSize:12, color:C.slate, marginBottom:8 }}>na rede desde Jan 2024</p>
+          <div style={{ display:'flex', flexWrap:'wrap', gap:7, justifyContent:'center', marginBottom:14 }}>
+            {eu.cats.map(c=>(
+              <span key={c} style={{ padding:'5px 12px', border:`1.5px solid ${C.border}`, borderRadius:20, fontSize:12, color:C.navy }}>{catById(c)?.ic} {catById(c)?.l}</span>
+            ))}
+            <span style={{ padding:'5px 12px', border:`1.5px solid ${C.border}`, borderRadius:20, fontSize:12, color:C.navy }}>🏅 Gold</span>
+          </div>
+        </div>
+        {/* Avaliação */}
+        <Card style={{ padding:20, textAlign:'center', marginBottom:16 }}>
+          <div style={{ fontSize:36, fontWeight:800, color:C.navy }}>{eu.r} <span style={{ color:C.amber }}>★</span></div>
+          <div style={{ fontSize:13, color:C.slate, marginTop:4 }}>Pontuação de satisfação</div>
+          <div style={{ display:'flex', justifyContent:'center', marginTop:8 }}>
+            {[1,2,3,4,5].map(i=><span key={i} style={{ fontSize:22, color: i<=Math.round(eu.r) ? C.amber : '#e2e8f0' }}>★</span>)}
+          </div>
+        </Card>
+        {/* Últimos 30 dias */}
+        <h2 style={{ fontSize:17, fontWeight:800, color:C.navy, margin:'0 0 12px' }}>Últimos 30 dias</h2>
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
+          {stats30.map(s=>(
+            <Card key={s.l} style={{ padding:'18px 16px', textAlign:'center' }}>
+              <div style={{ fontSize:22, fontWeight:800, color:C.navy, marginBottom:6 }}>{s.v}</div>
+              <div style={{ fontSize:11, color:C.slate, lineHeight:1.4 }}>{s.l}</div>
+            </Card>
+          ))}
+        </div>
+        {/* Total histórico */}
+        <h2 style={{ fontSize:17, fontWeight:800, color:C.navy, margin:'20px 0 12px' }}>Histórico total</h2>
+        <Card style={{ padding:16 }}>
+          {[['Total de serviços',eu.jobs],['Anos de experiência',eu.anos],['Avaliação média',`${eu.r}/5`],['Taxa de cancelamento','2%']].map(([l,v])=>(
+            <div key={l} style={{ display:'flex', justifyContent:'space-between', padding:'9px 0', borderBottom:'1px solid #f1f5f9' }}>
+              <span style={{ fontSize:13, color:C.slate }}>{l}</span>
+              <span style={{ fontSize:13, fontWeight:700, color:C.navy }}>{v}</span>
+            </div>
+          ))}
+        </Card>
+      </div>
+    </div>
+  )
+}
+
+// ── Pagamentos do prestador ──
+function PPagamentos({ onBack }) {
+  const [periodo, setPeriodo] = useState(30)
+  const [filtro, setFiltro] = useState('todos') // todos | pagos
+  const PERIODOS = [15, 30, 90]
+  const TRANSACOES = [
+    { id:'t1', data:'Disponível em breve', n:1, val:57.00, st:'pendente', via:null },
+    { id:'t2', data:'20 abril 2026',       n:2, val:75.00, st:'pago',     via:'Transferência bancária' },
+    { id:'t3', data:'18 abril 2026',       n:1, val:91.00, st:'pago',     via:'Transferência bancária' },
+    { id:'t4', data:'12 abril 2026',       n:1, val:45.00, st:'pago',     via:'Transferência bancária' },
+    { id:'t5', data:'10 abril 2026',       n:3, val:180.00,st:'pago',     via:'Pagamento em numerário' },
+  ]
+  const filtradas = TRANSACOES.filter(t=>filtro==='pagos'?t.st==='pago':true)
+  const total = filtradas.reduce((a,t)=>a+t.val,0)
+
+  return (
+    <div style={{ minHeight:'100vh', background:'#f8fafc' }}>
+      <Header title='Pagamentos' onBack={onBack}/>
+      <div style={{ padding:'14px 16px 40px' }}>
+        {/* Filtro de período */}
+        <div style={{ display:'flex', gap:8, marginBottom:16 }}>
+          {PERIODOS.map(p=>(
+            <button key={p} onClick={()=>setPeriodo(p)} style={{ flex:1, padding:'9px', borderRadius:22, border:`1.5px solid ${C.border}`, background: periodo===p ? C.navy : C.white, color: periodo===p ? '#fff' : C.slate, fontWeight:700, fontSize:12, cursor:'pointer' }}>
+              Últimos {p} dias
+            </button>
+          ))}
+        </div>
+        {/* Card total */}
+        <div style={{ background:C.navy, borderRadius:16, padding:'20px 20px', marginBottom:16 }}>
+          {/* Toggle Todos/Pagos */}
+          <div style={{ display:'inline-flex', background:'rgba(255,255,255,0.15)', borderRadius:20, padding:3, marginBottom:16 }}>
+            {['todos','pagos'].map(f=>(
+              <button key={f} onClick={()=>setFiltro(f)} style={{ padding:'6px 18px', borderRadius:17, border:'none', cursor:'pointer', background: filtro===f ? C.white : 'transparent', color: filtro===f ? C.navy : '#94a3b8', fontWeight:700, fontSize:13, textTransform:'capitalize' }}>
+                {f==='todos'?'Todos':'Pagos'}
+              </button>
+            ))}
+          </div>
+          <div style={{ fontSize:38, fontWeight:800, color:'#fff', marginBottom:12 }}>€{total.toFixed(2)}</div>
+          <div style={{ fontSize:12, color:'#64748b' }}>
+            {periodo===30 ? `${new Date(Date.now()-30*86400000).toLocaleDateString('pt-PT',{day:'2-digit',month:'short',year:'numeric'})} — Hoje` : `Últimos ${periodo} dias`}
+          </div>
+        </div>
+        {/* Lista de transacções */}
+        <h2 style={{ fontSize:17, fontWeight:800, color:C.navy, margin:'4px 0 14px' }}>Transações</h2>
+        {filtradas.map(t=>(
+          <div key={t.id} style={{ borderBottom:`1px solid ${C.border}`, paddingBottom:14, marginBottom:14 }}>
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:4 }}>
+              <div>
+                <div style={{ fontSize:16, fontWeight:700, color: t.st==='pendente' ? C.slate : C.navy }}>{t.data}</div>
+                <div style={{ fontSize:12, color:C.slate, marginTop:2 }}>Total de {t.n} Serviço{t.n>1?'s':''}</div>
+              </div>
+              <div style={{ display:'flex', alignItems:'center', gap:4 }}>
+                <span style={{ fontSize:16, fontWeight:800, color:C.navy }}>€{t.val.toFixed(2)}</span>
+                <span style={{ fontSize:14, color:C.slate }}>›</span>
+              </div>
+            </div>
+            {t.st==='pago' && <div style={{ display:'flex', gap:7, marginTop:6 }}>
+              <span style={{ display:'flex', alignItems:'center', gap:4, fontSize:11, color:'#16a34a', fontWeight:600 }}>
+                <span style={{ width:16, height:16, borderRadius:'50%', border:'1.5px solid #16a34a', display:'flex', alignItems:'center', justifyContent:'center', fontSize:8 }}>✓</span>
+                Pago
+              </span>
+              <span style={{ fontSize:11, color:C.slate }}>🏦 {t.via}</span>
+            </div>}
+            {t.st==='pendente' && <span style={{ fontSize:11, color:C.amber, fontWeight:600 }}>⏳ Disponível em breve</span>}
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ── Serviços ativos (contratos recorrentes) ──
+function PServicosAtivos({ onBack }) {
+  const CONTRATOS = [
+    // vazio para mostrar o estado empty (como na imagem)
+    // Em prod, viria do Supabase
+  ]
+  return (
+    <div style={{ minHeight:'100vh', background:'#fff' }}>
+      <Header title='Serviços ativos' onBack={onBack}/>
+      <div style={{ padding:'20px 16px' }}>
+        {CONTRATOS.length===0
+          ? <div style={{ textAlign:'center', padding:'80px 0', color:'#94a3b8' }}>
+              <div style={{ fontSize:48, marginBottom:14 }}>📋</div>
+              <div style={{ fontSize:16, fontWeight:600, marginBottom:6 }}>Sem serviços</div>
+              <div style={{ fontSize:12, lineHeight:1.5 }}>Os teus contratos recorrentes activos aparecem aqui</div>
+            </div>
+          : CONTRATOS.map(c=>(
+              <Card key={c.id} style={{ padding:14, marginBottom:8 }}>
+                <div>{c.n}</div>
+              </Card>
+            ))
+        }
+      </div>
+    </div>
+  )
+}
+
+// ── Escalões — ficha do prestador (Rating nível) ──
+function PNivel({ onBack }) {
+  const eu = TECNICOS[0]
+  const nivel = eu.nivel
+  const nc = NIVEIS[nivel]
+  const nKeys = Object.keys(NIVEIS)
+  const idx = nKeys.indexOf(nivel)
+  const prox = nKeys[idx+1]
+  const pc = prox ? NIVEIS[prox] : null
+  const faltam = pc ? Math.max(0, pc.min - eu.jobs) : 0
+  const progressoPct = pc ? Math.min(100, ((eu.jobs - NIVEIS[nKeys[idx-1]||nivel]?.min||0) / (pc.min - (NIVEIS[nKeys[idx-1]||nivel]?.min||0))) * 100) : 100
+
+  return (
+    <div style={{ minHeight:'100vh', background:C.mist }}>
+      <Header title={`Parceiro ${nc.l}`} sub='Progressão e escalões' onBack={onBack}/>
+      <div style={{ padding:'20px 16px 40px', textAlign:'center' }}>
+        <div style={{ fontSize:56, marginBottom:8 }}>{nc.ic}</div>
+        <h1 style={{ fontSize:20, fontWeight:800, color:C.navy, marginBottom:4 }}>Parceiro {nc.l}</h1>
+        <div style={{ fontSize:13, color:C.slate, marginBottom:4 }}>
+          <strong>{eu.jobs}</strong> serviços · ⭐ {eu.r}
+        </div>
+      </div>{/* fecha div padding 20px */}
+      {/* Progressão */}
+      {pc && <div style={{ margin:'16px', background:C.navy, borderRadius:16, padding:'16px 18px' }}>
+        <p style={{ color:'#86efac', fontSize:14, fontWeight:700, textAlign:'center', marginBottom:16 }}>Estás a subir de nível!</p>
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12 }}>
+          <span style={{ fontSize:26 }}>{nc.ic}</span>
+          <div style={{ flex:1, height:8, background:'rgba(255,255,255,0.15)', borderRadius:4, margin:'0 8px', overflow:'hidden' }}>
+            <div style={{ height:'100%', width:`${progressoPct}%`, background:'linear-gradient(90deg,#22c55e,#86efac)', borderRadius:4 }}/>
+          </div>
+          <span style={{ fontSize:26 }}>{pc.ic}</span>
+        </div>
+        <p style={{ color:'#94a3b8', fontSize:12, textAlign:'center', lineHeight:1.5 }}>
+          Faltam apenas <strong style={{ color:'#fff' }}>{faltam} serviços</strong> para desbloqueares o estatuto de <strong style={{ color:'#86efac' }}>Parceiro {pc.l}</strong>
+        </p>
+      </div>}
+      {/* Lista de níveis */}
+      <div style={{ padding:'8px 16px 40px' }}>
+        {Object.entries(NIVEIS).map(([id,n],i)=>{
+          const isAtual=id===nivel; const atingido=nKeys.indexOf(id)<=idx
+          return(
+            <div key={id} style={{ display:'flex', gap:14, padding:'16px 0', borderBottom:`1px solid ${C.border}` }}>
+              <div style={{ width:52, height:52, borderRadius:'50%', background: atingido?n.bg:'#f1f5f9', display:'flex', alignItems:'center', justifyContent:'center', fontSize:26, flexShrink:0, opacity:atingido?1:0.5 }}>{n.ic}</div>
+              <div style={{ flex:1 }}>
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
+                  <div style={{ fontSize:15, fontWeight:800, color: atingido?C.navy:'#94a3b8' }}>Parceiro {n.l}</div>
+                  {isAtual && <span style={{ fontSize:10, background:n.bg, color:n.cor, padding:'2px 8px', borderRadius:9, fontWeight:700 }}>★ Actual</span>}
+                </div>
+                <div style={{ fontSize:12, color:C.slate, marginTop:3, lineHeight:1.6 }}>
+                  {n.min===0?'Nível de entrada':n.min+' serviços com avaliação ≥'+n.mr}
+                </div>
+                <div style={{ fontSize:11, color:n.cor, fontWeight:600, marginTop:4 }}>
+                  Taxa: {n.taxa}% · {n.taxa===22?'Carteira + levantamento livre':n.taxa===20?'+ Seguro RC em grupo':n.taxa===18?'+ Fundo de equipamento':'+ Prioridade total em novas ordens'}
+                </div>
+                {isAtual && n.min<eu.jobs && pc && (
+                  <div style={{ fontSize:11, color:C.g, marginTop:3 }}>
+                    ✓ {eu.jobs} serviços (mínimo {n.min}) · Avaliação {eu.r} ✓
+                  </div>
+                )}
+              </div>
+            </div>
+          )
+        })}
+        {/* Dicas */}
+        <div style={{ background:'#fef9ec', borderRadius:12, padding:16, marginTop:12, border:'1px solid rgba(245,158,11,0.2)' }}>
+          <p style={{ fontSize:13, fontWeight:700, color:'#92400e', marginBottom:8 }}>✨ Dicas para manteres o teu estatuto</p>
+          {['Avaliação igual ou superior a 4,5','Sem atrasos nem faltas','Responde às propostas de serviço'].map(t=>(
+            <div key={t} style={{ display:'flex', gap:7, marginBottom:5 }}>
+              <span style={{ color:C.slate }}>•</span>
+              <span style={{ fontSize:12, color:C.slate }}>{t}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Dashboard actualizado com Online toggle + level banner ──
+function PDashV2({ ordens, onOrdem, onCarteira, onChat, onNavMenu }) {
+  const [drawerOpen, setDrawerOpen] = useState(false)
+  const [menuActivo, setMenuActivo] = useState(null)
+  const [online, setOnline]         = useState(true)
+  const [filtroKpi, setFiltroKpi]   = useState(null) // 'aceites'|'propostas'|'concluidas'|null
+
+  const eu = TECNICOS[0]; const nc = NIVEIS[eu.nivel]
+  const minhas  = ordens.filter(o => o.tid===eu.id)
+  const abertas = minhas.filter(o => o.st!=='concluida')
+  const feitas  = minhas.filter(o => o.st==='concluida')
+  const pendentes = ordens.filter(o => o.st==='pendente')
+  const nKeys   = Object.keys(NIVEIS)
+  const idx     = nKeys.indexOf(eu.nivel)
+  const prox    = nKeys[idx+1]
+  const pc      = prox ? NIVEIS[prox] : null
+  const faltam  = pc ? Math.max(0, pc.min - eu.jobs) : 0
+
+  // Lista de ordens conforme KPI activo — calculada FORA do JSX para evitar IIFE
+  const ordensFiltradas = filtroKpi==='aceites'   ? abertas
+    : filtroKpi==='propostas'  ? pendentes
+    : filtroKpi==='concluidas' ? feitas
+    : abertas
+
+  const tituloLista = filtroKpi==='propostas'?'Propostas pendentes'
+    : filtroKpi==='concluidas'?'Serviços concluídos'
+    : 'Ordens atribuídas'
+
+  const handleMenu = id => {
+    setMenuActivo(id)
+    if (id==='carteira')  { onCarteira?.(); return }
+    if (id==='mensagens') { onChat?.(); return }
+    onNavMenu?.(id)
+  }
+
+  const NAV_ITEMS = []
+
+  return (
+    <div style={{ minHeight:'100vh', background:C.mist }}>
+      <DrawerMenu open={drawerOpen} onClose={()=>setDrawerOpen(false)} onNavigate={handleMenu} user={{ n:eu.n, ini:eu.ini, id_num:'301612811', nivel:eu.nivel }} activeItem={menuActivo}/>
+
+      {/* Top bar */}
+      <div style={{ background:`linear-gradient(145deg,${C.navy},#0e4a2e)`, padding:'14px 16px' }}>
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+          <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+            <button onClick={()=>setDrawerOpen(true)} style={{ background:'none', border:'none', cursor:'pointer', padding:4, display:'flex', flexDirection:'column', gap:4 }}>
+              {[0,1,2].map(i=><div key={i} style={{ width:20, height:2, background:'#fff', borderRadius:2 }}/>)}
+            </button>
+            <button onClick={()=>setOnline(o=>!o)} style={{ display:'flex', alignItems:'center', gap:6, padding:'6px 12px', border:'none', borderRadius:20, cursor:'pointer', background: online ? C.g : '#475569' }}>
+              <span style={{ fontSize:12, color:'#fff', fontWeight:700 }}>{online?'Online':'Offline'}</span>
+              <div style={{ width:18, height:18, borderRadius:'50%', background:'#fff' }}/>
+            </button>
+          </div>
+          <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+            <button onClick={()=>onNavMenu?.('nivel_p')} style={{ display:'flex', alignItems:'center', gap:4, background:'none', border:'none', cursor:'pointer' }}>
+              <span style={{ color:C.amber, fontSize:13 }}>★</span>
+              <span style={{ color:'#fff', fontSize:13, fontWeight:700 }}>{eu.r}</span>
+            </button>
+            {/* Avatar → Perfil/Ficha do prestador */}
+            <button onClick={()=>onNavMenu?.('perfil')} style={{ background:'none', border:'none', cursor:'pointer', padding:0 }}>
+              <div style={{ width:38, height:38, borderRadius:'50%', background:`linear-gradient(135deg,${C.g},${C.gm})`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:14, color:'#fff', fontWeight:800, border:'2px solid rgba(255,255,255,0.3)' }}>{eu.ini}</div>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Banner nível */}
+      {pc && (
+        <button onClick={()=>onNavMenu?.('rating')} style={{ width:'100%', background:`linear-gradient(135deg,${C.navyM},#1a4035)`, padding:'14px 18px', border:'none', cursor:'pointer', display:'flex', justifyContent:'space-between', alignItems:'center', textAlign:'left' }}>
+          <div>
+            <div style={{ color:'#fff', fontSize:14, fontWeight:700 }}>Parceiro {nc.l}</div>
+            <div style={{ color:'#86efac', fontSize:12, marginTop:2, fontWeight:500 }}>{faltam} serviços para {pc.l}!</div>
+          </div>
+          <span style={{ fontSize:34 }}>{nc.ic}</span>
+        </button>
+      )}
+
+      {/* Conteúdo principal */}
+      <div style={{ padding:'14px 16px 100px' }}>
+        {/* Carteira */}
+        <div onClick={onCarteira} style={{ background:`linear-gradient(135deg,${C.navy},${C.gd})`, borderRadius:14, padding:'16px', marginBottom:14, cursor:'pointer', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+          <div>
+            <div style={{ color:'#94a3b8', fontSize:11, marginBottom:3 }}>A minha carteira</div>
+            <div style={{ color:'#fff', fontSize:22, fontWeight:800 }}>€105,00</div>
+            <div style={{ color:'#94a3b8', fontSize:11, marginTop:2 }}>+€57,00 pendente</div>
+          </div>
+          <span style={{ fontSize:9, color:'#86efac', fontWeight:700, background:'rgba(34,197,94,0.15)', padding:'4px 9px', borderRadius:9 }}>{nc.ic} {nc.l} · {nc.taxa}%</span>
+        </div>
+
+        {/* KPIs clicáveis */}
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:8, marginBottom:14 }}>
+          {[
+            {id:'aceites',   ic:'📋', v:abertas.length,   l:'Aceites'},
+            {id:'propostas', ic:'📩', v:pendentes.length, l:'Propostas'},
+            {id:'concluidas',ic:'✅', v:feitas.length,    l:'Concluídas'},
+          ].map(kpi => (
+            <div key={kpi.id} onClick={()=>setFiltroKpi(f=>f===kpi.id?null:kpi.id)}
+              style={{ background: filtroKpi===kpi.id ? C.navy : C.white, borderRadius:12, padding:'12px 8px', textAlign:'center', border:`2px solid ${filtroKpi===kpi.id?C.g:C.border}`, cursor:'pointer', transition:'all 0.15s' }}>
+              <div style={{ fontSize:16 }}>{kpi.ic}</div>
+              <div style={{ fontSize:17, fontWeight:800, color:filtroKpi===kpi.id?'#fff':C.navy, marginTop:3 }}>{kpi.v}</div>
+              <div style={{ fontSize:9, color:filtroKpi===kpi.id?'#86efac':C.slate, marginTop:2 }}>{kpi.l}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Lista de ordens — sem IIFE */}
+        {ordensFiltradas.length > 0 && <>
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8 }}>
+            <h2 style={{ fontSize:14, fontWeight:700, color:C.navy }}>{tituloLista}</h2>
+            {filtroKpi && <button onClick={()=>setFiltroKpi(null)} style={{ fontSize:10, color:C.slate, background:'none', border:'none', cursor:'pointer' }}>Limpar ×</button>}
+          </div>
+          {ordensFiltradas.map(ord => {
+            const sv = svcById(ord.sid)
+            return (
+              <Card key={ord.id} style={{ padding:13, marginBottom:8 }} onClick={() => onOrdem(ord)}>
+                <div style={{ display:'flex', gap:10, alignItems:'center' }}>
+                  <span style={{ fontSize:20 }}>{sv?.ic||'🔧'}</span>
+                  <div style={{ flex:1 }}>
+                    <div style={{ display:'flex', justifyContent:'space-between' }}>
+                      <span style={{ fontSize:13, fontWeight:700, color:C.navy }}>{sv?.n}</span>
+                      <EstBadge st={ord.st}/>
+                    </div>
+                    <div style={{ fontSize:11, color:C.slate, marginTop:2 }}>📍 {ord.morada}</div>
+                    <div style={{ display:'flex', gap:8, marginTop:3, alignItems:'center' }}>
+                      <span style={{ fontSize:11, color:C.g, fontWeight:600 }}>🕐 {ord.data}{ord.hora?' '+ord.hora:''}</span>
+                      {ord.km && <span style={{ fontSize:10, background:C.gl, color:C.gd, padding:'1px 6px', borderRadius:8, fontWeight:700 }}>📏 {ord.km} km</span>}
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            )
+          })}
+        </>}
+
+        {ordensFiltradas.length === 0 && (
+          <div style={{ textAlign:'center', padding:'32px 0', color:C.slate }}>
+            <div style={{ fontSize:40, marginBottom:10 }}>📋</div>
+            <div style={{ fontSize:14, fontWeight:600, color:C.navy, marginBottom:4 }}>
+              {filtroKpi==='concluidas'?'Sem serviços concluídos':filtroKpi==='propostas'?'Sem propostas pendentes':'Sem ordens activas'}
+            </div>
+            <div style={{ fontSize:12 }}>Aguarda novas propostas de serviço</div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function GDash({ ordens, onOrdem, onRede, onPag }) {
+  const c = { pendente:ordens.filter(o=>o.st==='pendente').length, em_curso:ordens.filter(o=>o.st==='em_curso').length, concluida:ordens.filter(o=>o.st==='concluida').length }
+  return (
+    <div style={{ minHeight:'100vh', background:C.mist }}>
+      <div style={{ background:C.navy, padding:'22px 20px 18px' }}>
+        <h1 style={{ color:'#fff', fontSize:17, fontWeight:800, margin:'0 0 2px' }}>Painel de Gestão</h1>
+        <p style={{ color:'#94a3b8', fontSize:10, margin:'0 0 14px' }}>Operação em tempo real · {new Date().toLocaleDateString('pt-PT')}</p>
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:8 }}>
+          {[['🟡',c.pendente,'Pendentes','#fef3c7','#92400e'],['🔵',c.em_curso,'Em curso','#eff6ff','#1d4ed8'],['✅',c.concluida,'Concluídas',C.gl,C.gd]].map(([ic,n,l,bg,col]) => (
+            <div key={l} style={{ background:bg, borderRadius:11, padding:'11px 7px', textAlign:'center' }}>
+              <div style={{ fontSize:13 }}>{ic}</div><div style={{ fontSize:20, fontWeight:800, color:col }}>{n}</div><div style={{ fontSize:8, color:col, fontWeight:600 }}>{l}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div style={{ padding:'14px 16px 20px' }}>
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:9, marginBottom:16 }}>
+          {[['👥','Rede de parceiros',onRede],['💳','Pagamentos SEPA',onPag]].map(([ic,l,fn]) => (
+            <button key={l} onClick={fn} style={{ background:C.white, border:`1px solid ${C.border}`, borderRadius:13, padding:'14px 11px', cursor:'pointer', textAlign:'left' }}>
+              <div style={{ fontSize:20, marginBottom:4 }}>{ic}</div><div style={{ fontSize:12, fontWeight:700, color:C.navy, lineHeight:1.3 }}>{l}</div>
+            </button>
+          ))}
+        </div>
+        <h2 style={{ fontSize:14, fontWeight:700, color:C.navy, margin:'0 0 10px' }}>Todas as ordens</h2>
+        {ordens.map(o => { const s=svcById(o.sid); const t=tecById(o.tid); return (
+          <Card key={o.id} style={{ padding:13, marginBottom:7 }} onClick={() => onOrdem(o)}>
+            <div style={{ display:'flex', gap:9, alignItems:'flex-start' }}>
+              <span style={{ fontSize:20, marginTop:1 }}>{s?.ic||'🔧'}</span>
+              <div style={{ flex:1 }}>
+                <div style={{ display:'flex', justifyContent:'space-between', marginBottom:2 }}><span style={{ fontSize:12, fontWeight:700, color:C.navy }}>{s?.n}</span><EstBadge st={o.st}/></div>
+                <div style={{ fontSize:10, color:C.slate }}>👤 {o.cli} · 📍 {o.morada}</div>
+                {t ? <div style={{ fontSize:10, color:C.g, fontWeight:600, marginTop:1 }}>👷 {t.n}</div> : <div style={{ fontSize:10, color:C.amber, fontWeight:600, marginTop:1 }}>⚠️ Por atribuir</div>}
+              </div>
+            </div>
+          </Card>
+        )})}
+      </div>
+    </div>
+  )
+}
+
+function GOrdem({ o, onBack, onUpdate }) {
+  const [tid, setTid] = useState(o.tid)
+  const s = svcById(o.sid)
+  const cands = TECNICOS.filter(t => t.cats.includes(s?.cat))
+  return (
+    <div style={{ minHeight:'100vh', background:C.mist }}>
+      <Header title='Gerir Ordem' sub={o.id} onBack={onBack}/>
+      <div style={{ padding:'14px 16px 110px' }}>
+        <div style={{ display:'flex', justifyContent:'space-between', marginBottom:12 }}><EstBadge st={o.st}/><span style={{ fontSize:12, fontWeight:700, color:C.navy }}>€{s?.p} {s?.u}</span></div>
+        <Card style={{ padding:14, marginBottom:10 }}>
+          {[['Serviço',s?.n],['Cliente',o.cli],['Data',o.data],['Morada',o.morada],o.notas&&['Notas',o.notas]].filter(Boolean).map(([l,v]) => (
+            <div key={l} style={{ display:'flex', justifyContent:'space-between', padding:'7px 0', borderBottom:'1px solid #f1f5f9' }}><span style={{ fontSize:11, color:C.slate }}>{l}</span><span style={{ fontSize:11, fontWeight:700, color:C.navy, maxWidth:200, textAlign:'right' }}>{v}</span></div>
+          ))}
+        </Card>
+        {o.st==='pendente' && <Card style={{ padding:14, marginBottom:10 }}>
+          <div style={{ fontSize:10, fontWeight:700, color:C.slate, textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:10 }}>Atribuir técnico</div>
+          {cands.map(t => (
+            <button key={t.id} onClick={() => setTid(t.id)} style={{ width:'100%', background:'none', borderRadius:11, padding:'10px', border: tid===t.id ? `2px solid ${C.g}` : `1.5px solid ${C.border}`, display:'flex', alignItems:'center', gap:9, cursor:'pointer', marginBottom:6, textAlign:'left' }}>
+              <div style={{ position:'relative' }}><Av ini={t.ini} size={36}/>
+                <div style={{ position:'absolute', bottom:0, right:0, width:9, height:9, borderRadius:'50%', background: t.st==='activo' ? C.gm : C.amber, border:'2px solid #fff' }}/>
+              </div>
+              <div style={{ flex:1 }}><div style={{ fontSize:12, fontWeight:700, color:C.navy }}>{t.n}</div><Stars v={t.r} s={10}/></div>
+              {tid===t.id && <span style={{ color:C.g, fontSize:15 }}>✓</span>}
+            </button>
+          ))}
+        </Card>}
+      </div>
+      {o.st==='pendente' && <FixedBottom><Btn full dis={!tid} onClick={() => { onUpdate({...o,tid,st:'atribuida'}); onBack() }}>Confirmar atribuição ✓</Btn></FixedBottom>}
+    </div>
+  )
+}
+
+function GRede({ onBack }) {
+  const [cat, setCat] = useState(null)
+  const [pSel, setPSel] = useState(null)
+  const [tabP, setTabP] = useState('perfil')
+  if (pSel) return (
+    <div style={{ minHeight:'100vh', background:C.mist }}>
+      <div style={{ background:C.navy, padding:'13px 16px 0' }}>
+        <button onClick={() => setPSel(null)} style={{ background:'none', border:'none', color:'#8FA8BB', fontSize:11, cursor:'pointer', fontWeight:700, padding:'0 0 10px' }}>← Rede</button>
+        <div style={{ display:'flex', gap:12, alignItems:'center', paddingBottom:14 }}>
+          <Av ini={pSel.ini} size={54}/>
+          <div>
+            <h2 style={{ color:'#fff', fontSize:16, fontWeight:800, margin:'0 0 4px' }}>{pSel.n}</h2>
+            <div style={{ display:'flex', gap:6 }}><Stars v={pSel.r} s={11}/><span style={{ fontSize:10, background: pSel.ok ? C.gl : '#fef3c7', color: pSel.ok ? C.gd : '#92400e', padding:'2px 7px', borderRadius:8, fontWeight:700 }}>{pSel.ok?'✓ Verificado':'Pendente'}</span></div>
+          </div>
+        </div>
+        <div style={{ display:'flex' }}>{['perfil','historico','pagamentos'].map(t => <button key={t} onClick={() => setTabP(t)} style={{ flex:1, padding:'8px 0', background:'none', border:'none', borderBottom: tabP===t ? `2px solid ${C.gm}` : '2px solid transparent', color: tabP===t ? '#86efac' : '#94a3b8', fontSize:10, fontWeight:700, cursor:'pointer', textTransform:'capitalize' }}>{t}</button>)}</div>
+      </div>
+      <div style={{ padding:'14px 16px 40px' }}>
+        {tabP==='perfil' && <>
+          <Card style={{ padding:14, marginBottom:10 }}>
+            {[['IBAN',pSel.iban],['Nível',NIVEIS[pSel.nivel]?.l||'—'],['Localidade',pSel.loc],['Áreas',pSel.cats.map(c=>catById(c)?.l).join(', ')],['Serviços',pSel.jobs],['Avaliação',pSel.r]].map(([l,v]) => (
+              <div key={l} style={{ display:'flex', justifyContent:'space-between', padding:'7px 0', borderBottom:'1px solid #f1f5f9' }}><span style={{ fontSize:11, color:C.slate }}>{l}</span><span style={{ fontSize:11, fontWeight:700, color:C.navy }}>{v}</span></div>
+            ))}
+          </Card>
+          <div style={{ display:'flex', gap:8 }}><Btn full>💬 Mensagem</Btn><Btn v='ghost' full>📋 Atribuir ordem</Btn></div>
+        </>}
+        {tabP==='historico' && ['Limpeza Mensal — Rua das Flores','Manutenção Preventiva — Ed. Roma','Limpeza Pós-Obra'].map((sv,i) => (
+          <Card key={i} style={{ padding:12, marginBottom:7 }}>
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+              <div><div style={{ fontSize:12, fontWeight:600, color:C.navy }}>{sv}</div><div style={{ fontSize:10, color:C.slate }}>{['Hoje','Ontem','12 Abr'][i]}</div></div>
+              <span style={{ fontSize:9, fontWeight:700, background:C.gl, color:C.gd, padding:'2px 8px', borderRadius:8 }}>Concluído</span>
+            </div>
+          </Card>
+        ))}
+        {tabP==='pagamentos' && <>
+          <Card style={{ padding:14, marginBottom:10 }}>
+            <div style={{ fontSize:10, fontWeight:700, color:C.slate, textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:7 }}>IBAN · Swan SEPA CT</div>
+            <div style={{ background:C.mist, borderRadius:8, padding:'8px 12px', fontFamily:'monospace', fontSize:12, color:C.navy, marginBottom:5 }}>{pSel.iban}</div>
+            <div style={{ fontSize:10, color:C.slate }}>D+1 · Swan.io</div>
+          </Card>
+          {[['PAG-041','€ 145,00','10 Abr'],['PAG-032','€ 210,00','10 Mar']].map(([r,v,d]) => (
+            <Card key={r} style={{ padding:12, marginBottom:7 }}>
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                <div><div style={{ fontSize:12, fontWeight:700, color:C.navy }}>{r}</div><div style={{ fontSize:9, color:C.slate }}>{d}</div></div>
+                <div style={{ textAlign:'right' }}><div style={{ fontSize:13, fontWeight:800, color:C.navy }}>{v}</div><span style={{ fontSize:9, color:C.g, fontWeight:700 }}>✓ SEPA</span></div>
+              </div>
+            </Card>
+          ))}
+        </>}
+      </div>
+    </div>
+  )
+  return (
+    <div style={{ minHeight:'100vh', background:C.mist }}>
+      <div style={{ background:C.navy, padding:'13px 16px 0', position:'sticky', top:0, zIndex:10 }}>
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12 }}>
+          <div>
+            <button onClick={onBack} style={{ background:'none', border:'none', color:'#8FA8BB', fontSize:10, cursor:'pointer', fontWeight:700, padding:'0 0 3px', display:'block' }}>← Voltar</button>
+            <h1 style={{ color:'#fff', fontSize:16, fontWeight:800, margin:0 }}>Rede de Parceiros</h1>
+          </div>
+          <button style={{ background:C.g, color:'#fff', border:'none', borderRadius:9, padding:'7px 11px', fontSize:11, fontWeight:700, cursor:'pointer' }}>+ Convidar</button>
+        </div>
+        <div style={{ display:'flex', gap:7, overflowX:'auto', paddingBottom:10 }}>
+          {[{id:null,l:'Todos'},...CATS.map(c=>({id:c.id,l:c.l}))].map(f => (
+            <button key={f.id||'t'} onClick={() => setCat(f.id)} style={{ flexShrink:0, padding:'5px 11px', borderRadius:16, border:'none', cursor:'pointer', background: cat===f.id ? C.g : 'rgba(255,255,255,0.1)', color: cat===f.id ? '#fff' : '#94a3b8', fontSize:10, fontWeight:600 }}>{f.l}</button>
+          ))}
+        </div>
+      </div>
+      <div style={{ padding:'12px 14px 20px' }}>
+        {TECNICOS.filter(t => cat ? t.cats.includes(cat) : true).map(t => (
+          <Card key={t.id} style={{ padding:13, marginBottom:7 }} onClick={() => setPSel(t)}>
+            <div style={{ display:'flex', gap:10, alignItems:'center' }}>
+              <div style={{ position:'relative' }}><Av ini={t.ini} size={46}/>{t.st==='activo'&&<div style={{ position:'absolute', bottom:0, right:0, width:10, height:10, borderRadius:'50%', background:C.gm, border:'2px solid #fff' }}/>}</div>
+              <div style={{ flex:1 }}>
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
+                  <div style={{ fontSize:13, fontWeight:700, color:C.navy }}>{t.n}</div>
+                  <span style={{ fontSize:9, background: t.ok ? C.gl : '#fef3c7', color: t.ok ? C.gd : '#92400e', padding:'2px 6px', borderRadius:7, fontWeight:700 }}>{t.ok?'✓':'⏳'}</span>
+                </div>
+                <div style={{ fontSize:10, color:C.slate, marginTop:1 }}>📍 {t.loc} · {t.cats.map(c=>catById(c)?.ic).join(' ')}</div>
+                <Stars v={t.r} s={10}/>
+              </div>
+              <span style={{ color:C.border, fontSize:15 }}>›</span>
+            </div>
+          </Card>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function GPag({ onBack }) {
+  const pp = ORDENS_INIT.filter(o => o.st==='concluida')
+  return (
+    <div style={{ minHeight:'100vh', background:C.mist }}>
+      <Header title='Pagamentos SEPA CT' sub='Via Swan.io' onBack={onBack}/>
+      <div style={{ padding:'14px 16px 40px' }}>
+        {pp.length>0 && <div style={{ background:'#fef3c7', borderRadius:10, padding:11, marginBottom:12, border:'1px solid rgba(180,83,9,0.2)' }}><p style={{ margin:0, fontSize:12, color:'#92400e', fontWeight:600 }}>{pp.length} pagamento(s) pendente(s)</p></div>}
+        {pp.map(o => { const s=svcById(o.sid); const t=tecById(o.tid); return (
+          <Card key={o.id} style={{ padding:14, marginBottom:9 }}>
+            <div style={{ display:'flex', justifyContent:'space-between', marginBottom:9 }}>
+              <div><div style={{ fontSize:13, fontWeight:700, color:C.navy }}>{s?.n}</div><div style={{ fontSize:10, color:C.slate }}>{o.cli}</div></div>
+              <div style={{ fontSize:16, fontWeight:800, color:C.navy }}>€{s?.p}</div>
+            </div>
+            {t && <div style={{ display:'flex', alignItems:'center', gap:9, borderTop:'1px solid #f1f5f9', paddingTop:9 }}>
+              <Av ini={t.ini} size={34}/>
+              <div style={{ flex:1 }}><div style={{ fontSize:12, fontWeight:700, color:C.navy }}>{t.n}</div><div style={{ fontSize:9, fontFamily:'monospace', color:C.slate }}>{t.iban}</div></div>
+              <button style={{ background:C.navy, color:'#fff', border:'none', borderRadius:7, padding:'7px 11px', fontSize:11, fontWeight:700, cursor:'pointer' }}>Pagar →</button>
+            </div>}
+          </Card>
+        )})}
+        <Card style={{ padding:14, marginTop:8 }}>
+          <div style={{ fontSize:10, fontWeight:700, color:C.slate, textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:9 }}>Histórico</div>
+          {[['PAG-041','António Ferreira','€ 145,00','10 Abr'],['PAG-032','Ricardo Gomes','€ 210,00','10 Mar']].map(([r,n,v,d]) => (
+            <div key={r} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'8px 0', borderBottom:'1px solid #f1f5f9' }}>
+              <div><div style={{ fontSize:11, fontWeight:600, color:C.navy }}>{n}</div><div style={{ fontSize:9, color:C.slate }}>{r} · {d}</div></div>
+              <div style={{ textAlign:'right' }}><div style={{ fontSize:12, fontWeight:800, color:C.navy }}>{v}</div><span style={{ fontSize:9, color:C.g, fontWeight:700 }}>✓ SEPA</span></div>
+            </div>
+          ))}
+        </Card>
+      </div>
+    </div>
+  )
+}
+
+/* ══════════════════════════════════
+   ADMIN DESKTOP — Sidebar + Tabelas
+══════════════════════════════════ */
+const ADMIN_PIN = 'admin2026'
+const CLIENTES_INIT = [
+  {id:'cl1',n:'Sr. Ferreira',   email:'ferreira@email.com',  tel:'912 000 001',morada:'Rua das Flores, 23, Caldas',   pedidos:4, gasto:300,  ativo:true, desde:'Jan 2024'},
+  {id:'cl2',n:'Cond. Verde',    email:'cond.verde@email.com', tel:'912 000 002',morada:'Av. da Liberdade, 10, Caldas', pedidos:2, gasto:130,  ativo:true, desde:'Mar 2024'},
+  {id:'cl3',n:'Sra. Alves',     email:'alves@email.com',      tel:'912 000 003',morada:'Quinta Rosas, Óbidos',         pedidos:7, gasto:585,  ativo:true, desde:'Nov 2023'},
+  {id:'cl4',n:'Cond. Sol',      email:'sol@email.com',         tel:'912 000 004',morada:'Rua do Sol, 5, Caldas',       pedidos:1, gasto:75,   ativo:true, desde:'Abr 2024'},
+  {id:'cl5',n:'Sr. Martins',    email:'martins@email.com',     tel:'912 000 005',morada:'Ed. Atlântico, Caldas',       pedidos:3, gasto:195,  ativo:false,desde:'Fev 2024'},
+  {id:'cl6',n:'Ed. Atlântico',  email:'atlantico@email.com',   tel:'912 000 006',morada:'Rua do Porto, 1, Caldas',    pedidos:12,gasto:960,  ativo:true, desde:'Jun 2023'},
+]
+// Paleta admin (separada de C mobile)
+const A = {
+  sidebar:'#0f172a', bg:'#f1f5f9', white:'#fff', border:'#e2e8f0',
+  accent:'#16a34a', accentL:'#dcfce7', accentD:'#14532d',
+  navy:'#0f172a', text:'#1e293b', slate:'#64748b', muted:'#94a3b8',
+  amber:'#f59e0b', amberL:'#fef3c7',
+  red:'#ef4444',   redL:'#fee2e2',
+  blue:'#3b82f6',  blueL:'#eff6ff',
+  purple:'#8b5cf6',purpleL:'#f5f3ff',
+}
+const ADMIN_NAV = [
+  {id:'dashboard',   ic:'📊', l:'Dashboard'},
+  {id:'pipeline',    ic:'🔄', l:'Pipeline'},
+  {id:'servicos',    ic:'🔧', l:'Serviços'},
+  {id:'clientes',    ic:'👥', l:'Clientes'},
+  {id:'prestadores', ic:'👷', l:'Prestadores'},
+  {id:'escaloes',    ic:'🏅', l:'Escalões'},
+  {id:'pagamentos',  ic:'💳', l:'Pagamentos'},
+  {id:'config',      ic:'⚙️', l:'Configurações'},
+]
+// ── helpers UI desktop ──────────────
+const ATh = ({ch}) => <th style={{textAlign:'left',fontSize:11,fontWeight:700,color:A.slate,textTransform:'uppercase',letterSpacing:'0.05em',padding:'10px 14px',background:A.bg,borderBottom:`2px solid ${A.border}`,whiteSpace:'nowrap'}}>{ch}</th>
+const ATd = ({children,right,mono}) => <td style={{padding:'11px 14px',fontSize:13,color:A.text,borderBottom:`1px solid ${A.border}`,textAlign:right?'right':'left',fontFamily:mono?'monospace':'inherit'}}>{children}</td>
+function ABadge({t,col='gray'}) {
+  const m={green:{bg:A.accentL,c:A.accentD},amber:{bg:A.amberL,c:'#92400e'},red:{bg:A.redL,c:A.red},blue:{bg:A.blueL,c:'#1d4ed8'},purple:{bg:A.purpleL,c:A.purple},gray:{bg:'#f1f5f9',c:A.slate}}
+  const p=m[col]||m.gray
+  return <span style={{fontSize:11,fontWeight:700,background:p.bg,color:p.c,padding:'3px 9px',borderRadius:20,whiteSpace:'nowrap'}}>{t}</span>
+}
+function AKpi({ic,label,value,sub,col='accent'}) {
+  const bg={accent:A.accentL,blue:A.blueL,amber:A.amberL,purple:A.purpleL}[col]||A.accentL
+  const ci={accent:A.accent,blue:A.blue,amber:A.amber,purple:A.purple}[col]||A.accent
+  return (
+    <div style={{flex:'1 1 180px',minWidth:0,background:A.white,borderRadius:12,padding:'16px 18px',border:`1px solid ${A.border}`,display:'flex',gap:12,alignItems:'flex-start'}}>
+      <div style={{width:44,height:44,borderRadius:11,background:bg,display:'flex',alignItems:'center',justifyContent:'center',fontSize:20,flexShrink:0}}>{ic}</div>
+      <div style={{minWidth:0}}>
+        <div style={{fontSize:11,color:A.slate,fontWeight:600,marginBottom:3,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{label}</div>
+        <div style={{fontSize:22,fontWeight:800,color:A.navy,lineHeight:1}}>{value}</div>
+        {sub&&<div style={{fontSize:10,color:A.slate,marginTop:3}}>{sub}</div>}
+      </div>
+    </div>
+  )
+}
+function AModal({title,onClose,children,wide}) {
+  return (
+    <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.45)',zIndex:200,display:'flex',alignItems:'center',justifyContent:'center',padding:24}} onClick={e=>{if(e.target===e.currentTarget)onClose()}}>
+      <div style={{background:A.white,borderRadius:16,boxShadow:'0 24px 70px rgba(0,0,0,0.25)',width:'100%',maxWidth:wide?800:520,maxHeight:'88vh',display:'flex',flexDirection:'column'}}>
+        <div style={{padding:'16px 22px',borderBottom:`1px solid ${A.border}`,display:'flex',justifyContent:'space-between',alignItems:'center',flexShrink:0}}>
+          <h2 style={{fontSize:15,fontWeight:800,color:A.navy,margin:0}}>{title}</h2>
+          <button onClick={onClose} style={{background:'#f1f5f9',border:'none',borderRadius:7,width:30,height:30,cursor:'pointer',fontSize:16,color:A.slate,lineHeight:1}}>✕</button>
+        </div>
+        <div style={{padding:22,overflowY:'auto',flex:1}}>{children}</div>
+      </div>
+    </div>
+  )
+}
+function ATopBar({title,sub,children}) {
+  return (
+    <div style={{background:A.white,borderBottom:`1px solid ${A.border}`,padding:'14px 26px',display:'flex',justifyContent:'space-between',alignItems:'center',position:'sticky',top:0,zIndex:10}}>
+      <div>
+        <h1 style={{fontSize:17,fontWeight:800,color:A.navy,margin:0}}>{title}</h1>
+        {sub&&<p style={{fontSize:11,color:A.slate,margin:'3px 0 0'}}>{sub}</p>}
+      </div>
+      <div style={{display:'flex',gap:8,alignItems:'center'}}>{children}</div>
+    </div>
+  )
+}
+function AFRow({label,children,half}){return<div style={{marginBottom:12,gridColumn:half?'auto':'1/-1'}}><label style={{display:'block',fontSize:10,fontWeight:700,color:A.slate,marginBottom:5,textTransform:'uppercase',letterSpacing:'0.04em'}}>{label}</label>{children}</div>}
+const ainp=(val,set,type='text',ph='',mono=false)=><input type={type} value={val??''} onChange={e=>set(e.target.value)} placeholder={ph} style={{width:'100%',border:`1.5px solid ${A.border}`,borderRadius:8,padding:'8px 11px',fontSize:13,outline:'none',color:A.navy,background:A.white,boxSizing:'border-box',fontFamily:mono?'monospace':'inherit'}}/>
+const asel=(val,set,opts)=><select value={val??''} onChange={e=>set(e.target.value)} style={{width:'100%',border:`1.5px solid ${A.border}`,borderRadius:8,padding:'8px 11px',fontSize:13,outline:'none',color:A.navy,background:A.white,boxSizing:'border-box'}}>{opts.map(o=><option key={Array.isArray(o)?o[0]:o} value={Array.isArray(o)?o[0]:o}>{Array.isArray(o)?o[1]:o}</option>)}</select>
+function APrimBtn({ch,onClick,disabled}){return<button onClick={onClick} disabled={disabled} style={{background:disabled?A.border:A.accent,color:'#fff',border:'none',borderRadius:9,padding:'9px 18px',fontSize:13,fontWeight:700,cursor:disabled?'default':'pointer',whiteSpace:'nowrap'}}>{ch}</button>}
+function ASecBtn({ch,onClick}){return<button onClick={onClick} style={{background:A.white,color:A.text,border:`1.5px solid ${A.border}`,borderRadius:9,padding:'8px 16px',fontSize:13,fontWeight:600,cursor:'pointer',whiteSpace:'nowrap'}}>{ch}</button>}
+function ATBtn({ch,onClick,col='default'}){
+  const p={default:{bg:'#f1f5f9',c:A.text},green:{bg:A.accentL,c:A.accentD},red:{bg:A.redL,c:A.red},amber:{bg:A.amberL,c:'#92400e'}}[col]||{bg:'#f1f5f9',c:A.text}
+  return<button onClick={onClick} style={{padding:'5px 11px',borderRadius:7,border:'none',background:p.bg,color:p.c,fontSize:11,fontWeight:700,cursor:'pointer',whiteSpace:'nowrap'}}>{ch}</button>
+}
+
+// ══ AdminLogin ═══════════════════════
+function AdminLogin({onLogin}){
+  const [pw,setPw]=useState(''), [err,setErr]=useState(false)
+  const go=()=>{if(pw===ADMIN_PIN){onLogin()}else{setErr(true);setPw('')}}
+  return(
+    <div style={{minHeight:'100vh',background:`linear-gradient(135deg,#0f172a 0%,#14532d 100%)`,display:'flex',alignItems:'center',justifyContent:'center'}}>
+      <div style={{background:A.white,borderRadius:18,padding:40,width:380,boxShadow:'0 30px 80px rgba(0,0,0,0.35)'}}>
+        <div style={{textAlign:'center',marginBottom:28}}>
+          <div style={{width:62,height:62,borderRadius:15,background:A.navy,display:'flex',alignItems:'center',justifyContent:'center',fontSize:28,margin:'0 auto 14px'}}>⚙️</div>
+          <h1 style={{fontSize:20,fontWeight:800,color:A.navy,margin:'0 0 4px'}}>Painel de Administração</h1>
+          <p style={{fontSize:11,color:A.slate,margin:0}}>ServiçoPRO · v5-manutenção</p>
+        </div>
+        <label style={{display:'block',fontSize:10,fontWeight:700,color:A.slate,marginBottom:5,textTransform:'uppercase',letterSpacing:'0.04em'}}>Password</label>
+        <input type='password' value={pw} onChange={e=>{setPw(e.target.value);setErr(false)}} onKeyDown={e=>e.key==='Enter'&&go()} placeholder='••••••••'
+          style={{width:'100%',border:`2px solid ${err?A.red:A.border}`,borderRadius:10,padding:'12px 14px',fontSize:15,outline:'none',color:A.navy,letterSpacing:'0.12em',boxSizing:'border-box',marginBottom:err?4:16}}/>
+        {err&&<p style={{color:A.red,fontSize:11,margin:'0 0 12px'}}>Password incorrecta. Tente novamente.</p>}
+        <button onClick={go} style={{width:'100%',background:A.accent,color:'#fff',border:'none',borderRadius:11,padding:'13px',fontSize:14,fontWeight:800,cursor:'pointer'}}>Entrar →</button>
+        <p style={{textAlign:'center',color:A.muted,fontSize:10,marginTop:14}}>Demo: <code style={{background:'#f1f5f9',padding:'2px 6px',borderRadius:4,letterSpacing:'0.05em'}}>admin2026</code></p>
+      </div>
+    </div>
+  )
+}
+
+// ══ AdminSidebar ══════════════════════
+function AdminSidebar({active,set,onLogout}){
+  return(
+    <div style={{width:240,background:A.sidebar,height:'100vh',position:'fixed',left:0,top:0,display:'flex',flexDirection:'column',zIndex:20,boxShadow:'4px 0 20px rgba(0,0,0,0.25)'}}>
+      <div style={{padding:'20px 18px 14px',borderBottom:'1px solid rgba(255,255,255,0.07)'}}>
+        <div style={{display:'flex',alignItems:'center',gap:10}}>
+          <div style={{width:36,height:36,borderRadius:10,background:A.accent,display:'flex',alignItems:'center',justifyContent:'center',fontSize:18}}>🏠</div>
+          <div><div style={{color:'#fff',fontSize:14,fontWeight:800,letterSpacing:'-0.01em'}}>ServiçoPRO</div><div style={{color:A.muted,fontSize:9,fontWeight:700,letterSpacing:'0.08em',marginTop:1}}>ADMIN v5</div></div>
+        </div>
+      </div>
+      <nav style={{flex:1,padding:'8px 10px',overflowY:'auto'}}>
+        {ADMIN_NAV.map(n=>(
+          <button key={n.id} onClick={()=>set(n.id)} style={{width:'100%',display:'flex',alignItems:'center',gap:10,padding:'9px 12px',borderRadius:9,border:'none',cursor:'pointer',marginBottom:1,fontFamily:'inherit',background:active===n.id?'rgba(34,197,94,0.15)':'transparent',borderLeft:active===n.id?`3px solid ${A.accent}`:'3px solid transparent',color:active===n.id?'#86efac':A.muted,fontSize:13,fontWeight:active===n.id?700:400,textAlign:'left',transition:'all 0.15s'}}
+            onMouseEnter={e=>{if(active!==n.id)e.currentTarget.style.background='rgba(255,255,255,0.04)'}}
+            onMouseLeave={e=>{if(active!==n.id)e.currentTarget.style.background='transparent'}}>
+            <span style={{fontSize:16,width:22,textAlign:'center',flexShrink:0}}>{n.ic}</span>
+            <span>{n.l}</span>
+          </button>
+        ))}
+      </nav>
+      <div style={{padding:'12px 12px 18px',borderTop:'1px solid rgba(255,255,255,0.07)'}}>
+        <div style={{display:'flex',alignItems:'center',gap:9,marginBottom:10,padding:'8px 10px',borderRadius:9,background:'rgba(255,255,255,0.04)'}}>
+          <div style={{width:32,height:32,borderRadius:'50%',background:A.accent,display:'flex',alignItems:'center',justifyContent:'center',fontSize:14,color:'#fff',fontWeight:800,flexShrink:0}}>A</div>
+          <div><div style={{color:'#fff',fontSize:12,fontWeight:700}}>Administrador</div><div style={{color:A.muted,fontSize:10}}>admin@servicopro.pt</div></div>
+        </div>
+        <button onClick={onLogout} style={{width:'100%',padding:'8px 12px',border:'none',borderRadius:8,background:'rgba(239,68,68,0.1)',color:'#fca5a5',fontSize:12,fontWeight:600,cursor:'pointer',textAlign:'left',fontFamily:'inherit'}}>🚪 Terminar sessão</button>
+      </div>
+    </div>
+  )
+}
+
+// ══ AdminDashboard ═════════════════════
+function AdminDashboard({svcs,prest,clientes}){
+  const ORDENS_D=[
+    {svc:'Limpeza Mensal',       cli:'Sr. Ferreira',  ini:'AF', pNome:'António F.',  dt:'Hoje · 14:00', val:75, st:'em_curso'},
+    {svc:'Urgência Canalização', cli:'Cond. Verde',   ini:null, pNome:'Por atribuir',dt:'Amanhã · 10:00',val:65, st:'pendente'},
+    {svc:'Manutenção Jardim',    cli:'Sra. Alves',    ini:'MC', pNome:'Manuel C.',   dt:'12 Abr',        val:45, st:'concluida'},
+    {svc:'Plano Anual',          cli:'Sr. Martins',   ini:'SM', pNome:'Sandra M.',   dt:'Hoje · 16:00',  val:49, st:'em_curso'},
+    {svc:'Limpeza Pós-Obra',     cli:'Cond. Sol',     ini:null, pNome:'Por atribuir',dt:'22 Abr',        val:120,st:'pendente'},
+  ]
+  const stLabel={pendente:'Pendente',em_curso:'Em curso',concluida:'Concluída'}
+  const stCol  ={pendente:'amber',  em_curso:'blue',    concluida:'green'}
+  const pending=ORDENS_D.filter(o=>o.st==='pendente').length
+  const prestAtivos=prest.filter(p=>p.st==='activo').length
+  const prestPend  =prest.filter(p=>!p.ok).length
+
+  return(
+    <div style={{padding:'28px 30px'}}>
+      {/* Cabeçalho */}
+      <div style={{marginBottom:24}}>
+        <h1 style={{fontSize:22,fontWeight:800,color:A.navy,margin:'0 0 4px'}}>Dashboard</h1>
+        <p style={{fontSize:12,color:A.slate,margin:0}}>Visão geral da plataforma · Abril 2026</p>
+      </div>
+      {/* KPIs — grid 4 colunas sempre */}
+      <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:16,marginBottom:24}}>
+        {[
+          {ic:'💰',label:'Receita este mês',   value:'€ 1.890',sub:'+12% vs mês anterior',           col:'accent'},
+          {ic:'📋',label:'Ordens pendentes',    value:String(pending),  sub:`${ORDENS_D.length} total`, col:'amber'},
+          {ic:'👷',label:'Prestadores activos', value:String(prestAtivos),sub:`${prestPend} por verificar`,col:'blue'},
+          {ic:'💳',label:'SEPA a processar',    value:'€ 439',  sub:'Swan.io · D+1',                  col:'purple'},
+        ].map(k=>{
+          const bg={accent:A.accentL,amber:A.amberL,blue:A.blueL,purple:A.purpleL}[k.col]
+          return(
+            <div key={k.label} style={{background:A.white,borderRadius:14,padding:'20px',border:`1px solid ${A.border}`,boxShadow:'0 1px 4px rgba(0,0,0,0.05)'}}>
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:14}}>
+                <p style={{fontSize:11,fontWeight:700,color:A.slate,textTransform:'uppercase',letterSpacing:'0.05em',margin:0,lineHeight:1.4}}>{k.label}</p>
+                <div style={{width:40,height:40,borderRadius:11,background:bg,display:'flex',alignItems:'center',justifyContent:'center',fontSize:20,flexShrink:0}}>{k.ic}</div>
+              </div>
+              <div style={{fontSize:30,fontWeight:900,color:A.navy,letterSpacing:'-0.02em',lineHeight:1}}>{k.value}</div>
+              <div style={{fontSize:11,color:A.slate,marginTop:7}}>{k.sub}</div>
+            </div>
+          )
+        })}
+      </div>
+      {/* Grid principal */}
+      <div style={{display:'grid',gridTemplateColumns:'1fr 300px',gap:18}}>
+        {/* Tabela ordens */}
+        <div style={{background:A.white,borderRadius:14,border:`1px solid ${A.border}`,overflow:'hidden',boxShadow:'0 1px 4px rgba(0,0,0,0.05)'}}>
+          <div style={{padding:'16px 20px',borderBottom:`1px solid ${A.border}`,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+            <div>
+              <span style={{fontSize:14,fontWeight:800,color:A.navy}}>Ordens recentes</span>
+              <span style={{marginLeft:8,fontSize:11,color:A.slate}}>{ORDENS_D.length} registos</span>
+            </div>
+            <span style={{fontSize:11,color:A.accent,fontWeight:700,cursor:'pointer'}}>Ver todas →</span>
+          </div>
+          <table style={{width:'100%',borderCollapse:'collapse'}}>
+            <thead><tr style={{background:'#f8fafc'}}><ATh ch='Serviço'/><ATh ch='Cliente'/><ATh ch='Prestador'/><ATh ch='Data'/><ATh ch='Valor'/><ATh ch='Estado'/></tr></thead>
+            <tbody>{ORDENS_D.map((o,i)=>(
+              <tr key={i} style={{cursor:'pointer'}} onMouseEnter={e=>e.currentTarget.style.background='#f8fafc'} onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
+                <ATd><span style={{fontWeight:700}}>{o.svc}</span></ATd>
+                <ATd><span style={{fontSize:12}}>{o.cli}</span></ATd>
+                <ATd>{o.ini?<div style={{display:'flex',alignItems:'center',gap:7}}><div style={{width:24,height:24,borderRadius:'50%',background:'linear-gradient(135deg,#16a34a,#22c55e)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:8,color:'#fff',fontWeight:800}}>{o.ini}</div><span style={{fontSize:12}}>{o.pNome}</span></div>:<span style={{fontSize:12,color:A.muted,fontStyle:'italic'}}>{o.pNome}</span>}</ATd>
+                <ATd><span style={{fontSize:11,color:A.slate}}>{o.dt}</span></ATd>
+                <ATd><span style={{fontWeight:700,color:A.accent}}>€{o.val}</span></ATd>
+                <ATd><ABadge t={stLabel[o.st]} col={stCol[o.st]}/></ATd>
+              </tr>
+            ))}</tbody>
+          </table>
+        </div>
+        {/* Lateral */}
+        <div style={{display:'flex',flexDirection:'column',gap:16}}>
+          <div style={{background:A.white,borderRadius:14,border:`1px solid ${A.border}`,padding:20,boxShadow:'0 1px 4px rgba(0,0,0,0.05)'}}>
+            <div style={{fontSize:13,fontWeight:800,color:A.navy,marginBottom:14}}>Margem por serviço</div>
+            {svcs.slice(0,5).map(s=>{const m=s.margem||Math.round(s.p*0.18);return(
+              <div key={s.id} style={{marginBottom:11}}>
+                <div style={{display:'flex',justifyContent:'space-between',marginBottom:5}}><span style={{fontSize:11,color:A.text}}>{s.ic} {s.n}</span><span style={{fontSize:11,fontWeight:700,color:A.accent}}>€{m}</span></div>
+                <div style={{height:5,background:'#f1f5f9',borderRadius:99}}><div style={{height:'100%',width:`${Math.min(100,m/25*100)}%`,background:`linear-gradient(90deg,${A.accent},#22c55e)`,borderRadius:99}}/></div>
+              </div>
+            )})}
+          </div>
+          <div style={{background:A.white,borderRadius:14,border:`1px solid ${A.border}`,padding:20,boxShadow:'0 1px 4px rgba(0,0,0,0.05)'}}>
+            <div style={{fontSize:13,fontWeight:800,color:A.navy,marginBottom:14}}>Top prestadores</div>
+            {prest.slice(0,4).map((p,i)=>{const nc=NIVEIS[p.nivel];return(
+              <div key={p.id} style={{display:'flex',alignItems:'center',gap:10,paddingBottom:i<3?10:0,marginBottom:i<3?10:0,borderBottom:i<3?`1px solid ${A.border}`:'none'}}>
+                {p.foto?<img src={p.foto} alt='' style={{width:36,height:36,borderRadius:'50%',objectFit:'cover',flexShrink:0}}/>:<div style={{width:36,height:36,borderRadius:'50%',background:'linear-gradient(135deg,#16a34a,#22c55e)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:12,color:'#fff',fontWeight:800,flexShrink:0}}>{p.ini}</div>}
+                <div style={{flex:1,minWidth:0}}><div style={{fontSize:12,fontWeight:700,color:A.navy,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{p.n}</div><div style={{fontSize:10,color:A.slate}}>⭐ {p.r} · {p.jobs} serviços</div></div>
+                <span style={{fontSize:10,fontWeight:700,background:nc?.bg,color:nc?.cor,padding:'3px 8px',borderRadius:8,flexShrink:0}}>{nc?.ic}</span>
+              </div>
+            )})}
+          </div>
+          <div style={{background:`linear-gradient(135deg,${A.navy},#1a3a5c)`,borderRadius:14,padding:20}}>
+            <div style={{fontSize:11,fontWeight:700,color:'rgba(255,255,255,0.5)',marginBottom:14,textTransform:'uppercase',letterSpacing:'0.06em'}}>Este mês</div>
+            {[['Serviços concluídos','18'],['Taxa média','18%'],['Clientes activos',String(clientes.filter(c=>c.ativo).length)],['NPS estimado','87']].map(([l,v])=>(
+              <div key={l} style={{display:'flex',justifyContent:'space-between',padding:'7px 0',borderBottom:'1px solid rgba(255,255,255,0.07)'}}>
+                <span style={{fontSize:11,color:'rgba(255,255,255,0.55)'}}>{l}</span>
+                <span style={{fontSize:14,fontWeight:800,color:'#fff'}}>{v}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+// ══ AdminPipeline — Kanban de estados de ordens ════
+const PIPELINE_STAGES = [
+  {id:'pendente_pagamento', l:'Aguarda Pagamento', ic:'💳', col:'#64748b', bg:'#f1f5f9'},
+  {id:'pendente',           l:'Pendente',          ic:'📬', col:'#f59e0b', bg:'#fef3c7'},
+  {id:'proposta_hora',      l:'Proposta de Hora',  ic:'🕐', col:'#8b5cf6', bg:'#f5f3ff'},
+  {id:'agendado',           l:'Agendado',          ic:'📅', col:'#3b82f6', bg:'#eff6ff'},
+  {id:'em_curso',           l:'Em Execução',       ic:'🔧', col:'#0ea5e9', bg:'#e0f2fe'},
+  {id:'aguarda_validacao',  l:'Aguarda Validação', ic:'📋', col:'#f97316', bg:'#fff7ed'},
+  {id:'concluida',          l:'Concluído',         ic:'✅', col:'#16a34a', bg:'#dcfce7'},
+  {id:'faturada',           l:'Faturado',          ic:'🧾', col:'#10b981', bg:'#d1fae5'},
+  {id:'paga',               l:'Pago',              ic:'💰', col:'#059669', bg:'#a7f3d0'},
+  {id:'cancelada',          l:'Cancelado',         ic:'❌', col:'#ef4444', bg:'#fee2e2'},
+]
+
+function AdminPipeline({ordens, setOrdens, prest}){
+  const [selOrd, setSelOrd] = useState(null)
+  const [filtro, setFiltro] = useState('todas')
+
+  const svcById = id => SVCS.find(s=>s.id===id)
+  const prestById = id => prest.find(p=>p.id===id)
+
+  // agrupa ordens por estado
+  const byStage = {}
+  PIPELINE_STAGES.forEach(s=>{ byStage[s.id]=[] })
+  ordens.forEach(o=>{ if(byStage[o.st]) byStage[o.st].push(o) })
+
+  const total = ordens.length
+  const pendentes = ordens.filter(o=>o.st==='pendente').length
+  const ativas   = ordens.filter(o=>['agendado','em_curso','aguarda_validacao'].includes(o.st)).length
+  const receita  = ordens.filter(o=>['concluida','faturada','paga'].includes(o.st)).reduce((a,o)=>a+o.val,0)
+
+  const moverEstado = (ord, novoEst) => {
+    setOrdens(p=>p.map(o=>o.id===ord.id?{...o,st:novoEst}:o))
+    if(selOrd?.id===ord.id) setSelOrd({...ord,st:novoEst})
+  }
+
+  const PROXIMOS = {
+    pendente_pagamento:['pendente','cancelada'],
+    pendente:['agendado','cancelada'],
+    proposta_hora:['agendado','pendente','cancelada'],
+    agendado:['em_curso','cancelada'],
+    em_curso:['aguarda_validacao'],
+    aguarda_validacao:['concluida'],
+    concluida:['faturada'],
+    faturada:['paga'],
+    paga:[],cancelada:[],
+  }
+
+  const stage = s => PIPELINE_STAGES.find(p=>p.id===s)||PIPELINE_STAGES[0]
+
+  return(
+    <>
+      <ATopBar title='🔄 Pipeline de Ordens' sub='Gestão do ciclo de vida completo de cada serviço'>
+        <select onChange={e=>setFiltro(e.target.value)} style={{border:`1.5px solid ${A.border}`,borderRadius:8,padding:'7px 11px',fontSize:12,outline:'none',background:A.white}}>
+          <option value='todas'>Todas as ordens</option>
+          <option value='ativas'>Em curso</option>
+          <option value='pendentes'>Pendentes</option>
+        </select>
+      </ATopBar>
+      <div style={{padding:'20px 24px'}}>
+        {/* KPIs rápidos */}
+        <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:12,marginBottom:20}}>
+          {[
+            {l:'Total ordens',v:total,ic:'📋',col:'accent'},
+            {l:'Pendentes',   v:pendentes,ic:'⏳',col:'amber'},
+            {l:'Em curso',    v:ativas,   ic:'🔧',col:'blue'},
+            {l:'Receita (concluídas)',v:`€${receita}`,ic:'💰',col:'accent'},
+          ].map(k=>{
+            const bg={accent:A.accentL,amber:A.amberL,blue:A.blueL}[k.col]||A.accentL
+            return(
+              <div key={k.l} style={{background:A.white,borderRadius:11,padding:'14px 16px',border:`1px solid ${A.border}`,display:'flex',gap:12,alignItems:'center'}}>
+                <div style={{width:38,height:38,borderRadius:9,background:bg,display:'flex',alignItems:'center',justifyContent:'center',fontSize:18}}>{k.ic}</div>
+                <div><div style={{fontSize:20,fontWeight:800,color:A.navy}}>{k.v}</div><div style={{fontSize:10,color:A.slate}}>{k.l}</div></div>
+              </div>
+            )
+          })}
+        </div>
+
+        {/* Kanban scroll horizontal */}
+        <div style={{display:'flex',gap:12,overflowX:'auto',paddingBottom:16}}>
+          {PIPELINE_STAGES.map(stage=>{
+            const cards=byStage[stage.id]||[]
+            return(
+              <div key={stage.id} style={{minWidth:220,flexShrink:0,background:'#f8fafc',borderRadius:12,border:`1px solid ${A.border}`,overflow:'hidden'}}>
+                {/* Header coluna */}
+                <div style={{padding:'10px 14px',background:stage.bg,borderBottom:`2px solid ${stage.col}33`,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                  <div style={{fontSize:12,fontWeight:700,color:stage.col}}>{stage.ic} {stage.l}</div>
+                  <div style={{width:22,height:22,borderRadius:'50%',background:stage.col,color:'#fff',fontSize:11,fontWeight:800,display:'flex',alignItems:'center',justifyContent:'center'}}>{cards.length}</div>
+                </div>
+                {/* Cards */}
+                <div style={{padding:'8px',maxHeight:540,overflowY:'auto',display:'flex',flexDirection:'column',gap:7}}>
+                  {cards.length===0&&<div style={{padding:'16px 8px',textAlign:'center',fontSize:11,color:A.muted}}>—</div>}
+                  {cards.map(o=>{
+                    const s=svcById(o.sid)
+                    const p=prestById(o.tid)
+                    return(
+                      <div key={o.id} onClick={()=>setSelOrd(o)}
+                        style={{background:A.white,borderRadius:9,padding:12,border:`1px solid ${A.border}`,cursor:'pointer',boxShadow:'0 1px 3px rgba(0,0,0,0.04)',transition:'all 0.15s'}}
+                        onMouseEnter={e=>{e.currentTarget.style.boxShadow='0 4px 12px rgba(0,0,0,0.1)';e.currentTarget.style.borderColor=stage.col}}
+                        onMouseLeave={e=>{e.currentTarget.style.boxShadow='0 1px 3px rgba(0,0,0,0.04)';e.currentTarget.style.borderColor=A.border}}>
+                        <div style={{display:'flex',justifyContent:'space-between',marginBottom:6}}>
+                          <span style={{fontSize:12,fontWeight:700,color:A.navy,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',maxWidth:130}}>{s?.n}</span>
+                          <span style={{fontSize:11,fontWeight:700,color:A.accent}}>€{o.val}</span>
+                        </div>
+                        <div style={{fontSize:10,color:A.slate,marginBottom:3}}>👤 {o.cli}</div>
+                        <div style={{fontSize:10,color:A.slate,marginBottom:5}}>📍 {o.morada?.split(',')[0]}</div>
+                        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                          <span style={{fontSize:9,color:A.slate}}>🕐 {o.data} {o.hora}</span>
+                          {p
+                            ?<div style={{width:20,height:20,borderRadius:'50%',background:'linear-gradient(135deg,#16a34a,#22c55e)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:7,color:'#fff',fontWeight:800}}>{p.ini}</div>
+                            :<span style={{fontSize:9,color:A.muted,background:'#f1f5f9',padding:'1px 5px',borderRadius:4}}>Sem prestador</span>
+                          }
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Drawer detalhe de ordem */}
+      {selOrd&&<>
+        <div onClick={()=>setSelOrd(null)} style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.3)',zIndex:100}}/>
+        <div style={{position:'fixed',right:0,top:0,bottom:0,width:420,background:A.white,boxShadow:'-8px 0 30px rgba(0,0,0,0.15)',zIndex:101,overflowY:'auto',display:'flex',flexDirection:'column'}}>
+          {/* Header */}
+          <div style={{padding:'18px 22px',borderBottom:`1px solid ${A.border}`,background:`${stage(selOrd.st).bg}`,display:'flex',justifyContent:'space-between',alignItems:'flex-start'}}>
+            <div>
+              <div style={{fontSize:12,fontWeight:700,color:stage(selOrd.st).col,marginBottom:4}}>{stage(selOrd.st).ic} {stage(selOrd.st).l}</div>
+              <div style={{fontSize:16,fontWeight:800,color:A.navy}}>{svcById(selOrd.sid)?.n}</div>
+              <div style={{fontSize:11,color:A.slate,marginTop:2}}>#{selOrd.id} · {selOrd.dt_pedido}</div>
+            </div>
+            <button onClick={()=>setSelOrd(null)} style={{background:'rgba(0,0,0,0.08)',border:'none',borderRadius:7,width:28,height:28,cursor:'pointer',fontSize:15,display:'flex',alignItems:'center',justifyContent:'center'}}>✕</button>
+          </div>
+          <div style={{flex:1,padding:22,display:'flex',flexDirection:'column',gap:16}}>
+            {/* Detalhes */}
+            <div style={{background:'#f8fafc',borderRadius:11,padding:16}}>
+              {[
+                ['Cliente',selOrd.cli],
+                ['Morada',selOrd.morada],
+                ['Data/Hora',`${selOrd.data} · ${selOrd.hora}`],
+                ['Valor cobrado',`€${selOrd.val}`],
+                ['Taxa plataforma',`${selOrd.taxa}% = €${(selOrd.val*selOrd.taxa/100).toFixed(2)}`],
+                ['Valor ao prestador',`€${(selOrd.val*(1-selOrd.taxa/100)).toFixed(2)}`],
+                ['Notas',selOrd.notas||'—'],
+              ].map(([l,v])=>(
+                <div key={l} style={{display:'flex',justifyContent:'space-between',padding:'7px 0',borderBottom:`1px solid ${A.border}`}}>
+                  <span style={{fontSize:11,color:A.slate}}>{l}</span>
+                  <span style={{fontSize:11,fontWeight:600,color:A.navy,textAlign:'right',maxWidth:240}}>{v}</span>
+                </div>
+              ))}
+            </div>
+            {/* Prestador */}
+            {selOrd.tid&&(()=>{const p=prestById(selOrd.tid);return p?(<div style={{background:'#f0fdf4',borderRadius:11,padding:14,border:'1px solid #bbf7d0',display:'flex',gap:12,alignItems:'center'}}>
+              <div style={{width:42,height:42,borderRadius:'50%',background:'linear-gradient(135deg,#16a34a,#22c55e)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:14,color:'#fff',fontWeight:800,flexShrink:0}}>{p.ini}</div>
+              <div><div style={{fontWeight:700,color:A.navy}}>{p.n}</div><div style={{fontSize:11,color:A.slate}}>{p.indicativo} {p.tel} · {p.email}</div><div style={{fontSize:10,color:A.accent,fontWeight:600,marginTop:2}}>{NIVEIS[p.nivel]?.ic} {NIVEIS[p.nivel]?.l} · ⭐ {p.r}</div></div>
+            </div>):null})()}
+            {!selOrd.tid&&<div style={{background:A.amberL,borderRadius:10,padding:14,border:'1px solid rgba(245,158,11,0.3)',fontSize:12,color:'#92400e',fontWeight:600}}>⚠️ Sem prestador atribuído — ordem em aberto</div>}
+
+            {/* Fotos */}
+            {selOrd.fotos?.length>0&&<div>
+              <div style={{fontSize:11,fontWeight:700,color:A.slate,textTransform:'uppercase',letterSpacing:'0.05em',marginBottom:8}}>Relatório fotográfico</div>
+              <div style={{display:'flex',gap:8}}>{selOrd.fotos.map((f,i)=><div key={i} style={{width:70,height:70,borderRadius:9,background:'#f1f5f9',display:'flex',alignItems:'center',justifyContent:'center',fontSize:28,border:`1px solid ${A.border}`}}>{f}</div>)}</div>
+            </div>}
+
+            {/* Chat da ordem no admin */}
+            <div>
+              <div style={{fontSize:11,fontWeight:700,color:A.slate,textTransform:'uppercase',letterSpacing:'0.05em',marginBottom:10}}>Chat da ordem</div>
+              <div style={{background:'#f8fafc',borderRadius:10,padding:12,maxHeight:200,overflowY:'auto',display:'flex',flexDirection:'column',gap:6}}>
+                {(CHAT_INIT[selOrd.id]||[]).map(m=>{
+                  const isSys=m.tipo==='system_auto'||m.tipo==='system_alert'
+                  return(
+                    <div key={m.id} style={{display:'flex',flexDirection:'column',alignItems:isSys?'center':m.tipo==='user_client'?'flex-end':'flex-start'}}>
+                      {!isSys&&<div style={{fontSize:9,color:A.slate,marginBottom:2}}>{m.autor}</div>}
+                      <div style={{maxWidth:'85%',padding:isSys?'3px 10px':'8px 11px',borderRadius:isSys?12:10,background:isSys?'rgba(0,0,0,0.05)':m.tipo==='user_client'?A.navy:A.white,color:isSys?A.slate:m.tipo==='user_client'?'#fff':A.navy,fontSize:11,border:isSys?'none':`1px solid ${A.border}`}}>{m.texto}</div>
+                      <div style={{fontSize:9,color:A.muted,marginTop:1}}>{m.dt}</div>
+                    </div>
+                  )
+                })}
+                {!(CHAT_INIT[selOrd.id]?.length)&&<div style={{textAlign:'center',fontSize:11,color:A.muted}}>Sem mensagens</div>}
+              </div>
+            </div>
+
+            {/* Avançar estado */}
+            {PROXIMOS[selOrd.st]?.length>0&&<div>
+              <div style={{fontSize:11,fontWeight:700,color:A.slate,textTransform:'uppercase',letterSpacing:'0.05em',marginBottom:10}}>Avançar estado</div>
+              <div style={{display:'flex',flexDirection:'column',gap:7}}>
+                {PROXIMOS[selOrd.st].map(est=>{const sg=stage(est);return(
+                  <button key={est} onClick={()=>moverEstado(selOrd,est)}
+                    style={{padding:'11px 16px',border:`2px solid ${sg.col}44`,borderRadius:10,background:sg.bg,color:sg.col,fontSize:13,fontWeight:700,cursor:'pointer',textAlign:'left',display:'flex',alignItems:'center',gap:8}}>
+                    <span>{sg.ic}</span><span>→ {sg.l}</span>
+                  </button>
+                )})}
+              </div>
+            </div>}
+
+            {selOrd.st==='concluida'&&<div style={{background:A.accentL,borderRadius:10,padding:14,border:'1px solid rgba(22,163,74,0.2)'}}>
+              <div style={{fontSize:12,fontWeight:700,color:A.accentD,marginBottom:6}}>🧾 Emitir Fatura de Comissão</div>
+              <div style={{fontSize:11,color:A.slate,marginBottom:10}}>Valor da comissão: <strong>€{(selOrd.val*selOrd.taxa/100).toFixed(2)}</strong> ({selOrd.taxa}%)</div>
+              <button onClick={()=>moverEstado(selOrd,'faturada')} style={{width:'100%',padding:'10px',border:'none',borderRadius:8,background:A.accent,color:'#fff',fontSize:12,fontWeight:700,cursor:'pointer'}}>🧾 Emitir fatura e notificar prestador</button>
+            </div>}
+          </div>
+        </div>
+      </>}
+    </>
+  )
+}
+
+// ══ AdminServicos ══════════════════════
+function AdminServicos({svcs,setSvcs}){
+  const [q,setQ]=useState(''), [cat,setCat]=useState('all'), [modal,setModal]=useState(null), [form,setForm]=useState({})
+  const [syncing,setSyncing]=useState(false)
+  const filtered=svcs.filter(s=>(cat==='all'||s.cat===cat)&&s.n.toLowerCase().includes(q.toLowerCase()))
+  const openNew=()=>{setForm({id:`s${Date.now()}`,cat:'limpeza',n:'',p:0,u:'/visita',d:'60min',ic:'🔧',badge:''});setModal('new')}
+  const save=async()=>{
+    setSyncing(true)
+    const updated=modal==='new'?{...form,r:5.0,rv:0}:{...form}
+    if(modal==='new')setSvcs(p=>[...p,updated]);else setSvcs(p=>p.map(s=>s.id===form.id?{...s,...form}:s))
+    await sbSave('servicos',updated)
+    setSyncing(false); setModal(null)
+  }
+  const del=id=>{if(window.confirm('Eliminar este serviço?'))setSvcs(p=>p.filter(s=>s.id!==id))}
+  return(
+    <>
+      <ATopBar title='🔧 Serviços' sub={`${svcs.length} serviços configurados`}>
+        <APrimBtn ch='+ Novo serviço' onClick={openNew}/>
+      </ATopBar>
+      <div style={{padding:24}}>
+        <div style={{display:'flex',gap:10,marginBottom:16,background:A.white,padding:'12px 16px',borderRadius:11,border:`1px solid ${A.border}`}}>
+          <input value={q} onChange={e=>setQ(e.target.value)} placeholder='Pesquisar serviço…' style={{flex:1,border:`1.5px solid ${A.border}`,borderRadius:7,padding:'7px 11px',fontSize:13,outline:'none',color:A.navy}}/>
+          <select value={cat} onChange={e=>setCat(e.target.value)} style={{border:`1.5px solid ${A.border}`,borderRadius:7,padding:'7px 11px',fontSize:13,outline:'none',color:A.navy,background:A.white}}>
+            <option value='all'>Todas as categorias</option>
+            {CATS.map(c=><option key={c.id} value={c.id}>{c.ic} {c.l}</option>)}
+          </select>
+        </div>
+        <div style={{background:A.white,borderRadius:12,border:`1px solid ${A.border}`,overflow:'hidden'}}>
+          <table style={{width:'100%',borderCollapse:'collapse'}}>
+            <thead><tr><ATh ch='Serviço'/><ATh ch='Categoria'/><ATh ch='Preço'/><ATh ch='Duração'/><ATh ch='Badge'/><ATh ch='Ações'/></tr></thead>
+            <tbody>{filtered.map(s=>(
+              <tr key={s.id} onMouseEnter={e=>e.currentTarget.style.background='#f8fafc'} onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
+                <ATd><div style={{display:'flex',alignItems:'center',gap:9}}><span style={{fontSize:20}}>{s.ic}</span><span style={{fontWeight:700}}>{s.n}</span></div></ATd>
+                <ATd><ABadge t={CATS.find(c=>c.id===s.cat)?.l||s.cat}/></ATd>
+                <ATd><span style={{fontWeight:700,color:A.accent}}>€{s.p}</span><span style={{color:A.slate,fontSize:11}}> {s.u}</span></ATd>
+                <ATd><span style={{color:A.slate}}>{s.d}</span></ATd>
+                <ATd>{s.badge?<ABadge t={s.badge} col={s.badge==='Urgente'?'red':s.badge==='Destaque'?'amber':'green'}/>:<span style={{color:A.muted}}>—</span>}</ATd>
+                <ATd><div style={{display:'flex',gap:6}}><ATBtn ch='✏️ Editar' onClick={()=>{setForm({...s});setModal(s)}}/><ATBtn ch='🗑' onClick={()=>del(s.id)} col='red'/></div></ATd>
+              </tr>
+            ))}</tbody>
+          </table>
+        </div>
+      </div>
+      {modal&&<AModal title={modal==='new'?'Novo Serviço':`Editar — ${form.n}`} onClose={()=>setModal(null)}>
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+          <AFRow label='Nome do serviço'><input value={form.n||''} onChange={e=>setForm(f=>({...f,n:e.target.value}))} style={{width:'100%',border:`1.5px solid ${A.border}`,borderRadius:8,padding:'8px 11px',fontSize:13,outline:'none',color:A.navy,boxSizing:'border-box'}}/></AFRow>
+          <AFRow label='Ícone'>{ainp(form.ic,v=>setForm(f=>({...f,ic:v})))}</AFRow>
+          <AFRow label='Preço (€)'>{ainp(form.p,v=>setForm(f=>({...f,p:parseFloat(v)||0})),'number')}</AFRow>
+          <AFRow label='Unidade'>{asel(form.u,v=>setForm(f=>({...f,u:v})),['/mês','/visita','fixo','/hora'])}</AFRow>
+          <AFRow label='Categoria'>{asel(form.cat,v=>setForm(f=>({...f,cat:v})),CATS.map(c=>[c.id,`${c.ic} ${c.l}`]))}</AFRow>
+          <AFRow label='Duração'>{ainp(form.d,v=>setForm(f=>({...f,d:v})),'text','ex: 60min')}</AFRow>
+          <AFRow label='Badge (opcional)'>{asel(form.badge||'',v=>setForm(f=>({...f,badge:v})),['','Destaque','Popular','Urgente','Novo'].map(b=>[b,b||'Sem badge']))}</AFRow>
+        </div>
+        <div style={{display:'flex',gap:8,marginTop:14,justifyContent:'flex-end'}}><ASecBtn ch='Cancelar' onClick={()=>setModal(null)}/><APrimBtn ch={syncing?'A guardar…':'💾 Guardar'} onClick={save} disabled={syncing}/></div>
+      </AModal>}
+    </>
+  )
+}
+
+// ══ AdminClientes ══════════════════════
+function AdminClientes({clientes,setClientes}){
+  const [q,setQ]=useState(''), [filt,setFilt]=useState('all'), [sel,setSel]=useState(null), [form,setForm]=useState({})
+  const filtered=clientes.filter(c=>(filt==='all'||(filt==='ativo'&&c.ativo)||(filt==='inativo'&&!c.ativo))&&(c.n+c.email).toLowerCase().includes(q.toLowerCase()))
+  const save=async()=>{setClientes(p=>p.map(c=>c.id===form.id?{...c,...form}:c));await sbSave('clientes',form);setSel(null)}
+  const toggle=c=>{const u={...c,ativo:!c.ativo};setClientes(p=>p.map(x=>x.id===c.id?u:x));sbSave('clientes',u)}
+  return(
+    <>
+      <ATopBar title='👥 Clientes' sub={`${clientes.length} clientes · ${clientes.filter(c=>c.ativo).length} activos`}>
+        <APrimBtn ch='+ Novo cliente'/>
+      </ATopBar>
+      <div style={{padding:24}}>
+        <div style={{display:'flex',gap:8,marginBottom:16,background:A.white,padding:'12px 16px',borderRadius:11,border:`1px solid ${A.border}`}}>
+          <input value={q} onChange={e=>setQ(e.target.value)} placeholder='Pesquisar nome ou email…' style={{flex:1,border:`1.5px solid ${A.border}`,borderRadius:7,padding:'7px 11px',fontSize:13,outline:'none',color:A.navy}}/>
+          {['all','ativo','inativo'].map(f=><button key={f} onClick={()=>setFilt(f)} style={{padding:'7px 14px',border:`1.5px solid ${filt===f?A.accent:A.border}`,borderRadius:8,cursor:'pointer',background:filt===f?A.accent:A.white,color:filt===f?'#fff':A.slate,fontWeight:600,fontSize:12}}>{f==='all'?'Todos':f==='ativo'?'Activos':'Inactivos'}</button>)}
+        </div>
+        <div style={{background:A.white,borderRadius:12,border:`1px solid ${A.border}`,overflow:'hidden'}}>
+          <table style={{width:'100%',borderCollapse:'collapse'}}>
+            <thead><tr><ATh ch='Cliente'/><ATh ch='Contacto'/><ATh ch='Morada'/><ATh ch='Pedidos'/><ATh ch='Gasto'/><ATh ch='Estado'/><ATh ch='Ações'/></tr></thead>
+            <tbody>{filtered.map(c=>(
+              <tr key={c.id} onMouseEnter={e=>e.currentTarget.style.background='#f8fafc'} onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
+                <ATd><div><div style={{fontWeight:700}}>{c.n}</div><div style={{fontSize:10,color:A.slate}}>{c.desde}</div></div></ATd>
+                <ATd><div style={{fontSize:12,color:A.slate}}>{c.email}</div><div style={{fontSize:11,color:A.muted}}>{c.tel}</div></ATd>
+                <ATd><span style={{fontSize:12,color:A.slate}}>{c.morada}</span></ATd>
+                <ATd><span style={{fontWeight:600}}>{c.pedidos}</span></ATd>
+                <ATd><span style={{fontWeight:700,color:A.accent}}>€{c.gasto}</span></ATd>
+                <ATd><ABadge t={c.ativo?'Activo':'Inactivo'} col={c.ativo?'green':'gray'}/></ATd>
+                <ATd><div style={{display:'flex',gap:6}}><ATBtn ch='✏️' onClick={()=>{setForm({...c});setSel(c)}}/><ATBtn ch={c.ativo?'Desactivar':'Activar'} onClick={()=>toggle(c)} col={c.ativo?'red':'green'}/></div></ATd>
+              </tr>
+            ))}</tbody>
+          </table>
+        </div>
+      </div>
+      {sel&&<AModal title={`Editar — ${form.n}`} onClose={()=>setSel(null)}>
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+          <AFRow label='Nome completo'><input value={form.n||''} onChange={e=>setForm(f=>({...f,n:e.target.value}))} style={{width:'100%',border:`1.5px solid ${A.border}`,borderRadius:8,padding:'8px 11px',fontSize:13,outline:'none',color:A.navy,boxSizing:'border-box'}}/></AFRow>
+          <AFRow label='Email'>{ainp(form.email,v=>setForm(f=>({...f,email:v})),'email')}</AFRow>
+          <AFRow label='Telefone'>{ainp(form.tel,v=>setForm(f=>({...f,tel:v})))}</AFRow>
+          <AFRow label=''><div/></AFRow>
+          <div style={{gridColumn:'1/-1'}}><AFRow label='Morada'>{ainp(form.morada,v=>setForm(f=>({...f,morada:v})))}</AFRow></div>
+        </div>
+        <div style={{display:'flex',gap:8,marginTop:14,justifyContent:'flex-end'}}><ASecBtn ch='Cancelar' onClick={()=>setSel(null)}/><APrimBtn ch='💾 Guardar' onClick={save}/></div>
+      </AModal>}
+    </>
+  )
+}
+
+// ══ AdminPrestadores — com todos os campos ═══
+const INDICATIVOS=['+351 🇵🇹','+34 🇪🇸','+33 🇫🇷','+44 🇬🇧','+49 🇩🇪','+55 🇧🇷','+244 🇦🇴','+1 🇺🇸']
+function AdminPrestadores({prest,setPrest,niveis}){
+  const [q,setQ]=useState(''), [fNivel,setFNivel]=useState('all'), [sel,setSel]=useState(null), [form,setForm]=useState({}), [tabF,setTabF]=useState('perfil')
+  const [ibanDoc,setIbanDoc]=useState(null), [ibanDocNome,setIbanDocNome]=useState('')
+  const [syncing,setSyncing]=useState(false)
+  const [convModal,setConvModal]=useState(false)
+  const [convForm,setConvForm]=useState({n:'',email:'',tel:'',indicativo:'+351 🇵🇹',nivel:'base'})
+  const [convResult,setConvResult]=useState(null)
+  const [convSaving,setConvSaving]=useState(false)
+  const [convCopied,setConvCopied]=useState(false)
+  const filtered=prest.filter(p=>(fNivel==='all'||p.nivel===fNivel)&&(p.n+' '+(p.cidade||p.loc||'')).toLowerCase().includes(q.toLowerCase()))
+  const handleConvidar=async e=>{
+    e.preventDefault()
+    if(!convForm.n.trim()||!convForm.email.trim())return
+    setConvSaving(true)
+    const ini=convForm.n.trim().split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()
+    const nc=niveis[convForm.nivel]
+    const novo={id:`p${Date.now()}`,n:convForm.n.trim(),email:convForm.email.trim(),tel:convForm.tel.trim(),indicativo:convForm.indicativo.split(' ')[0],nivel:convForm.nivel,taxa_plataforma:nc?.taxa,ok:false,st:'activo',ini}
+    await sbSave('prestadores',novo)
+    setPrest(p=>[novo,...p])
+    setConvResult(novo)
+    setConvSaving(false)
+  }
+  const convLink=convResult?`${window.location.origin}/convite/${convResult.id}`:''
+  const copyConvLink=()=>{navigator.clipboard.writeText(convLink).then(()=>{setConvCopied(true);setTimeout(()=>setConvCopied(false),2000)})}
+  const save=async()=>{
+    setSyncing(true)
+    const updated={...form}
+    setPrest(p=>p.map(x=>x.id===updated.id?{...x,...updated}:x))
+    await sbSave('prestadores',updated)
+    setSyncing(false); setSel(null)
+  }
+  const handleIbanDoc=e=>{const f=e.target.files?.[0];if(!f)return;setIbanDocNome(f.name);setIbanDoc('pendente');setForm(ff=>({...ff,comprovativo_iban:'pendente'}))}
+  const handleFoto=e=>{const f=e.target.files?.[0];if(!f)return;const r=new FileReader();r.onload=ev=>setForm(ff=>({...ff,foto:ev.target.result}));r.readAsDataURL(f)}
+  const TABS=['perfil','morada','nivel','pagamento']
+  return(
+    <>
+      <ATopBar title='👷 Prestadores' sub={`${prest.length} prestadores · ${prest.filter(p=>!p.ok).length} por verificar`}>
+        <APrimBtn ch='+ Convidar prestador' onClick={()=>{setConvModal(true);setConvResult(null);setConvForm({n:'',email:'',tel:'',indicativo:'+351 🇵🇹',nivel:'base'})}}/>
+      </ATopBar>
+      <div style={{padding:24}}>
+        <div style={{display:'flex',gap:10,marginBottom:16,background:A.white,padding:'12px 16px',borderRadius:11,border:`1px solid ${A.border}`}}>
+          <input value={q} onChange={e=>setQ(e.target.value)} placeholder='Nome, localidade ou email…' style={{flex:1,border:`1.5px solid ${A.border}`,borderRadius:7,padding:'7px 11px',fontSize:13,outline:'none',color:A.navy}}/>
+          <select value={fNivel} onChange={e=>setFNivel(e.target.value)} style={{border:`1.5px solid ${A.border}`,borderRadius:7,padding:'7px 11px',fontSize:13,outline:'none',color:A.navy,background:A.white}}>
+            <option value='all'>Todos os níveis</option>
+            {Object.entries(niveis).map(([k,n])=><option key={k} value={k}>{n.ic} {n.l}</option>)}
+          </select>
+        </div>
+        <div style={{background:A.white,borderRadius:12,border:`1px solid ${A.border}`,overflow:'hidden'}}>
+          <div style={{overflowX:'auto'}}>
+            <table style={{width:'100%',borderCollapse:'collapse',minWidth:900}}>
+              <thead><tr><ATh ch='Prestador'/><ATh ch='NIF'/><ATh ch='Telefone'/><ATh ch='Morada / CP'/><ATh ch='Nível'/><ATh ch='IBAN'/><ATh ch='Docs'/><ATh ch='Estado'/><ATh ch='Ações'/></tr></thead>
+              <tbody>{filtered.map(p=>{const nc=niveis[p.nivel];return(
+                <tr key={p.id} onMouseEnter={e=>e.currentTarget.style.background='#f8fafc'} onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
+                  <ATd>
+                    <div style={{display:'flex',alignItems:'center',gap:9}}>
+                      {p.foto
+                        ?<img src={p.foto} alt='' style={{width:34,height:34,borderRadius:'50%',objectFit:'cover',flexShrink:0,border:`2px solid ${A.border}`}}/>
+                        :<div style={{width:34,height:34,borderRadius:'50%',background:'linear-gradient(135deg,#16a34a,#22c55e)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:11,color:'#fff',fontWeight:800,flexShrink:0}}>{p.ini}</div>
+                      }
+                      <div style={{minWidth:0}}><div style={{fontWeight:700,fontSize:13,whiteSpace:'nowrap'}}>{p.n}</div><div style={{fontSize:10,color:A.slate,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p.email}</div></div>
+                    </div>
+                  </ATd>
+                  <ATd><span style={{fontFamily:'monospace',fontSize:12}}>{p.nif||<span style={{color:A.muted}}>—</span>}</span></ATd>
+                  <ATd><span style={{fontSize:12}}>{p.indicativo||'+351'} {p.tel}</span></ATd>
+                  <ATd><div style={{fontSize:12}}>{p.morada||'—'}</div><div style={{fontSize:10,color:A.slate}}>{p.cp||''} {p.cidade||p.loc}</div></ATd>
+                  <ATd><span style={{fontSize:10,fontWeight:700,background:nc?.bg,color:nc?.cor,padding:'2px 8px',borderRadius:8,whiteSpace:'nowrap'}}>{nc?.ic} {nc?.l} · {nc?.taxa}%</span></ATd>
+                  <ATd><span style={{fontFamily:'monospace',fontSize:11,color:p.iban?A.text:A.muted}}>{p.iban?p.iban.substring(0,12)+'…':' — '}</span></ATd>
+                  <ATd>
+                    <div style={{display:'flex',gap:4,flexWrap:'wrap'}}>
+                      {p.foto?<ABadge t='📷 Foto' col='green'/>:<ABadge t='Sem foto' col='gray'/>}
+                      {p.comprovativo_iban?<ABadge t='📄 IBAN' col='green'/>:<ABadge t='Sem doc.' col='amber'/>}
+                    </div>
+                  </ATd>
+                  <ATd><ABadge t={p.ok?'✓ Verif.':'Pendente'} col={p.ok?'green':'amber'}/></ATd>
+                  <ATd><ATBtn ch='✏️ Gerir' onClick={()=>{setForm({...p});setSel(p);setTabF('perfil');setIbanDoc(p.comprovativo_iban||null);setIbanDocNome('')}}/></ATd>
+                </tr>
+              )})}</tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      {sel&&<AModal title={`Gerir — ${form.n}`} onClose={()=>setSel(null)} wide>
+        {/* Tabs */}
+        <div style={{display:'flex',gap:0,borderBottom:`1px solid ${A.border}`,marginBottom:18}}>
+          {TABS.map(t=><button key={t} onClick={()=>setTabF(t)} style={{padding:'9px 18px',border:'none',borderBottom:tabF===t?`2.5px solid ${A.accent}`:'2.5px solid transparent',background:'none',cursor:'pointer',color:tabF===t?A.accent:A.slate,fontWeight:tabF===t?700:400,fontSize:13,fontFamily:'inherit',textTransform:'capitalize'}}>{t}</button>)}
+        </div>
+
+        {tabF==='perfil'&&<div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:14}}>
+          <div style={{gridColumn:'1/-1'}}>
+            <label style={{display:'block',fontSize:10,fontWeight:700,color:A.slate,marginBottom:8,textTransform:'uppercase',letterSpacing:'0.04em'}}>Foto de perfil</label>
+            <div style={{display:'flex',alignItems:'center',gap:14}}>
+              {form.foto
+                ?<img src={form.foto} alt='' style={{width:58,height:58,borderRadius:'50%',objectFit:'cover',border:`3px solid ${A.border}`}}/>
+                :<div style={{width:58,height:58,borderRadius:'50%',background:'linear-gradient(135deg,#16a34a,#22c55e)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:20,color:'#fff',fontWeight:800}}>{form.ini}</div>
+              }
+              <div>
+                <label style={{display:'inline-flex',alignItems:'center',gap:6,padding:'8px 14px',border:`1.5px dashed ${A.border}`,borderRadius:9,cursor:'pointer',fontSize:12,color:A.slate,fontWeight:600}}>
+                  📷 Carregar foto<input type='file' accept='image/*' style={{display:'none'}} onChange={handleFoto}/>
+                </label>
+                {form.foto&&<button onClick={()=>setForm(f=>({...f,foto:null}))} style={{marginLeft:8,fontSize:11,color:A.red,background:'none',border:'none',cursor:'pointer'}}>Remover</button>}
+                <p style={{fontSize:10,color:A.muted,margin:'4px 0 0'}}>Visível para clientes na app · JPEG/PNG</p>
+              </div>
+            </div>
+          </div>
+          <div style={{gridColumn:'1/-1',borderTop:`1px solid ${A.border}`,paddingTop:14}}/>
+          <AFRow label='Nome completo' half>{ainp(form.n,v=>setForm(f=>({...f,n:v})))}</AFRow>
+          <AFRow label='NIF' half>{ainp(form.nif||'',v=>setForm(f=>({...f,nif:v})),'text','123 456 789')}</AFRow>
+          <AFRow label='Email'>{ainp(form.email||'',v=>setForm(f=>({...f,email:v})),'email')}</AFRow>
+          <AFRow label='Verificado' half>{asel(form.ok?'sim':'nao',v=>setForm(f=>({...f,ok:v==='sim'})),[['sim','✓ Verificado'],['nao','Não verificado']])}</AFRow>
+          <AFRow label='Estado' half>{asel(form.st||'activo',v=>setForm(f=>({...f,st:v})),[['activo','Activo'],['ocupado','Ocupado'],['inactivo','Suspenso']])}</AFRow>
+        </div>}
+
+        {tabF==='morada'&&<div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:14}}>
+          <div style={{gridColumn:'1/-1'}}><AFRow label='Morada'>{ainp(form.morada||'',v=>setForm(f=>({...f,morada:v})),'text','Rua das Flores, 23')}</AFRow></div>
+          <AFRow label='Código Postal' half>{ainp(form.cp||'',v=>setForm(f=>({...f,cp:v})),'text','2500-123')}</AFRow>
+          <AFRow label='Cidade' half>{ainp(form.cidade||form.loc||'',v=>setForm(f=>({...f,cidade:v,loc:v})))}</AFRow>
+          <AFRow label='Indicativo de país' half>
+            <select value={form.indicativo||'+351 🇵🇹'} onChange={e=>setForm(f=>({...f,indicativo:e.target.value.split(' ')[0]}))} style={{width:'100%',border:`1.5px solid ${A.border}`,borderRadius:8,padding:'8px 11px',fontSize:13,outline:'none',color:A.navy,background:A.white,boxSizing:'border-box'}}>
+              {INDICATIVOS.map(i=><option key={i}>{i}</option>)}
+            </select>
+          </AFRow>
+          <AFRow label='Número de telefone' half>{ainp(form.tel||'',v=>setForm(f=>({...f,tel:v})),'tel','914 000 000')}</AFRow>
+        </div>}
+
+        {tabF==='nivel'&&<div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
+          {Object.entries(niveis).map(([id,n])=>(
+            <button key={id} onClick={()=>setForm(f=>({...f,nivel:id}))} style={{padding:'14px',border:`2px solid ${form.nivel===id?n.cor:A.border}`,borderRadius:12,background:form.nivel===id?n.bg:A.white,cursor:'pointer',textAlign:'left',transition:'all 0.15s'}}>
+              <div style={{fontSize:24,marginBottom:5}}>{n.ic}</div>
+              <div style={{fontWeight:700,color:n.cor,fontSize:14}}>{n.l}</div>
+              <div style={{fontSize:12,color:A.slate,marginTop:2}}>Taxa {n.taxa}% · {n.min===0?'Entrada':n.min+'+ serviços'}</div>
+              {form.nivel===id&&<div style={{fontSize:10,color:n.cor,fontWeight:700,marginTop:4}}>✓ Nível seleccionado</div>}
+            </button>
+          ))}
+        </div>}
+
+        {tabF==='pagamento'&&<div style={{display:'flex',flexDirection:'column',gap:16}}>
+          <AFRow label='IBAN (Swan SEPA CT)'>{ainp(form.iban||'',v=>setForm(f=>({...f,iban:v})),'text','PT50 0000 0000 0000 0000 0')}</AFRow>
+          <div>
+            <label style={{display:'block',fontSize:10,fontWeight:700,color:A.slate,marginBottom:8,textTransform:'uppercase',letterSpacing:'0.04em'}}>Comprovativo de IBAN</label>
+            {ibanDoc
+              ?<div style={{display:'flex',alignItems:'center',gap:12,padding:'12px 16px',background:A.accentL,borderRadius:11,border:`1px solid rgba(22,163,74,0.2)`}}>
+                  <span style={{fontSize:26}}>📄</span>
+                  <div style={{flex:1}}><div style={{fontSize:13,fontWeight:700,color:A.accentD}}>{ibanDocNome||'Comprovativo IBAN'}</div><div style={{fontSize:11,color:A.accent}}>✓ Documento carregado</div></div>
+                  <button onClick={()=>{setIbanDoc(null);setIbanDocNome('');setForm(f=>({...f,comprovativo_iban:null}))}} style={{background:'none',border:'none',color:A.slate,cursor:'pointer',fontSize:18,lineHeight:1}}>×</button>
+                </div>
+              :<label style={{display:'flex',alignItems:'center',gap:12,padding:'16px 20px',border:`2px dashed ${A.border}`,borderRadius:11,cursor:'pointer',background:A.bg}}>
+                  <span style={{fontSize:28}}>📎</span>
+                  <div><div style={{fontSize:13,fontWeight:600,color:A.text}}>Clique para anexar comprovativo</div><div style={{fontSize:11,color:A.muted,marginTop:2}}>PDF, JPG ou PNG · máx. 5MB</div></div>
+                  <input type='file' accept='.pdf,image/*' style={{display:'none'}} onChange={handleIbanDoc}/>
+                </label>
+            }
+          </div>
+          <div style={{background:A.bg,borderRadius:10,padding:'12px 14px',border:`1px solid ${A.border}`}}>
+            <div style={{fontSize:12,fontWeight:700,color:A.navy,marginBottom:4}}>Como funciona o pagamento</div>
+            <div style={{fontSize:11,color:A.slate,lineHeight:1.7}}>Os pagamentos são efectuados via Swan.io SEPA Credit Transfer, no dia útil seguinte (D+1) à conclusão do serviço. O valor liquido já desconta a taxa de plataforma do escalão activo do prestador.</div>
+          </div>
+        </div>}
+
+        <div style={{display:'flex',gap:8,marginTop:18,justifyContent:'space-between',borderTop:`1px solid ${A.border}`,paddingTop:16}}>
+          <SyncBadge synced={false} loading={syncing}/>
+          <div style={{display:'flex',gap:8}}><ASecBtn ch='Cancelar' onClick={()=>setSel(null)}/><APrimBtn ch={syncing?'A guardar…':'💾 Guardar no Supabase'} onClick={save} disabled={syncing}/></div>
+        </div>
+      </AModal>}
+      {convModal&&<AModal title='Convidar prestador' onClose={()=>setConvModal(false)}>
+        {!convResult
+          ?<form onSubmit={handleConvidar}>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:14}}>
+              <AFRow label='Nome *'>{ainp(convForm.n,v=>setConvForm(f=>({...f,n:v})),'text','Nome completo')}</AFRow>
+              <AFRow label='Email *'>{ainp(convForm.email,v=>setConvForm(f=>({...f,email:v})),'email','email@exemplo.com')}</AFRow>
+              <AFRow label='Indicativo' half>
+                <select value={convForm.indicativo} onChange={e=>setConvForm(f=>({...f,indicativo:e.target.value}))} style={{width:'100%',border:`1.5px solid ${A.border}`,borderRadius:8,padding:'8px 11px',fontSize:13,outline:'none',color:A.navy,background:A.white,boxSizing:'border-box'}}>
+                  {INDICATIVOS.map(i=><option key={i}>{i}</option>)}
+                </select>
+              </AFRow>
+              <AFRow label='Telefone' half>{ainp(convForm.tel,v=>setConvForm(f=>({...f,tel:v})),'tel','914 000 000')}</AFRow>
+              <AFRow label='Nível inicial'>{asel(convForm.nivel,v=>setConvForm(f=>({...f,nivel:v})),Object.entries(niveis).map(([k,n])=>[k,`${n.ic} ${n.l} · ${n.taxa}%`]))}</AFRow>
+            </div>
+            {(!convForm.n.trim()||!convForm.email.trim())&&<p style={{fontSize:11,color:A.red,margin:'4px 0 0'}}>Nome e email são obrigatórios.</p>}
+            <div style={{display:'flex',gap:8,marginTop:18,justifyContent:'flex-end'}}><ASecBtn ch='Cancelar' onClick={()=>setConvModal(false)}/><APrimBtn ch={convSaving?'A criar…':'Criar convite'} onClick={handleConvidar} disabled={convSaving||!convForm.n.trim()||!convForm.email.trim()}/></div>
+          </form>
+          :<div>
+            <div style={{display:'flex',alignItems:'center',gap:10,background:A.accentL,border:`1px solid rgba(22,163,74,0.25)`,borderRadius:11,padding:'12px 16px',marginBottom:16}}>
+              <span style={{fontSize:22}}>✓</span>
+              <div><div style={{fontWeight:700,fontSize:13,color:A.accentD}}>Convite criado para {convResult.n}</div><div style={{fontSize:11,color:A.accent,marginTop:2}}>Partilha o link abaixo com o prestador</div></div>
+            </div>
+            <div style={{display:'flex',alignItems:'center',gap:8,background:A.bg,border:`1px solid ${A.border}`,borderRadius:9,padding:'10px 14px',marginBottom:14}}>
+              <span style={{flex:1,fontSize:11,color:A.slate,fontFamily:'monospace',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{convLink}</span>
+              <button onClick={copyConvLink} style={{background:convCopied?A.accent:'#e2e8f0',color:convCopied?'#fff':A.navy,border:'none',borderRadius:7,padding:'6px 12px',fontSize:11,fontWeight:700,cursor:'pointer',whiteSpace:'nowrap',transition:'all 0.15s'}}>{convCopied?'Copiado!':'Copiar'}</button>
+            </div>
+            <div style={{display:'flex',gap:8}}>
+              <button onClick={()=>{const msg=encodeURIComponent(`Olá ${convResult.n}! Foste convidado/a para a plataforma ServiçoPRO. Regista-te aqui: ${convLink}`);const ph=convResult.tel?.replace(/\D/g,'');window.open(ph?`https://wa.me/351${ph}?text=${msg}`:`https://wa.me/?text=${msg}`,'_blank')}} style={{flex:1,background:'#25D366',color:'#fff',border:'none',borderRadius:9,padding:'10px',fontSize:13,fontWeight:700,cursor:'pointer'}}>WhatsApp</button>
+              {convResult.email&&<button onClick={()=>{const s=encodeURIComponent('Convite — ServiçoPRO');const b=encodeURIComponent(`Olá ${convResult.n},\n\nForam-te enviadas as tuas credenciais de acesso à plataforma ServiçoPRO.\n\nRegista-te através deste link:\n${convLink}\n\nCumprimentos,\nEquipa ServiçoPRO`);window.open(`mailto:${convResult.email}?subject=${s}&body=${b}`,'_blank')}} style={{flex:1,background:A.accent,color:'#fff',border:'none',borderRadius:9,padding:'10px',fontSize:13,fontWeight:700,cursor:'pointer'}}>Email</button>}
+              <ASecBtn ch='Fechar' onClick={()=>setConvModal(false)}/>
+            </div>
+          </div>
+        }
+      </AModal>}
+    </>
+  )
+}
+
+// ══ AdminEscaloes ══════════════════════
+function AdminEscaloes({niveis,setNiveis}){
+  const [edit,setEdit]=useState(null), [form,setForm]=useState({})
+  const save=()=>{setNiveis(p=>({...p,[form.id]:{...p[form.id],taxa:parseFloat(form.taxa)||0,min:parseInt(form.min)||0,mr:parseFloat(form.mr)||0}}));setEdit(null)}
+  const ex=75
+  return(
+    <>
+      <ATopBar title='🏅 Escalões & Taxas' sub='Configura taxa de plataforma e critérios de progressão dos prestadores'/>
+      <div style={{padding:24}}>
+        <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:16,marginBottom:22}}>
+          {Object.entries(niveis).map(([id,n])=>(
+            <div key={id} style={{background:A.white,borderRadius:14,border:`2px solid ${n.cor}33`,padding:20,display:'flex',flexDirection:'column',gap:8}}>
+              <div style={{fontSize:36}}>{n.ic}</div>
+              <div style={{fontSize:16,fontWeight:800,color:n.cor}}>{n.l}</div>
+              <div style={{fontSize:32,fontWeight:900,color:A.navy,lineHeight:1}}>{n.taxa}<span style={{fontSize:14,color:A.slate}}> %</span></div>
+              <div style={{background:'#f8fafc',borderRadius:9,padding:'10px 12px',fontSize:11,color:A.slate}}>
+                <div>{n.min===0?'▸ Nível de entrada':`▸ Min. ${n.min} serviços`}</div>
+                {n.mr>0&&<div>▸ Avaliação ≥ {n.mr}★</div>}
+              </div>
+              <div style={{background:n.bg,borderRadius:9,padding:'10px 12px'}}>
+                <div style={{fontSize:11,color:n.cor,fontWeight:600}}>Serviço €{ex} →</div>
+                <div style={{fontSize:14,fontWeight:800,color:n.cor}}>Prestador €{(ex*(1-n.taxa/100)).toFixed(2)}</div>
+                <div style={{fontSize:10,color:n.cor}}>Plataforma €{(ex*n.taxa/100).toFixed(2)}</div>
+              </div>
+              <button onClick={()=>{setForm({id,...n});setEdit(id)}} style={{padding:'8px',border:`1.5px solid ${n.cor}55`,borderRadius:9,background:A.white,color:n.cor,fontWeight:700,fontSize:12,cursor:'pointer'}}>✏️ Editar escalão</button>
+            </div>
+          ))}
+        </div>
+        <div style={{background:A.white,borderRadius:13,border:`1px solid ${A.border}`,overflow:'hidden'}}>
+          <div style={{padding:'13px 20px',borderBottom:`1px solid ${A.border}`}}><span style={{fontSize:13,fontWeight:800,color:A.navy}}>Impacto anual — 500 serviços × €75</span></div>
+          <table style={{width:'100%',borderCollapse:'collapse'}}>
+            <thead><tr><ATh ch='Escalão'/><ATh ch='Taxa'/><ATh ch='Prestador / serviço'/><ATh ch='Plataforma / serviço'/><ATh ch='Total anual prestador'/><ATh ch='Total anual plataforma'/></tr></thead>
+            <tbody>{Object.entries(niveis).map(([id,n])=>(
+              <tr key={id} onMouseEnter={e=>e.currentTarget.style.background='#f8fafc'} onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
+                <ATd><span style={{fontWeight:700}}>{n.ic} {n.l}</span></ATd>
+                <ATd><span style={{fontWeight:700,color:n.cor}}>{n.taxa}%</span></ATd>
+                <ATd>€{(ex*(1-n.taxa/100)).toFixed(2)}</ATd>
+                <ATd>€{(ex*n.taxa/100).toFixed(2)}</ATd>
+                <ATd><span style={{fontWeight:700,color:A.accent}}>€{(500*ex*(1-n.taxa/100)).toLocaleString('pt-PT')}</span></ATd>
+                <ATd>€{(500*ex*n.taxa/100).toLocaleString('pt-PT')}</ATd>
+              </tr>
+            ))}</tbody>
+          </table>
+        </div>
+      </div>
+      {edit&&<AModal title={`Editar — ${form.ic} ${form.l}`} onClose={()=>setEdit(null)}>
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:12,marginBottom:14}}>
+          <AFRow label='Taxa plataforma (%)'>{ainp(form.taxa,v=>setForm(f=>({...f,taxa:v})),'number')}</AFRow>
+          <AFRow label='Mínimo de serviços'>{ainp(form.min,v=>setForm(f=>({...f,min:v})),'number')}</AFRow>
+          <AFRow label='Avaliação mínima'>{ainp(form.mr,v=>setForm(f=>({...f,mr:v})),'number')}</AFRow>
+        </div>
+        {form.taxa&&<div style={{background:'#f8fafc',borderRadius:10,padding:'12px 16px',marginBottom:14,border:`1px solid ${A.border}`}}>
+          <div style={{fontSize:11,color:A.slate,marginBottom:6}}>Preview — serviço de €75:</div>
+          <div style={{display:'flex',gap:24}}>
+            <div><div style={{fontSize:20,fontWeight:800,color:A.accent}}>€{(75*(1-parseFloat(form.taxa)/100)).toFixed(2)}</div><div style={{fontSize:10,color:A.slate}}>Prestador</div></div>
+            <div><div style={{fontSize:20,fontWeight:800,color:A.navy}}>€{(75*parseFloat(form.taxa)/100).toFixed(2)}</div><div style={{fontSize:10,color:A.slate}}>Plataforma</div></div>
+          </div>
+        </div>}
+        <div style={{display:'flex',gap:8,justifyContent:'flex-end'}}><ASecBtn ch='Cancelar' onClick={()=>setEdit(null)}/><APrimBtn ch='💾 Guardar' onClick={save}/></div>
+      </AModal>}
+    </>
+  )
+}
+
+// ══ AdminPagamentos ═════════════════════
+function AdminPagamentos({prest}){
+  const [proc,setProc]=useState({})
+  const total=prest.reduce((a,p)=>a+(p.saldo||Math.round(p.jobs*0.12)),0)
+  const allDone=prest.every(p=>proc[p.id])
+  const processarTodos=()=>prest.forEach(p=>p.iban&&setProc(pr=>({...pr,[p.id]:true})))
+  return(
+    <>
+      <ATopBar title='💳 Pagamentos SEPA CT' sub='Swan.io · Transferências D+1 para prestadores'>
+        <APrimBtn ch={allDone?'✓ Todos processados':'💸 Processar todos'} onClick={processarTodos} disabled={allDone}/>
+      </ATopBar>
+      <div style={{padding:24}}>
+        <div style={{display:'flex',gap:14,marginBottom:20,flexWrap:'wrap'}}>
+          <AKpi ic='💶' label='Total a transferir'   value={`€ ${total}`}   sub={`${prest.length} prestadores`}  col='accent'/>
+          <AKpi ic='✅' label='Processado este mês'   value='€ 1.234'        sub='12 transferências'              col='blue'/>
+          <AKpi ic='⏳' label='Em processamento'      value='€ 91'           sub='Aguarda confirmação D+1'        col='amber'/>
+        </div>
+        <div style={{background:A.white,borderRadius:13,border:`1px solid ${A.border}`,overflow:'hidden'}}>
+          {!allDone&&<div style={{padding:'12px 20px',background:A.amberL,borderBottom:`1px solid ${A.border}`}}><span style={{fontSize:13,fontWeight:700,color:'#92400e'}}>⚠️ {prest.filter(p=>!proc[p.id]).length} prestadores com pagamentos pendentes</span></div>}
+          <table style={{width:'100%',borderCollapse:'collapse'}}>
+            <thead><tr><ATh ch='Prestador'/><ATh ch='Nível'/><ATh ch='IBAN'/><ATh ch='Saldo'/><ATh ch='Docs'/><ATh ch='Estado'/><ATh ch='Ação'/></tr></thead>
+            <tbody>{prest.map(p=>{const nc=NIVEIS[p.nivel];const saldo=p.saldo||Math.round(p.jobs*0.12);return(
+              <tr key={p.id} onMouseEnter={e=>e.currentTarget.style.background='#f8fafc'} onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
+                <ATd>
+                  <div style={{display:'flex',alignItems:'center',gap:8}}>
+                    {p.foto?<img src={p.foto} alt='' style={{width:30,height:30,borderRadius:'50%',objectFit:'cover'}}/>:<div style={{width:30,height:30,borderRadius:'50%',background:'linear-gradient(135deg,#16a34a,#22c55e)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:10,color:'#fff',fontWeight:800}}>{p.ini}</div>}
+                    <div><div style={{fontWeight:700,fontSize:13}}>{p.n}</div><div style={{fontSize:10,color:A.slate}}>{p.cidade||p.loc}</div></div>
+                  </div>
+                </ATd>
+                <ATd><span style={{fontSize:10,fontWeight:700,background:nc?.bg,color:nc?.cor,padding:'2px 7px',borderRadius:7}}>{nc?.ic} {nc?.l}</span></ATd>
+                <ATd><span style={{fontFamily:'monospace',fontSize:11,color:p.iban?A.text:A.red}}>{p.iban?p.iban.substring(0,16)+'…':<span style={{color:A.red,fontStyle:'italic'}}>IBAN em falta</span>}</span></ATd>
+                <ATd><span style={{fontSize:14,fontWeight:800,color:A.accent}}>€{saldo}</span></ATd>
+                <ATd>{p.comprovativo_iban?<ABadge t='✓ Doc.' col='green'/>:<ABadge t='Sem doc.' col='amber'/>}</ATd>
+                <ATd>{proc[p.id]?<ABadge t='✓ Processado' col='green'/>:<ABadge t='Pendente' col='amber'/>}</ATd>
+                <ATd>{proc[p.id]
+                  ?<span style={{fontSize:11,color:A.muted}}>Swan · D+1</span>
+                  :<ATBtn ch={p.iban?'💸 Pagar':'Falta IBAN'} onClick={()=>p.iban&&setProc(pr=>({...pr,[p.id]:true}))} col={p.iban?'green':'red'}/>
+                }</ATd>
+              </tr>
+            )})}</tbody>
+          </table>
+        </div>
+      </div>
+    </>
+  )
+}
+
+// ══ AdminConfig ════════════════════════
+function AdminConfig(){
+  const [f,setF]=useState({empresa:'ServiçoPRO',nif:'502 000 000',email:'admin@servicopro.pt',tel:'+351 262 000 000',morada:'Caldas da Rainha, 2500',iban:'PT50 0035 0000 0000 0000 0000 0',swan:'https://api.servicopro.pt/swan/webhook',supabaseUrl:'https://hkmvszkpxjbxmnixzqbl.supabase.co',fotos:'2',prazo:'24',comissao:'22'})
+  const [saved,setSaved]=useState(false), [saving,setSaving]=useState(false)
+  const upd=(k,v)=>{setF(x=>({...x,[k]:v}));setSaved(false)}
+  const saveAll=async()=>{setSaving(true);await new Promise(r=>setTimeout(r,600));setSaved(true);setSaving(false)}
+  const FInp=({label,k,type='text'})=><AFRow label={label}>{ainp(f[k],v=>upd(k,v),type)}</AFRow>
+  const Sect=({t,ch})=><><div style={{fontSize:10,fontWeight:800,color:A.slate,textTransform:'uppercase',letterSpacing:'0.06em',margin:'20px 0 10px',paddingBottom:7,borderBottom:`1px solid ${A.border}`}}>{t}</div>{ch}</>
+  return(
+    <>
+      <ATopBar title='⚙️ Configurações' sub='Dados da empresa, financeiro e integrações'>
+        <SyncBadge synced={saved} loading={saving}/>
+        <APrimBtn ch={saving?'A guardar…':'💾 Guardar tudo'} onClick={saveAll} disabled={saving}/>
+      </ATopBar>
+      <div style={{padding:24}}>
+        {saved&&<div style={{background:A.accentL,border:`1px solid rgba(22,163,74,0.25)`,borderRadius:10,padding:'11px 18px',marginBottom:18,display:'flex',alignItems:'center',gap:8}}><span>✅</span><span style={{fontSize:13,color:A.accentD,fontWeight:700}}>Configurações guardadas com sucesso.</span></div>}
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:22}}>
+          <div style={{background:A.white,borderRadius:13,border:`1px solid ${A.border}`,padding:22}}>
+            <Sect t='Empresa' ch={<><FInp label='Nome' k='empresa'/><FInp label='NIF' k='nif'/><FInp label='Email' k='email'/><FInp label='Telefone' k='tel'/><FInp label='Morada' k='morada'/></>}/>
+            <Sect t='Financeiro' ch={<><FInp label='IBAN para receber margens' k='iban'/><FInp label='Comissão base (%)' k='comissao' type='number'/><FInp label='Prazo para pagamento pendente (h)' k='prazo' type='number'/></>}/>
+          </div>
+          <div style={{background:A.white,borderRadius:13,border:`1px solid ${A.border}`,padding:22}}>
+            <Sect t='Integrações' ch={<><FInp label='Supabase URL' k='supabaseUrl'/><FInp label='Swan.io Webhook URL' k='swan'/></>}/>
+            <Sect t='Estado dos serviços' ch={
+              <div style={{marginBottom:12}}>
+                {[['Supabase','Conectado','green'],['Swan.io','Conectado','green'],['Swan SEPA CT','Activo','green'],['Storage (bucket documentos)','Ok','green']].map(([s,st,c])=>(
+                  <div key={s} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'8px 0',borderBottom:`1px solid ${A.border}`}}>
+                    <span style={{fontSize:12,color:A.text,fontWeight:600}}>{s}</span>
+                    <ABadge t={`● ${st}`} col={c}/>
+                  </div>
+                ))}
+              </div>
+            }/>
+            <Sect t='Segurança' ch={<>
+              <AFRow label='Password de acesso admin'><input type='password' defaultValue='admin2026' style={{width:'100%',border:`1.5px solid ${A.border}`,borderRadius:8,padding:'8px 11px',fontSize:13,outline:'none',color:A.navy,boxSizing:'border-box'}}/></AFRow>
+              <div style={{background:A.amberL,borderRadius:9,padding:'10px 14px',border:`1px solid rgba(245,158,11,0.3)`,marginTop:4}}><div style={{fontSize:11,color:'#92400e',fontWeight:600,lineHeight:1.6}}>⚠️ Em produção, utilizar autenticação via Supabase Auth com roles por tabela (clientes / prestadores / admin).</div></div>
+            </>}/>
+          </div>
+        </div>
+      </div>
+    </>
+  )
+}
+
+// ══ AdminDash — contentor principal ════
+function AdminDash({svcs,setSvcs,prestadores,setPrestadores,niveis,setNiveis,clientes,setClientes,ordens,setOrdens,onLogout}){
+  const [page,setPage]=useState('dashboard')
+  return(
+    <div style={{position:'fixed',inset:0,display:'flex',background:A.bg,fontFamily:'system-ui,-apple-system,sans-serif',overflow:'hidden'}}>
+      <style>{`body{background:${A.bg}!important;margin:0;padding:0;overflow:hidden}`}</style>
+      <AdminSidebar active={page} set={setPage} onLogout={onLogout}/>
+      <div style={{marginLeft:240,flex:1,height:'100vh',overflowY:'auto',overflowX:'hidden',background:A.bg}}>
+        {page==='dashboard'   &&<AdminDashboard svcs={svcs} prest={prestadores} clientes={clientes}/>}
+        {page==='pipeline'    &&<AdminPipeline  ordens={ordens} setOrdens={setOrdens} prest={prestadores}/>}
+        {page==='servicos'    &&<AdminServicos   svcs={svcs} setSvcs={setSvcs}/>}
+        {page==='clientes'    &&<AdminClientes   clientes={clientes} setClientes={setClientes}/>}
+        {page==='prestadores' &&<AdminPrestadores prest={prestadores} setPrest={setPrestadores} niveis={niveis}/>}
+        {page==='escaloes'    &&<AdminEscaloes   niveis={niveis} setNiveis={setNiveis}/>}
+        {page==='pagamentos'  &&<AdminPagamentos  prest={prestadores}/>}
+        {page==='config'      &&<AdminConfig/>}
+      </div>
+    </div>
+  )
+}
+
+
+/* ══════════════════════════════════
+   ASSISTENTE AI — Botão flutuante
+══════════════════════════════════ */
+const AI_RESPOSTAS = {
+  default: 'Olá! Sou o assistente do ServiçoPRO. Posso ajudar com ordens de trabalho, dúvidas sobre pagamentos, escalões ou disponibilidade. Em que posso ajudar?',
+  carteira: 'A tua carteira tem saldo disponível para levantamento imediato. Podes levantar para o teu IBAN via Swan SEPA CT em D+1. Queres ajuda com isso?',
+  nivel: 'Estás no nível Gold (18% taxa). Para atingir Elite precisas de mais 160 serviços e manter avaliação ≥ 4.8. Cada serviço conta!',
+  ordem: 'Para concluir uma ordem: 1) Aceita, 2) Executa, 3) Tira mínimo 2 fotos, 4) Aguarda assinatura do cliente. O pagamento é creditado em 24h.',
+  disponibilidade: 'Podes gerir a tua disponibilidade em Menu → A tua disponibilidade. Define os dias e horários (manhã/tarde/dia todo) e bloqueia datas específicas.',
+  pagamento: 'Os pagamentos são processados via Swan.io SEPA CT, no dia a seguir ao serviço ser confirmado. Podes levantar em qualquer momento via Carteira.',
+}
+const SUGESTOES = ['Como funciona a minha carteira?','Qual é o meu nível?','Como concluir uma ordem?','Gerir disponibilidade']
+
+function AIChat() {
+  const [aberto, setAberto] = useState(false)
+  const [msgs, setMsgs] = useState([{ de:'ai', t: AI_RESPOSTAS.default }])
+  const [input, setInput] = useState('')
+  const [loading, setLoading] = useState(false)
+  // FAB constrangido ao container de 430px
+  const fabRight = 'max(14px, calc(50vw - 201px))'
+
+  const getResp = (txt) => {
+    const t = txt.toLowerCase()
+    if (t.includes('carteira')||t.includes('saldo')||t.includes('levant')) return AI_RESPOSTAS.carteira
+    if (t.includes('nível')||t.includes('nivel')||t.includes('gold')||t.includes('elite')) return AI_RESPOSTAS.nivel
+    if (t.includes('ordem')||t.includes('serviço')||t.includes('foto')||t.includes('assinar')) return AI_RESPOSTAS.ordem
+    if (t.includes('disponib')||t.includes('horário')||t.includes('bloqueio')) return AI_RESPOSTAS.disponibilidade
+    if (t.includes('pagam')||t.includes('sepa')||t.includes('swan')||t.includes('transferê')) return AI_RESPOSTAS.pagamento
+    return 'Obrigado pela tua pergunta! Para situações mais específicas, podes contactar a equipa via Chat de suporte. Posso ajudar com carteira, ordens, níveis ou disponibilidade.'
+  }
+
+  const enviar = (txt) => {
+    if (!txt.trim() || loading) return
+    setMsgs(m => [...m, { de:'user', t:txt }])
+    setInput('')
+    setLoading(true)
+    setTimeout(() => {
+      setMsgs(m => [...m, { de:'ai', t:getResp(txt) }])
+      setLoading(false)
+    }, 800)
+  }
+
+  if (!aberto) return (
+    <button
+      onClick={() => setAberto(true)}
+      style={{
+        position:'fixed', bottom:90, right:fabRight,
+        width:52, height:52, borderRadius:'50%', border:'none', cursor:'pointer',
+        background:`linear-gradient(135deg,${C.g},#065f46)`,
+        boxShadow:'0 4px 20px rgba(22,163,74,0.5)',
+        display:'flex', alignItems:'center', justifyContent:'center',
+        fontSize:22, zIndex:45,
+        animation:'pulse-ai 2s infinite',
+      }}
+      title='Assistente AI'>
+      ✨
+      <style>{`@keyframes pulse-ai{0%,100%{box-shadow:0 4px 20px rgba(22,163,74,0.5)}50%{box-shadow:0 4px 28px rgba(22,163,74,0.8)}}`}</style>
+    </button>
+  )
+
+  return (
+    <div style={{
+      position:'fixed', bottom:0, right:0, left:0,
+      zIndex:55, display:'flex', flexDirection:'column', alignItems:'flex-end',
+      maxWidth:430, margin:'0 auto',
+      left:'50%', transform:'translateX(-50%)',
+    }}>
+      {/* Painel de chat */}
+      <div style={{
+        width:'100%', height:480,
+        background:C.white, borderRadius:'20px 20px 0 0',
+        boxShadow:'0 -8px 40px rgba(0,0,0,0.2)',
+        display:'flex', flexDirection:'column', overflow:'hidden',
+      }}>
+        {/* Header do chat */}
+        <div style={{ background:`linear-gradient(135deg,${C.navy},${C.gd})`, padding:'14px 16px', display:'flex', justifyContent:'space-between', alignItems:'center', flexShrink:0 }}>
+          <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+            <div style={{ width:36, height:36, borderRadius:'50%', background:'rgba(255,255,255,0.15)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:18 }}>✨</div>
+            <div>
+              <div style={{ color:'#fff', fontSize:13, fontWeight:700 }}>Assistente ServiçoPRO</div>
+              <div style={{ color:'#86efac', fontSize:10 }}>● Online · Resposta imediata</div>
+            </div>
+          </div>
+          <button onClick={() => setAberto(false)} style={{ background:'rgba(255,255,255,0.1)', border:'none', borderRadius:8, width:30, height:30, cursor:'pointer', color:'#fff', fontSize:16 }}>×</button>
+        </div>
+
+        {/* Mensagens */}
+        <div style={{ flex:1, overflowY:'auto', padding:'14px 14px 8px', display:'flex', flexDirection:'column', gap:8 }}>
+          {msgs.map((m, i) => (
+            <div key={i} style={{ display:'flex', justifyContent: m.de==='user'?'flex-end':'flex-start' }}>
+              {m.de==='ai' && <div style={{ width:26, height:26, borderRadius:'50%', background:`linear-gradient(135deg,${C.g},#065f46)`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:12, marginRight:7, flexShrink:0, alignSelf:'flex-end' }}>✨</div>}
+              <div style={{
+                maxWidth:'76%', padding:'9px 12px', borderRadius: m.de==='user'?'16px 4px 16px 16px':'4px 16px 16px 16px',
+                background: m.de==='user' ? C.navy : '#f1f5f9',
+                color: m.de==='user' ? '#fff' : C.navy,
+                fontSize:13, lineHeight:1.5,
+              }}>{m.t}</div>
+            </div>
+          ))}
+          {loading && (
+            <div style={{ display:'flex', alignItems:'center', gap:7 }}>
+              <div style={{ width:26, height:26, borderRadius:'50%', background:`linear-gradient(135deg,${C.g},#065f46)`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:12 }}>✨</div>
+              <div style={{ background:'#f1f5f9', padding:'10px 14px', borderRadius:'4px 16px 16px 16px', display:'flex', gap:4 }}>
+                {[0,1,2].map(i=><div key={i} style={{ width:6, height:6, borderRadius:'50%', background:C.slate, animation:`dot${i} 1s ${i*0.2}s infinite` }}/>)}
+                <style>{`@keyframes dot0,@keyframes dot1,@keyframes dot2{0%,100%{opacity:0.3}50%{opacity:1}}`}</style>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Sugestões */}
+        {msgs.length <= 2 && (
+          <div style={{ padding:'0 12px 8px', display:'flex', gap:6, overflowX:'auto', flexShrink:0 }}>
+            {SUGESTOES.map(s => (
+              <button key={s} onClick={() => enviar(s)} style={{ flexShrink:0, padding:'6px 12px', border:`1px solid ${C.g}`, borderRadius:16, background:C.gl, color:C.gd, fontSize:11, fontWeight:600, cursor:'pointer', whiteSpace:'nowrap' }}>{s}</button>
+            ))}
+          </div>
+        )}
+
+        {/* Input */}
+        <div style={{ padding:'8px 12px 16px', borderTop:`1px solid ${C.border}`, display:'flex', gap:8, flexShrink:0 }}>
+          <input
+            value={input} onChange={e=>setInput(e.target.value)}
+            onKeyDown={e=>e.key==='Enter'&&enviar(input)}
+            placeholder='Escreve a tua pergunta...'
+            style={{ flex:1, border:`1.5px solid ${C.border}`, borderRadius:22, padding:'10px 14px', fontSize:13, outline:'none', color:C.navy, background:'#f8fafc' }}
+          />
+          <button onClick={() => enviar(input)} disabled={!input.trim()||loading} style={{ width:40, height:40, borderRadius:'50%', border:'none', background: input.trim()&&!loading ? C.g : C.border, cursor: input.trim()&&!loading ?'pointer':'default', color:'#fff', fontSize:16, flexShrink:0 }}>➤</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* ══════════════════════════════════
+   ROOT
+══════════════════════════════════ */
+export default function App() {
+  // ── Auth ──────────────────────────────────
+  const [authUser,  setAuthUser]  = useState(null) // {user, token, role, nome, perfil}
+  const [role,      setRole]      = useState('prestador')
+
+  const [tab,    setTab]    = useState('inicio')
+  const [ecra,   setEcra]   = useState('home')
+  const [ordens, setOrdens] = useState(ORDENS_INIT)
+  const [sel,    setSel]    = useState(null)
+  const [svcNova,setSvcNova]= useState(null)
+
+  // ── Estado Admin ──────────────────────────
+  const [adminAuth,     setAdminAuth]    = useState(false)
+  const [adminSvcs,     setAdminSvcs]    = useState([...SVCS])
+  const [adminPrest,    setAdminPrest]   = useState([...TECNICOS])
+  const [adminNiveis,   setAdminNiveis]  = useState({...NIVEIS})
+  const [adminClientes, setAdminClientes]= useState([...CLIENTES_INIT])
+  // ── Disponibilidade partilhada (reflecte no calendário) ──
+  const [bloqueados, setBloqueados] = useState([])
+  const [diasDisponib, setDiasDisponib] = useState({0:'todo',1:'todo',2:'todo',3:'todo',4:'manha'})
+
+  const upd = o => setOrdens(p => p.map(x => x.id===o.id ? o : x))
+  const add = async d => {
+    const MN=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
+    const DN=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb']
+    const dataStr = d.data
+      ? `${DN[d.data.getDay()]} ${d.data.getDate()} ${MN[d.data.getMonth()]}`
+      : 'Em breve'
+    const svc = SVCS.find(s=>s.id===d.sid)
+    const n = {
+      id:       `ot${Date.now()}`,
+      sid:      d.sid,
+      cli:      authUser?.nome || 'Cliente',
+      cliId:    authUser?.user?.id || null,
+      morada:   d.morada,
+      data:     dataStr,
+      hora:     d.hora || '09:00',
+      tid:      d.tid || null,
+      st:       'pendente',
+      fotos:    [],
+      ass:      false,
+      aval:     null,
+      notas:    d.notas || '',
+      val:      svc?.p || 0,
+      taxa:     18,
+      dt_pedido: new Date().toLocaleString('pt-PT', {day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}),
+      pago:     true,
+    }
+    // Guarda localmente primeiro (UI imediata)
+    setOrdens(p => [n, ...p])
+    setEcra('home')
+    setTab('pedidos')
+    // Guarda no Supabase em background
+    if (SB_KEY) {
+      await sbSave('ordens', {
+        servico_id:    d.sid,
+        cliente_id:    authUser?.user?.id || null,
+        prestador_id:  d.tid || null,
+        estado:        'pendente',
+        morada:        d.morada,
+        hora_agendada: d.hora || '09:00',
+        data_agendada: d.data ? d.data.toISOString().split('T')[0] : null,
+        valor_cobrado: svc?.p || 0,
+        taxa_pct:      18,
+        valor_plataforma: ((svc?.p||0) * 0.18).toFixed(2),
+        valor_prestador:  ((svc?.p||0) * 0.82).toFixed(2),
+        notas:         d.notas || '',
+      }, authUser?.token)
+      .then(r => r && console.log('[Supabase] Ordem guardada:', r[0]?.id))
+      .catch(e => console.warn('[Supabase] Erro ao guardar ordem:', e))
+    }
+  }
+  const mudar = r => {
+    if (r==='admin') { setRole('admin'); return }
+    setRole(r); setTab('inicio'); setEcra('home'); setSel(null)
+  }
+
+  // Callback de auth — pode vir do AuthScreen ou do botão admin
+  const onAuth = (auth) => {
+    setAuthUser(auth)
+    if (auth.role === 'admin') { setRole('admin'); setAdminAuth(true) }
+    else setRole(auth.role)
+  }
+
+  const onLogout = async () => {
+    if (authUser?.token) await sbSignOut(authUser.token)
+    setAuthUser(null); setRole('prestador'); setAdminAuth(false)
+  }
+
+  // ── Mostrar AuthScreen se não autenticado ──
+  if (!authUser) return <AuthScreen onAuth={onAuth}/>
+
+  const hideRole = ecra==='carteira' || role==='admin'
+  const cliOver  = ['nova','ordem','chat_c','chat_ordem_c'].includes(ecra)
+
+  return (
+    <>
+      <style>{`
+        body { background: #0f172a; margin: 0; }
+        @media (max-width: 430px) { body { background: #f8fafc; } }
+        * { box-sizing: border-box; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes blink { 50% { opacity: 0; } }
+        @keyframes popIn { from { transform: scale(0.5); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+      `}</style>
+
+      {/* ── ADMIN DESKTOP (full-width, fora do container de 430px) ── */}
+      {role==='admin' && (
+        adminAuth
+          ? <AdminDash
+              svcs={adminSvcs}           setSvcs={setAdminSvcs}
+              prestadores={adminPrest}   setPrestadores={setAdminPrest}
+              niveis={adminNiveis}       setNiveis={setAdminNiveis}
+              clientes={adminClientes}   setClientes={setAdminClientes}
+              ordens={ordens}            setOrdens={setOrdens}
+              onLogout={onLogout}
+            />
+          : <AdminLogin onLogin={() => setAdminAuth(true)}/>
+      )}
+
+      {/* ── APP MOBILE (container 430px) ── */}
+      {role!=='admin' && <div style={{ maxWidth:430, margin:'0 auto', minHeight:'100vh', background:'#f8fafc', position:'relative', boxShadow:'0 0 80px rgba(0,0,0,0.5)' }}>
+
+        {/* RoleBar — mostra utilizador + botão sair */}
+        {!hideRole && (
+          <div style={{ background:'#0f172a', padding:'7px 12px', display:'flex', gap:6, position:'sticky', top:0, zIndex:60, alignItems:'center' }}>
+            {/* Avatar + nome */}
+            <div style={{ display:'flex', alignItems:'center', gap:7, flex:1, minWidth:0 }}>
+              <div style={{ width:26,height:26,borderRadius:'50%',background:'linear-gradient(135deg,#16a34a,#22c55e)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:10,color:'#fff',fontWeight:800,flexShrink:0 }}>
+                {(authUser?.nome||'U')[0].toUpperCase()}
+              </div>
+              <span style={{ fontSize:11, color:'#94a3b8', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', maxWidth:120 }}>{authUser?.nome||'Utilizador'}</span>
+              <span style={{ fontSize:9, color:'#475569', background:'rgba(255,255,255,0.07)', padding:'2px 7px', borderRadius:8, fontWeight:700, flexShrink:0 }}>{role==='cliente'?'👤':'👷'} {role}</span>
+            </div>
+            {/* Sair */}
+            <button onClick={onLogout} title="Terminar sessão" style={{ flexShrink:0, padding:'6px 10px', borderRadius:8, border:'none', cursor:'pointer', background:'rgba(255,255,255,0.04)', color:'#64748b', fontSize:11, fontWeight:600 }}>Sair</button>
+            <button onClick={() => mudar('admin')} title="Admin" style={{ flexShrink:0, padding:'6px 9px', borderRadius:8, border:'none', cursor:'pointer', background:'rgba(255,255,255,0.04)', color:'#334155', fontSize:13 }}
+              onMouseEnter={e=>e.currentTarget.style.color='#f59e0b'}
+              onMouseLeave={e=>e.currentTarget.style.color='#334155'}>⚙️</button>
+          </div>
+        )}
+
+        {/* ── CLIENTE ── */}
+        {role==='cliente' && <>
+          {ecra==='nova'        && <CNovaOrdem svcI={svcNova} onBack={()=>setEcra('home')} onOk={add}/>}
+          {ecra==='ordem'       && sel && <COrdem o={sel} onBack={()=>setEcra('home')} onChat={()=>setEcra('chat_ordem_c')}/>}
+          {ecra==='chat_c'      && <Chat titulo='Suporte' msgs={CHAT_C} lado='cliente' onBack={()=>setEcra('home')}/>}
+          {ecra==='chat_ordem_c'&& sel && <OrderChat ordem={sel} role='cliente' prest={TECNICOS.find(t=>t.id===sel.tid)} onBack={()=>setEcra('ordem')} onUpdate={o=>{upd(o);setSel(o)}}/>}
+          {!cliOver && <>
+            {tab==='inicio'   && <CHome    ordens={ordens} onSvc={s=>{setSvcNova(s);setEcra('nova')}} onOrdem={o=>{setSel(o);setEcra('ordem')}} authUser={authUser}/>}
+            {tab==='explorar' && <CExplorar onSvc={s=>{setSvcNova(s);setEcra('nova')}}/>}
+            {tab==='pedidos'  && <CPedidos  ordens={ordens} onOrdem={o=>{setSel(o);setEcra('ordem')}} authUser={authUser}/>}
+            {tab==='perfil'   && <CPerfil/>}
+            <BNav tab={tab} set={t=>{setTab(t);setEcra('home')}}/>
+          </>}
+        </>}
+
+        {/* ── PRESTADOR ── */}
+        {role==='prestador' && <>
+          {ecra==='home'           && <PDashV2 ordens={ordens} onOrdem={o=>{setSel(o);setEcra('exec')}} onCarteira={()=>setEcra('carteira')} onChat={()=>setEcra('chat_p')}
+            onNavMenu={id=>{
+              const map={'meus_servicos':'meus_servicos','carteira':'carteira','pagamentos':'carteira','mensagens':'chat_p','disponibilidade':'disponibilidade','tarefas':'tarefas','estatisticas':'estatisticas','rating':'nivel_p','servicos_ativos':'servicos_ativos','perfil':'perfil_p','ajuda':'home'}
+              setEcra(map[id]||'home')
+            }}/>}
+          {ecra==='exec'           && sel && <PExec o={sel} onBack={()=>setEcra('home')} onUpdate={o=>{upd(o);setSel(o)}} onChat={()=>setEcra('chat_ordem_p')}/>}
+          {ecra==='chat_ordem_p'   && sel && <OrderChat ordem={sel} role='prestador' prest={TECNICOS[0]} onBack={()=>setEcra('exec')} onUpdate={o=>{upd(o);setSel(o)}}/>}
+          {ecra==='carteira'       && <PCarteira onBack={()=>setEcra('home')} ordens={ordens} onOrdem={o=>{setSel(o);setEcra('exec')}}/>}
+          {ecra==='meus_servicos'  && <MeusServicos servicos={SERVICOS_CAL} bloqueados={bloqueados} onBack={()=>setEcra('home')}/>}
+          {ecra==='disponibilidade'&& <PDisponibilidade bloqueados={bloqueados} setBloqueados={setBloqueados} onBack={()=>setEcra('home')}/>}
+          {ecra==='tarefas'        && <PTarefas onBack={()=>setEcra('home')}/>}
+          {ecra==='estatisticas'   && <PEstatisticas onBack={()=>setEcra('home')}/>}
+          {ecra==='servicos_ativos'&& <PServicosAtivos onBack={()=>setEcra('home')}/>}
+          {ecra==='perfil_p'       && <PPrestadorPerfil onBack={()=>setEcra('home')}/>}
+          {ecra==='nivel_p'        && <PNivel onBack={()=>setEcra('home')}/>}
+          {ecra==='chat_p'         && <Chat titulo='Plataforma' msgs={CHAT_P} lado='prestador' onBack={()=>setEcra('home')}/>}
+          <AIChat/>
+        </>}
+
+        {/* ── GESTOR ── */}
+        {role==='gestor' && <>
+          {ecra==='home'    && <GDash    ordens={ordens} onOrdem={o=>{setSel(o);setEcra('ordem_g')}} onRede={()=>setEcra('rede')} onPag={()=>setEcra('pag')}/>}
+          {ecra==='ordem_g' && sel && <GOrdem o={sel} onBack={()=>setEcra('home')} onUpdate={o=>upd(o)}/>}
+          {ecra==='rede'    && <GRede    onBack={()=>setEcra('home')}/>}
+          {ecra==='pag'     && <GPag     onBack={()=>setEcra('home')}/>}
+        </>}
+      </div>}{/* fim do container mobile */}
+    </>
   )
 }
