@@ -1150,6 +1150,8 @@ const SVCS = [
    checklist:['Diagnóstico do circuito afectado','Intervenção realizada com segurança','Teste de funcionamento','Verificação do quadro eléctrico','Confirmação de conformidade','Limpeza da área de trabalho']},
   {id:'s8',cat:'pintura',    n:'Pintura de Divisão',     p:90, u:'fixo',    d:'4–6h',      r:4.7,rv:160,badge:null,      ic:'🎨',
    checklist:['Preparação e protecção de superfícies e pavimentos','Lixagem e primário aplicados','1.ª demão de tinta aplicada e seca','2.ª demão de tinta aplicada e seca','Retirada de protecções e limpeza final','Verificação visual com o cliente']},
+  {id:'s9',cat:'manutencao', n:'Serviço por Horas',       p:25, u:'/hora',  d:'Flexível',  r:4.8,rv:95, badge:'Novo',     ic:'⏱️',tipo:'hora',
+   checklist:['Trabalho realizado conforme solicitado','Horas registadas com o cliente','Área de trabalho limpa','Material extra documentado','Verificação final com o cliente']},
 ]
 const SVC_DETALHES = {
   s1:{desc:'Plano completo de manutenção preventiva anual. Técnico fixo dedicado, visitas regulares e prioridade em urgências.',inclui:['12 visitas anuais incluídas','Técnico fixo atribuído','Relatório mensal de estado','Prioridade no agendamento','Assistência urgente incluída']},
@@ -1160,6 +1162,7 @@ const SVC_DETALHES = {
   s6:{desc:'Intervenção urgente em canalizações: fugas, entupimentos e avarias. Resposta em menos de 2 horas.',inclui:['Deslocação prioritária','Diagnóstico e localização de fuga','Reparação de avaria','Teste de pressão após intervenção','Garantia de 30 dias na reparação']},
   s7:{desc:'Instalação e reparação de circuitos elétricos, tomadas, iluminação e quadros elétricos por técnico certificado.',inclui:['Diagnóstico elétrico completo','Instalação/substituição de tomadas','Montagem de iluminação','Certificado de conformidade','Material incluído até €50']},
   s8:{desc:'Pintura profissional de divisões interiores com preparação de superfícies e material premium incluído.',inclui:['Preparação e lixagem de paredes','Primário e massa corrida','2 demãos de tinta premium','Protecção de pavimentos e móveis','Limpeza final incluída']},
+  s9:{desc:'Serviço flexível à hora para manutenção, reparações e montagens diversas. Paga exactamente pelo tempo trabalhado, com cronómetro partilhado.',inclui:['Preço por hora real trabalhada','Cronómetro partilhado com o cliente','Relatório de horas assinado','Material extra a orçar separadamente','Mínimo 1 hora cobrada']},
 }
 const TECNICOS = [
   {id:'p1',n:'António Ferreira',ini:'AF',
@@ -1202,7 +1205,11 @@ const ORDENS_INIT = [
   {id:'ot6',sid:'s7',cli:'Sr. Martins',  cliId:'cl5',morada:'Ed. Atlântico, Caldas',       km:2.9, data:'24 Abr', hora:'14:00',tid:'p2',st:'proposta_hora',      fotos:[],               ass:false,aval:null,notas:'Quadro antigo',  pago:true,  val:80,  taxa:20,hora_proposta:'16:00',dt_pedido:'21 Abr 08:00'},
   {id:'ot7',sid:'s1',cli:'Sr. Ferreira', cliId:'cl1',morada:'Rua das Flores, 23, Caldas',  km:2.1, data:'25 Abr', hora:'10:00',tid:'p1',st:'aguarda_validacao',  fotos:['📷','📷','📷'],ass:false,aval:null,notas:'',              pago:true,  val:49,  taxa:18,dt_pedido:'19 Abr 09:00'},
   {id:'ot8',sid:'s5',cli:'Cond. Sol',    cliId:'cl4',morada:'Rua do Sol, 5, Caldas',       km:3.8, data:'18 Abr', hora:'11:00',tid:'p4',st:'concluida',          fotos:['🏊','📷'],     ass:true, aval:4,   notas:'',              pago:true,  val:55,  taxa:20,dt_pedido:'16 Abr 10:00'},
-  {id:'ot9',sid:'s8',cli:'Sra. Alves',   cliId:'cl3',morada:'Quinta Rosas, Óbidos',        km:12.4,data:'10 Abr', hora:'09:00',tid:'p4',st:'faturada',           fotos:['🎨','📷','📷'],ass:true, aval:5,   notas:'Sala + quarto',  pago:true,  val:90,  taxa:20,dt_pedido:'8 Abr 15:00'},
+  {id:'ot9', sid:'s8',cli:'Sra. Alves',   cliId:'cl3',morada:'Quinta Rosas, Óbidos',        km:12.4,data:'10 Abr', hora:'09:00',tid:'p4',st:'faturada',           fotos:['🎨','📷','📷'],ass:true, aval:5,   notas:'Sala + quarto',  pago:true,  val:90,  taxa:20,dt_pedido:'8 Abr 15:00'},
+  // Task 8 — ordem com avaliação baixa para p1 (despoleta aviso de rating)
+  {id:'ot10',sid:'s2',cli:'Sr. Costa',    cliId:'cl7',morada:'Rua Nova, 12, Caldas',         km:3.1, data:'16 Abr', hora:'10:00',tid:'p1',st:'concluida',          fotos:['📷','📷'],     ass:true, aval:2,   notas:'',              pago:true,  val:75,  taxa:18,dt_pedido:'14 Abr 09:00'},
+  // Task 7 — ordem de rectificação de ot10
+  {id:'ot11',sid:'s2',cli:'Sr. Costa',    cliId:'cl7',morada:'Rua Nova, 12, Caldas',         km:3.1, data:'23 Abr', hora:'09:00',tid:'p1',st:'pendente',tipo:'rectificacao',ordem_original_id:'ot10',prazo_rectificacao:'25 Abr',fotos:[],ass:false,aval:null,notas:'Janelas não foram limpas — precisam de refazer.',pago:false,val:0,taxa:18,dt_pedido:'20 Abr 16:00'},
 ]
 const MOVS = [
   {id:'m1',tipo:'credito', v:57.00, d:'Limpeza Mensal — Rua das Flores', dt:'Hoje 14:32',  st:'disponivel',oid:'ot1'},
@@ -1844,11 +1851,17 @@ function haversine(lat1, lng1, lat2, lng2) {
   return R * 2 * Math.asin(Math.sqrt(a))
 }
 
-function COrdem({ o, onBack, onChat }) {
+function COrdem({ o, onBack, onChat, onUpdate, onRectificacao }) {
   const [aval, setAval] = useState(o.aval)
   const [cancelModal, setCancelModal] = useState(false)
   const [cancelado, setCancelado] = useState(false)
   const [gpsDemo, setGpsDemo] = useState(null)
+  const [propostaEstado, setPropostaEstado] = useState(o.proposta_estado)
+  // Task 7: Rectificação
+  const [showRect,      setShowRect]      = useState(false)
+  const [rectDesc,      setRectDesc]      = useState('')
+  const [rectPrazo,     setRectPrazo]     = useState('')
+  const [rectSolicitado,setRectSolicitado]= useState(false)
   const s = svcById(o.sid); const t = tecById(o.tid)
 
   // Demo: simula prestador a caminho após 4s quando em_curso ou agendado
@@ -1932,11 +1945,60 @@ function COrdem({ o, onBack, onChat }) {
           {o.ass && <div style={{ fontSize:11, color:C.g, fontWeight:600, background:C.gl, padding:'6px 10px', borderRadius:7 }}>✅ Assinado digitalmente</div>}
         </Card>}
 
+        {/* Task 6: Proposta de materiais extra pendente */}
+        {o.proposta_materiais?.length > 0 && propostaEstado === 'pendente' && (
+          <Card style={{ padding:15, marginBottom:10, border:'1.5px solid #f59e0b', background:'#fffbeb' }}>
+            <div style={{ fontSize:11, fontWeight:700, color:'#92400e', textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:10 }}>🧰 Materiais extra — aguarda aprovação</div>
+            {o.proposta_materiais.map((m, i) => (
+              <div key={i} style={{ display:'flex', justifyContent:'space-between', padding:'5px 0', borderBottom:'1px solid #fef3c7' }}>
+                <span style={{ fontSize:12, color:C.navy }}>{m.desc} × {m.qty}</span>
+                <span style={{ fontSize:12, fontWeight:700, color:C.navy }}>€{(Number(m.preco) * m.qty).toFixed(2)}</span>
+              </div>
+            ))}
+            <div style={{ display:'flex', justifyContent:'space-between', marginTop:8, paddingTop:8, borderTop:'1.5px solid #f59e0b' }}>
+              <span style={{ fontSize:13, fontWeight:700, color:'#92400e' }}>Total</span>
+              <span style={{ fontSize:14, fontWeight:800, color:'#92400e' }}>€{(o.valor_materiais||0).toFixed(2)}</span>
+            </div>
+            <div style={{ display:'flex', gap:8, marginTop:12 }}>
+              <button onClick={async () => {
+                if (sb) await sbSave('ordens', { id: o.id, proposta_estado: 'recusado' })
+                setPropostaEstado('recusado')
+                onUpdate && onUpdate({...o, proposta_estado:'recusado'})
+              }} style={{ flex:1, padding:'10px', border:'1.5px solid #ef4444', borderRadius:10, background:'#fff', color:'#ef4444', fontSize:12, fontWeight:700, cursor:'pointer' }}>✕ Recusar</button>
+              <button onClick={async () => {
+                if (sb) await sbSave('ordens', { id: o.id, proposta_estado: 'aprovado', materiais_aprovados: true })
+                setPropostaEstado('aprovado')
+                onUpdate && onUpdate({...o, proposta_estado:'aprovado', materiais_aprovados:true})
+              }} style={{ flex:2, padding:'10px', border:'none', borderRadius:10, background:'#f59e0b', color:'#fff', fontSize:13, fontWeight:800, cursor:'pointer' }}>✓ Aprovar · €{(o.valor_materiais||0).toFixed(2)}</button>
+            </div>
+          </Card>
+        )}
+        {o.proposta_materiais?.length > 0 && propostaEstado === 'aprovado' && (
+          <div style={{ background:'#f0fdf4', border:'1px solid #16a34a', borderRadius:12, padding:'10px 14px', marginBottom:10 }}>
+            <span style={{ fontSize:12, fontWeight:700, color:C.gd }}>✅ Materiais aprovados · €{(o.valor_materiais||0).toFixed(2)} adicionados ao total</span>
+          </div>
+        )}
+
         {o.st==='concluida' && <Card style={{ padding:15, marginBottom:10 }}>
           <div style={{ fontSize:10, fontWeight:700, color:C.slate, textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:9 }}>A sua avaliação</div>
           <div style={{ display:'flex', gap:5, justifyContent:'center' }}>{[1,2,3,4,5].map(i => <button key={i} onClick={() => setAval(i)} style={{ fontSize:26, background:'none', border:'none', cursor:'pointer', filter: i<=(aval||0) ? 'none' : 'grayscale(1)' }}>⭐</button>)}</div>
           {aval && <p style={{ textAlign:'center', fontSize:11, color:C.g, marginTop:6, fontWeight:600 }}>Obrigado pela avaliação!</p>}
         </Card>}
+
+        {/* Task 7: Botão de rectificação (só aparece após avaliação ≤ 3) */}
+        {o.st==='concluida' && aval && aval <= 3 && (
+          rectSolicitado
+            ? <div style={{ background:'#fef3c7', border:'1px solid #f59e0b', borderRadius:12, padding:'12px 14px', marginBottom:10, display:'flex', alignItems:'center', gap:10 }}>
+                <span style={{ fontSize:20 }}>🔄</span>
+                <div>
+                  <div style={{ fontSize:12, fontWeight:700, color:'#92400e' }}>Rectificação solicitada</div>
+                  <div style={{ fontSize:11, color:C.slate }}>O prestador irá contactar em breve para reagendar.</div>
+                </div>
+              </div>
+            : <button onClick={()=>setShowRect(true)} style={{ width:'100%', marginBottom:10, padding:'13px', border:'1.5px solid #f59e0b', borderRadius:12, background:'#fffbeb', color:'#92400e', fontSize:13, fontWeight:700, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:8 }}>
+                🔄 Solicitar rectificação do serviço
+              </button>
+        )}
 
         {cancelado && <div style={{ background:'#fef2f2', border:'1px solid #ef4444', borderRadius:12, padding:14, textAlign:'center', marginBottom:10 }}>
           <div style={{ fontSize:26, marginBottom:6 }}>❌</div>
@@ -1950,6 +2012,54 @@ function COrdem({ o, onBack, onChat }) {
           </button>
         )}
       </div>
+
+      {/* Task 7: Bottom sheet — Solicitar rectificação */}
+      {showRect && <>
+        <div onClick={()=>setShowRect(false)} style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', zIndex:50 }}/>
+        <div style={{ position:'fixed', bottom:0, left:'50%', transform:'translateX(-50%)', width:'100%', maxWidth:430, background:C.white, borderRadius:'22px 22px 0 0', zIndex:51, padding:'22px 20px 36px' }}>
+          <div style={{ width:36, height:4, borderRadius:2, background:'#e2e8f0', margin:'0 auto 18px' }}/>
+          <div style={{ textAlign:'center', marginBottom:18 }}>
+            <div style={{ fontSize:32, marginBottom:8 }}>🔄</div>
+            <h3 style={{ fontSize:16, fontWeight:800, color:C.navy, marginBottom:4 }}>Solicitar rectificação</h3>
+            <p style={{ fontSize:12, color:C.slate, lineHeight:1.5 }}>Descreva o que não ficou bem. O prestador irá corrigir sem custo adicional.</p>
+          </div>
+
+          <div style={{ marginBottom:14 }}>
+            <label style={{ fontSize:11, fontWeight:700, color:C.slate, display:'block', marginBottom:6, textTransform:'uppercase', letterSpacing:'0.04em' }}>O que precisa de rectificação? <span style={{ color:'#ef4444' }}>*</span></label>
+            <textarea value={rectDesc} onChange={e=>setRectDesc(e.target.value)}
+              placeholder='Ex: As janelas da sala não foram limpas. O pó debaixo do sofá não foi aspirado...'
+              style={{ width:'100%', border:`1.5px solid ${rectDesc?C.g:C.border}`, borderRadius:10, padding:'10px 12px', fontSize:13, outline:'none', resize:'vertical', minHeight:90, fontFamily:'inherit', boxSizing:'border-box', color:C.navy }}/>
+          </div>
+
+          <div style={{ marginBottom:20 }}>
+            <label style={{ fontSize:11, fontWeight:700, color:C.slate, display:'block', marginBottom:6, textTransform:'uppercase', letterSpacing:'0.04em' }}>Prazo pretendido</label>
+            <input type='date' value={rectPrazo} min={new Date().toISOString().split('T')[0]}
+              onChange={e=>setRectPrazo(e.target.value)}
+              style={{ width:'100%', border:`1.5px solid ${rectPrazo?C.g:C.border}`, borderRadius:10, padding:'10px 12px', fontSize:13, outline:'none', color:C.navy, background:rectPrazo?'#f0fdf4':'#f8fafc', boxSizing:'border-box', cursor:'pointer' }}/>
+          </div>
+
+          <div style={{ display:'flex', gap:9 }}>
+            <button onClick={()=>setShowRect(false)} style={{ flex:1, padding:'13px', border:`1.5px solid ${C.border}`, borderRadius:12, background:C.white, color:C.navy, fontSize:13, fontWeight:600, cursor:'pointer' }}>Cancelar</button>
+            <button disabled={!rectDesc.trim()} onClick={()=>{
+              onRectificacao && onRectificacao({
+                sid: o.sid,
+                tipo: 'rectificacao',
+                ordem_original_id: o.id,
+                prazo_rectificacao: rectPrazo || null,
+                morada: o.morada,
+                tid: o.tid,
+                notas: rectDesc,
+                data: null,
+                hora: '09:00',
+              })
+              setRectSolicitado(true)
+              setShowRect(false)
+            }} style={{ flex:2, padding:'13px', border:'none', borderRadius:12, background:rectDesc.trim()?'#f59e0b':'#cbd5e1', color:'#fff', fontSize:13, fontWeight:800, cursor:rectDesc.trim()?'pointer':'default' }}>
+              ✓ Enviar pedido de rectificação
+            </button>
+          </div>
+        </div>
+      </>}
 
       {/* Modal de cancelamento */}
       {cancelModal && <>
@@ -2093,8 +2203,21 @@ function PExec({ o, onBack, onUpdate, onChat }) {
   const [ckObs,         setCkObs]         = useState('')
   const [ckSaving,      setCkSaving]      = useState(false)
 
+  // Task 5: Cronómetro para serviço por hora
+  const [timerActivo, setTimerActivo] = useState(false)
+  const [timerInicio, setTimerInicio] = useState(null)
+  const [timerSecs,   setTimerSecs]   = useState(0)
+  const timerRef = useRef(null)
+
+  // Task 6: Proposta de materiais extra
+  const [showMat,    setShowMat]    = useState(false)
+  const [matItems,   setMatItems]   = useState([{desc:'',qty:1,preco:''}])
+  const [matEnviada, setMatEnviada] = useState(!!o.proposta_materiais)
+  const [matSaving,  setMatSaving]  = useState(false)
+
   useEffect(() => () => {
     if (gpsWatchRef.current) navigator.geolocation.clearWatch(gpsWatchRef.current)
+    if (timerRef.current) clearInterval(timerRef.current)
   }, [])
 
   const iniciarViagem = () => {
@@ -2118,13 +2241,33 @@ function PExec({ o, onBack, onUpdate, onChat }) {
     onUpdate && onUpdate({...o, prestador_online:false})
   }
 
+  const iniciarTimer = () => {
+    const t0 = Date.now() - timerSecs * 1000
+    setTimerInicio(t0)
+    setTimerActivo(true)
+    timerRef.current = setInterval(() => setTimerSecs(Math.floor((Date.now() - t0) / 1000)), 1000)
+  }
+
+  const pararTimer = () => {
+    if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null }
+    setTimerActivo(false)
+  }
+
+  const formatTimer = s => {
+    const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), ss = s % 60
+    return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(ss).padStart(2,'0')}`
+  }
+
   const submeterChecklist = () => {
     setCkSaving(true)
+    pararTimer()
+    const horas_reais = timerInicio ? parseFloat(((Date.now() - timerInicio) / 3600000).toFixed(2)) : null
+    const valorFinal = (s?.tipo === 'hora' && horas_reais) ? parseFloat((horas_reais * (s.p || 25)).toFixed(2)) : (s?.p || 0)
     setTimeout(() => {
       setFotos(ckFotos.length ? ckFotos : ['📷'])
       pararGps()
       setFase('aguarda_val')
-      onUpdate && onUpdate({...o, st:'aguarda_validacao', checklist_completo:true, fotos:ckFotos.length ? ckFotos : ['📷']})
+      onUpdate && onUpdate({...o, st:'aguarda_validacao', checklist_completo:true, fotos:ckFotos.length ? ckFotos : ['📷'], horas_reais, val:valorFinal})
       setShowChecklist(false)
       setCkSaving(false)
     }, 700)
@@ -2179,6 +2322,23 @@ function PExec({ o, onBack, onUpdate, onChat }) {
       </div>
 
       <div style={{ padding:'14px 16px 110px' }}>
+
+        {/* Task 7: Badge de rectificação */}
+        {o.tipo === 'rectificacao' && (
+          <div style={{ background:'#fef3c7', border:'1.5px solid #f59e0b', borderRadius:12, padding:'12px 16px', marginBottom:12, display:'flex', alignItems:'center', gap:10 }}>
+            <span style={{ fontSize:22, flexShrink:0 }}>🔄</span>
+            <div style={{ flex:1 }}>
+              <div style={{ fontSize:13, fontWeight:800, color:'#92400e' }}>RECTIFICAÇÃO</div>
+              <div style={{ fontSize:11, color:C.slate }}>
+                Ordem original: <strong>#{o.ordem_original_id}</strong>
+                {o.prazo_rectificacao && ` · Prazo: ${o.prazo_rectificacao}`}
+              </div>
+              {o.notas && <div style={{ fontSize:11, color:'#92400e', marginTop:4, fontStyle:'italic' }}>"{o.notas}"</div>}
+            </div>
+            <span style={{ background:'#f59e0b', color:'#fff', fontSize:10, fontWeight:800, padding:'3px 8px', borderRadius:6, flexShrink:0 }}>SEM CUSTO</span>
+          </div>
+        )}
+
         {/* Ficha da ordem */}
         <Card style={{ padding:14, marginBottom:12 }}>
           {[
@@ -2255,6 +2415,49 @@ function PExec({ o, onBack, onUpdate, onChat }) {
                 <button onClick={() => { pararGps(); setFase('fotos') }} style={{ width:'100%', padding:'10px', border:'none', borderRadius:10, background:'#1d4ed8', color:'#fff', fontSize:12, fontWeight:700, cursor:'pointer' }}>
                   ✅ Chegou à porta — Iniciar serviço
                 </button>
+              </div>
+          }
+
+          {/* Task 5: Cronómetro para serviço por hora */}
+          {s?.tipo === 'hora' && (
+            <div style={{ background:timerActivo?'#fff7ed':'#f8fafc', border:`1.5px solid ${timerActivo?'#f97316':'#e2e8f0'}`, borderRadius:12, padding:'14px 16px', marginBottom:12 }}>
+              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:8 }}>
+                <span style={{ fontSize:12, fontWeight:700, color:timerActivo?'#c2410c':C.slate }}>⏱️ Tempo de serviço</span>
+                {timerActivo && <span style={{ fontSize:9, fontWeight:800, color:'#f97316', textTransform:'uppercase', letterSpacing:'0.06em' }}>● A contar</span>}
+              </div>
+              <div style={{ fontSize:34, fontWeight:800, color:timerActivo?'#ea580c':C.navy, fontFamily:'monospace', textAlign:'center', letterSpacing:'0.06em', marginBottom:8 }}>
+                {formatTimer(timerSecs)}
+              </div>
+              <div style={{ fontSize:11, color:C.slate, textAlign:'center', marginBottom:10 }}>
+                {timerActivo
+                  ? `€${(timerSecs / 3600 * (s?.p || 25)).toFixed(2)} até agora · €${s?.p||25}/hora`
+                  : timerSecs > 0
+                    ? `Total: ${(timerSecs/3600).toFixed(2)}h · €${(timerSecs/3600*(s?.p||25)).toFixed(2)}`
+                    : `Prima Iniciar quando começar o trabalho · €${s?.p||25}/hora`}
+              </div>
+              <div style={{ display:'flex', gap:8 }}>
+                {!timerActivo
+                  ? <button onClick={iniciarTimer} style={{ flex:1, padding:'10px', border:'none', borderRadius:10, background:'#f97316', color:'#fff', fontSize:13, fontWeight:700, cursor:'pointer' }}>▶ Iniciar</button>
+                  : <button onClick={pararTimer} style={{ flex:1, padding:'10px', border:'none', borderRadius:10, background:'#ef4444', color:'#fff', fontSize:13, fontWeight:700, cursor:'pointer' }}>⏸ Pausar</button>
+                }
+                {timerSecs > 0 && !timerActivo && (
+                  <button onClick={()=>{setTimerSecs(0);setTimerInicio(null)}} style={{ padding:'10px 14px', border:`1.5px solid ${C.border}`, borderRadius:10, background:'#fff', color:C.slate, fontSize:12, cursor:'pointer' }}>Reset</button>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Task 6: Propor materiais extra */}
+          {!matEnviada
+            ? <button onClick={()=>setShowMat(true)} style={{ width:'100%', padding:'11px', border:`1.5px solid ${C.border}`, borderRadius:12, background:C.white, color:C.navy, fontSize:12, fontWeight:600, cursor:'pointer', marginBottom:8, display:'flex', alignItems:'center', justifyContent:'center', gap:6 }}>
+                🧰 Propor materiais extra
+              </button>
+            : <div style={{ background:'#fffbeb', border:'1px solid #f59e0b', borderRadius:12, padding:12, marginBottom:8, display:'flex', alignItems:'center', gap:10 }}>
+                <span style={{ fontSize:18 }}>⏳</span>
+                <div>
+                  <div style={{ fontSize:12, fontWeight:700, color:'#92400e' }}>Proposta de materiais enviada</div>
+                  <div style={{ fontSize:11, color:C.slate }}>€{(o.valor_materiais||0).toFixed(2)} — aguarda aprovação do cliente</div>
+                </div>
               </div>
           }
 
@@ -2413,6 +2616,63 @@ function PExec({ o, onBack, onUpdate, onChat }) {
             <button onClick={()=>setNovaHora(false)} style={{ flex:1, padding:'12px', border:`1.5px solid ${C.border}`, borderRadius:12, background:C.white, color:C.navy, fontSize:13, fontWeight:600, cursor:'pointer' }}>Cancelar</button>
             <button onClick={()=>{ setNovaHora(false); setPropEnviada(true) }} disabled={!horaProp} style={{ flex:2, padding:'12px', border:'none', borderRadius:12, background:horaProp?C.g:'#cbd5e1', color:'#fff', fontSize:13, fontWeight:800, cursor:horaProp?'pointer':'default' }}>
               📤 Enviar proposta ({horaProp||'—'})
+            </button>
+          </div>
+        </div>
+      </>}
+
+      {/* Bottom sheet — Task 6: Proposta de materiais */}
+      {showMat && <>
+        <div onClick={()=>setShowMat(false)} style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', zIndex:60 }}/>
+        <div style={{ position:'fixed', bottom:0, left:'50%', transform:'translateX(-50%)', width:'100%', maxWidth:430, background:C.white, borderRadius:'22px 22px 0 0', zIndex:61, padding:'20px 20px 32px', maxHeight:'88vh', overflowY:'auto' }}>
+          <div style={{ width:36, height:4, borderRadius:2, background:'#e2e8f0', margin:'0 auto 16px' }}/>
+          <h3 style={{ fontSize:16, fontWeight:800, color:C.navy, marginBottom:4 }}>🧰 Propor materiais extra</h3>
+          <p style={{ fontSize:12, color:C.slate, marginBottom:16, lineHeight:1.5 }}>Adicione os materiais necessários. O cliente irá receber a proposta para aprovação antes do pagamento.</p>
+
+          {matItems.map((item, i) => (
+            <div key={i} style={{ display:'grid', gridTemplateColumns:'1fr 48px 68px auto', gap:6, marginBottom:8, alignItems:'center' }}>
+              <input value={item.desc} onChange={e=>setMatItems(p=>p.map((x,j)=>j===i?{...x,desc:e.target.value}:x))}
+                placeholder='Descrição' style={{ border:`1.5px solid ${C.border}`, borderRadius:8, padding:'8px 10px', fontSize:12, outline:'none', color:C.navy }}/>
+              <input type='number' value={item.qty} min={1} onChange={e=>setMatItems(p=>p.map((x,j)=>j===i?{...x,qty:Math.max(1,Number(e.target.value))}:x))}
+                style={{ border:`1.5px solid ${C.border}`, borderRadius:8, padding:'8px 4px', fontSize:12, outline:'none', textAlign:'center', color:C.navy }}/>
+              <input type='number' value={item.preco} onChange={e=>setMatItems(p=>p.map((x,j)=>j===i?{...x,preco:e.target.value}:x))}
+                placeholder='€' style={{ border:`1.5px solid ${C.border}`, borderRadius:8, padding:'8px 6px', fontSize:12, outline:'none', textAlign:'right', color:C.navy }}/>
+              {matItems.length > 1
+                ? <button onClick={()=>setMatItems(p=>p.filter((_,j)=>j!==i))} style={{ width:28, height:28, border:'none', borderRadius:'50%', background:'#fee2e2', color:'#ef4444', cursor:'pointer', fontSize:16, display:'flex', alignItems:'center', justifyContent:'center' }}>×</button>
+                : <div style={{ width:28 }}/>
+              }
+            </div>
+          ))}
+
+          <button onClick={()=>setMatItems(p=>[...p,{desc:'',qty:1,preco:''}])} style={{ width:'100%', padding:'9px', border:`1.5px dashed ${C.g}`, borderRadius:10, background:'transparent', color:C.g, fontSize:12, fontWeight:600, cursor:'pointer', marginBottom:16 }}>
+            + Adicionar item
+          </button>
+
+          {(() => {
+            const items = matItems.filter(m => m.desc.trim() && m.preco)
+            const total = items.reduce((s, m) => s + Number(m.preco) * m.qty, 0)
+            return total > 0 ? (
+              <div style={{ background:C.gl, borderRadius:10, padding:'10px 14px', marginBottom:16, display:'flex', justifyContent:'space-between' }}>
+                <span style={{ fontSize:13, color:C.gd }}>Total proposto</span>
+                <span style={{ fontSize:14, fontWeight:800, color:C.gd }}>€{total.toFixed(2)}</span>
+              </div>
+            ) : null
+          })()}
+
+          <div style={{ display:'flex', gap:9 }}>
+            <button onClick={()=>setShowMat(false)} style={{ flex:1, padding:'13px', border:`1.5px solid ${C.border}`, borderRadius:12, background:C.white, color:C.navy, fontSize:13, fontWeight:600, cursor:'pointer' }}>Cancelar</button>
+            <button disabled={matSaving || !matItems.some(m => m.desc.trim() && m.preco)} onClick={async () => {
+              const items = matItems.filter(m => m.desc.trim() && m.preco)
+              if (!items.length) return
+              setMatSaving(true)
+              const total = parseFloat(items.reduce((s, m) => s + Number(m.preco) * m.qty, 0).toFixed(2))
+              if (sb) await sbSave('ordens', { id: o.id, proposta_materiais: items, proposta_estado: 'pendente', valor_materiais: total })
+              onUpdate && onUpdate({...o, proposta_materiais: items, proposta_estado: 'pendente', valor_materiais: total})
+              setMatEnviada(true)
+              setShowMat(false)
+              setMatSaving(false)
+            }} style={{ flex:2, padding:'13px', border:'none', borderRadius:12, background:matItems.some(m=>m.desc.trim()&&m.preco)?C.g:'#cbd5e1', color:'#fff', fontSize:13, fontWeight:800, cursor:matItems.some(m=>m.desc.trim()&&m.preco)?'pointer':'default' }}>
+              {matSaving ? 'A enviar…' : '📤 Enviar proposta ao cliente'}
             </button>
           </div>
         </div>
@@ -2708,12 +2968,25 @@ const TAREFAS_DATA = {
 const DIAS_SEMANA_FULL = ['Segunda','Terça','Quarta','Quinta','Sexta','Sábado','Domingo']
 const DIAS_INI = ['S','T','Q','Q','S','S','D']
 
-function PDisponibilidade({ onBack, bloqueados=[], setBloqueados=()=>{} }) {
+function PDisponibilidade({ onBack, bloqueados=[], setBloqueados=()=>{}, prestadorId=null }) {
   const [diasSel, setDiasSel]   = useState([0,1,2,3,4])
   const [horarios, setHorarios] = useState({0:'todo',1:'todo',2:'todo',3:'todo',4:'manha'})
   const [sheet, setSheet]       = useState(null)
   const [modalEvento, setModalEvento] = useState(false)
   const [saved, setSaved]       = useState(false)
+  const [saving, setSaving]     = useState(false)
+
+  useEffect(() => {
+    if (!sb || !prestadorId) return
+    sb.from('prestadores').select('disponibilidade').eq('id', prestadorId).maybeSingle()
+      .then(({ data }) => {
+        if (!data?.disponibilidade) return
+        const d = data.disponibilidade
+        if (d.dias) setDiasSel(d.dias)
+        if (d.horarios) setHorarios(d.horarios)
+        if (d.bloqueados) setBloqueados(d.bloqueados)
+      })
+  }, [prestadorId])
   // Form de novo evento
   const hoje = new Date().toISOString().split('T')[0]
   const [evTipo, setEvTipo]     = useState('ferias')
@@ -2829,9 +3102,16 @@ function PDisponibilidade({ onBack, bloqueados=[], setBloqueados=()=>{} }) {
 
       {/* CTA */}
       <div style={{ position:'fixed', bottom:0, left:'50%', transform:'translateX(-50%)', width:'100%', maxWidth:430, padding:'12px 16px 20px', background:C.white, borderTop:`1px solid ${C.border}`, zIndex:30 }}>
-        {saved && <div style={{ textAlign:'center', color:C.g, fontSize:12, fontWeight:600, marginBottom:8 }}>✅ Disponibilidade actualizada!</div>}
-        <button onClick={()=>setSaved(true)} style={{ width:'100%', background:C.g, color:'#fff', border:'none', borderRadius:14, padding:'15px', fontSize:14, fontWeight:800, cursor:'pointer', letterSpacing:'0.03em', boxShadow:'0 4px 14px rgba(22,163,74,0.35)' }}>
-          ATUALIZAR DISPONIBILIDADE
+        {saved && <div style={{ textAlign:'center', color:C.g, fontSize:12, fontWeight:600, marginBottom:8 }}>✅ Disponibilidade guardada no Supabase!</div>}
+        <button onClick={async () => {
+          setSaving(true)
+          if (sb && prestadorId) {
+            await sb.from('prestadores').update({ disponibilidade: { dias: diasSel, horarios, bloqueados } }).eq('id', prestadorId)
+          }
+          setSaved(true)
+          setSaving(false)
+        }} style={{ width:'100%', background:saving?C.slate:C.g, color:'#fff', border:'none', borderRadius:14, padding:'15px', fontSize:14, fontWeight:800, cursor:saving?'default':'pointer', letterSpacing:'0.03em', boxShadow:'0 4px 14px rgba(22,163,74,0.35)' }}>
+          {saving ? 'A guardar…' : 'ATUALIZAR DISPONIBILIDADE'}
         </button>
       </div>
 
@@ -3480,6 +3760,13 @@ function PDashV2({ ordens, onOrdem, onCarteira, onChat, onNavMenu }) {
   const pc      = prox ? NIVEIS[prox] : null
   const faltam  = pc ? Math.max(0, pc.min - eu.jobs) : 0
 
+  // Task 8: Rating mínimo com aviso automático
+  const avaliacoes  = minhas.filter(o => o.aval && o.st === 'concluida').map(o => o.aval)
+  const ratingLive  = avaliacoes.length ? parseFloat((avaliacoes.reduce((s,v)=>s+v,0)/avaliacoes.length).toFixed(1)) : eu.r
+  const mrMin       = NIVEIS[eu.nivel]?.mr || 0
+  const ratingCritico = ratingLive < 3.5
+  const ratingAviso   = mrMin > 0 && ratingLive < mrMin
+
   // Lista de ordens conforme KPI activo — calculada FORA do JSX para evitar IIFE
   const ordensFiltradas = filtroKpi==='aceites'   ? abertas
     : filtroKpi==='propostas'  ? pendentes
@@ -3551,6 +3838,24 @@ function PDashV2({ ordens, onOrdem, onCarteira, onChat, onNavMenu }) {
           <span style={{ fontSize:9, color:'#86efac', fontWeight:700, background:'rgba(34,197,94,0.15)', padding:'4px 9px', borderRadius:9 }}>{nc.ic} {nc.l} · {nc.taxa}%</span>
         </div>
 
+        {/* Task 8: Aviso de rating abaixo do mínimo */}
+        {(ratingCritico || ratingAviso) && (
+          <div style={{ background: ratingCritico?'#fef2f2':'#fffbeb', border:`1.5px solid ${ratingCritico?'#ef4444':'#f59e0b'}`, borderRadius:12, padding:'12px 14px', marginBottom:12, display:'flex', alignItems:'center', gap:10 }}>
+            <span style={{ fontSize:22, flexShrink:0 }}>{ratingCritico?'⛔':'⚠️'}</span>
+            <div style={{ flex:1 }}>
+              <div style={{ fontSize:12, fontWeight:800, color:ratingCritico?'#b91c1c':'#92400e' }}>
+                {ratingCritico ? 'Avaliação crítica — conta em risco de suspensão' : `Avaliação abaixo do mínimo ${NIVEIS[eu.nivel].l}`}
+              </div>
+              <div style={{ fontSize:11, color:C.slate, marginTop:2 }}>
+                Média actual: <strong>{ratingLive}★</strong>
+                {ratingAviso && !ratingCritico && ` · Mínimo exigido: ${mrMin}★`}
+                {ratingCritico ? ' · Abaixo de 3.5 — requer atenção imediata' : ''}
+              </div>
+            </div>
+            <button onClick={()=>onNavMenu?.('nivel_p')} style={{ flexShrink:0, padding:'6px 10px', border:`1.5px solid ${ratingCritico?'#ef4444':'#f59e0b'}`, borderRadius:8, background:'transparent', color:ratingCritico?'#b91c1c':'#92400e', fontSize:11, fontWeight:700, cursor:'pointer' }}>Ver nível</button>
+          </div>
+        )}
+
         {/* KPIs clicáveis */}
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:8, marginBottom:14 }}>
           {[
@@ -3580,13 +3885,17 @@ function PDashV2({ ordens, onOrdem, onCarteira, onChat, onNavMenu }) {
                 <div style={{ display:'flex', gap:10, alignItems:'center' }}>
                   <span style={{ fontSize:20 }}>{sv?.ic||'🔧'}</span>
                   <div style={{ flex:1 }}>
-                    <div style={{ display:'flex', justifyContent:'space-between' }}>
-                      <span style={{ fontSize:13, fontWeight:700, color:C.navy }}>{sv?.n}</span>
+                    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                      <div style={{ display:'flex', alignItems:'center', gap:5 }}>
+                        <span style={{ fontSize:13, fontWeight:700, color:C.navy }}>{sv?.n}</span>
+                        {ord.tipo==='rectificacao' && <span style={{ fontSize:9, fontWeight:800, background:'#fef3c7', color:'#92400e', padding:'1px 5px', borderRadius:4 }}>🔄 REC</span>}
+                      </div>
                       <EstBadge st={ord.st}/>
                     </div>
                     <div style={{ fontSize:11, color:C.slate, marginTop:2 }}>📍 {ord.morada}</div>
                     <div style={{ display:'flex', gap:8, marginTop:3, alignItems:'center' }}>
                       <span style={{ fontSize:11, color:C.g, fontWeight:600 }}>🕐 {ord.data}{ord.hora?' '+ord.hora:''}</span>
+                      {ord.tipo==='rectificacao' && ord.prazo_rectificacao && <span style={{ fontSize:10, background:'#fef3c7', color:'#92400e', padding:'1px 6px', borderRadius:8, fontWeight:700 }}>prazo {ord.prazo_rectificacao}</span>}
                       {ord.km && <span style={{ fontSize:10, background:C.gl, color:C.gd, padding:'1px 6px', borderRadius:8, fontWeight:700 }}>📏 {ord.km} km</span>}
                     </div>
                   </div>
@@ -4926,6 +5235,9 @@ export default function App() {
       hora:     d.hora || '09:00',
       tid:      d.tid || null,
       st:       'pendente',
+      tipo:     d.tipo || 'fixo',
+      ordem_original_id: d.ordem_original_id || null,
+      prazo_rectificacao: d.prazo_rectificacao || null,
       fotos:    [],
       ass:      false,
       aval:     null,
@@ -4933,7 +5245,7 @@ export default function App() {
       val:      svc?.p || 0,
       taxa:     18,
       dt_pedido: new Date().toLocaleString('pt-PT', {day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}),
-      pago:     true,
+      pago:     d.tipo === 'rectificacao' ? false : true,
     }
     // Guarda localmente primeiro (UI imediata)
     setOrdens(p => [n, ...p])
@@ -4946,6 +5258,9 @@ export default function App() {
         cliente_id:    authUser?.user?.id || null,
         prestador_id:  d.tid || null,
         estado:        'pendente',
+        tipo:          d.tipo || 'fixo',
+        ordem_original_id: d.ordem_original_id || null,
+        prazo_rectificacao: d.prazo_rectificacao || null,
         morada:        d.morada,
         hora_agendada: d.hora || '09:00',
         data_agendada: d.data ? d.data.toISOString().split('T')[0] : null,
@@ -5032,7 +5347,7 @@ export default function App() {
         {/* ── CLIENTE ── */}
         {role==='cliente' && <>
           {ecra==='nova'        && <CNovaOrdem svcI={svcNova} onBack={()=>setEcra('home')} onOk={add}/>}
-          {ecra==='ordem'       && sel && <COrdem o={sel} onBack={()=>setEcra('home')} onChat={()=>setEcra('chat_ordem_c')}/>}
+          {ecra==='ordem'       && sel && <COrdem o={sel} onBack={()=>setEcra('home')} onChat={()=>setEcra('chat_ordem_c')} onUpdate={o=>{upd(o);setSel(o)}} onRectificacao={d=>{add(d);setEcra('pedidos')}}/>}
           {ecra==='chat_c'      && <Chat titulo='Suporte' msgs={CHAT_C} lado='cliente' onBack={()=>setEcra('home')}/>}
           {ecra==='chat_ordem_c'&& sel && <OrderChat ordem={sel} role='cliente' prest={TECNICOS.find(t=>t.id===sel.tid)} onBack={()=>setEcra('ordem')} onUpdate={o=>{upd(o);setSel(o)}}/>}
           {!cliOver && <>
@@ -5055,7 +5370,7 @@ export default function App() {
           {ecra==='chat_ordem_p'   && sel && <OrderChat ordem={sel} role='prestador' prest={TECNICOS[0]} onBack={()=>setEcra('exec')} onUpdate={o=>{upd(o);setSel(o)}}/>}
           {ecra==='carteira'       && <PCarteira onBack={()=>setEcra('home')} ordens={ordens} onOrdem={o=>{setSel(o);setEcra('exec')}}/>}
           {ecra==='meus_servicos'  && <MeusServicos servicos={SERVICOS_CAL} bloqueados={bloqueados} onBack={()=>setEcra('home')}/>}
-          {ecra==='disponibilidade'&& <PDisponibilidade bloqueados={bloqueados} setBloqueados={setBloqueados} onBack={()=>setEcra('home')}/>}
+          {ecra==='disponibilidade'&& <PDisponibilidade bloqueados={bloqueados} setBloqueados={setBloqueados} prestadorId={authUser?.user?.id||'p1'} onBack={()=>setEcra('home')}/>}
           {ecra==='tarefas'        && <PTarefas onBack={()=>setEcra('home')}/>}
           {ecra==='estatisticas'   && <PEstatisticas onBack={()=>setEcra('home')}/>}
           {ecra==='servicos_ativos'&& <PServicosAtivos onBack={()=>setEcra('home')}/>}
