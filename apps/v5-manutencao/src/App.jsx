@@ -4262,13 +4262,15 @@ function AdminPrestadores({prest,setPrest,niveis}){
               <AFRow label='Telefone' half>{ainp(convForm.tel,v=>setConvForm(f=>({...f,tel:v})),'tel','914 000 000')}</AFRow>
               <AFRow label='Nível inicial'>{asel(convForm.nivel,v=>setConvForm(f=>({...f,nivel:v})),Object.entries(niveis).map(([k,n])=>[k,`${n.ic} ${n.l} · ${n.taxa}%`]))}</AFRow>
             </div>
-            {(!convForm.n.trim()||!convForm.email.trim())&&<p style={{fontSize:11,color:A.red,margin:'4px 0 0'}}>Nome e email são obrigatórios.</p>}
-            <div style={{display:'flex',gap:8,marginTop:18,justifyContent:'flex-end'}}><ASecBtn ch='Cancelar' onClick={()=>setConvModal(false)}/><APrimBtn ch={convSaving?'A criar…':'Criar convite'} onClick={handleConvidar} disabled={convSaving||!convForm.n.trim()||!convForm.email.trim()}/></div>
+            <div style={{display:'flex',gap:8,marginTop:18,justifyContent:'flex-end'}}>
+              <ASecBtn ch='Cancelar' onClick={()=>setConvModal(false)}/>
+              <APrimBtn ch={convSaving?'A criar…':'Criar convite'} onClick={handleConvidar} disabled={convSaving||!convForm.n.trim()||!convForm.email.trim()}/>
+            </div>
           </form>
           :<div>
-            <div style={{display:'flex',alignItems:'center',gap:10,background:A.accentL,border:`1px solid rgba(22,163,74,0.25)`,borderRadius:11,padding:'12px 16px',marginBottom:16}}>
+            <div style={{display:'flex',alignItems:'center',gap:10,background:'#f0fdf4',border:'1px solid rgba(22,163,74,0.25)',borderRadius:11,padding:'12px 16px',marginBottom:16}}>
               <span style={{fontSize:22}}>✓</span>
-              <div><div style={{fontWeight:700,fontSize:13,color:A.accentD}}>Convite criado para {convResult.n}</div><div style={{fontSize:11,color:A.accent,marginTop:2}}>Partilha o link abaixo com o prestador</div></div>
+              <div><div style={{fontWeight:700,fontSize:13,color:'#15803d'}}>Convite criado para {convResult.n}</div><div style={{fontSize:11,color:'#16a34a',marginTop:2}}>Partilha o link abaixo com o prestador</div></div>
             </div>
             <div style={{display:'flex',alignItems:'center',gap:8,background:A.bg,border:`1px solid ${A.border}`,borderRadius:9,padding:'10px 14px',marginBottom:14}}>
               <span style={{flex:1,fontSize:11,color:A.slate,fontFamily:'monospace',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{convLink}</span>
