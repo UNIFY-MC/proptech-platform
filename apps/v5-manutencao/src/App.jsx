@@ -1178,6 +1178,16 @@ const SVCS = [
   {id:'s7',cat:'eletrica',   n:'Instalação Elétrica',    p:80, u:'fixo',    d:'2–4h',      r:4.8,rv:210,badge:null,      ic:'⚡'},
   {id:'s8',cat:'pintura',    n:'Pintura de Divisão',     p:90, u:'fixo',    d:'4–6h',      r:4.7,rv:160,badge:null,      ic:'🎨'},
 ]
+const SVC_DETALHES = {
+  s1:{desc:'Plano completo de manutenção preventiva anual. Técnico fixo dedicado, visitas regulares e prioridade em urgências.',inclui:['12 visitas anuais incluídas','Técnico fixo atribuído','Relatório mensal de estado','Prioridade no agendamento','Assistência urgente incluída']},
+  s2:{desc:'Limpeza regular do teu espaço com técnico de confiança. Agendamento flexível e material de limpeza incluído.',inclui:['Limpeza de todas as divisões','Aspiração e lavagem de pavimentos','Casa de banho e cozinha','Material de limpeza incluído']},
+  s3:{desc:'Limpeza especializada após obras, remoção de poeiras finas, restos de materiais e preparação do espaço para habitação.',inclui:['Remoção de pó de obra','Limpeza de janelas e vidros','Limpeza de pavimentos e rodapés','Casas de banho e cozinha','Remoção de resíduos incluída']},
+  s4:{desc:'Manutenção regular de jardim: corte de relva, poda, adubação e tratamento de plantas.',inclui:['Corte e aparamento de relva','Poda de arbustos e sebes','Adubação sazonal','Limpeza de folhas e resíduos','Tratamento fitossanitário básico']},
+  s5:{desc:'Manutenção completa de piscina: limpeza, análise de água e ajuste de químicos para água cristalina.',inclui:['Aspiração do fundo e paredes','Análise e ajuste de pH e cloro','Limpeza de skimmers e filtros','Remoção de algas','Relatório de qualidade da água']},
+  s6:{desc:'Intervenção urgente em canalizações: fugas, entupimentos e avarias. Resposta em menos de 2 horas.',inclui:['Deslocação prioritária','Diagnóstico e localização de fuga','Reparação de avaria','Teste de pressão após intervenção','Garantia de 30 dias na reparação']},
+  s7:{desc:'Instalação e reparação de circuitos elétricos, tomadas, iluminação e quadros elétricos por técnico certificado.',inclui:['Diagnóstico elétrico completo','Instalação/substituição de tomadas','Montagem de iluminação','Certificado de conformidade','Material incluído até €50']},
+  s8:{desc:'Pintura profissional de divisões interiores com preparação de superfícies e material premium incluído.',inclui:['Preparação e lixagem de paredes','Primário e massa corrida','2 demãos de tinta premium','Protecção de pavimentos e móveis','Limpeza final incluída']},
+}
 const TECNICOS = [
   {id:'p1',n:'António Ferreira',ini:'AF',
    morada:'Rua das Flores, 23',cp:'2500-123',cidade:'Caldas da Rainha',
@@ -1720,6 +1730,7 @@ function CNovaOrdem({ svcI, onBack, onOk }) {
   const [hora,setHora] = useState(null)
   const [morada,setMorada] = useState('')
   const [notas,setNotas]   = useState('')
+  const [detailSvc,setDetailSvc] = useState(null)
   const s    = svcById(sid)
   const tecs = s ? TECNICOS.filter(t=>t.cats.includes(s.cat)) : []
   const hoje = new Date()
@@ -1743,11 +1754,56 @@ function CNovaOrdem({ svcI, onBack, onOk }) {
           <Card key={sv.id} style={{ padding:13, marginBottom:7, border: sid===sv.id ? `2px solid ${C.g}` : undefined }} onClick={() => setSid(sv.id)}>
             <div style={{ display:'flex', gap:10, alignItems:'center' }}>
               <span style={{ fontSize:22 }}>{sv.ic}</span>
-              <div style={{ flex:1 }}><div style={{ fontSize:13, fontWeight:700, color:C.navy }}>{sv.n}</div><div style={{ fontSize:11, color:C.slate }}>€{sv.p} {sv.u}</div></div>
+              <div style={{ flex:1 }}>
+                <div style={{ display:'flex', alignItems:'center', gap:5 }}>
+                  <span style={{ fontSize:13, fontWeight:700, color:C.navy }}>{sv.n}</span>
+                  {sv.badge && <span style={{ fontSize:8, fontWeight:800, background:sv.badge==='Urgente'?'#fee2e2':sv.badge==='Destaque'?'#fef9c3':'#dcfce7', color:sv.badge==='Urgente'?'#dc2626':sv.badge==='Destaque'?'#854d0e':'#15803d', padding:'1px 5px', borderRadius:4 }}>{sv.badge}</span>}
+                </div>
+                <div style={{ fontSize:11, color:C.slate }}>€{sv.p} {sv.u} · {sv.d}</div>
+              </div>
+              <button onClick={e=>{e.stopPropagation();setDetailSvc(sv)}} style={{ background:'#f1f5f9', border:'none', borderRadius:'50%', width:26, height:26, fontSize:12, cursor:'pointer', color:'#64748b', flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center' }}>ℹ</button>
               {sid===sv.id && <span style={{ color:C.g, fontSize:17 }}>✓</span>}
             </div>
           </Card>
         ))}
+        {/* Bottom sheet — detalhes do serviço */}
+        {detailSvc && <>
+          <div onClick={()=>setDetailSvc(null)} style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.4)', zIndex:50 }}/>
+          <div style={{ position:'fixed', left:0, right:0, bottom:0, zIndex:51, background:'#fff', borderRadius:'20px 20px 0 0', padding:'20px 20px 36px', maxHeight:'80vh', overflowY:'auto', boxShadow:'0 -8px 40px rgba(0,0,0,0.18)' }}>
+            <div style={{ width:36, height:4, borderRadius:2, background:'#e2e8f0', margin:'0 auto 16px' }}/>
+            <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:14 }}>
+              <span style={{ fontSize:32 }}>{detailSvc.ic}</span>
+              <div>
+                <div style={{ fontSize:15, fontWeight:800, color:C.navy }}>{detailSvc.n}</div>
+                <div style={{ display:'flex', alignItems:'center', gap:6, marginTop:2 }}>
+                  <Stars v={detailSvc.r} s={11}/>
+                  <span style={{ fontSize:11, color:C.slate }}>{detailSvc.r} · {detailSvc.rv} avaliações</span>
+                </div>
+              </div>
+            </div>
+            <div style={{ display:'flex', gap:8, marginBottom:14 }}>
+              <div style={{ flex:1, background:'#f8fafc', borderRadius:10, padding:'10px 12px', textAlign:'center' }}>
+                <div style={{ fontSize:16, fontWeight:800, color:C.g }}>€{detailSvc.p}</div>
+                <div style={{ fontSize:10, color:C.slate }}>{detailSvc.u}</div>
+              </div>
+              <div style={{ flex:1, background:'#f8fafc', borderRadius:10, padding:'10px 12px', textAlign:'center' }}>
+                <div style={{ fontSize:16, fontWeight:800, color:C.navy }}>{detailSvc.d}</div>
+                <div style={{ fontSize:10, color:C.slate }}>duração</div>
+              </div>
+            </div>
+            <p style={{ fontSize:13, color:C.slate, lineHeight:1.6, margin:'0 0 14px' }}>{SVC_DETALHES[detailSvc.id]?.desc}</p>
+            <div style={{ fontSize:11, fontWeight:700, color:C.navy, textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:8 }}>O que está incluído</div>
+            {(SVC_DETALHES[detailSvc.id]?.inclui||[]).map((item,i) => (
+              <div key={i} style={{ display:'flex', alignItems:'center', gap:8, padding:'6px 0', borderBottom:'1px solid #f1f5f9' }}>
+                <span style={{ color:C.g, fontSize:13 }}>✓</span>
+                <span style={{ fontSize:13, color:C.navy }}>{item}</span>
+              </div>
+            ))}
+            <button onClick={()=>{setSid(detailSvc.id);setDetailSvc(null)}} style={{ width:'100%', marginTop:18, padding:'14px', background:C.g, color:'#fff', border:'none', borderRadius:13, fontSize:14, fontWeight:800, cursor:'pointer' }}>
+              {sid===detailSvc.id ? '✓ Seleccionado' : 'Selecionar este serviço'}
+            </button>
+          </div>
+        </>}
         {step===2 && <>
           <p style={{ fontSize:12, color:C.slate, margin:'0 0 12px', lineHeight:1.5 }}>Escolha o técnico. Todos verificados e com histórico na rede.</p>
           {tecs.map(t => (
