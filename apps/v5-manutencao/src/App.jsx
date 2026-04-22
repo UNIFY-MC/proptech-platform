@@ -1,7 +1,12 @@
-// src/App.jsx — v5-manutencao 2026.0420 2221
-// 100% auto-suficiente — zero imports externos. Só React.
+// src/App.jsx — v5-manutencao 2026.0422 (catálogo canalização + personalizado)
 
 import React, { useState, useMemo, useEffect, useRef } from 'react'
+import {
+  ArrowLeft, X, Check, Camera, Plus, MapPin, ChevronRight,
+  Shield, Lock, MessageSquare, FileImage, RefreshCw, Wrench,
+  Sparkles, Trash2, Tag, Receipt, Banknote, CreditCard, Info,
+  Calendar, MapPinned, PartyPopper, Search, Star, Leaf, Zap,
+} from 'lucide-react'
 
 /* ══ UI COMPONENTS (inline) ══ */
 function Av({ ini, size = 44, green = true }) {
@@ -1169,14 +1174,53 @@ const CATS = [
   {id:'obra',       l:'Pós-Obra',    ic:'🏗️', cor:'#78716c'},
 ]
 const SVCS = [
-  {id:'s1',cat:'limpeza',    n:'Plano Anual Preventivo', p:49, u:'/mês',    d:'Recorrente',r:4.9,rv:312,badge:'Destaque',ic:'🛡️'},
-  {id:'s2',cat:'limpeza',    n:'Limpeza Mensal',         p:75, u:'/visita', d:'3–5h',      r:4.8,rv:840,badge:null,      ic:'🧹'},
-  {id:'s3',cat:'limpeza',    n:'Limpeza Pós-Obra',       p:120,u:'fixo',    d:'4–8h',      r:4.9,rv:220,badge:'Popular', ic:'🏗️'},
-  {id:'s4',cat:'jardim',     n:'Manutenção de Jardim',   p:45, u:'/visita', d:'2–3h',      r:4.7,rv:190,badge:null,      ic:'🌿'},
-  {id:'s5',cat:'piscina',    n:'Manutenção de Piscina',  p:55, u:'/visita', d:'1–2h',      r:4.8,rv:140,badge:null,      ic:'🏊'},
-  {id:'s6',cat:'canalizacao',n:'Urgência Canalização',   p:65, u:'fixo',    d:'1–2h',      r:4.9,rv:390,badge:'Urgente', ic:'🚿'},
-  {id:'s7',cat:'eletrica',   n:'Instalação Elétrica',    p:80, u:'fixo',    d:'2–4h',      r:4.8,rv:210,badge:null,      ic:'⚡'},
-  {id:'s8',cat:'pintura',    n:'Pintura de Divisão',     p:90, u:'fixo',    d:'4–6h',      r:4.7,rv:160,badge:null,      ic:'🎨'},
+  // ── LIMPEZA ──────────────────────────────────────────
+  {id:'s1', cat:'limpeza',     n:'Plano Anual Preventivo',   p:499, u:'/ano',    d:'12 visitas/ano',  r:4.9,rv:312, badge:'Destaque', ic:'🛡️', margem:90, desc:'Visita mensal de limpeza geral. Prioridade na marcação.'},
+  {id:'s2', cat:'limpeza',     n:'Limpeza Regular (T2)',      p:75,  u:'/visita', d:'3–4h',            r:4.8,rv:840, badge:null,       ic:'🧹', margem:14, desc:'Limpeza completa de apartamento T2. Produtos incluídos.'},
+  {id:'s3', cat:'limpeza',     n:'Limpeza Profunda',         p:120, u:'/visita', d:'5–7h',            r:4.9,rv:220, badge:'Popular',  ic:'✨', margem:22, desc:'Limpeza a fundo, incluindo armários, electrodomésticos e janelas.'},
+  {id:'s4', cat:'limpeza',     n:'Limpeza Pós-Obra',         p:180, u:'fixo',    d:'6–10h',           r:4.9,rv:180, badge:null,       ic:'🏗️',margem:32, desc:'Remoção de resíduos de construção, poeiras e acabamentos.'},
+  {id:'s5', cat:'limpeza',     n:'Limpeza Pós-Evento',       p:100, u:'/visita', d:'3–5h',            r:4.7,rv:95,  badge:null,       ic:'🎉', margem:18, desc:'Limpeza após festas, eventos ou reuniões.'},
+  {id:'s6', cat:'limpeza',     n:'Limpeza de Janelas',       p:55,  u:'/visita', d:'1–2h',            r:4.6,rv:140, badge:null,       ic:'🪟', margem:10, desc:'Interior e exterior. Inclui molduras e parapeitos.'},
+  {id:'s7', cat:'limpeza',     n:'Condomínio Mensal',        p:150, u:'/mês',    d:'Recorrente',      r:4.8,rv:65,  badge:null,       ic:'🏢', margem:27, desc:'Limpeza de áreas comuns, escadas e elevadores.'},
+  {id:'s8', cat:'limpeza',     n:'Limpeza Tapetes/Estofos',  p:45,  u:'/unidade',d:'1–2h',            r:4.7,rv:80,  badge:null,       ic:'🛋️', margem:8,  desc:'Lavagem a fundo de tapetes, sofás e colchões.'},
+
+  // ── JARDIM ───────────────────────────────────────────
+  {id:'s10',cat:'jardim',      n:'Manutenção de Jardim',     p:100, u:'/visita', d:'2–4h',            r:4.7,rv:190, badge:null,       ic:'🌿', margem:18, desc:'Corte de relva, poda de arbustos e limpeza geral.'},
+  {id:'s11',cat:'jardim',      n:'Corte de Relva',           p:45,  u:'/visita', d:'1–2h',            r:4.6,rv:220, badge:null,       ic:'🌱', margem:8,  desc:'Corte, aparagem de bordas e recolha de aparas.'},
+  {id:'s12',cat:'jardim',      n:'Poda de Árvores',          p:80,  u:'/visita', d:'2–4h',            r:4.8,rv:110, badge:null,       ic:'🌳', margem:14, desc:'Poda formativa e de manutenção. Remoção de ramos.'},
+  {id:'s13',cat:'jardim',      n:'Limpeza de Terreno',       p:150, u:'fixo',    d:'4–8h',            r:4.7,rv:70,  badge:null,       ic:'🏕️', margem:27, desc:'Remoção de ervas daninhas, lixo e vegetação seca.'},
+  {id:'s14',cat:'jardim',      n:'Sistema de Rega',          p:180, u:'fixo',    d:'3–6h',            r:4.8,rv:45,  badge:null,       ic:'💧', margem:32, desc:'Instalação de rega automática por gotejamento.'},
+
+  // ── PISCINA ──────────────────────────────────────────
+  {id:'s20',cat:'piscina',     n:'Manutenção Mensal',        p:120, u:'/mês',    d:'Recorrente',      r:4.8,rv:140, badge:null,       ic:'🏊', margem:22, desc:'Limpeza, análise e tratamento de água. Visita semanal.'},
+  {id:'s21',cat:'piscina',     n:'Limpeza Pontual',          p:75,  u:'/visita', d:'1–3h',            r:4.7,rv:95,  badge:null,       ic:'🧽', margem:14, desc:'Aspiração, tratamento químico e limpeza de bordas.'},
+  {id:'s22',cat:'piscina',     n:'Abertura de Temporada',    p:150, u:'fixo',    d:'3–5h',            r:4.9,rv:80,  badge:'Sazonal',  ic:'☀️', margem:27, desc:'Limpeza completa, verificação de equipamentos e tratamento.'},
+  {id:'s23',cat:'piscina',     n:'Fecho de Temporada',       p:120, u:'fixo',    d:'2–4h',            r:4.8,rv:75,  badge:null,       ic:'🍂', margem:22, desc:'Tratamento de conservação, lona e revisão de filtros.'},
+
+  // ── CANALIZAÇÃO ──────────────────────────────────────
+  {id:'s30',cat:'canalizacao', n:'Urgência Canalização',     p:95,  u:'fixo',    d:'1–2h',            r:4.9,rv:390, badge:'Urgente',  ic:'🚨', margem:17, desc:'Intervenção rápida em fugas, desentupimentos urgentes.'},
+  {id:'s31',cat:'canalizacao', n:'Desentupimento Sanita',    p:80,  u:'fixo',    d:'30min–2h',        r:4.8,rv:210, badge:null,       ic:'🚿', margem:14, desc:'Desentupimento profissional com equipamento adequado.'},
+  {id:'s32',cat:'canalizacao', n:'Reparação de Torneira',    p:45,  u:'fixo',    d:'30min–1h',        r:4.7,rv:180, badge:null,       ic:'🔧', margem:8,  desc:'Substituição de torneiras, vedantes e cartucho.'},
+  {id:'s33',cat:'canalizacao', n:'Visita Técnica',           p:49,  u:'fixo',    d:'30min–1h',        r:4.6,rv:300, badge:null,       ic:'🔍', margem:9,  desc:'Diagnóstico e orçamento. Valor deduzido na reparação.'},
+  {id:'s34',cat:'canalizacao', n:'Deteção de Fuga',          p:95,  u:'fixo',    d:'1–3h',            r:4.8,rv:120, badge:null,       ic:'💧', margem:17, desc:'Deteção e reparação de fugas em tubagens.'},
+
+  // ── ELÉTRICA ─────────────────────────────────────────
+  {id:'s40',cat:'eletrica',    n:'Avaria Elétrica',          p:55,  u:'fixo',    d:'30min–2h',        r:4.8,rv:210, badge:null,       ic:'⚡', margem:10, desc:'Diagnóstico e reparação de avarias elétricas.'},
+  {id:'s41',cat:'eletrica',    n:'Instalação Tomadas/Focos', p:35,  u:'/unidade',d:'30min',           r:4.7,rv:190, badge:null,       ic:'🔌', margem:6,  desc:'Instalação ou substituição de tomadas, interruptores e focos.'},
+  {id:'s42',cat:'eletrica',    n:'Instalação Ar Condicionado',p:150,u:'fixo',    d:'2–4h',            r:4.8,rv:120, badge:null,       ic:'❄️', margem:27, desc:'Instalação completa de unidade split. Sem materiais.'},
+  {id:'s43',cat:'eletrica',    n:'Substituição Quadro',      p:280, u:'fixo',    d:'3–6h',            r:4.9,rv:60,  badge:null,       ic:'⚙️', margem:50, desc:'Substituição do quadro elétrico com disjuntores.'},
+  {id:'s44',cat:'eletrica',    n:'Urgência Elétrica',        p:88,  u:'fixo',    d:'1–2h',            r:4.9,rv:150, badge:'Urgente',  ic:'🚨', margem:16, desc:'Intervenção urgente em avarias e cortes de energia.'},
+
+  // ── PINTURA ──────────────────────────────────────────
+  {id:'s50',cat:'pintura',     n:'Pintura de Divisão',       p:220, u:'fixo',    d:'1–2 dias',        r:4.7,rv:160, badge:null,       ic:'🎨', margem:40, desc:'Pintura de paredes e teto de uma divisão. Inclui preparação.'},
+  {id:'s51',cat:'pintura',     n:'Pintura Apartamento T2',   p:900, u:'fixo',    d:'3–5 dias',        r:4.8,rv:80,  badge:'Popular',  ic:'🏠', margem:162,desc:'Pintura completa de apartamento T2. Inclui todos os materiais.'},
+  {id:'s52',cat:'pintura',     n:'Pintura de Fachada (m²)',  p:13,  u:'/m²',     d:'Variável',        r:4.7,rv:55,  badge:null,       ic:'🏗️',margem:2,  desc:'Preparação, primário e pintura exterior. Por metro quadrado.'},
+
+  // ── MANUTENÇÃO GERAL ─────────────────────────────────
+  {id:'s60',cat:'manutencao',  n:'Handyman (2h)',             p:80,  u:'fixo',    d:'2h',              r:4.7,rv:230, badge:null,       ic:'🔨', margem:14, desc:'Pequenas reparações: prateleiras, rodapés, colagem, selagem.'},
+  {id:'s61',cat:'manutencao',  n:'Montagem de Móveis',       p:50,  u:'/visita', d:'1–3h',            r:4.6,rv:310, badge:null,       ic:'🪑', margem:9,  desc:'Montagem de móveis IKEA e outras marcas.'},
+  {id:'s62',cat:'manutencao',  n:'Controlo de Pragas',       p:90,  u:'/visita', d:'1–2h',            r:4.8,rv:85,  badge:null,       ic:'🐜', margem:16, desc:'Tratamento contra formigas, baratas, ratos e outros.'},
+  {id:'s63',cat:'manutencao',  n:'Limpeza de Chaminé',       p:80,  u:'/visita', d:'1–2h',            r:4.7,rv:70,  badge:'Sazonal',  ic:'🔥', margem:14, desc:'Limpeza e inspeção de chaminé e lareira.'},
 ]
 const TECNICOS = [
   {id:'p1',n:'António Ferreira',ini:'AF',
@@ -1282,6 +1326,665 @@ const SERVICOS_CAL = [
   {id:'c7',data:'2026-04-20',hora:'09:00',nome:'Limpeza Pós-Obra',  estado:'concluido',  local:'Rua da Liberdade, 8, Caldas',km:0.9, cliente:'Sr. Martins',    valor:120, dur:'5h',   ic:'🏗️'},
 ]
 
+/* ════════════════════════════════════════════════════════════════════
+   ══ NOVO FLUXO CANALIZAÇÃO — Catálogo + Personalizado ══
+   Paleta CC (coexiste com C actual). Fontes Fraunces + Outfit.
+   ════════════════════════════════════════════════════════════════════ */
+const CC = {
+  forest:"#0B3D2E", forestDeep:"#072819", forestSoft:"#164E3A",
+  emerald:"#10B981", emeraldDark:"#059669", emeraldBright:"#22C55E",
+  emeraldSoft:"#D1FAE5", emeraldPale:"#ECFDF5",
+  cream:"#FAFAF6", paper:"#FFFFFF",
+  ink:"#0A1620", stone:"#6B7685", stoneLight:"#E5E7EB", line:"#ECE9E2",
+  amber:"#F59E0B", amberSoft:"#FEF3C7",
+  discount:"#DC2626", discountSoft:"#FEE2E2",
+}
+
+const TRAVEL_FEE=5.90, PROTECTION_FEE=0.98, PROTECTION_FEE_NOW=0,
+      IMEDIATO_FEE=6.90, HOJE_FEE=3.90,
+      PROMO_CODE="CHEGUEI50_", PROMO_SAVINGS=4.99
+
+const PERSONALIZADO = {
+  id:"personalizado", slug:"personalizado",
+  name:"Serviço personalizado",
+  tagline:"Algo fora do comum? Descreva o trabalho e enviamos o técnico certo.",
+  pricePerHour:44.91, pricePerHourOriginal:49.90,
+  icon:"✨", type:"hourly",
+}
+
+const SUBCATEGORIES = [
+  { id:"autoclismo", name:"Autoclismo e sanita", icon:"🚽", services:[
+    { id:"auto-repair",    name:"Reparação de autoclismo",    price:36.46,  priceOriginal:42.90,  popular:true },
+    { id:"auto-install",   name:"Instalação de autoclismo",   price:30.43,  priceOriginal:32.90 },
+    { id:"seat-repair",    name:"Reparar tampo de sanita",    price:27.65,  priceOriginal:29.90 },
+    { id:"seat-replace",   name:"Substituir tampo de sanita", price:29.25,  priceOriginal:32.50 },
+    { id:"toilet-replace", name:"Substituir sanita",          price:79.11,  priceOriginal:87.90 },
+    { id:"toilet-install", name:"Instalar sanita",            price:57.15,  priceOriginal:63.50 },
+    { id:"toilet-remove",  name:"Remover sanita",             price:57.15,  priceOriginal:63.50 },
+    { id:"toilet-unclog",  name:"Desentupir sanita",          price:105.75, priceOriginal:117.50 },
+  ]},
+  { id:"torneiras", name:"Torneiras", icon:"🚰", services:[
+    { id:"bath-tap-repair",  name:"Reparar torneira de casa de banho", price:35.55, priceOriginal:39.50 },
+    { id:"sink-tap-repair",  name:"Reparar torneira de lava-loiça",    price:35.55, priceOriginal:39.50 },
+    { id:"sink-tap-replace", name:"Substituir torneira de lavatório",  price:29.61, priceOriginal:32.90 },
+    { id:"kitchen-tap-eff",  name:"Substituir torneira de lava-loiça (Eficiência energética)",      price:39.15, priceOriginal:43.50, eco:true },
+    { id:"bath-tap-eff",     name:"Substituir torneira de casa de banho (Eficiência energética)",    price:35.55, priceOriginal:39.50, eco:true },
+    { id:"safety-tap",       name:"Substituir torneira de segurança",    price:18.40, priceOriginal:19.90 },
+    { id:"bath-tap-install", name:"Instalar torneira de banheira",       price:35.55, priceOriginal:39.50 },
+  ]},
+  { id:"fugas", name:"Fugas e diagnósticos", icon:"💧", services:[
+    { id:"leak-diagnosis", name:"Diagnóstico de fuga de água",            price:35.55,  priceOriginal:39.50 },
+    { id:"kitchen-leak",   name:"Fuga de água no lava-loiça",             price:42.21,  priceOriginal:46.90, popular:true },
+    { id:"sink-leak",      name:"Fuga de água no lavatório",              price:40.37,  priceOriginal:42.50 },
+    { id:"shower-leak",    name:"Reparar cabine de duche (Fuga de água)", price:207.18, priceOriginal:212.50 },
+  ]},
+  { id:"desentupimentos", name:"Desentupimentos", icon:"🌊", services:[
+    { id:"kitchen-unclog",  name:"Desentupir lava-loiça",    price:70.97, priceOriginal:83.50 },
+    { id:"bathroom-unclog", name:"Desentupir casa de banho", price:83.25, priceOriginal:92.50 },
+  ]},
+  { id:"lavatorio", name:"Lavatório", icon:"🪞", services:[
+    { id:"valve-replace",  name:"Substituir válvula de lavatório", price:33.15, priceOriginal:34.90 },
+    { id:"vanity-replace", name:"Substituir móvel de lavatório",   price:82.35, priceOriginal:91.50 },
+    { id:"vanity-install", name:"Instalar móvel de lavatório",     price:53.01, priceOriginal:58.90 },
+  ]},
+  { id:"duche", name:"Duche e banheira", icon:"🚿", services:[
+    { id:"shower-column",   name:"Substituir coluna de duche",                   price:43.11,   priceOriginal:47.90 },
+    { id:"shower-head-eff", name:"Substituir chuveiro (Eficiência energética)",  price:35.01,   priceOriginal:38.90, eco:true },
+    { id:"shower-cabin",    name:"Substituir cabine de duche",                   price:227.66,  priceOriginal:233.50 },
+    { id:"tub-to-shower",   name:"Substituir banheira por duche",                price:2084.50, priceOriginal:null },
+  ]},
+  { id:"manutencao_can", name:"Manutenção", icon:"🧱", services:[
+    { id:"grout-replace", name:"Substituir juntas de azulejos", price:35.64, priceOriginal:41.93 },
+  ]},
+]
+
+const TIMESLOTS = [
+  "07:00","07:30","08:00","08:30","09:00","09:30","10:00","10:30",
+  "11:00","11:30","12:00","12:30","13:00","13:30","14:00","14:30",
+  "15:00","15:30","16:00","16:30","17:00","17:30","18:00","18:30",
+  "19:00","19:30","20:00","20:30","21:00","21:30","22:00",
+]
+
+const BOOKING_BUFFER_MIN = 90
+
+function eur(n){ return `€${Number(n||0).toFixed(2).replace(".",",")}` }
+
+function fmtDate(d){
+  const M=["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"]
+  return `${d.getDate()} ${M[d.getMonth()]} ${d.getFullYear()}`
+}
+
+function getDays(){
+  const DN=["Domingo","Segunda","Terça","Quarta","Quinta","Sexta","Sábado"]
+  const today=new Date(), days=[]
+  for(let i=0;i<5;i++){
+    const d=new Date(today); d.setDate(today.getDate()+i)
+    const label = i===0 ? "Hoje" : i===1 ? "Amanhã" : DN[d.getDay()]
+    days.push({ id: i===0?"hoje":i===1?"amanha":`d${i}`, label, date:fmtDate(d),
+                extra: i===0?HOJE_FEE:0, dateObj:d })
+  }
+  return days
+}
+
+function isSlotBookable(dayId, time, now=new Date()){
+  if(dayId!=="hoje") return true
+  const [h,m]=time.split(":").map(Number)
+  const s=new Date(now); s.setHours(h,m,0,0)
+  return s >= new Date(now.getTime()+BOOKING_BUFFER_MIN*60000)
+}
+
+function hasAvailableSlotsToday(now=new Date()){
+  return TIMESLOTS.some(t => isSlotBookable("hoje", t, now))
+}
+
+/* ── Flag global para carregar fontes novas uma só vez ── */
+let __ccFontsLoaded = false
+function ensureCCFonts(){
+  if(__ccFontsLoaded || typeof document==='undefined') return
+  __ccFontsLoaded = true
+  const l = document.createElement('link')
+  l.rel = 'stylesheet'
+  l.href = 'https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Outfit:wght@300;400;500;600;700&display=swap'
+  document.head.appendChild(l)
+  const s = document.createElement('style')
+  s.innerHTML = `
+    .cc-root .serif{font-family:'Fraunces',Georgia,serif;font-optical-sizing:auto;letter-spacing:-0.01em}
+    .cc-root{font-family:'Outfit',-apple-system,BlinkMacSystemFont,sans-serif}
+    .cc-no-scrollbar::-webkit-scrollbar{display:none}
+    .cc-no-scrollbar{-ms-overflow-style:none;scrollbar-width:none}
+    @keyframes ccSlideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+    @keyframes ccFadeIn{from{opacity:0}to{opacity:1}}
+  `
+  document.head.appendChild(s)
+}
+
+/* ══ UI PRIMITIVES (novo fluxo) ══ */
+function CCShell({ children }){
+  useEffect(()=>{ ensureCCFonts() }, [])
+  return (
+    <div className="cc-root" style={{
+      maxWidth:440, margin:"0 auto", minHeight:"100vh", background:CC.cream,
+      color:CC.ink, display:"flex", flexDirection:"column", position:"relative",
+    }}>
+      {children}
+    </div>
+  )
+}
+
+function CCTopBar({ onBack, title, subtitle, onClose }){
+  return (
+    <div style={{
+      position:"sticky", top:0, background:CC.cream, zIndex:20,
+      padding:"14px 18px 12px", borderBottom:`1px solid ${CC.line}`,
+      display:"flex", alignItems:"center", gap:12,
+    }}>
+      {onBack && (
+        <button onClick={onBack} style={{
+          width:36, height:36, borderRadius:999, background:"transparent",
+          border:`1px solid ${CC.line}`, display:"grid", placeItems:"center",
+          cursor:"pointer", color:CC.ink,
+        }}><ArrowLeft size={18}/></button>
+      )}
+      <div style={{ flex:1, minWidth:0 }}>
+        <div className="serif" style={{ fontSize:17, fontWeight:600, letterSpacing:-0.2, textAlign:onClose?"center":"left" }}>{title}</div>
+        {subtitle && <div style={{ fontSize:12, color:CC.stone, marginTop:1 }}>{subtitle}</div>}
+      </div>
+      {onClose && (
+        <button onClick={onClose} style={{
+          width:36, height:36, borderRadius:999, background:"transparent",
+          border:`1px solid ${CC.line}`, display:"grid", placeItems:"center",
+          cursor:"pointer", color:CC.ink,
+        }}><X size={18}/></button>
+      )}
+    </div>
+  )
+}
+
+function CCPrimaryBtn({ children, onClick, disabled }){
+  return (
+    <button onClick={onClick} disabled={disabled} style={{
+      width:"100%", background: disabled?CC.stoneLight:CC.emerald,
+      color: disabled?CC.stone:CC.paper,
+      border:"none", borderRadius:14, padding:"16px",
+      fontSize:15, fontWeight:600, cursor: disabled?"not-allowed":"pointer",
+      letterSpacing:0.1, boxShadow: disabled?"none":`0 8px 24px -10px ${CC.emerald}`,
+    }}>{children}</button>
+  )
+}
+
+function CCStickyCTA({ children, banner }){
+  return (
+    <div style={{ position:"sticky", bottom:0, zIndex:15, marginTop:"auto", background:CC.cream }}>
+      {banner && (
+        <div style={{
+          background:CC.forest, color:CC.paper, padding:"10px 18px",
+          fontSize:12.5, fontWeight:500, textAlign:"center",
+          display:"flex", alignItems:"center", justifyContent:"center", gap:6,
+        }}><Tag size={13} color={CC.emeraldBright}/>{banner}</div>
+      )}
+      <div style={{ padding:"14px 18px 20px" }}>{children}</div>
+    </div>
+  )
+}
+
+function CCValueRow({ icon:Icon, title, desc }){
+  return (
+    <div style={{ display:"flex", gap:12, alignItems:"flex-start" }}>
+      <div style={{ width:36, height:36, flexShrink:0, borderRadius:10,
+                    background:CC.emeraldPale, color:CC.emerald,
+                    display:"grid", placeItems:"center" }}>
+        <Icon size={18}/>
+      </div>
+      <div style={{ flex:1, paddingTop:1 }}>
+        <div style={{ fontSize:14, fontWeight:600, color:CC.ink }}>{title}</div>
+        <div style={{ fontSize:12.5, color:CC.stone, marginTop:3, lineHeight:1.45 }}>{desc}</div>
+      </div>
+    </div>
+  )
+}
+
+function CCChip({ children, icon:Icon, tone="default" }){
+  const styles = {
+    default:{bg:CC.paper,fg:CC.ink,border:CC.line},
+    emerald:{bg:CC.emeraldSoft,fg:CC.emeraldDark,border:CC.emeraldSoft},
+    eco:{bg:"#E8F5EE",fg:"#2D7A5F",border:"#E8F5EE"},
+    amber:{bg:CC.amberSoft,fg:"#92400E",border:CC.amberSoft},
+    discount:{bg:CC.discountSoft,fg:CC.discount,border:CC.discountSoft},
+  }[tone]
+  return (
+    <span style={{
+      display:"inline-flex", alignItems:"center", gap:4,
+      padding:"3px 9px", borderRadius:999,
+      background:styles.bg, color:styles.fg, border:`1px solid ${styles.border}`,
+      fontSize:11, fontWeight:600, letterSpacing:0.2, whiteSpace:"nowrap",
+    }}>{Icon && <Icon size={11}/>}{children}</span>
+  )
+}
+
+function CCPriceTag({ price, priceOriginal, size="md" }){
+  const sz = {sm:{c:15,o:11}, md:{c:17,o:12}, lg:{c:22,o:13}}[size]
+  return (
+    <div style={{ display:"flex", alignItems:"baseline", gap:6 }}>
+      {priceOriginal && priceOriginal>price && (
+        <span style={{ fontSize:sz.o, color:CC.stone, textDecoration:"line-through" }}>{eur(priceOriginal)}</span>
+      )}
+      <span className="serif" style={{ fontSize:sz.c, fontWeight:600, color:CC.forest }}>{eur(price)}</span>
+    </div>
+  )
+}
+
+function CCDivisor(){
+  return <div style={{ height:8, background:CC.cream, margin:"20px 0",
+                       borderTop:`1px solid ${CC.line}`, borderBottom:`1px solid ${CC.line}` }}/>
+}
+
+function CCBottomSheet({ title, onClose, children, footer }){
+  return (
+    <>
+      <div onClick={onClose} style={{
+        position:"fixed", inset:0, zIndex:50, background:"rgba(7,40,25,0.55)",
+        animation:"ccFadeIn 0.2s ease", maxWidth:440, margin:"0 auto",
+      }}/>
+      <div style={{
+        position:"fixed", left:0, right:0, bottom:0, zIndex:51,
+        maxWidth:440, margin:"0 auto", background:CC.cream,
+        borderTopLeftRadius:24, borderTopRightRadius:24,
+        maxHeight:"92vh", display:"flex", flexDirection:"column",
+        animation:"ccSlideUp 0.25s cubic-bezier(.2,.8,.2,1)",
+        boxShadow:"0 -20px 60px -10px rgba(0,0,0,0.3)",
+      }}>
+        <div style={{ height:22, display:"grid", placeItems:"center", flexShrink:0 }}>
+          <div style={{ width:36, height:4, background:CC.stoneLight, borderRadius:999 }}/>
+        </div>
+        <div style={{
+          padding:"0 18px 12px", display:"flex", alignItems:"center", gap:12,
+          borderBottom:`1px solid ${CC.line}`, flexShrink:0,
+        }}>
+          <button onClick={onClose} style={{
+            width:34, height:34, borderRadius:999, background:"transparent",
+            border:"none", cursor:"pointer", display:"grid", placeItems:"center", color:CC.ink,
+          }}><X size={18}/></button>
+          <div className="serif" style={{ flex:1, fontSize:17, fontWeight:600, textAlign:"center", paddingRight:34 }}>{title}</div>
+        </div>
+        <div style={{ flex:1, overflowY:"auto", padding:"16px 18px 0" }}>{children}</div>
+        {footer && (
+          <div style={{ padding:"12px 18px 20px", borderTop:`1px solid ${CC.line}`, background:CC.cream, flexShrink:0 }}>{footer}</div>
+        )}
+      </div>
+    </>
+  )
+}
+
+function CCFormField({ label, value, onChange, placeholder, inputMode }){
+  return (
+    <div style={{ marginBottom:14 }}>
+      <div style={{ fontSize:12, color:CC.stone, fontWeight:500, marginBottom:6 }}>{label}</div>
+      <input value={value} onChange={e=>onChange(e.target.value)}
+        placeholder={placeholder} inputMode={inputMode}
+        style={{ width:"100%", padding:"12px 14px", background:CC.paper,
+                 border:`1px solid ${CC.line}`, borderRadius:10, fontSize:14,
+                 color:CC.ink, fontFamily:"inherit", outline:"none" }}/>
+    </div>
+  )
+}
+
+function CCExampleLine({ children, last }){
+  return (
+    <div style={{
+      display:"flex", gap:8, alignItems:"flex-start",
+      paddingBottom: last?0:8, marginBottom: last?0:8,
+      borderBottom: last?"none":`1px dashed ${CC.line}`,
+    }}>
+      <div style={{ width:4, height:4, borderRadius:999, background:CC.emerald, marginTop:8, flexShrink:0 }}/>
+      <div style={{ fontSize:12.5, color:CC.stone, lineHeight:1.45 }}>{children}</div>
+    </div>
+  )
+}
+
+function CCLineRow({ label, value, valueOriginal, strike }){
+  return (
+    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"baseline", padding:"4px 0", fontSize:13.5 }}>
+      <span style={{ color:CC.ink }}>{label}</span>
+      <div style={{ display:"flex", alignItems:"baseline", gap:6 }}>
+        {valueOriginal!==undefined && valueOriginal!==null && valueOriginal>value && (
+          <span style={{ fontSize:12, color:CC.stone, textDecoration:"line-through" }}>{eur(valueOriginal)}</span>
+        )}
+        <span style={{ fontWeight:600, color: strike && value===0 ? CC.emerald : CC.ink }}>{eur(value)}</span>
+      </div>
+    </div>
+  )
+}
+
+function CCSubPill({ children, active, onClick }){
+  return (
+    <button onClick={onClick} style={{
+      padding:"8px 14px", borderRadius:999,
+      background: active?CC.forest:CC.paper, color: active?CC.paper:CC.ink,
+      border:`1px solid ${active?CC.forest:CC.line}`,
+      fontSize:12, fontWeight:600, cursor:"pointer",
+      whiteSpace:"nowrap", flexShrink:0, scrollSnapAlign:"start",
+    }}>{children}</button>
+  )
+}
+
+function CCServiceCard({ service, onClick }){
+  const hasDisc = service.priceOriginal && service.priceOriginal>service.price
+  const pct = hasDisc ? Math.round(((service.priceOriginal-service.price)/service.priceOriginal)*100) : 0
+  return (
+    <button onClick={onClick} style={{
+      background:CC.paper, border:`1px solid ${CC.line}`,
+      borderRadius:14, padding:12,
+      display:"flex", gap:12, alignItems:"center",
+      cursor:"pointer", textAlign:"left", width:"100%",
+    }}>
+      <div style={{
+        width:56, height:56, flexShrink:0, borderRadius:12,
+        background: service.eco?"#E8F5EE":CC.emeraldPale,
+        color: service.eco?"#2D7A5F":CC.emerald,
+        display:"grid", placeItems:"center", position:"relative",
+      }}>
+        {service.eco ? <Leaf size={24}/> : <Wrench size={22}/>}
+        {service.popular && (
+          <div style={{
+            position:"absolute", top:-6, right:-6,
+            background:CC.emerald, color:CC.paper,
+            width:22, height:22, borderRadius:999,
+            display:"grid", placeItems:"center",
+            boxShadow:`0 2px 6px -1px ${CC.emeraldDark}`,
+          }}><Star size={11} fill={CC.paper} color={CC.paper}/></div>
+        )}
+      </div>
+      <div style={{ flex:1, minWidth:0 }}>
+        <div style={{ fontSize:13.5, fontWeight:600, color:CC.ink, lineHeight:1.25 }}>{service.name}</div>
+        <div style={{ display:"flex", gap:6, alignItems:"center", marginTop:6, flexWrap:"wrap" }}>
+          {service.eco && <CCChip tone="eco" icon={Leaf}>Eco</CCChip>}
+          {service.popular && <CCChip tone="emerald" icon={Star}>Popular</CCChip>}
+          {hasDisc && pct>=10 && <CCChip tone="discount">−{pct}%</CCChip>}
+        </div>
+        <div style={{ marginTop:6 }}>
+          <CCPriceTag price={service.price} priceOriginal={service.priceOriginal} size="sm"/>
+        </div>
+      </div>
+      <ChevronRight size={18} color={CC.stone} style={{ flexShrink:0 }}/>
+    </button>
+  )
+}
+
+function CCJaFaltaPouco(){
+  const steps = [
+    { icon:Check,       title:"Confirmar e agendar",          current:true },
+    { icon:PartyPopper, title:"Confirmação imediata" },
+    { icon:MapPinned,   title:"Acompanha o técnico no mapa" },
+    { icon:Shield,      title:"Problema resolvido" },
+  ]
+  return (
+    <div style={{
+      background:`linear-gradient(135deg,${CC.forest} 0%,${CC.forestSoft} 100%)`,
+      color:CC.paper, borderRadius:18, padding:"22px 20px",
+      position:"relative", overflow:"hidden",
+    }}>
+      <div style={{
+        position:"absolute", right:-30, top:-30, width:120, height:120, borderRadius:999,
+        background:`radial-gradient(circle,${CC.emerald} 0%,transparent 70%)`, opacity:0.15,
+      }}/>
+      <div style={{
+        display:"inline-flex", gap:6, alignItems:"center",
+        background:"rgba(34,197,94,0.18)", color:CC.emeraldBright,
+        padding:"4px 10px", borderRadius:999,
+        fontSize:10, fontWeight:700, letterSpacing:1.2, textTransform:"uppercase",
+        position:"relative",
+      }}><Sparkles size={10}/> Já falta pouco!</div>
+      <div className="serif" style={{ fontSize:20, fontWeight:500, marginTop:8, letterSpacing:-0.3, position:"relative" }}>
+        O seu problema está a <span style={{ color:CC.emeraldBright, fontStyle:"italic" }}>4 passos</span> de ficar resolvido.
+      </div>
+      <div style={{ marginTop:18, position:"relative" }}>
+        {steps.map((step,i) => {
+          const Icon = step.icon
+          const isLast = i===steps.length-1
+          return (
+            <div key={i} style={{
+              display:"flex", alignItems:"flex-start", gap:12,
+              position:"relative", paddingBottom: isLast?0:14,
+            }}>
+              {!isLast && <div style={{
+                position:"absolute", left:13, top:28,
+                width:2, height:"calc(100% - 14px)",
+                background:"rgba(255,255,255,0.12)",
+              }}/>}
+              <div style={{
+                width:28, height:28, borderRadius:999, flexShrink:0,
+                background: step.current?CC.emeraldBright:"rgba(255,255,255,0.08)",
+                color: step.current?CC.forest:"rgba(255,255,255,0.5)",
+                display:"grid", placeItems:"center",
+                border: step.current?`2px solid ${CC.emeraldBright}`:"2px solid rgba(255,255,255,0.12)",
+                boxShadow: step.current?`0 0 0 4px rgba(34,197,94,0.15)`:"none",
+                position:"relative", zIndex:1,
+              }}><Icon size={13} strokeWidth={step.current?3:2}/></div>
+              <div style={{ flex:1, paddingTop:5 }}>
+                <div style={{
+                  fontSize:13.5, fontWeight: step.current?600:400,
+                  color: step.current?CC.paper:"rgba(255,255,255,0.7)",
+                }}>{step.title}</div>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+/* ══ MODAIS DO NOVO FLUXO ══ */
+function CCScheduleModal({ onClose, slots, onConfirm }){
+  const now = new Date()
+  const DAYS = useMemo(()=>getDays(), [])
+  const todayAvailable = hasAvailableSlotsToday(now)
+  const [activeDay, setActiveDay] = useState(() =>
+    (slots && slots.length>0) ? slots[0].day : (todayAvailable ? "hoje" : "amanha")
+  )
+  const [selected, setSelected] = useState(slots || [])
+  const slotKey = (day,time) => `${day}|${time}`
+  const isSelected = (day,time) => selected.some(s => s.key===slotKey(day,time))
+
+  const toggleSlot = (day,time) => {
+    if(!isSlotBookable(day, time, now)) return
+    const key = slotKey(day, time)
+    setSelected(prev => {
+      if(prev.some(s => s.key===key)) return prev.filter(s => s.key!==key)
+      if(prev.length>=5) return prev
+      const dayObj = DAYS.find(d => d.id===day)
+      return [...prev, { key, day, time, dayLabel:dayObj.label, dayDate:dayObj.date }]
+    })
+  }
+
+  const footer = (
+    <div>
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10, padding:"0 4px" }}>
+        <span style={{ fontSize:13, color:CC.ink, fontWeight:500 }}>
+          {selected.length===0 ? "Nenhum horário selecionado" : `${selected.length} horário${selected.length>1?"s":""} selecionado${selected.length>1?"s":""}`}
+        </span>
+        {selected.length>0 && (
+          <button onClick={()=>setSelected([])} style={{
+            background:"transparent", border:"none", cursor:"pointer",
+            color:CC.stone, fontSize:13, fontWeight:500, textDecoration:"underline",
+          }}>Limpar tudo</button>
+        )}
+      </div>
+      <CCPrimaryBtn onClick={()=>onConfirm(selected)} disabled={selected.length===0}>Confirmar</CCPrimaryBtn>
+    </div>
+  )
+
+  return (
+    <CCBottomSheet title="Selecionar data" onClose={onClose} footer={footer}>
+      <div className="cc-no-scrollbar" style={{ display:"flex", gap:0, overflowX:"auto", borderBottom:`1px solid ${CC.line}`, marginBottom:16 }}>
+        {DAYS.map(d => {
+          const isActive = activeDay===d.id
+          const daySlots = selected.filter(s => s.day===d.id).length
+          const isHojeDisabled = d.id==="hoje" && !todayAvailable
+          return (
+            <button key={d.id} onClick={()=>!isHojeDisabled && setActiveDay(d.id)} disabled={isHojeDisabled}
+              style={{
+                flex:"0 0 auto", padding:"10px 14px", background:"transparent", border:"none",
+                borderBottom:`2px solid ${isActive?CC.forest:"transparent"}`,
+                cursor: isHojeDisabled?"not-allowed":"pointer",
+                textAlign:"left", minWidth:92, opacity: isHojeDisabled?0.4:1,
+              }}>
+              <div style={{ fontSize:14, fontWeight: isActive?700:500, color: isActive?CC.ink:CC.stone, display:"flex", alignItems:"center", gap:4, flexWrap:"wrap" }}>
+                {d.label}
+                {daySlots>0 && (
+                  <span style={{
+                    background:CC.emerald, color:CC.paper, fontSize:10, fontWeight:700,
+                    minWidth:16, height:16, borderRadius:999, display:"inline-grid", placeItems:"center", padding:"0 4px",
+                  }}>{daySlots}</span>
+                )}
+                {d.extra>0 && <span style={{ fontSize:10.5, color:CC.amber, fontWeight:600 }}>+{eur(d.extra)}</span>}
+              </div>
+              <div style={{ fontSize:11, color:CC.stone, marginTop:2 }}>{d.date}</div>
+            </button>
+          )
+        })}
+      </div>
+
+      <div style={{
+        background:CC.emeraldPale, border:`1px solid ${CC.emeraldSoft}`,
+        borderRadius:12, padding:"10px 12px",
+        display:"flex", gap:10, alignItems:"flex-start", marginBottom:16,
+      }}>
+        <Calendar size={16} color={CC.emerald} style={{ flexShrink:0, marginTop:2 }}/>
+        <div style={{ fontSize:12.5, color:CC.forestSoft, lineHeight:1.4 }}>
+          Tem um horário flexível? Pode selecionar <strong>até 5 horários disponíveis</strong> — aumenta a probabilidade de conseguir o técnico de preferência.
+        </div>
+      </div>
+
+      {activeDay==="hoje" && !todayAvailable && (
+        <div style={{
+          background:CC.amberSoft, border:`1px solid ${CC.amber}`,
+          borderRadius:12, padding:"12px 14px", marginBottom:16,
+          display:"flex", gap:10, alignItems:"flex-start",
+        }}>
+          <Info size={16} color={CC.amber} style={{ flexShrink:0, marginTop:2 }}/>
+          <div style={{ fontSize:12.5, color:"#92400E", lineHeight:1.4 }}>
+            Sem horários disponíveis hoje. Escolha outro dia ou use a opção <strong>Imediato</strong> para chegada em 30-40 min.
+          </div>
+        </div>
+      )}
+
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:8, paddingBottom:16 }}>
+        {TIMESLOTS.map(t => {
+          const bookable = isSlotBookable(activeDay, t, now)
+          const sel = isSelected(activeDay, t)
+          const atLimit = selected.length>=5 && !sel
+          const disabled = !bookable || atLimit
+          return (
+            <button key={t} onClick={()=>toggleSlot(activeDay, t)} disabled={disabled}
+              style={{
+                background: sel?CC.forest:CC.paper,
+                color: sel?CC.paper : !bookable?CC.stoneLight : atLimit?CC.stoneLight : CC.ink,
+                border:`1.5px solid ${sel?CC.forest : !bookable?CC.stoneLight : CC.line}`,
+                borderRadius:10, padding:"10px 0", fontSize:13, fontWeight:600,
+                cursor: disabled?"not-allowed":"pointer",
+                opacity: !bookable?0.35 : atLimit?0.5 : 1,
+                textDecoration: !bookable?"line-through":"none",
+                transition:"all 0.12s",
+              }}
+              title={!bookable?"Horário já passado ou demasiado próximo":undefined}
+            >{t}</button>
+          )
+        })}
+      </div>
+    </CCBottomSheet>
+  )
+}
+
+function CCPhotosNotesModal({ onClose, notes, photos, onConfirm }){
+  const [localNotes, setLocalNotes] = useState(notes || "")
+  const [localPhotos, setLocalPhotos] = useState(photos || [])
+  const addPhoto = () => { if(localPhotos.length<5) setLocalPhotos(p => [...p, { id:Date.now(), placeholder:true }]) }
+  const removePhoto = (id) => setLocalPhotos(p => p.filter(x => x.id!==id))
+
+  const footer = (
+    <CCPrimaryBtn onClick={()=>onConfirm({ notes:localNotes, photos:localPhotos })}>Guardar</CCPrimaryBtn>
+  )
+  return (
+    <CCBottomSheet title="Fotografias e notas" onClose={onClose} footer={footer}>
+      <div>
+        <div style={{ fontSize:14, fontWeight:600, color:CC.ink, marginBottom:6 }}>Fotografias</div>
+        <div style={{ fontSize:12.5, color:CC.stone, marginBottom:12, lineHeight:1.4 }}>
+          Adicione imagens para ajudar o técnico a preparar-se para o serviço.
+        </div>
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:8 }}>
+          {localPhotos.map(p => (
+            <div key={p.id} style={{
+              aspectRatio:"1", borderRadius:12, background:CC.emeraldPale,
+              border:`1px solid ${CC.emeraldSoft}`, display:"grid", placeItems:"center", position:"relative",
+            }}>
+              <FileImage size={24} color={CC.emerald}/>
+              <button onClick={()=>removePhoto(p.id)} style={{
+                position:"absolute", top:4, right:4, width:24, height:24, borderRadius:999,
+                background:"rgba(0,0,0,0.6)", color:CC.paper, border:"none", cursor:"pointer",
+                display:"grid", placeItems:"center",
+              }}><X size={12}/></button>
+            </div>
+          ))}
+          {localPhotos.length<5 && (
+            <button onClick={addPhoto} style={{
+              aspectRatio:"1", borderRadius:12, background:CC.paper,
+              border:`1.5px dashed ${CC.stoneLight}`,
+              display:"grid", placeItems:"center", cursor:"pointer", color:CC.stone,
+            }}><Plus size={24}/></button>
+          )}
+        </div>
+        <div style={{ fontSize:11, color:CC.stone, marginTop:6, textAlign:"right" }}>{localPhotos.length}/5 fotografias</div>
+      </div>
+      <div style={{ marginTop:24 }}>
+        <div style={{ fontSize:14, fontWeight:600, color:CC.ink, marginBottom:6 }}>Notas sobre o serviço</div>
+        <div style={{ fontSize:12.5, color:CC.stone, marginBottom:12, lineHeight:1.4 }}>Adicione notas como os exemplos seguintes:</div>
+        <div style={{ background:CC.paper, border:`1px solid ${CC.line}`, borderRadius:12, padding:12, marginBottom:12 }}>
+          <CCExampleLine>Se precisa que o técnico compre algum material</CCExampleLine>
+          <CCExampleLine>A marca e modelo do aparelho avariado, e o erro que aparece</CCExampleLine>
+          <CCExampleLine>Áreas específicas da casa que deseja que sejam intervencionadas</CCExampleLine>
+          <CCExampleLine last>Instruções de acesso — porteiro, código do prédio, estacionamento</CCExampleLine>
+        </div>
+        <textarea value={localNotes} onChange={e=>setLocalNotes(e.target.value)} maxLength={200}
+          placeholder="Ex: Torneira da cozinha pinga há 2 dias, já substituí vedantes sem sucesso. Prédio com porteiro no R/C."
+          style={{
+            width:"100%", minHeight:100, background:CC.paper,
+            border:`1px solid ${CC.line}`, borderRadius:12, padding:14,
+            fontSize:13.5, fontFamily:"inherit", color:CC.ink, resize:"vertical", outline:"none",
+          }}/>
+        <div style={{ fontSize:11, color:CC.stone, marginTop:4, textAlign:"right" }}>{localNotes.length}/200</div>
+      </div>
+      <div style={{ height:8 }}/>
+    </CCBottomSheet>
+  )
+}
+
+function CCBillingModal({ onClose, billing, onConfirm }){
+  const [local, setLocal] = useState(billing || { nome:"", nif:"", morada:"", cp:"", localidade:"" })
+  const canSave = local.nome && local.nif && local.morada && local.cp && local.localidade
+  const footer = <CCPrimaryBtn onClick={()=>onConfirm(local)} disabled={!canSave}>Guardar</CCPrimaryBtn>
+  return (
+    <CCBottomSheet title="Informações de faturação" onClose={onClose} footer={footer}>
+      <div>
+        <div style={{ fontSize:13, fontWeight:700, color:CC.ink, textTransform:"uppercase", letterSpacing:0.5, marginBottom:14 }}>Identificação fiscal</div>
+        <CCFormField label="Nome"       value={local.nome}        onChange={v=>setLocal(p=>({...p,nome:v}))}         placeholder="Nome completo"/>
+        <CCFormField label="NIF"        value={local.nif}         onChange={v=>setLocal(p=>({...p,nif:v.replace(/\D/g,"").slice(0,9)}))} placeholder="9 dígitos" inputMode="numeric"/>
+      </div>
+      <div style={{ marginTop:28 }}>
+        <div style={{ fontSize:13, fontWeight:700, color:CC.ink, textTransform:"uppercase", letterSpacing:0.5, marginBottom:14 }}>Morada de faturação</div>
+        <CCFormField label="Morada" value={local.morada} onChange={v=>setLocal(p=>({...p,morada:v}))} placeholder="Rua, número, andar"/>
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1.3fr", gap:10 }}>
+          <CCFormField label="Código postal" value={local.cp}         onChange={v=>setLocal(p=>({...p,cp:v}))}         placeholder="0000-000"/>
+          <CCFormField label="Localidade"    value={local.localidade} onChange={v=>setLocal(p=>({...p,localidade:v}))} placeholder="Cidade"/>
+        </div>
+      </div>
+      <div style={{ height:8 }}/>
+    </CCBottomSheet>
+  )
+}
+
+/* ══ FIM DO BLOCO NOVO FLUXO (parte 1) ══ */
+
 /* ══ HELPERS ══ */
 const svcById = id => SVCS.find(s => s.id === id)
 const tecById = id => TECNICOS.find(t => t.id === id)
@@ -1297,6 +2000,16 @@ const CHAT_P = [
 ]
 
 /* ══ COMPONENTES LOCAIS ══ */
+
+/* ── FotoThumb — renderiza foto: imagem se for dataURL/http, senão emoji ── */
+function FotoThumb({ src, size=68, radius=10, border=true }) {
+  const isImg = typeof src === 'string' && (src.startsWith('data:') || src.startsWith('http') || src.startsWith('blob:'))
+  return (
+    <div style={{ width:size, height:size, borderRadius:radius, background:'#f1f5f9', display:'flex', alignItems:'center', justifyContent:'center', fontSize:Math.round(size*0.36), border: border ? '1px solid rgba(0,0,0,0.08)' : 'none', overflow:'hidden', flexShrink:0 }}>
+      {isImg ? <img src={src} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }}/> : src}
+    </div>
+  )
+}
 
 /* ── OrderChat — Chat partilhado cliente/prestador ── */
 function OrderChat({ ordem, role='cliente', prest, onBack, onUpdate }) {
@@ -1712,21 +2425,33 @@ function CPerfil() {
   )
 }
 
-function CNovaOrdem({ svcI, onBack, onOk }) {
+function CNovaOrdem({ svcI, onBack, onOk, moradas=[], setMoradas }) {
+  const defMor = moradas.find(m=>m.def) || moradas[0] || null
   const [step,setStep] = useState(1)
   const [sid,setSid]   = useState(svcI?.id||null)
   const [tid,setTid]   = useState(null)
   const [data,setData] = useState(null)
   const [hora,setHora] = useState(null)
-  const [morada,setMorada] = useState('')
+  const [morada,setMorada] = useState(defMor?.morada || '')
+  const [cp,    setCp]     = useState(defMor?.cp || '')
+  const [moradaId, setMoradaId] = useState(defMor?.id || null)
+  const [guardar, setGuardar] = useState(false)
   const [notas,setNotas]   = useState('')
+  const [fotos,setFotos]   = useState([])
+  const addFotos = async files => {
+    const lidas = await Promise.all(Array.from(files).slice(0,8-fotos.length).map(f => new Promise(res => {
+      const r = new FileReader(); r.onload = () => res(r.result); r.readAsDataURL(f)
+    })))
+    setFotos(p => [...p, ...lidas].slice(0,8))
+  }
   const s    = svcById(sid)
   const tecs = s ? TECNICOS.filter(t=>t.cats.includes(s.cat)) : []
   const hoje = new Date()
   const datas = Array.from({length:7},(_,i)=>{ const d=new Date(hoje); d.setDate(hoje.getDate()+i+1); return d })
   const DN=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'], MN=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
   const HORAS=['08:00','09:00','10:00','11:00','14:00','15:00','16:00','17:00']
-  const ok = step===1?!!sid : step===2?true : step===3?!!(data&&hora) : morada.length>3
+  const cpOk = /^\d{4}-\d{3}$/.test(cp.trim())
+  const ok = step===1?!!sid : step===2?true : step===3?!!(data&&hora) : (morada.length>3 && cpOk)
   const LABS = ['Serviço','Equipa','Quando','Morada']
   return (
     <div style={{ minHeight:'100vh', background:C.mist }}>
@@ -1783,12 +2508,58 @@ function CNovaOrdem({ svcI, onBack, onOk }) {
         </>}
         {step===4 && <>
           <Card style={{ padding:16, marginBottom:12 }}>
-            <div style={{ marginBottom:12 }}>
+            {moradas.length>0 && (
+              <div style={{ marginBottom:12 }}>
+                <label style={{ fontSize:11, fontWeight:700, color:C.slate, display:'block', marginBottom:6 }}>Moradas guardadas</label>
+                <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
+                  {moradas.map(m => (
+                    <button key={m.id} onClick={()=>{ setMoradaId(m.id); setMorada(m.morada); setCp(m.cp); setGuardar(false) }}
+                      style={{ padding:'7px 11px', borderRadius:9, border:`1.5px solid ${moradaId===m.id?C.g:C.border}`, background:moradaId===m.id?C.gl:'#fff', color:moradaId===m.id?C.gd:C.navy, fontSize:11, fontWeight:600, cursor:'pointer', display:'flex', alignItems:'center', gap:5, maxWidth:'100%' }}>
+                      {m.def && <span style={{ fontSize:9 }}>★</span>}
+                      <span style={{ overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', maxWidth:180 }}>{m.label || m.morada}</span>
+                    </button>
+                  ))}
+                  <button onClick={()=>{ setMoradaId(null); setMorada(''); setCp(''); setGuardar(true) }}
+                    style={{ padding:'7px 11px', borderRadius:9, border:`1.5px dashed ${C.border}`, background:'transparent', color:C.slate, fontSize:11, fontWeight:600, cursor:'pointer' }}>+ Nova</button>
+                </div>
+              </div>
+            )}
+            <div style={{ marginBottom:10 }}>
               <label style={{ fontSize:11, fontWeight:700, color:C.slate, display:'block', marginBottom:4 }}>Morada completa</label>
-              <input value={morada} onChange={e=>setMorada(e.target.value)} placeholder="Rua das Flores, 23, 2500 Caldas" style={{ width:'100%', border:`1.5px solid ${C.border}`, borderRadius:9, padding:'10px 13px', fontSize:13, outline:'none', boxSizing:'border-box', color:C.navy }}/>
+              <input value={morada} onChange={e=>{setMorada(e.target.value);setMoradaId(null)}} placeholder="Rua das Flores, 23" style={{ width:'100%', border:`1.5px solid ${C.border}`, borderRadius:9, padding:'10px 13px', fontSize:13, outline:'none', boxSizing:'border-box', color:C.navy }}/>
             </div>
+            <div style={{ marginBottom:12 }}>
+              <label style={{ fontSize:11, fontWeight:700, color:C.slate, display:'block', marginBottom:4 }}>Código postal</label>
+              <input value={cp} onChange={e=>{setCp(e.target.value);setMoradaId(null)}} placeholder="2500-123" maxLength={8}
+                style={{ width:'100%', border:`1.5px solid ${cp && !cpOk ? C.red||'#ef4444' : C.border}`, borderRadius:9, padding:'10px 13px', fontSize:13, outline:'none', boxSizing:'border-box', color:C.navy, fontFamily:'ui-monospace,monospace' }}/>
+              {cp && !cpOk && <div style={{ fontSize:10, color:'#ef4444', marginTop:4 }}>Formato esperado: 0000-000</div>}
+            </div>
+            {setMoradas && !moradaId && morada.length>3 && cpOk && (
+              <label style={{ display:'flex', alignItems:'center', gap:8, fontSize:11, color:C.slate, cursor:'pointer', marginBottom:10 }}>
+                <input type="checkbox" checked={guardar} onChange={e=>setGuardar(e.target.checked)}/>
+                Guardar esta morada para futuros pedidos
+              </label>
+            )}
             <label style={{ fontSize:11, fontWeight:700, color:C.slate, display:'block', marginBottom:4 }}>Notas (opcional)</label>
-            <textarea value={notas} onChange={e=>setNotas(e.target.value)} placeholder="Ex: 3.º andar sem elevador..." style={{ width:'100%', border:`1.5px solid ${C.border}`, borderRadius:9, padding:'9px 13px', fontSize:13, resize:'none', height:64, outline:'none', boxSizing:'border-box', color:C.navy }}/>
+            <textarea value={notas} onChange={e=>setNotas(e.target.value)} placeholder="Ex: 3.º andar sem elevador..." style={{ width:'100%', border:`1.5px solid ${C.border}`, borderRadius:9, padding:'9px 13px', fontSize:13, resize:'none', height:64, outline:'none', boxSizing:'border-box', color:C.navy, marginBottom:12 }}/>
+            <label style={{ fontSize:11, fontWeight:700, color:C.slate, display:'block', marginBottom:6 }}>Fotos (opcional · até 8) <span style={{ color:C.slate, fontWeight:500 }}>— ajuda o prestador a preparar-se</span></label>
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:6 }}>
+              {fotos.map((src,i) => (
+                <div key={i} style={{ position:'relative', paddingTop:'100%', borderRadius:9, overflow:'hidden', border:`1px solid ${C.border}`, background:'#f1f5f9' }}>
+                  <img src={src} alt="" style={{ position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'cover' }}/>
+                  <button onClick={()=>setFotos(p=>p.filter((_,k)=>k!==i))} style={{ position:'absolute', top:3, right:3, width:20, height:20, borderRadius:'50%', background:'rgba(0,0,0,0.65)', color:'#fff', border:'none', fontSize:13, lineHeight:1, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>×</button>
+                </div>
+              ))}
+              {fotos.length<8 && (
+                <label style={{ paddingTop:'100%', position:'relative', borderRadius:9, border:`1.5px dashed ${C.border}`, background:'#f8fafc', cursor:'pointer' }}>
+                  <input type="file" accept="image/*" multiple capture="environment" onChange={e=>{addFotos(e.target.files); e.target.value=''}} style={{ position:'absolute', inset:0, opacity:0, cursor:'pointer' }}/>
+                  <div style={{ position:'absolute', inset:0, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', color:C.slate, fontSize:10, fontWeight:700, gap:2 }}>
+                    <span style={{ fontSize:20 }}>📷</span>
+                    <span>Adicionar</span>
+                  </div>
+                </label>
+              )}
+            </div>
           </Card>
           {s && <Card style={{ padding:15 }}>
             <div style={{ fontSize:10, fontWeight:700, color:C.slate, textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:8 }}>Resumo</div>
@@ -1799,7 +2570,14 @@ function CNovaOrdem({ svcI, onBack, onOk }) {
         </>}
       </div>
       <FixedBottom>
-        <Btn v='green' full dis={!ok} onClick={() => step<4 ? setStep(p=>p+1) : onOk({sid,tid,data,hora,morada,notas})}>
+        <Btn v='green' full dis={!ok} onClick={() => {
+          if (step<4) { setStep(p=>p+1); return }
+          if (guardar && setMoradas && !moradaId) {
+            const nova = { id:`m${Date.now()}`, label:morada.split(',')[0].trim(), morada, cp, def: moradas.length===0 }
+            setMoradas(p => [...p, nova])
+          }
+          onOk({ sid, tid, data, hora, morada, cp, notas, fotos })
+        }}>
           {step===4 ? '✓ Confirmar pedido' : 'Continuar →'}
         </Btn>
       </FixedBottom>
@@ -1833,13 +2611,22 @@ function COrdem({ o, onBack, onChat }) {
           </div>
         </Card>}
         <Card style={{ padding:15, marginBottom:10 }}>
-          {[['Morada',o.morada],['Valor',`€${s?.p} ${s?.u}`],o.notas&&['Notas',o.notas]].filter(Boolean).map(([l,v]) => (
+          {[
+            ['Morada', o.morada],
+            o.cp && ['Cód. postal', o.cp],
+            ['Valor', `€${s?.p} ${s?.u}`],
+            o.dt_pedido && ['Pedido em', o.dt_pedido],
+            o.inicio_ts && ['Início', new Date(o.inicio_ts).toLocaleTimeString('pt-PT',{hour:'2-digit',minute:'2-digit'})],
+            o.fim_ts    && ['Fim',    new Date(o.fim_ts).toLocaleTimeString('pt-PT',{hour:'2-digit',minute:'2-digit'})],
+            o.duracao_min && ['Duração', o.duracao_min<60 ? `${o.duracao_min} min` : `${Math.floor(o.duracao_min/60)}h${String(o.duracao_min%60).padStart(2,'0')}`],
+            o.notas && ['Notas', o.notas],
+          ].filter(Boolean).map(([l,v]) => (
             <div key={l} style={{ display:'flex', justifyContent:'space-between', padding:'7px 0', borderBottom:'1px solid #f1f5f9' }}><span style={{ fontSize:11, color:C.slate }}>{l}</span><span style={{ fontSize:11, fontWeight:700, color:C.navy, maxWidth:200, textAlign:'right' }}>{v}</span></div>
           ))}
         </Card>
         {o.fotos.length>0 && <Card style={{ padding:15, marginBottom:10 }}>
           <div style={{ fontSize:10, fontWeight:700, color:C.slate, textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:9 }}>Relatório fotográfico</div>
-          <div style={{ display:'flex', gap:7, marginBottom:8 }}>{o.fotos.map((f,i) => <div key={i} style={{ width:68, height:68, borderRadius:10, background:'#f1f5f9', display:'flex', alignItems:'center', justifyContent:'center', fontSize:24, border:`1px solid ${C.border}` }}>{f}</div>)}</div>
+          <div style={{ display:'flex', gap:7, marginBottom:8, flexWrap:'wrap' }}>{o.fotos.map((f,i) => <FotoThumb key={i} src={f} size={68} radius={10}/>)}</div>
           {o.ass && <div style={{ fontSize:11, color:C.g, fontWeight:600, background:C.gl, padding:'6px 10px', borderRadius:7 }}>✅ Assinado digitalmente</div>}
         </Card>}
         {o.st==='concluida' && <Card style={{ padding:15 }}>
@@ -1944,6 +2731,39 @@ function PExec({ o, onBack, onUpdate, onChat }) {
   const [horaProp,setHoraProp]= useState(o.hora||'')
   const [motivo,  setMotivo]  = useState('')
   const [propEnviada,setPropEnviada] = useState(false)
+  const [geoBusy, setGeoBusy] = useState(false)
+  const [geoErr,  setGeoErr]  = useState(null)
+
+  const pedirGeo = () => new Promise(res => {
+    if (!navigator.geolocation) { res(null); return }
+    navigator.geolocation.getCurrentPosition(
+      p => res({ lat:p.coords.latitude, lng:p.coords.longitude, acc:Math.round(p.coords.accuracy), ts:Date.now() }),
+      ()=>res(null),
+      { enableHighAccuracy:true, timeout:12000, maximumAge:0 }
+    )
+  })
+
+  const iniciarServico = async () => {
+    setGeoBusy(true); setGeoErr(null)
+    const loc = await pedirGeo()
+    setGeoBusy(false)
+    if (!loc) { setGeoErr('Não foi possível obter a localização. Ative o GPS e tente novamente.'); return }
+    const inicio_ts = Date.now()
+    setFase('exec')
+    onUpdate && onUpdate({ ...o, st:'em_curso', inicio_ts, inicio_loc: loc })
+  }
+
+  const concluirServico = async () => {
+    setGeoBusy(true); setGeoErr(null)
+    const loc = await pedirGeo()
+    setGeoBusy(false)
+    const fim_ts = Date.now()
+    const duracao_min = o.inicio_ts ? Math.max(1, Math.round((fim_ts - o.inicio_ts) / 60000)) : null
+    const upd = { ...o, st:'concluida', fotos, ass:true, fim_ts, fim_loc: loc, duracao_min }
+    onUpdate && onUpdate(upd); setFase('done')
+  }
+
+  const fmtDur = m => m==null ? '—' : m<60 ? `${m} min` : `${Math.floor(m/60)}h${String(m%60).padStart(2,'0')}`
 
   const FL = ['Aceitar','Executar','Fotos','Assinar','Concluído']
   const fi = ['aceitar','exec','fotos','assinar','done'].indexOf(fase)
@@ -1999,8 +2819,13 @@ function PExec({ o, onBack, onUpdate, onChat }) {
           {[
             ['Cliente',  o.cli],
             ['Morada',   o.morada],
+            o.cp && ['Cód. postal', o.cp],
             ['Data/Hora',dataFormatada],
+            o.dt_pedido && ['Pedido em', o.dt_pedido],
             o.km && ['Distância', `📏 ${o.km} km`],
+            o.inicio_ts && ['Início', new Date(o.inicio_ts).toLocaleTimeString('pt-PT',{hour:'2-digit',minute:'2-digit'})],
+            o.fim_ts    && ['Fim',    new Date(o.fim_ts).toLocaleTimeString('pt-PT',{hour:'2-digit',minute:'2-digit'})],
+            o.duracao_min && ['Duração', fmtDur(o.duracao_min)],
             o.notas && ['Notas', o.notas],
           ].filter(Boolean).map(([l,v]) => (
             <div key={l} style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', padding:'7px 0', borderBottom:'1px solid #f1f5f9' }}>
@@ -2031,10 +2856,12 @@ function PExec({ o, onBack, onUpdate, onChat }) {
               </Card>
           }
           {!propEnviada && <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+            {geoErr && <div style={{ background:'#fef2f2', border:'1px solid #fecaca', color:'#b91c1c', borderRadius:10, padding:'8px 12px', fontSize:11 }}>📍 {geoErr}</div>}
             <div style={{ display:'flex', gap:8 }}>
-              <Btn full v='ghost' onClick={onBack}>Recusar</Btn>
-              <Btn full onClick={() => { setFase('exec'); onUpdate&&onUpdate({...o,st:'em_curso'}) }}>Aceitar ✓</Btn>
+              <Btn full v='ghost' onClick={onBack} dis={geoBusy}>Recusar</Btn>
+              <Btn full onClick={iniciarServico} dis={geoBusy}>{geoBusy?'📍 A localizar…':'📍 Iniciar serviço'}</Btn>
             </div>
+            <div style={{ fontSize:10, color:C.slate, textAlign:'center', marginTop:-2 }}>Ao iniciar, é registada a localização e a hora para contabilizar o tempo.</div>
             <button onClick={()=>setNovaHora(true)} style={{ width:'100%', padding:'11px', border:`1.5px solid ${C.border}`, borderRadius:12, background:C.white, color:C.slate, fontSize:12, fontWeight:600, cursor:'pointer' }}>
               🕐 Propor nova hora
             </button>
@@ -2054,7 +2881,7 @@ function PExec({ o, onBack, onUpdate, onChat }) {
           <Card style={{ padding:14, marginBottom:10 }}>
             <div style={{ fontSize:10, fontWeight:700, color:C.slate, textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:9 }}>Relatório fotográfico</div>
             <div style={{ display:'flex', gap:7, flexWrap:'wrap', marginBottom:8 }}>
-              {fotos.map((f,i) => <div key={i} style={{ width:66, height:66, borderRadius:9, background:'#f1f5f9', display:'flex', alignItems:'center', justifyContent:'center', fontSize:24, border:`1px solid ${C.border}` }}>{f}</div>)}
+              {fotos.map((f,i) => <FotoThumb key={i} src={f} size={66} radius={9}/>)}
               <button onClick={() => setFotos(f=>[...f,'📷'])} style={{ width:66, height:66, borderRadius:9, border:`2px dashed ${C.g}`, background:'transparent', fontSize:18, cursor:'pointer', color:C.g }}>+</button>
             </div>
             <p style={{ fontSize:10, color:C.slate, margin:0 }}>Mínimo 2 fotos — antes e depois.</p>
@@ -2071,7 +2898,8 @@ function PExec({ o, onBack, onUpdate, onChat }) {
               <div style={{ fontSize:12, color:C.slate }}>A aguardar assinatura de<br/><strong style={{ color:C.navy }}>{o.cli}</strong></div>
             </div>
           </Card>
-          <Btn v='green' full onClick={() => { const upd={...o,st:'concluida',fotos,ass:true}; onUpdate&&onUpdate(upd); setFase('done') }}>Simular assinatura recebida ✓</Btn>
+          {geoErr && <div style={{ background:'#fef2f2', border:'1px solid #fecaca', color:'#b91c1c', borderRadius:10, padding:'8px 12px', fontSize:11, marginBottom:8 }}>📍 {geoErr}</div>}
+          <Btn v='green' full onClick={concluirServico} dis={geoBusy}>{geoBusy?'📍 A localizar…':'📍 Fechar serviço (regista localização)'}</Btn>
         </>}
 
         {/* FASE: Concluído */}
@@ -3931,7 +4759,7 @@ function AdminPipeline({ordens, setOrdens, prest}){
             {/* Fotos */}
             {selOrd.fotos?.length>0&&<div>
               <div style={{fontSize:11,fontWeight:700,color:A.slate,textTransform:'uppercase',letterSpacing:'0.05em',marginBottom:8}}>Relatório fotográfico</div>
-              <div style={{display:'flex',gap:8}}>{selOrd.fotos.map((f,i)=><div key={i} style={{width:70,height:70,borderRadius:9,background:'#f1f5f9',display:'flex',alignItems:'center',justifyContent:'center',fontSize:28,border:`1px solid ${A.border}`}}>{f}</div>)}</div>
+              <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>{selOrd.fotos.map((f,i)=><FotoThumb key={i} src={f} size={70} radius={9}/>)}</div>
             </div>}
 
             {/* Chat da ordem no admin */}
@@ -4089,26 +4917,7 @@ function AdminPrestadores({prest,setPrest,niveis}){
   const [q,setQ]=useState(''), [fNivel,setFNivel]=useState('all'), [sel,setSel]=useState(null), [form,setForm]=useState({}), [tabF,setTabF]=useState('perfil')
   const [ibanDoc,setIbanDoc]=useState(null), [ibanDocNome,setIbanDocNome]=useState('')
   const [syncing,setSyncing]=useState(false)
-  const [convModal,setConvModal]=useState(false)
-  const [convForm,setConvForm]=useState({n:'',email:'',tel:'',indicativo:'+351 🇵🇹',nivel:'base'})
-  const [convResult,setConvResult]=useState(null)
-  const [convSaving,setConvSaving]=useState(false)
-  const [convCopied,setConvCopied]=useState(false)
   const filtered=prest.filter(p=>(fNivel==='all'||p.nivel===fNivel)&&(p.n+' '+(p.cidade||p.loc||'')).toLowerCase().includes(q.toLowerCase()))
-  const handleConvidar=async e=>{
-    e.preventDefault()
-    if(!convForm.n.trim()||!convForm.email.trim())return
-    setConvSaving(true)
-    const ini=convForm.n.trim().split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()
-    const nc=niveis[convForm.nivel]
-    const novo={id:`p${Date.now()}`,n:convForm.n.trim(),email:convForm.email.trim(),tel:convForm.tel.trim(),indicativo:convForm.indicativo.split(' ')[0],nivel:convForm.nivel,taxa_plataforma:nc?.taxa,ok:false,st:'activo',ini}
-    await sbSave('prestadores',novo)
-    setPrest(p=>[novo,...p])
-    setConvResult(novo)
-    setConvSaving(false)
-  }
-  const convLink=convResult?`${window.location.origin}/convite/${convResult.id}`:''
-  const copyConvLink=()=>{navigator.clipboard.writeText(convLink).then(()=>{setConvCopied(true);setTimeout(()=>setConvCopied(false),2000)})}
   const save=async()=>{
     setSyncing(true)
     const updated={...form}
@@ -4122,7 +4931,7 @@ function AdminPrestadores({prest,setPrest,niveis}){
   return(
     <>
       <ATopBar title='👷 Prestadores' sub={`${prest.length} prestadores · ${prest.filter(p=>!p.ok).length} por verificar`}>
-        <APrimBtn ch='+ Convidar prestador' onClick={()=>{setConvModal(true);setConvResult(null);setConvForm({n:'',email:'',tel:'',indicativo:'+351 🇵🇹',nivel:'base'})}}/>
+        <APrimBtn ch='+ Convidar prestador'/>
       </ATopBar>
       <div style={{padding:24}}>
         <div style={{display:'flex',gap:10,marginBottom:16,background:A.white,padding:'12px 16px',borderRadius:11,border:`1px solid ${A.border}`}}>
@@ -4247,42 +5056,6 @@ function AdminPrestadores({prest,setPrest,niveis}){
           <SyncBadge synced={false} loading={syncing}/>
           <div style={{display:'flex',gap:8}}><ASecBtn ch='Cancelar' onClick={()=>setSel(null)}/><APrimBtn ch={syncing?'A guardar…':'💾 Guardar no Supabase'} onClick={save} disabled={syncing}/></div>
         </div>
-      </AModal>}
-      {convModal&&<AModal title='Convidar prestador' onClose={()=>setConvModal(false)}>
-        {!convResult
-          ?<form onSubmit={handleConvidar}>
-            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:14}}>
-              <AFRow label='Nome *'>{ainp(convForm.n,v=>setConvForm(f=>({...f,n:v})),'text','Nome completo')}</AFRow>
-              <AFRow label='Email *'>{ainp(convForm.email,v=>setConvForm(f=>({...f,email:v})),'email','email@exemplo.com')}</AFRow>
-              <AFRow label='Indicativo' half>
-                <select value={convForm.indicativo} onChange={e=>setConvForm(f=>({...f,indicativo:e.target.value}))} style={{width:'100%',border:`1.5px solid ${A.border}`,borderRadius:8,padding:'8px 11px',fontSize:13,outline:'none',color:A.navy,background:A.white,boxSizing:'border-box'}}>
-                  {INDICATIVOS.map(i=><option key={i}>{i}</option>)}
-                </select>
-              </AFRow>
-              <AFRow label='Telefone' half>{ainp(convForm.tel,v=>setConvForm(f=>({...f,tel:v})),'tel','914 000 000')}</AFRow>
-              <AFRow label='Nível inicial'>{asel(convForm.nivel,v=>setConvForm(f=>({...f,nivel:v})),Object.entries(niveis).map(([k,n])=>[k,`${n.ic} ${n.l} · ${n.taxa}%`]))}</AFRow>
-            </div>
-            <div style={{display:'flex',gap:8,marginTop:18,justifyContent:'flex-end'}}>
-              <ASecBtn ch='Cancelar' onClick={()=>setConvModal(false)}/>
-              <APrimBtn ch={convSaving?'A criar…':'Criar convite'} onClick={handleConvidar} disabled={convSaving||!convForm.n.trim()||!convForm.email.trim()}/>
-            </div>
-          </form>
-          :<div>
-            <div style={{display:'flex',alignItems:'center',gap:10,background:'#f0fdf4',border:'1px solid rgba(22,163,74,0.25)',borderRadius:11,padding:'12px 16px',marginBottom:16}}>
-              <span style={{fontSize:22}}>✓</span>
-              <div><div style={{fontWeight:700,fontSize:13,color:'#15803d'}}>Convite criado para {convResult.n}</div><div style={{fontSize:11,color:'#16a34a',marginTop:2}}>Partilha o link abaixo com o prestador</div></div>
-            </div>
-            <div style={{display:'flex',alignItems:'center',gap:8,background:A.bg,border:`1px solid ${A.border}`,borderRadius:9,padding:'10px 14px',marginBottom:14}}>
-              <span style={{flex:1,fontSize:11,color:A.slate,fontFamily:'monospace',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{convLink}</span>
-              <button onClick={copyConvLink} style={{background:convCopied?A.accent:'#e2e8f0',color:convCopied?'#fff':A.navy,border:'none',borderRadius:7,padding:'6px 12px',fontSize:11,fontWeight:700,cursor:'pointer',whiteSpace:'nowrap',transition:'all 0.15s'}}>{convCopied?'Copiado!':'Copiar'}</button>
-            </div>
-            <div style={{display:'flex',gap:8}}>
-              <button onClick={()=>{const msg=encodeURIComponent(`Olá ${convResult.n}! Foste convidado/a para a plataforma ServiçoPRO. Regista-te aqui: ${convLink}`);const ph=convResult.tel?.replace(/\D/g,'');window.open(ph?`https://wa.me/351${ph}?text=${msg}`:`https://wa.me/?text=${msg}`,'_blank')}} style={{flex:1,background:'#25D366',color:'#fff',border:'none',borderRadius:9,padding:'10px',fontSize:13,fontWeight:700,cursor:'pointer'}}>WhatsApp</button>
-              {convResult.email&&<button onClick={()=>{const s=encodeURIComponent('Convite — ServiçoPRO');const b=encodeURIComponent(`Olá ${convResult.n},\n\nForam-te enviadas as tuas credenciais de acesso à plataforma ServiçoPRO.\n\nRegista-te através deste link:\n${convLink}\n\nCumprimentos,\nEquipa ServiçoPRO`);window.open(`mailto:${convResult.email}?subject=${s}&body=${b}`,'_blank')}} style={{flex:1,background:A.accent,color:'#fff',border:'none',borderRadius:9,padding:'10px',fontSize:13,fontWeight:700,cursor:'pointer'}}>Email</button>}
-              <ASecBtn ch='Fechar' onClick={()=>setConvModal(false)}/>
-            </div>
-          </div>
-        }
       </AModal>}
     </>
   )
@@ -4612,6 +5385,12 @@ export default function App() {
   const [ordens, setOrdens] = useState(ORDENS_INIT)
   const [sel,    setSel]    = useState(null)
   const [svcNova,setSvcNova]= useState(null)
+  const [moradasCli, setMoradasCli] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('v5_moradas_cli')||'null') || [] } catch { return [] }
+  })
+  useEffect(() => {
+    try { localStorage.setItem('v5_moradas_cli', JSON.stringify(moradasCli)) } catch {}
+  }, [moradasCli])
 
   // ── Estado Admin ──────────────────────────
   const [adminAuth,     setAdminAuth]    = useState(false)
@@ -4637,17 +5416,19 @@ export default function App() {
       cli:      authUser?.nome || 'Cliente',
       cliId:    authUser?.user?.id || null,
       morada:   d.morada,
+      cp:       d.cp || '',
       data:     dataStr,
       hora:     d.hora || '09:00',
       tid:      d.tid || null,
       st:       'pendente',
-      fotos:    [],
+      fotos:    d.fotos || [],
       ass:      false,
       aval:     null,
       notas:    d.notas || '',
       val:      svc?.p || 0,
       taxa:     18,
-      dt_pedido: new Date().toLocaleString('pt-PT', {day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}),
+      dt_pedido:     new Date().toLocaleString('pt-PT', {day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}),
+      dt_pedido_iso: new Date().toISOString(),
       pago:     true,
     }
     // Guarda localmente primeiro (UI imediata)
@@ -4662,6 +5443,7 @@ export default function App() {
         prestador_id:  d.tid || null,
         estado:        'pendente',
         morada:        d.morada,
+        codigo_postal: d.cp || null,
         hora_agendada: d.hora || '09:00',
         data_agendada: d.data ? d.data.toISOString().split('T')[0] : null,
         valor_cobrado: svc?.p || 0,
@@ -4746,7 +5528,7 @@ export default function App() {
 
         {/* ── CLIENTE ── */}
         {role==='cliente' && <>
-          {ecra==='nova'        && <CNovaOrdem svcI={svcNova} onBack={()=>setEcra('home')} onOk={add}/>}
+          {ecra==='nova'        && <CNovaOrdem svcI={svcNova} onBack={()=>setEcra('home')} onOk={add} moradas={moradasCli} setMoradas={setMoradasCli}/>}
           {ecra==='ordem'       && sel && <COrdem o={sel} onBack={()=>setEcra('home')} onChat={()=>setEcra('chat_ordem_c')}/>}
           {ecra==='chat_c'      && <Chat titulo='Suporte' msgs={CHAT_C} lado='cliente' onBack={()=>setEcra('home')}/>}
           {ecra==='chat_ordem_c'&& sel && <OrderChat ordem={sel} role='cliente' prest={TECNICOS.find(t=>t.id===sel.tid)} onBack={()=>setEcra('ordem')} onUpdate={o=>{upd(o);setSel(o)}}/>}
