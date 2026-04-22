@@ -2228,7 +2228,7 @@ function Chat({ titulo, msgs: iM, lado, onBack }) {
 /* ══════════════════════════════════
    CLIENTE
 ══════════════════════════════════ */
-function CHome({ ordens, onSvc, onOrdem, authUser }) {
+function CHome({ ordens, onSvc, onOrdem, authUser, onCanalizacao }) {
   const [cat, setCat] = useState(null)
   const [q,   setQ]   = useState('')
   const nomeCliente = authUser?.nome || 'Cliente'
@@ -2285,7 +2285,10 @@ function CHome({ ordens, onSvc, onOrdem, authUser }) {
         <SectTitle t="O que precisa?"/>
         <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:8, marginBottom:18 }}>
           {CATS.map(c => (
-            <button key={c.id} onClick={() => setCat(cat===c.id ? null : c.id)} style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:4, background: cat===c.id ? c.cor : C.white, border:`2px solid ${cat===c.id ? c.cor : C.border}`, borderRadius:13, padding:'10px 4px', cursor:'pointer' }}>
+            <button key={c.id} onClick={() => {
+              if (c.id === 'canalizacao' && onCanalizacao) { onCanalizacao(); return }
+              setCat(cat===c.id ? null : c.id)
+            }} style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:4, background: cat===c.id ? c.cor : C.white, border:`2px solid ${cat===c.id ? c.cor : C.border}`, borderRadius:13, padding:'10px 4px', cursor:'pointer' }}>
               <span style={{ fontSize:20 }}>{c.ic}</span>
               <span style={{ fontSize:9, fontWeight:700, color: cat===c.id ? '#fff' : '#64748b', textAlign:'center', lineHeight:1.2 }}>{c.l}</span>
             </button>
@@ -6030,6 +6033,25 @@ export default function App() {
   const [ordens, setOrdens] = useState(ORDENS_INIT)
   const [sel,    setSel]    = useState(null)
   const [svcNova,setSvcNova]= useState(null)
+
+  // ── Estado do novo fluxo Canalização (catálogo + personalizado) ──
+  const [catScreen, setCatScreen] = useState(null) // null | 'list' | 'landing' | 'form' | 'detail' | 'checkout' | 'done'
+  const [catSelected, setCatSelected] = useState(null)
+  const [catIsPersonalizado, setCatIsPersonalizado] = useState(false)
+  const [catState, setCatState] = useState({
+    description:"", horas:1,
+    scheduleMode:null, selectedSlots:[],
+    notes:"", photos:[], billing:null, paymentMethod:null,
+  })
+  const catReset = () => {
+    setCatSelected(null); setCatIsPersonalizado(false)
+    setCatState({
+      description:"", horas:1,
+      scheduleMode:null, selectedSlots:[],
+      notes:"", photos:[], billing:null, paymentMethod:null,
+    })
+    setCatScreen(null)
+  }
   const [moradasCli, setMoradasCli] = useState(() => {
     try { return JSON.parse(localStorage.getItem('v5_moradas_cli')||'null') || [] } catch { return [] }
   })
@@ -6101,6 +6123,106 @@ export default function App() {
       .catch(e => console.warn('[Supabase] Erro ao guardar ordem:', e))
     }
   }
+
+  // ── Criar ordem a partir do novo fluxo Canalização ──
+  // Faz lookup slug→UUID em `servicos`, escreve todos os campos novos, e
+  // reflete localmente no estado de ordens para aparecer na lista "Os meus pedidos".
+  const addCatalogOrder = async ({ selected, isPersonalizado, state, total, scheduleSurcharge }) => {
+    const slug = isPersonalizado ? 'personalizado' : selected.id
+    const name = isPersonalizado ? 'Serviço personalizado' : selected.name
+
+    // Lookup slug → UUID
+    let servico_uuid = null
+    if (SB_KEY) {
+      try {
+        const rows = await sbGet('servicos', `?slug=eq.${encodeURIComponent(slug)}&select=id`, authUser?.token)
+        if (Array.isArray(rows) && rows.length > 0) servico_uuid = rows[0].id
+      } catch (e) { console.warn('[Supabase] lookup slug falhou:', e) }
+    }
+
+    const servicePrice = isPersonalizado
+      ? (state.horas || 1) * PERSONALIZADO.pricePerHour
+      : selected.price
+    const firstSlot = (state.selectedSlots || [])[0]
+    const dataAgendada = firstSlot?.dayDate
+      ? (() => {
+          // dayDate format: "DD mmm YYYY" — converter para ISO
+          try {
+            const [d, m, y] = firstSlot.dayDate.split(' ')
+            const MM = {jan:'01',fev:'02',mar:'03',abr:'04',mai:'05',jun:'06',jul:'07',ago:'08',set:'09',out:'10',nov:'11',dez:'12'}
+            return `${y}-${MM[m.toLowerCase()]}-${String(d).padStart(2,'0')}`
+          } catch { return null }
+        })()
+      : null
+    const horaAgendada = firstSlot?.time || null
+
+    // Reflexo local para UI imediata (usa o mesmo formato que o fluxo antigo espera)
+    const ordemLocal = {
+      id:       `ot${Date.now()}`,
+      sid:      null, // SVCS legacy não tem estes ids; deixamos null
+      cli:      authUser?.nome || 'Cliente',
+      cliId:    authUser?.user?.id || null,
+      morada:   state.billing?.morada || authUser?.perfil?.morada || 'Morada por definir',
+      cp:       state.billing?.cp || '',
+      data:     state.scheduleMode === 'imediato' ? 'Imediato' : (firstSlot ? `${firstSlot.dayLabel} ${firstSlot.time}` : 'Em breve'),
+      hora:     horaAgendada || '—',
+      tid:      null,
+      st:       'pendente',
+      fotos:    (state.photos || []).map(()=>'📷'),
+      ass:      false,
+      aval:     null,
+      notas:    state.notes || (isPersonalizado ? state.description : ''),
+      val:      Number(total?.toFixed?.(2) ?? servicePrice),
+      taxa:     18,
+      dt_pedido:     new Date().toLocaleString('pt-PT', {day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}),
+      dt_pedido_iso: new Date().toISOString(),
+      pago:     true,
+      nome:     name, // permite apresentação mesmo sem sid legacy
+    }
+    setOrdens(p => [ordemLocal, ...p])
+
+    // Persistir na Supabase
+    if (SB_KEY) {
+      const payload = {
+        servico_id:          servico_uuid,
+        cliente_id:          authUser?.user?.id || null,
+        prestador_id:        null,
+        estado:              'pendente',
+        morada:              state.billing?.morada || null,
+        cod_postal:          state.billing?.cp || null,
+        cidade:              state.billing?.localidade || null,
+        data_agendada:       dataAgendada,
+        hora_agendada:       horaAgendada,
+        valor_cobrado:       Number(total?.toFixed?.(2) ?? servicePrice),
+        taxa_pct:            18,
+        valor_plataforma:    ((Number(total?.toFixed?.(2) ?? servicePrice)) * 0.18).toFixed(2),
+        valor_prestador:     ((Number(total?.toFixed?.(2) ?? servicePrice)) * 0.82).toFixed(2),
+        notas:               state.notes || null,
+        // Campos novos da migração 20260422
+        is_personalizado:    !!isPersonalizado,
+        horas_estimadas:     isPersonalizado ? (state.horas || 1) : null,
+        descricao_personalizada: isPersonalizado ? (state.description || null) : null,
+        slots_flexiveis:     state.selectedSlots || [],
+        schedule_mode:       state.scheduleMode || null,
+        travel_fee:          TRAVEL_FEE,
+        schedule_surcharge:  scheduleSurcharge || 0,
+        metodo_pagamento:    state.paymentMethod || null,
+        promo_code:          PROMO_CODE,
+        promo_desconto:      PROMO_SAVINGS,
+        faturacao_nome:      state.billing?.nome || null,
+        faturacao_nif:       state.billing?.nif || null,
+        faturacao_morada:    state.billing?.morada || null,
+        faturacao_cp:        state.billing?.cp || null,
+        faturacao_localidade:state.billing?.localidade || null,
+      }
+      sbSave('ordens', payload, authUser?.token)
+        .then(r => r && console.log('[Supabase] Ordem (catálogo) guardada:', r[0]?.id))
+        .catch(e => console.warn('[Supabase] Erro ao guardar ordem (catálogo):', e))
+    }
+
+    setCatScreen('done')
+  }
+
   const mudar = r => {
     if (r==='admin') { setRole('admin'); return }
     setRole(r); setTab('inicio'); setEcra('home'); setSel(null)
@@ -6121,8 +6243,8 @@ export default function App() {
   // ── Mostrar AuthScreen se não autenticado ──
   if (!authUser) return <AuthScreen onAuth={onAuth}/>
 
-  const hideRole = ecra==='carteira' || role==='admin'
-  const cliOver  = ['nova','ordem','chat_c','chat_ordem_c'].includes(ecra)
+  const hideRole = ecra==='carteira' || role==='admin' || (role==='cliente' && catScreen !== null)
+  const cliOver  = ['nova','ordem','chat_c','chat_ordem_c'].includes(ecra) || (role==='cliente' && catScreen !== null)
 
   return (
     <>
@@ -6173,16 +6295,51 @@ export default function App() {
 
         {/* ── CLIENTE ── */}
         {role==='cliente' && <>
-          {ecra==='nova'        && <CNovaOrdem svcI={svcNova} onBack={()=>setEcra('home')} onOk={add} moradas={moradasCli} setMoradas={setMoradasCli}/>}
-          {ecra==='ordem'       && sel && <COrdem o={sel} onBack={()=>setEcra('home')} onChat={()=>setEcra('chat_ordem_c')}/>}
-          {ecra==='chat_c'      && <Chat titulo='Suporte' msgs={CHAT_C} lado='cliente' onBack={()=>setEcra('home')}/>}
-          {ecra==='chat_ordem_c'&& sel && <OrderChat ordem={sel} role='cliente' prest={TECNICOS.find(t=>t.id===sel.tid)} onBack={()=>setEcra('ordem')} onUpdate={o=>{upd(o);setSel(o)}}/>}
-          {!cliOver && <>
-            {tab==='inicio'   && <CHome    ordens={ordens} onSvc={s=>{setSvcNova(s);setEcra('nova')}} onOrdem={o=>{setSel(o);setEcra('ordem')}} authUser={authUser}/>}
-            {tab==='explorar' && <CExplorar onSvc={s=>{setSvcNova(s);setEcra('nova')}}/>}
-            {tab==='pedidos'  && <CPedidos  ordens={ordens} onOrdem={o=>{setSel(o);setEcra('ordem')}} authUser={authUser}/>}
-            {tab==='perfil'   && <CPerfil/>}
-            <BNav tab={tab} set={t=>{setTab(t);setEcra('home')}}/>
+          {/* Novo fluxo Canalização (catálogo + personalizado) — tem prioridade sobre home/tabs */}
+          {catScreen==='list' && (
+            <ServiceListScreen
+              onBack={catReset}
+              onSelectService={(s)=>{ setCatSelected(s); setCatIsPersonalizado(false); setCatScreen('detail') }}
+              onSelectPersonalizado={()=>{ setCatSelected(PERSONALIZADO); setCatIsPersonalizado(true); setCatScreen('landing') }}
+            />
+          )}
+          {catScreen==='landing' && (
+            <PersonalizadoLanding onBack={()=>setCatScreen('list')} onContinue={()=>setCatScreen('form')}/>
+          )}
+          {catScreen==='form' && (
+            <PersonalizadoForm onBack={()=>setCatScreen('landing')} onContinue={()=>setCatScreen('checkout')}
+              state={catState} setState={setCatState}/>
+          )}
+          {catScreen==='detail' && catSelected && (
+            <ServiceDetailScreen service={catSelected}
+              onBack={()=>setCatScreen('list')}
+              onContinue={()=>setCatScreen('checkout')}/>
+          )}
+          {catScreen==='checkout' && catSelected && (
+            <FinalizarPedido
+              selected={catSelected}
+              isPersonalizado={catIsPersonalizado}
+              onBack={()=>setCatScreen(catIsPersonalizado?'form':'detail')}
+              onConfirm={({ total, scheduleSurcharge })=>addCatalogOrder({ selected:catSelected, isPersonalizado:catIsPersonalizado, state:catState, total, scheduleSurcharge })}
+              state={catState} setState={setCatState}/>
+          )}
+          {catScreen==='done' && (
+            <ConfirmadoScreen onRestart={()=>{ catReset(); setTab('pedidos') }}/>
+          )}
+
+          {/* Fluxo antigo (activo apenas quando catScreen === null) */}
+          {catScreen===null && <>
+            {ecra==='nova'        && <CNovaOrdem svcI={svcNova} onBack={()=>setEcra('home')} onOk={add} moradas={moradasCli} setMoradas={setMoradasCli}/>}
+            {ecra==='ordem'       && sel && <COrdem o={sel} onBack={()=>setEcra('home')} onChat={()=>setEcra('chat_ordem_c')}/>}
+            {ecra==='chat_c'      && <Chat titulo='Suporte' msgs={CHAT_C} lado='cliente' onBack={()=>setEcra('home')}/>}
+            {ecra==='chat_ordem_c'&& sel && <OrderChat ordem={sel} role='cliente' prest={TECNICOS.find(t=>t.id===sel.tid)} onBack={()=>setEcra('ordem')} onUpdate={o=>{upd(o);setSel(o)}}/>}
+            {!cliOver && <>
+              {tab==='inicio'   && <CHome    ordens={ordens} onSvc={s=>{setSvcNova(s);setEcra('nova')}} onOrdem={o=>{setSel(o);setEcra('ordem')}} authUser={authUser} onCanalizacao={()=>setCatScreen('list')}/>}
+              {tab==='explorar' && <CExplorar onSvc={s=>{setSvcNova(s);setEcra('nova')}}/>}
+              {tab==='pedidos'  && <CPedidos  ordens={ordens} onOrdem={o=>{setSel(o);setEcra('ordem')}} authUser={authUser}/>}
+              {tab==='perfil'   && <CPerfil/>}
+              <BNav tab={tab} set={t=>{setTab(t);setEcra('home')}}/>
+            </>}
           </>}
         </>}
 
