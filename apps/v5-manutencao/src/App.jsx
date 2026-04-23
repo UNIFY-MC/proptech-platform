@@ -2501,6 +2501,13 @@ function CHome({ ordens, onSvc, onOrdem, authUser, onCanalizacao, categoriesCach
             const s = svcById(o.sid)
             const t = tecById(o.tid)
             const titulo = s?.n || o.servico_nome || (o.is_personalizado ? 'Serviço personalizado' : 'Serviço')
+            const catNome = (() => {
+              const names = { limpeza:'Limpeza', manutencao:'Manutenção', jardim:'Jardim', piscina:'Piscina', pintura:'Pintura', eletrica:'Eléctrica', canalizacao:'Canalização', pos_obra:'Pós-obra' }
+              return o.categoria_id ? names[o.categoria_id] : null
+            })()
+            const valorText = o.valor_cobrado != null
+              ? `€${Number(o.valor_cobrado).toFixed(2).replace('.',',')}`
+              : (o.val != null ? `€${Number(o.val).toFixed(2).replace('.',',')}` : null)
             let quando = o.data
             if(o.schedule_mode === 'imediato') quando = 'Imediato · 30-40 min'
             else if(o.data_agendada && o.hora_agendada){
@@ -2509,19 +2516,44 @@ function CHome({ ordens, onSvc, onOrdem, authUser, onCanalizacao, categoriesCach
                 quando = `${d.toLocaleDateString('pt-PT', { weekday:'short', day:'numeric', month:'short' })} · ${o.hora_agendada}`
               } catch {}
             }
+            const pedidoIso = o.dt_pedido_iso || o.created_at
+            const pedidoLabel = (() => {
+              if(!pedidoIso) return null
+              const ms = Date.now() - new Date(pedidoIso).getTime()
+              if(ms < 0 || Number.isNaN(ms)) return null
+              const m = Math.floor(ms / 60000)
+              if(m < 1) return 'há instantes'
+              if(m < 60) return `há ${m} min`
+              const h = Math.floor(m / 60)
+              if(h < 24) return `há ${h}h`
+              return `há ${Math.floor(h/24)} dias`
+            })()
             return (
               <Card key={o.id} style={{ padding:14, marginBottom:8 }} onClick={() => onOrdem(o)}>
-                <div style={{ display:'flex', gap:10, alignItems:'center' }}>
-                  <span style={{ fontSize:24 }}>{s?.ic||'🔧'}</span>
+                <div style={{ display:'flex', gap:10, alignItems:'flex-start' }}>
+                  <span style={{ fontSize:24, lineHeight:1 }}>{s?.ic||'🔧'}</span>
                   <div style={{ flex:1, minWidth:0 }}>
-                    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:1 }}>
-                      {o.numero_sequencial
-                        ? <span style={{ fontSize:10, fontWeight:700, color:C.slate, fontFamily:'ui-monospace,monospace', letterSpacing:0.3 }}>{o.numero_sequencial}</span>
-                        : <span/>}
+                    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:3 }}>
+                      <span style={{ fontSize:11, fontWeight:700, color:C.slate, fontFamily:'ui-monospace,monospace', letterSpacing:0.3 }}>
+                        {o.numero_sequencial || 'Pedido recente'}
+                      </span>
                       <EstBadge st={o.st}/>
                     </div>
                     <div style={{ fontSize:13, fontWeight:700, color:C.navy, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{titulo}</div>
-                    <div style={{ fontSize:11, color:C.slate, marginTop:2 }}>{quando}{t&&<span style={{ color:C.g, fontWeight:600 }}> · 👤 {t.n}</span>}</div>
+                    {(catNome || valorText) && (
+                      <div style={{ fontSize:11, color:C.slate, marginTop:2 }}>
+                        {catNome && <span>{catNome}</span>}
+                        {catNome && valorText && <span> · </span>}
+                        {valorText && <span style={{ fontWeight:700, color:C.navy }}>{valorText}</span>}
+                      </div>
+                    )}
+                    <div style={{ fontSize:11, color:C.slate, marginTop:2 }}>{quando}</div>
+                    {t
+                      ? <div style={{ fontSize:10, color:C.g, fontWeight:600, marginTop:2 }}>👤 {t.n}</div>
+                      : <div style={{ fontSize:10, color:C.amber, fontWeight:600, marginTop:2 }}>⏳ A atribuir técnico</div>}
+                    {pedidoLabel && (
+                      <div style={{ fontSize:10, color:C.slate, marginTop:2 }}>{pedidoLabel}</div>
+                    )}
                   </div>
                 </div>
               </Card>
