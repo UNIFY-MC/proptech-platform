@@ -2454,34 +2454,9 @@ function CHome({ ordens, onSvc, onOrdem, authUser, onCanalizacao, categoriesCach
   const nomeCliente = authUser?.nome || 'Cliente'
   const meus = ordens.filter(o => o.cli===nomeCliente && o.st!=='concluida')
   const svcs = SVCS.filter(s => (cat ? s.cat===cat : true) && (q ? s.n.toLowerCase().includes(q.toLowerCase()) : true))
-  // TEMP(2b): ACTIVO — testar ServiceListScreenV2 → VariantPicker → Detail (categoria='limpeza').
-  // Após teste manual, voltar a comentar e remover em 2c.
-  {
-    const [ecraT, setEcraT] = useState('list')
-    const [selT, setSelT]   = useState(null)
-    const [catT, setCatT]   = useState(null)
-    if (ecraT === 'list') return (
-      <ServiceListScreenV2 categoryId="limpeza" categoriesCache={categoriesCache} authUser={authUser}
-        onBack={()=>{}}
-        onSelectService={(s, cat)=>{
-          setCatT(cat)
-          if(s.tipo === 'grupo'){ setSelT(s); setEcraT('variant') }
-          else { setSelT(s); setEcraT('detail') }
-        }}
-        onSelectPersonalizado={()=>alert('Personalizado — não implementado nesta fase TEMP')}/>
-    )
-    if (ecraT === 'variant') return (
-      <VariantPickerScreenV2 parent={selT} category={catT} authUser={authUser}
-        onBack={()=>setEcraT('list')}
-        onContinue={(variant)=>{ setSelT(variant); setEcraT('detail') }}/>
-    )
-    if (ecraT === 'detail') return (
-      <ServiceDetailScreenV2 serviceId={selT.id} category={catT} authUser={authUser}
-        onBack={()=>setEcraT(selT.servico_pai_id ? 'variant' : 'list')}
-        onContinue={(opts)=>alert('Continuar → checkout (não implementado nesta fase TEMP)\n\n' + JSON.stringify({ id: opts.service.id, price: opts.effectivePrice, suffix: opts.priceSuffix }, null, 2))}/>
-    )
-    return null
-  }
+  // TEMP(2b) DESACTIVADO: bypass de teste validado (passos 1-7 OK).
+  // A integração proper dos screens V2 com o click de Canalização na CHome é feita na Fase 2c-A.
+  // Se precisar de re-testar em isolado, recolocar o bloco que esteve aqui em commit ff87563 ~ bd828dd.
   return (
     <div style={{ minHeight:'100vh', background:C.mist, paddingBottom:80 }}>
       {/* Hero */}
