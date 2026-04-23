@@ -6508,6 +6508,7 @@ function PersonalizadoFormV2({ category, onBack, onContinue, state, setState }){
 /* ── FinalizarPedidoV2 — checkout unificado (personalizado + fixo) com categoria ── */
 function FinalizarPedidoV2({ selected, category, isPersonalizado, onBack, onConfirm, state, setState }){
   const [modal, setModal] = useState(null)
+  const [lightbox, setLightbox] = useState(null) // index da foto ou null
 
   // Se o cliente configurou opções no detalhe (produtos/frequência), usa o preço efectivo
   const serviceOptions = state.serviceOptions
@@ -6634,65 +6635,140 @@ function FinalizarPedidoV2({ selected, category, isPersonalizado, onBack, onConf
 
         <div style={{ padding:"0 18px" }}>
           <div className="serif" style={{ fontSize:18, fontWeight:600 }}>O seu serviço</div>
+
           <div style={{
-            marginTop:12, display:"flex", gap:12, alignItems:"flex-start",
-            padding:14, background:CC.paper,
+            marginTop:12, background:CC.paper,
             border:`1px solid ${CC.line}`, borderRadius:14,
+            overflow:"hidden",
           }}>
-            <div style={{
-              width:48, height:48, flexShrink:0, borderRadius:10,
-              background:`${category.color}15`, color:category.color,
-              display:"grid", placeItems:"center", fontSize:22,
-            }}>{category.emoji}</div>
-            <div style={{ flex:1, minWidth:0 }}>
-              <div style={{ fontSize:14, fontWeight:600 }}>
-                {isPersonalizado ? `${category.nome} · Personalizado` : selectedNome}
-              </div>
-              <div style={{ fontSize:11.5, color:CC.stone, marginTop:2 }}>
-                {isPersonalizado
-                  ? `${state.horas || 1}h × ${eur(category.personalizadoRate)}/h`
-                  : category.nome}
-              </div>
-              {isPersonalizado && state.description && (
-                <div style={{
-                  fontSize:12, color:CC.stone, marginTop:6, lineHeight:1.4,
-                  overflow:"hidden", display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical",
-                }}>
-                  {state.description.length > 80 ? state.description.slice(0,80) + "…" : state.description}
+            {/* A. Header — icon + nome + subtítulo + botão delete */}
+            <div style={{ display:"flex", gap:12, alignItems:"flex-start", padding:14 }}>
+              <div style={{
+                width:48, height:48, flexShrink:0, borderRadius:10,
+                background:`${category.color}15`, color:category.color,
+                display:"grid", placeItems:"center", fontSize:22,
+              }}>{category.emoji}</div>
+              <div style={{ flex:1, minWidth:0 }}>
+                <div style={{ fontSize:14, fontWeight:600 }}>
+                  {isPersonalizado ? `${category.nome} · Personalizado` : selectedNome}
                 </div>
-              )}
-              {isPersonalizado && (state.photos || []).length > 0 && (
-                <div style={{ display:"flex", gap:6, marginTop:8 }}>
-                  {(state.photos || []).slice(0,3).map(p => (
-                    <div key={p.id} style={{
-                      width:36, height:36, borderRadius:8, flexShrink:0,
-                      background:CC.emeraldPale, border:`1px solid ${CC.emeraldSoft}`,
-                      display:"grid", placeItems:"center",
-                    }}><FileImage size={14} color={CC.emerald}/></div>
-                  ))}
-                  {(state.photos || []).length > 3 && (
-                    <div style={{
-                      width:36, height:36, borderRadius:8, flexShrink:0,
-                      background:CC.stoneLight, color:CC.stone,
-                      display:"grid", placeItems:"center",
-                      fontSize:11, fontWeight:700,
-                    }}>+{(state.photos || []).length - 3}</div>
+                <div style={{ fontSize:11.5, color:CC.stone, marginTop:2 }}>
+                  {isPersonalizado
+                    ? `${state.horas || 1}h × ${eur(category.personalizadoRate)}/h`
+                    : category.nome}
+                </div>
+              </div>
+              <button style={{
+                background:CC.paper, border:`1px solid ${CC.line}`,
+                borderRadius:999, width:32, height:32,
+                display:"grid", placeItems:"center", cursor:"pointer", color:CC.stone,
+                flexShrink:0,
+              }}><Trash2 size={14}/></button>
+            </div>
+
+            {/* B. Conteúdo do pedido (só personalizado; omitido para serviços fixos) */}
+            {isPersonalizado && (state.description || (state.photos || []).length > 0 || state.notes?.trim()) && (
+              <>
+                <div style={{ height:1, background:CC.line }}/>
+                <div style={{ padding:"14px", display:"flex", flexDirection:"column", gap:14 }}>
+                  {state.description && (
+                    <div>
+                      <div style={{
+                        fontSize:10, fontWeight:700, color:CC.stone,
+                        textTransform:"uppercase", letterSpacing:0.5, marginBottom:6,
+                      }}>Descrição</div>
+                      <div style={{ fontSize:13, color:CC.ink, lineHeight:1.5, whiteSpace:"pre-wrap" }}>
+                        {state.description}
+                      </div>
+                    </div>
+                  )}
+                  {(state.photos || []).length > 0 && (
+                    <div>
+                      <div style={{
+                        fontSize:10, fontWeight:700, color:CC.stone,
+                        textTransform:"uppercase", letterSpacing:0.5, marginBottom:6,
+                      }}>Fotografias ({(state.photos || []).length})</div>
+                      <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+                        {(state.photos || []).slice(0, 4).map((p, i) => (
+                          <button key={p.id}
+                            onClick={()=>setLightbox(i)}
+                            style={{
+                              width:48, height:48, borderRadius:8, flexShrink:0,
+                              background:CC.emeraldPale,
+                              border:`1px solid ${CC.emeraldSoft}`,
+                              display:"grid", placeItems:"center", cursor:"pointer", padding:0,
+                            }}><FileImage size={18} color={CC.emerald}/></button>
+                        ))}
+                        {(state.photos || []).length > 4 && (
+                          <button onClick={()=>setLightbox(4)} style={{
+                            width:48, height:48, borderRadius:8, flexShrink:0,
+                            background:CC.stoneLight, color:CC.stone,
+                            display:"grid", placeItems:"center",
+                            fontSize:12, fontWeight:700, cursor:"pointer", padding:0,
+                            border:"none",
+                          }}>+{(state.photos || []).length - 4}</button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  {state.notes?.trim() && (
+                    <div>
+                      <div style={{
+                        fontSize:10, fontWeight:700, color:CC.stone,
+                        textTransform:"uppercase", letterSpacing:0.5, marginBottom:6,
+                      }}>Notas</div>
+                      <div style={{ fontSize:13, color:CC.ink, lineHeight:1.5, whiteSpace:"pre-wrap" }}>
+                        {state.notes}
+                      </div>
+                    </div>
                   )}
                 </div>
-              )}
-              <div style={{ display:"flex", alignItems:"baseline", gap:6, marginTop:6 }}>
-                {servicePriceOriginal && servicePriceOriginal>servicePrice && (
-                  <span style={{ fontSize:11.5, color:CC.stone, textDecoration:"line-through" }}>{eur(servicePriceOriginal)}</span>
+              </>
+            )}
+
+            {/* C. Localização (placeholder do Fase 2d — morada do billing por agora) */}
+            <div style={{ height:1, background:CC.line }}/>
+            <div style={{ padding:"12px 14px", display:"flex", gap:10, alignItems:"flex-start" }}>
+              <div style={{
+                width:32, height:32, flexShrink:0, borderRadius:8,
+                background:CC.emeraldPale, color:CC.emerald,
+                display:"grid", placeItems:"center",
+              }}><MapPin size={16}/></div>
+              <div style={{ flex:1, minWidth:0 }}>
+                <div style={{
+                  fontSize:10, fontWeight:700, color:CC.stone,
+                  textTransform:"uppercase", letterSpacing:0.5, marginBottom:3,
+                }}>Localização</div>
+                {state.billing?.morada ? (
+                  <>
+                    <div style={{ fontSize:13, color:CC.ink, fontWeight:500 }}>{state.billing.morada}</div>
+                    <div style={{ fontSize:12, color:CC.stone, marginTop:1 }}>
+                      {[state.billing.cp, state.billing.localidade].filter(Boolean).join(' ') || '—'}
+                    </div>
+                  </>
+                ) : (
+                  <div style={{ fontSize:13, color:CC.stone, fontStyle:"italic" }}>
+                    Morada por adicionar
+                  </div>
                 )}
-                <span className="serif" style={{ fontSize:16, fontWeight:600, color:CC.forest }}>{eur(servicePrice)}</span>
+              </div>
+            </div>
+
+            {/* D. Preço do serviço (header-level; os extras ficam na secção "Detalhes do pagamento") */}
+            <div style={{ height:1, background:CC.line }}/>
+            <div style={{
+              padding:"12px 14px",
+              display:"flex", justifyContent:"space-between", alignItems:"baseline",
+            }}>
+              <span style={{ fontSize:12, color:CC.stone, fontWeight:500 }}>Preço do serviço</span>
+              <div style={{ display:"flex", alignItems:"baseline", gap:6 }}>
+                {servicePriceOriginal && servicePriceOriginal>servicePrice && (
+                  <span style={{ fontSize:12, color:CC.stone, textDecoration:"line-through" }}>{eur(servicePriceOriginal)}</span>
+                )}
+                <span className="serif" style={{ fontSize:18, fontWeight:600, color:CC.forest }}>{eur(servicePrice)}</span>
                 {priceSuffix && <span style={{ fontSize:11.5, color:CC.stone }}>{priceSuffix}</span>}
               </div>
             </div>
-            <button style={{
-              background:CC.paper, border:`1px solid ${CC.line}`,
-              borderRadius:999, width:32, height:32,
-              display:"grid", placeItems:"center", cursor:"pointer", color:CC.stone,
-            }}><Trash2 size={14}/></button>
           </div>
         </div>
 
@@ -6811,6 +6887,33 @@ function FinalizarPedidoV2({ selected, category, isPersonalizado, onBack, onConf
       {modal==="billing" && (
         <CCBillingModal billing={state.billing} onClose={()=>setModal(null)}
           onConfirm={(billing)=>{ setState(p=>({...p, billing})); setModal(null) }}/>
+      )}
+      {lightbox !== null && (state.photos || [])[lightbox] && (
+        <div onClick={()=>setLightbox(null)} style={{
+          position:"fixed", inset:0, background:"rgba(0,0,0,0.92)",
+          zIndex:100, display:"grid", placeItems:"center", padding:20,
+          cursor:"pointer",
+        }}>
+          <button onClick={(e)=>{ e.stopPropagation(); setLightbox(null) }} style={{
+            position:"absolute", top:16, right:16,
+            width:40, height:40, borderRadius:999,
+            background:"rgba(255,255,255,0.15)", color:CC.paper,
+            border:"none", cursor:"pointer",
+            display:"grid", placeItems:"center",
+          }}><X size={20}/></button>
+          <div style={{
+            width:"min(90vw, 380px)", aspectRatio:"3/4",
+            background:CC.emeraldPale, border:`1px solid ${CC.emeraldSoft}`,
+            borderRadius:16, display:"grid", placeItems:"center",
+          }}><FileImage size={80} color={CC.emerald}/></div>
+          {(state.photos || []).length > 1 && (
+            <div style={{
+              position:"absolute", bottom:32, left:"50%", transform:"translateX(-50%)",
+              color:CC.paper, fontSize:13, fontWeight:600,
+              background:"rgba(0,0,0,0.5)", padding:"6px 14px", borderRadius:999,
+            }}>{lightbox + 1} / {(state.photos || []).length}</div>
+          )}
+        </div>
       )}
     </CCShell>
   )
