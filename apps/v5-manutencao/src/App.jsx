@@ -691,12 +691,33 @@ function AuthScreen({ onAuth }) {
     setStep('pending')
   }
 
-  const demoLogin = (r) => {
-    const demos = {
-      cliente:   {id:'demo-cli',  nome:'Maria Santos'},
-      prestador: {id:'demo-prest',nome:'António Ferreira'},
+  const demoLogin = async (r) => {
+    // Fallback local quando não há chave Supabase (dev sem env) —
+    // mantém o comportamento pre-2d para não bloquear demos offline.
+    if (!SB_KEY) {
+      const locals = {
+        cliente:   { id:'demo-cli',  nome:'Maria Santos' },
+        prestador: { id:'demo-prest',nome:'António Ferreira' },
+        admin:     { id:'admin',     nome:'Admin' },
+      }
+      onAuth({ user:locals[r], token:null, role:r, nome:locals[r].nome, demo:true })
+      return
     }
-    onAuth({user:demos[r],token:null,role:r,nome:demos[r].nome,demo:true})
+    // Fase 2d.2 — signInWithPassword contra as 3 contas demo do Supabase.
+    // Ver CLAUDE.md "Auth dos botões demo" para credenciais e UUIDs.
+    const credenciais = {
+      cliente:   { email:'cliente@demov5.pt',   password:'Demo2026!', nome:'Maria Santos' },
+      prestador: { email:'prestador@demov5.pt', password:'Demo2026!', nome:'António Ferreira' },
+      admin:     { email:'admin@demov5.pt',     password:'Demo2026!', nome:'Admin' },
+    }
+    const { email, password, nome } = credenciais[r]
+    const res = await sbSignIn(email, password)
+    if (res.error) {
+      alert(`Login demo falhou: ${res.error}`)
+      console.error('[auth] demo login failed', res.error)
+      return
+    }
+    onAuth({ user:res.user, token:res.token, role:r, nome, demo:true })
   }
 
   // Componentes UI ────────────────────────────────
@@ -788,7 +809,7 @@ function AuthScreen({ onAuth }) {
             👷 Prestador demo
           </button>
         </div>
-        <button onClick={()=>onAuth({user:{id:'admin'},token:null,role:'admin',nome:'Admin',demo:true})} style={{width:'100%',padding:'8px',background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.08)',borderRadius:9,color:'rgba(255,255,255,0.4)',fontSize:11,cursor:'pointer',fontFamily:FONT,fontWeight:600}}>
+        <button onClick={()=>demoLogin('admin')} style={{width:'100%',padding:'8px',background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.08)',borderRadius:9,color:'rgba(255,255,255,0.4)',fontSize:11,cursor:'pointer',fontFamily:FONT,fontWeight:600}}>
           ⚙️ Painel Admin
         </button>
       </div>
@@ -7965,13 +7986,11 @@ export default function App() {
 
     // Persistir na Supabase
     if (SB_KEY) {
-      // Débito técnico: os botões demo (Cliente/Prestador/Admin) usam ids string tipo
-      // 'demo-cli', 'demo-pro', 'demo-adm' que não são UUIDs válidos. A coluna
-      // ordens.cliente_id é UUID com FK para clientes(id). Sem auth real, passamos
-      // NULL nestes casos para evitar erro 22P02 (invalid input syntax for uuid).
-      // Ver secção "Auth dos botões demo (DÉBITO TÉCNICO)" no CLAUDE.md.
-      const rawUserId = authUser?.user?.id
-      const clienteIdFinal = (rawUserId && !String(rawUserId).startsWith('demo-')) ? rawUserId : null
+      // Fase 2d.2: auth real activa — authUser.user.id é sempre um UUID
+      // válido (seja das 3 contas demo ou de user real). Ver CLAUDE.md
+      // "Auth dos botões demo — Fase 2d". O fallback para null cobre
+      // apenas o modo dev sem SB_KEY (demoLogin local), que nem chega aqui.
+      const clienteIdFinal = authUser?.user?.id || null
       const payload = {
         servico_id:          servicoId,                    // TEXT PK em public.servicos
         cliente_id:          clienteIdFinal,
