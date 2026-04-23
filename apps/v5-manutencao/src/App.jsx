@@ -1983,6 +1983,226 @@ function CCBillingModal({ onClose, billing, onConfirm }){
   )
 }
 
+/* ══════════════════════════════════════════════════════════════════
+   Fase 2a — primitivos de detalhe + opções dinâmicas
+   ══════════════════════════════════════════════════════════════════ */
+
+/* Mapa prefixos id categoria → sufixo usado nos 8 ids de personalizados
+   (personalizado-cln, personalizado-can, ...). Permite render dinâmico
+   do hero Personalizado conforme a categoria actual do cliente. */
+const CATEGORY_PREFIX = {
+  limpeza:'cln', manutencao:'mnt', jardim:'jar', piscina:'pol',
+  pintura:'pnt', eletrica:'elc', canalizacao:'can', pos_obra:'pos',
+}
+const personalizadoId = (categoriaId) => `personalizado-${CATEGORY_PREFIX[categoriaId]||'can'}`
+
+/* Templates de frequência — alinhadas com a tabela frequency_templates da BD.
+   Cada serviço aplicável aponta a uma destas via campo frequencyTemplate. */
+const FREQUENCY_TEMPLATES = {
+  cln_home: [
+    { id:"pontual",         label:"Pontual",                      hint:"1 visita apenas",                    multiplier:1,    discount:0,    suffix:"" },
+    { id:"mensal",          label:"Plano mensal (4 visitas/mês)", hint:"Mesma técnica sempre · −15%",        multiplier:4,    discount:0.15, suffix:"/mês" },
+    { id:"mensal-profunda", label:"Mensal + profunda trimestral", hint:"4 regulares + 1 profunda/3 meses",   multiplier:4.33, discount:0.12, suffix:"/mês", includesDeep:true },
+  ],
+  cln_occasional: [
+    { id:"pontual",    label:"Pontual",    hint:"1 visita apenas",                 multiplier:1, discount:0,    suffix:"" },
+    { id:"trimestral", label:"Trimestral", hint:"1 visita cada 3 meses · −10%",    multiplier:1, discount:0.10, suffix:"/visita", perVisit:true },
+    { id:"semestral",  label:"Semestral",  hint:"1 visita cada 6 meses · −5%",     multiplier:1, discount:0.05, suffix:"/visita", perVisit:true },
+  ],
+  cln_office: [
+    { id:"pontual",   label:"Pontual",   hint:"1 visita apenas",          multiplier:1, discount:0,    suffix:"" },
+    { id:"semanal",   label:"Semanal",   hint:"4 visitas/mês · −20%",     multiplier:4, discount:0.20, suffix:"/mês" },
+    { id:"quinzenal", label:"Quinzenal", hint:"2 visitas/mês · −15%",     multiplier:2, discount:0.15, suffix:"/mês" },
+    { id:"mensal",    label:"Mensal",    hint:"1 visita/mês · −10%",      multiplier:1, discount:0.10, suffix:"/mês" },
+  ],
+  jardim_corte: [
+    { id:"pontual",   label:"Pontual",   hint:"1 corte apenas",          multiplier:1, discount:0,    suffix:"" },
+    { id:"semanal",   label:"Semanal",   hint:"4 cortes/mês · −15%",     multiplier:4, discount:0.15, suffix:"/mês" },
+    { id:"quinzenal", label:"Quinzenal", hint:"2 cortes/mês · −12%",     multiplier:2, discount:0.12, suffix:"/mês" },
+    { id:"mensal",    label:"Mensal",    hint:"1 corte/mês · −8%",       multiplier:1, discount:0.08, suffix:"/mês" },
+  ],
+  sazonal_cut: [
+    { id:"pontual",   label:"Pontual",   hint:"1 visita apenas",            multiplier:1, discount:0,    suffix:"" },
+    { id:"semestral", label:"Semestral", hint:"2 visitas/ano · −10%",       multiplier:1, discount:0.10, suffix:"/visita", perVisit:true },
+    { id:"anual",     label:"Anual",     hint:"1 visita/ano · −5%",         multiplier:1, discount:0.05, suffix:"/visita", perVisit:true },
+  ],
+  plano_gradual: [
+    { id:"mensal",     label:"Mensal",       hint:"Sem compromisso",                           multiplier:1, discount:0,    suffix:"/mês" },
+    { id:"trimestral", label:"Trimestral",   hint:"3 meses comprometidos · −3%",               multiplier:1, discount:0.03, suffix:"/mês" },
+    { id:"semestral",  label:"Semestral",    hint:"6 meses comprometidos · −6%",               multiplier:1, discount:0.06, suffix:"/mês" },
+    { id:"anual",      label:"Plano anual",  hint:"12 meses · −10% · prioridade na agenda",    multiplier:1, discount:0.10, suffix:"/mês" },
+  ],
+  piscina_quimica: [
+    { id:"pontual",   label:"Pontual",   hint:"1 tratamento apenas",            multiplier:1, discount:0,    suffix:"" },
+    { id:"quinzenal", label:"Quinzenal", hint:"2 tratamentos/mês · −12%",       multiplier:2, discount:0.12, suffix:"/mês" },
+    { id:"mensal",    label:"Mensal",    hint:"1 tratamento/mês · −8%",         multiplier:1, discount:0.08, suffix:"/mês" },
+  ],
+  manutencao_anual: [
+    { id:"pontual", label:"Pontual",      hint:"1 visita apenas",                                     multiplier:1, discount:0,    suffix:"" },
+    { id:"anual",   label:"Plano anual",  hint:"12 meses · lembrete automático · −10% · prioridade",  multiplier:1, discount:0.10, suffix:"/visita", perVisit:true },
+  ],
+}
+
+const PRODUCTS_OPTIONS = [
+  { id:"cliente", label:"Eu forneço produtos e materiais", hint:"Detergentes, panos e sacos seus",      extra:0 },
+  { id:"tecnica", label:"Técnica traz produtos",            hint:"Profissional, não precisa preparar nada" }, // extra vem de service.productsExtraPrice
+]
+
+function getFrequencyOptions(service, parent){
+  const key = (parent || service)?.frequencyTemplate
+  if(!key || !FREQUENCY_TEMPLATES[key]) return null
+  return FREQUENCY_TEMPLATES[key]
+}
+
+function calcDynamicPrice(basePrice, productsId, frequencyId, productsExtra, deepPrice, frequencyOptions){
+  const prodExtra = productsId === "tecnica" ? (productsExtra || 0) : 0
+  if(!frequencyOptions) return basePrice + prodExtra
+  const freq = frequencyOptions.find(f => f.id === frequencyId)
+  if(!freq) return basePrice + prodExtra
+  if(freq.perVisit) return (basePrice + prodExtra) * (1 - freq.discount)
+  let total = (basePrice + prodExtra) * freq.multiplier * (1 - freq.discount)
+  if(freq.includesDeep && deepPrice) total += (deepPrice / 3) * (1 - freq.discount)
+  return total
+}
+
+/* Primitivos para o ServiceDetailScreen (Fase 2b) */
+function DetailSection({ title, icon:Icon, iconColor, children }){
+  return (
+    <div style={{ marginTop:22 }}>
+      <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:12 }}>
+        {Icon && (
+          <div style={{
+            width:24, height:24, borderRadius:6,
+            background:`${iconColor}15`, color:iconColor,
+            display:"grid", placeItems:"center",
+          }}><Icon size={14}/></div>
+        )}
+        <div className="serif" style={{ fontSize:15, fontWeight:600, color:CC.ink }}>{title}</div>
+      </div>
+      <div style={{ display:"flex", flexDirection:"column", gap:8 }}>{children}</div>
+    </div>
+  )
+}
+
+function DetailItem({ icon:Icon, iconColor, children }){
+  return (
+    <div style={{
+      display:"flex", gap:10, alignItems:"flex-start",
+      fontSize:13, lineHeight:1.45, color:CC.ink,
+    }}>
+      {Icon && <Icon size={14} color={iconColor} style={{ flexShrink:0, marginTop:3 }}/>}
+      <div style={{ flex:1 }}>{children}</div>
+    </div>
+  )
+}
+
+function FaqItem({ q, a }){
+  const [open, setOpen] = useState(false)
+  return (
+    <div style={{
+      border:`1px solid ${CC.line}`, borderRadius:10, overflow:"hidden",
+      background:CC.paper,
+    }}>
+      <button onClick={()=>setOpen(!open)} style={{
+        width:"100%", padding:"12px 14px",
+        background:"transparent", border:"none", cursor:"pointer",
+        display:"flex", justifyContent:"space-between", alignItems:"center",
+        gap:10, textAlign:"left",
+        fontSize:13, fontWeight:600, color:CC.ink,
+        fontFamily:"inherit",
+      }}>
+        <span style={{ flex:1 }}>{q}</span>
+        <ChevronRight size={16} color={CC.stone}
+          style={{ transform: open?"rotate(90deg)":"none", transition:"transform 0.15s" }}/>
+      </button>
+      {open && (
+        <div style={{ padding:"0 14px 14px", fontSize:13, lineHeight:1.5, color:CC.stone }}>{a}</div>
+      )}
+    </div>
+  )
+}
+
+/* Primitivos para opções dinâmicas (produtos + frequência) */
+function OptionRow({ selected, label, hint, priceLabel, onClick, accent }){
+  return (
+    <button onClick={onClick} style={{
+      background: selected ? `${accent}08` : CC.paper,
+      border: `2px solid ${selected ? accent : CC.line}`,
+      borderRadius:12, padding:"12px 14px",
+      display:"flex", alignItems:"center", gap:12,
+      cursor:"pointer", textAlign:"left", width:"100%",
+      transition:"all 0.15s",
+    }}>
+      <div style={{
+        width:18, height:18, borderRadius:999,
+        border:`2px solid ${selected ? accent : CC.stoneLight}`,
+        background: selected ? accent : "transparent",
+        display:"grid", placeItems:"center", flexShrink:0,
+      }}>
+        {selected && <Check size={10} color={CC.paper} strokeWidth={3}/>}
+      </div>
+      <div style={{ flex:1, minWidth:0 }}>
+        <div style={{ fontSize:13.5, fontWeight:600, color:CC.ink, lineHeight:1.3 }}>{label}</div>
+        {hint && <div style={{ fontSize:11.5, color:CC.stone, marginTop:3, lineHeight:1.3 }}>{hint}</div>}
+      </div>
+      {priceLabel && (
+        <div style={{ fontSize:12.5, fontWeight:600, color:accent, flexShrink:0 }}>{priceLabel}</div>
+      )}
+    </button>
+  )
+}
+
+function OptionsSection({ service, parent, productsId, setProductsId, frequencyId, setFrequencyId, accent }){
+  const src = parent || service
+  const frequencyOptions = getFrequencyOptions(service, parent)
+  const hasFrequency = !!frequencyOptions
+  if(!src.hasProductsOption && !hasFrequency) return null
+
+  return (
+    <div style={{ marginTop:22 }}>
+      <div className="serif" style={{ fontSize:15, fontWeight:600, color:CC.ink, marginBottom:12 }}>Opções</div>
+
+      {src.hasProductsOption && (
+        <div style={{ marginBottom:14 }}>
+          <div style={{ fontSize:12, color:CC.stone, marginBottom:8, fontWeight:600, textTransform:"uppercase", letterSpacing:0.3 }}>
+            Produtos e materiais
+          </div>
+          <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+            {PRODUCTS_OPTIONS.map(opt => (
+              <OptionRow key={opt.id}
+                selected={productsId === opt.id}
+                onClick={()=>setProductsId(opt.id)}
+                label={opt.label} hint={opt.hint}
+                priceLabel={opt.id === "tecnica" && src.productsExtraPrice
+                  ? `+${eur(src.productsExtraPrice)}`
+                  : null}
+                accent={accent}/>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {hasFrequency && (
+        <div>
+          <div style={{ fontSize:12, color:CC.stone, marginBottom:8, fontWeight:600, textTransform:"uppercase", letterSpacing:0.3 }}>
+            Frequência
+          </div>
+          <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+            {frequencyOptions.map(opt => (
+              <OptionRow key={opt.id}
+                selected={frequencyId === opt.id}
+                onClick={()=>setFrequencyId(opt.id)}
+                label={opt.label} hint={opt.hint}
+                priceLabel={opt.discount > 0 ? `−${Math.round(opt.discount * 100)}%` : null}
+                accent={accent}/>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 /* ══ FIM DO BLOCO NOVO FLUXO (parte 1) ══ */
 
 /* ══ HELPERS ══ */
