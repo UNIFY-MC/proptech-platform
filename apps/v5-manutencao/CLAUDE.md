@@ -85,8 +85,13 @@ Entre cada fase, apresenta o plano ou o resultado e espera confirmação.
 Os botões Cliente/Prestador/Admin no login mudam state local sem fazer
 signin real no Supabase. Consequências e workarounds actuais:
 
-1. **RLS de ordens** tem policy temporária permitindo INSERT a role `anon`
-   (`temp_anon_insert_ordens`, migração `20260423_temp_anon_insert_ordens.sql`).
+1. **RLS de ordens** tem 2 policies temporárias abertas a role `public`
+   (`pre_auth_select_ordens` + `pre_auth_insert_ordens`, migração
+   `20260423_fix_ordens_rls_pre_auth.sql`). UPDATE/DELETE ficam sem
+   policy — bloqueado por default. Policies anteriores
+   (`ordens_participantes`, `temp_anon_insert_ordens`) foram removidas
+   porque o pathway do PostgREST com anon key JWT não accionava o role
+   matching esperado.
 2. **`auth.uid()` retorna null** em todos os fluxos demo.
 3. Os IDs dos demos (`demo-cli`, `demo-pro`, `demo-adm`) são strings
    não-UUID. INSERT em colunas UUID com estes IDs falha (erro `22P02:
@@ -106,9 +111,12 @@ signin real no Supabase. Consequências e workarounds actuais:
 1. Criar 3 contas mock no Supabase (`cliente@demo.v5`, `prestador@demo.v5`,
    `admin@demo.v5`) via `POST /auth/v1/admin/users` com service_role key.
 2. Botões demo passam a fazer `signInWithPassword` com password fixa.
-3. Substituir policies permissivas por `cliente_id = auth.uid()` em `ordens`.
+3. Substituir policies `pre_auth_*` por policies proper com
+   `auth.uid() = cliente_id OR prestador_id` (ver header da migração
+   `20260423_fix_ordens_rls_pre_auth.sql` para template SQL completo).
 4. Remover o check `startsWith('demo-')` em `addCatalogOrder`.
-5. `DROP POLICY "temp_anon_insert_ordens"` em `ordens`.
+5. `DROP POLICY pre_auth_select_ordens` e `pre_auth_insert_ordens`
+   em `ordens`; recriar com auth.uid() match.
 
 **Prioridade**: alta antes de qualquer teste externo ou convite a clientes reais.
 
