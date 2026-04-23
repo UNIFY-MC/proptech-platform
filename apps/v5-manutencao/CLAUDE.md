@@ -148,6 +148,15 @@ prerequisitos mútuos.
       policies proper com `auth.uid() = cliente_id`
 - [ ] Limpar quaisquer contas de teste/demo
 - [ ] Apagar dados de desenvolvimento em profiles/catalog/etc.
+- [ ] DROP colunas órfãs da tabela `ordens`:
+      `ALTER TABLE ordens DROP COLUMN descricao_cliente;`
+      `ALTER TABLE ordens DROP COLUMN notas_cliente;`
+      `ALTER TABLE ordens DROP COLUMN nota_cliente;`
+
+      Contexto: resíduos de migrations anteriores. Nunca são
+      gravadas pelo código actual (só `descricao_personalizada` e
+      `notas` são). Deixá-las vazias criava dúvidas sobre integridade
+      de dados. Remover junto com o reset da sequência.
 
 ## Supabase — tabelas
 
