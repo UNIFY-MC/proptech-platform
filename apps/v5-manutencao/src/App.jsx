@@ -6381,6 +6381,8 @@ function PersonalizadoLandingV2({ category, onBack, onContinue }){
 function PersonalizadoFormV2({ category, onBack, onContinue, state, setState }){
   const hoursEstimate = (state.horas || 1) * category.personalizadoRate
   const canContinue = (state.description || "").length >= 30
+  // Reset scroll ao entrar — evita herdar offset do ecrã anterior (Landing)
+  useEffect(() => { window.scrollTo(0, 0) }, [])
   return (
     <CCShell>
       <CCTopBar onBack={onBack} title={`${category.nome} · Personalizado`}/>
