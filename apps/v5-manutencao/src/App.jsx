@@ -6681,23 +6681,23 @@ function FinalizarPedidoV2({ selected, category, isPersonalizado, onBack, onConf
                           fontSize:10, fontWeight:700, color:CC.stone,
                           textTransform:"uppercase", letterSpacing:0.5, marginBottom:6,
                         }}>Fotografias ({photos.length})</div>
-                        <div style={{ display:"flex", gap:6 }}>
+                        <div style={{ display:"flex", gap:4 }}>
                           {photos.slice(0, visibleCount).map((p, i) => (
                             <button key={p.id}
                               onClick={()=>setLightbox(i)}
                               style={{
-                                width:48, height:48, borderRadius:8, flexShrink:0,
+                                width:44, height:44, borderRadius:8, flexShrink:0,
                                 background:CC.emeraldPale,
                                 border:`1px solid ${CC.emeraldSoft}`,
                                 display:"grid", placeItems:"center", cursor:"pointer", padding:0,
-                              }}><FileImage size={18} color={CC.emerald}/></button>
+                              }}><FileImage size={16} color={CC.emerald}/></button>
                           ))}
                           {hiddenCount > 0 && (
                             <button onClick={()=>setLightbox(visibleCount)} style={{
-                              width:48, height:48, borderRadius:8, flexShrink:0,
+                              width:44, height:44, borderRadius:8, flexShrink:0,
                               background:CC.stoneLight, color:CC.stone,
                               display:"grid", placeItems:"center",
-                              fontSize:12, fontWeight:700, cursor:"pointer", padding:0,
+                              fontSize:11, fontWeight:700, cursor:"pointer", padding:0,
                               border:"none",
                             }}>+{hiddenCount}</button>
                           )}
