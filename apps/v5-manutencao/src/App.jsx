@@ -6682,35 +6682,41 @@ function FinalizarPedidoV2({ selected, category, isPersonalizado, onBack, onConf
                       </div>
                     </div>
                   )}
-                  {(state.photos || []).length > 0 && (
-                    <div>
-                      <div style={{
-                        fontSize:10, fontWeight:700, color:CC.stone,
-                        textTransform:"uppercase", letterSpacing:0.5, marginBottom:6,
-                      }}>Fotografias ({(state.photos || []).length})</div>
-                      <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
-                        {(state.photos || []).slice(0, 4).map((p, i) => (
-                          <button key={p.id}
-                            onClick={()=>setLightbox(i)}
-                            style={{
+                  {(state.photos || []).length > 0 && (() => {
+                    const photos = state.photos || []
+                    const showAll = photos.length <= 5
+                    const visibleCount = showAll ? photos.length : 4
+                    const hiddenCount = photos.length - visibleCount
+                    return (
+                      <div>
+                        <div style={{
+                          fontSize:10, fontWeight:700, color:CC.stone,
+                          textTransform:"uppercase", letterSpacing:0.5, marginBottom:6,
+                        }}>Fotografias ({photos.length})</div>
+                        <div style={{ display:"flex", gap:6 }}>
+                          {photos.slice(0, visibleCount).map((p, i) => (
+                            <button key={p.id}
+                              onClick={()=>setLightbox(i)}
+                              style={{
+                                width:48, height:48, borderRadius:8, flexShrink:0,
+                                background:CC.emeraldPale,
+                                border:`1px solid ${CC.emeraldSoft}`,
+                                display:"grid", placeItems:"center", cursor:"pointer", padding:0,
+                              }}><FileImage size={18} color={CC.emerald}/></button>
+                          ))}
+                          {hiddenCount > 0 && (
+                            <button onClick={()=>setLightbox(visibleCount)} style={{
                               width:48, height:48, borderRadius:8, flexShrink:0,
-                              background:CC.emeraldPale,
-                              border:`1px solid ${CC.emeraldSoft}`,
-                              display:"grid", placeItems:"center", cursor:"pointer", padding:0,
-                            }}><FileImage size={18} color={CC.emerald}/></button>
-                        ))}
-                        {(state.photos || []).length > 4 && (
-                          <button onClick={()=>setLightbox(4)} style={{
-                            width:48, height:48, borderRadius:8, flexShrink:0,
-                            background:CC.stoneLight, color:CC.stone,
-                            display:"grid", placeItems:"center",
-                            fontSize:12, fontWeight:700, cursor:"pointer", padding:0,
-                            border:"none",
-                          }}>+{(state.photos || []).length - 4}</button>
-                        )}
+                              background:CC.stoneLight, color:CC.stone,
+                              display:"grid", placeItems:"center",
+                              fontSize:12, fontWeight:700, cursor:"pointer", padding:0,
+                              border:"none",
+                            }}>+{hiddenCount}</button>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )
+                  })()}
                   {state.notes?.trim() && (
                     <div>
                       <div style={{
