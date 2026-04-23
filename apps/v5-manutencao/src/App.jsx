@@ -6686,8 +6686,12 @@ function ConfirmadoScreenV2({ onRestart }){
 }
 
 /* ════════════════════════════════════════════════════════════════════
-   ══ NOVO FLUXO CANALIZAÇÃO — 6 ECRÃS ══
-   ════════════════════════════════════════════════════════════════════ */
+   ══ V1_LEGACY — 6 ecrãs do fluxo original da canalização (iter 1) ══
+   ════════════════════════════════════════════════════════════════════
+   Substituídos pelos V2 data-driven na Fase 2c-A (commit dbde537).
+   Mantidos comentados como safety-net para rollback rápido em produção.
+   Remover na Fase 3 depois do V2 estar estável nas 8 categorias.
+   Para restaurar: apagar este header e o marcador de fecho antes do bloco ROOT.
 
 function ServiceListScreen({ onBack, onSelectService, onSelectPersonalizado }){
   const [activeSub, setActiveSub] = useState("todos")
@@ -7329,6 +7333,7 @@ function ConfirmadoScreen({ onRestart }){
     </CCShell>
   )
 }
+*/ /* ── fim V1_LEGACY ── */
 
 /* ══════════════════════════════════
    ROOT
