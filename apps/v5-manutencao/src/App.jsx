@@ -6531,7 +6531,8 @@ function FinalizarPedidoV2({ selected, category, isPersonalizado, onBack, onConf
   const total = servicePrice + TRAVEL_FEE + PROTECTION_FEE_NOW + scheduleSurcharge
   const scheduleOk = state.scheduleMode === "imediato" ||
     (state.scheduleMode === "agendar" && (state.selectedSlots || []).length > 0)
-  const canBook = state.paymentMethod !== null && scheduleOk
+  const hasMorada = !!state.billing?.morada
+  const canBook = state.paymentMethod !== null && scheduleOk && hasMorada
   const slots = state.selectedSlots || []
   const hasBilling = state.billing?.nif
 
@@ -6559,31 +6560,42 @@ function FinalizarPedidoV2({ selected, category, isPersonalizado, onBack, onConf
               boxShadow:`0 8px 20px -4px ${CC.forestDeep}`,
             }}><MapPin size={16} fill={CC.paper}/></div>
           </div>
-          <button style={{
+          <button onClick={()=>setModal("billing")} style={{
             position:"absolute", bottom:14, left:"50%", transform:"translateX(-50%)",
             background:CC.paper, color:CC.ink,
             border:`1px solid ${CC.line}`, borderRadius:999,
             padding:"6px 14px", fontSize:12, fontWeight:600,
             cursor:"pointer", boxShadow:"0 4px 12px -4px rgba(0,0,0,0.1)",
-          }}>Editar localização</button>
+          }}>{state.billing?.morada ? "Editar localização" : "Adicionar localização"}</button>
         </div>
 
         <div style={{ padding:"16px 18px 0" }}>
-          <div style={{
-            display:"flex", alignItems:"center", gap:12,
+          <button onClick={()=>setModal("billing")} style={{
+            display:"flex", alignItems:"center", gap:12, width:"100%",
             padding:"12px 0", borderBottom:`1px solid ${CC.line}`,
+            background:"transparent", border:"none", cursor:"pointer", textAlign:"left",
           }}>
             <div style={{
               width:36, height:36, borderRadius:10,
-              background:CC.emeraldPale, color:CC.emerald,
+              background:state.billing?.morada ? CC.emeraldPale : CC.stoneLight,
+              color:state.billing?.morada ? CC.emerald : CC.stone,
               display:"grid", placeItems:"center", flexShrink:0,
             }}><MapPin size={18}/></div>
-            <div style={{ flex:1 }}>
-              <div style={{ fontSize:14, fontWeight:600 }}>{state.billing?.morada || "Rua Palmira Bastos, 4"}</div>
-              <div style={{ fontSize:12, color:CC.stone }}>{state.billing?.localidade || "Caldas da Rainha"}</div>
+            <div style={{ flex:1, minWidth:0 }}>
+              {state.billing?.morada ? (
+                <>
+                  <div style={{ fontSize:14, fontWeight:600, color:CC.ink }}>{state.billing.morada}</div>
+                  <div style={{ fontSize:12, color:CC.stone }}>{[state.billing.cp, state.billing.localidade].filter(Boolean).join(' ') || '—'}</div>
+                </>
+              ) : (
+                <>
+                  <div style={{ fontSize:14, fontWeight:600, color:CC.ink }}>Adicionar morada de serviço</div>
+                  <div style={{ fontSize:12, color:CC.stone }}>Necessária para agendar — toque para preencher</div>
+                </>
+              )}
             </div>
             <ChevronRight size={18} color={CC.stone}/>
-          </div>
+          </button>
 
           <div style={{ marginTop:16, display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
             <button onClick={()=>{ setState(p=>({...p, scheduleMode:"agendar"})); setModal("schedule") }}
@@ -6868,11 +6880,13 @@ function FinalizarPedidoV2({ selected, category, isPersonalizado, onBack, onConf
 
       <CCStickyCTA banner={`Reserve agora e poupe ${eur(PROMO_SAVINGS)} em descontos`}>
         <CCPrimaryBtn onClick={()=>onConfirm({ total, scheduleSurcharge, servicePrice })} disabled={!canBook}>
-          {!state.paymentMethod
-            ? "Escolha método de pagamento"
-            : !scheduleOk
-              ? "Escolha Agendar ou Imediato"
-              : "Agendar serviço"}
+          {!hasMorada
+            ? "Adicione morada de serviço"
+            : !state.paymentMethod
+              ? "Escolha método de pagamento"
+              : !scheduleOk
+                ? "Escolha Agendar ou Imediato"
+                : "Agendar serviço"}
         </CCPrimaryBtn>
       </CCStickyCTA>
 
