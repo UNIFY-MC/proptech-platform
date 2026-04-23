@@ -2448,15 +2448,40 @@ function Chat({ titulo, msgs: iM, lado, onBack }) {
 /* ══════════════════════════════════
    CLIENTE
 ══════════════════════════════════ */
-function CHome({ ordens, onSvc, onOrdem, authUser, onCanalizacao }) {
+function CHome({ ordens, onSvc, onOrdem, authUser, onCanalizacao, categoriesCache }) {
   const [cat, setCat] = useState(null)
   const [q,   setQ]   = useState('')
   const nomeCliente = authUser?.nome || 'Cliente'
   const meus = ordens.filter(o => o.cli===nomeCliente && o.st!=='concluida')
   const svcs = SVCS.filter(s => (cat ? s.cat===cat : true) && (q ? s.n.toLowerCase().includes(q.toLowerCase()) : true))
-  // TEMP(2b): descomenta para testar ServiceListScreenV2 com uma categoria à escolha.
-  // if (true) return <ServiceListScreenV2 categoryId="limpeza" authUser={authUser} onBack={()=>{}} onSelectService={(s,c)=>console.log('svc',s,c)} onSelectPersonalizado={()=>console.log('personalizado')} />
-  // Remover em 2c quando os screens V2 forem ligados pelo root via estado dedicado.
+  // TEMP(2b): ACTIVO — testar ServiceListScreenV2 → VariantPicker → Detail (categoria='limpeza').
+  // Após teste manual, voltar a comentar e remover em 2c.
+  {
+    const [ecraT, setEcraT] = useState('list')
+    const [selT, setSelT]   = useState(null)
+    const [catT, setCatT]   = useState(null)
+    if (ecraT === 'list') return (
+      <ServiceListScreenV2 categoryId="limpeza" categoriesCache={categoriesCache} authUser={authUser}
+        onBack={()=>{}}
+        onSelectService={(s, cat)=>{
+          setCatT(cat)
+          if(s.tipo === 'grupo'){ setSelT(s); setEcraT('variant') }
+          else { setSelT(s); setEcraT('detail') }
+        }}
+        onSelectPersonalizado={()=>alert('Personalizado — não implementado nesta fase TEMP')}/>
+    )
+    if (ecraT === 'variant') return (
+      <VariantPickerScreenV2 parent={selT} category={catT} authUser={authUser}
+        onBack={()=>setEcraT('list')}
+        onContinue={(variant)=>{ setSelT(variant); setEcraT('detail') }}/>
+    )
+    if (ecraT === 'detail') return (
+      <ServiceDetailScreenV2 serviceId={selT.id} category={catT} authUser={authUser}
+        onBack={()=>setEcraT(selT.servico_pai_id ? 'variant' : 'list')}
+        onContinue={(opts)=>alert('Continuar → checkout (não implementado nesta fase TEMP)\n\n' + JSON.stringify({ id: opts.service.id, price: opts.effectivePrice, suffix: opts.priceSuffix }, null, 2))}/>
+    )
+    return null
+  }
   return (
     <div style={{ minHeight:'100vh', background:C.mist, paddingBottom:80 }}>
       {/* Hero */}
@@ -5618,22 +5643,28 @@ const CATEGORY_META = {
   pos_obra:    { color:'#78716C', hero:'Acabamento pós-obra à medida — limpeza + retoques + entulho conforme precisar.' },
 }
 
-/* Fetch completo de uma categoria (categoria + subcategorias + serviços-top + variantes + personalizado).
-   Retorna estrutura aninhada igual à que os ecrãs V2 esperam. */
-async function fetchCategoryFull(categoryId, token){
-  const meta = CATEGORY_META[categoryId]
-  if(!meta) return null
+/* Fetch completo de uma categoria (subcategorias + serviços-top + variantes + personalizado).
+   `baseCategoryRow` vem do cache de categorias carregado no root App (ver categoriesCache).
+   CATEGORY_META é só para design tokens (color + hero copy). Se a cat não estiver em
+   CATEGORY_META, cai em defaults — permite futuras categorias dinâmicas sem bloquear.
+   Retorna null apenas se a categoria não existir no cache. */
+async function fetchCategoryFull(categoryId, token, baseCategoryRow){
+  if(!baseCategoryRow) return null
+  const meta = CATEGORY_META[categoryId] || { color:'#10B981', hero:'Serviço à medida — descreva o trabalho e enviamos o técnico certo.' }
 
-  const [catRows, subRows, personalizadoRows, topServicos, allVariants] = await Promise.all([
-    sbGet('categorias',    `?id=eq.${categoryId}&select=id,nome,icon,activo`, token),
+  const [subRows, personalizadoRows, topServicos, allVariants] = await Promise.all([
     sbGet('subcategorias', `?categoria_id=eq.${categoryId}&order=ordem`, token),
     sbGet('servicos',      `?id=eq.${getPersonalizadoId(categoryId)}&select=preco,preco_original`, token),
     sbGet('servicos',      `?categoria_id=eq.${categoryId}&activo=eq.true&servico_pai_id=is.null&tipo=neq.personalizado&order=ordem`, token),
     sbGet('servicos',      `?categoria_id=eq.${categoryId}&activo=eq.true&servico_pai_id=not.is.null&order=ordem`, token),
   ])
 
-  if(!catRows || catRows.length === 0) return null
-  const cat = catRows[0]
+  console.log('[V2 catalog] fetchCategoryFull', categoryId,
+    '→ subs:', Array.isArray(subRows)?subRows.length:subRows,
+    '· top:', Array.isArray(topServicos)?topServicos.length:topServicos,
+    '· variants:', Array.isArray(allVariants)?allVariants.length:allVariants,
+    '· personalizado:', personalizadoRows?.[0]?.preco ?? null)
+
   const personalizado = personalizadoRows?.[0]
 
   const variantsByParent = {}
@@ -5654,9 +5685,9 @@ async function fetchCategoryFull(categoryId, token){
   })).filter(sub => sub.services.length > 0)
 
   return {
-    id:    cat.id,
-    nome:  cat.nome,
-    emoji: cat.icon,
+    id:    baseCategoryRow.id,
+    nome:  baseCategoryRow.nome,
+    emoji: baseCategoryRow.icon,
     color: meta.color,
     hero:  meta.hero,
     subcategorias,
@@ -5761,8 +5792,12 @@ function ServiceCardV2({ service, categoryColor, onClick }){
   )
 }
 
-/* ── ServiceListScreenV2 — lista data-driven por categoria ── */
-function ServiceListScreenV2({ categoryId, authUser, onBack, onSelectService, onSelectPersonalizado }){
+/* ── ServiceListScreenV2 — lista data-driven por categoria ──
+   Props:
+   - categoryId: string (ex: 'limpeza')
+   - categoriesCache: array vindo do root App (null = a carregar, [] = erro de fetch)
+   - authUser, onBack, onSelectService, onSelectPersonalizado: standard */
+function ServiceListScreenV2({ categoryId, categoriesCache, authUser, onBack, onSelectService, onSelectPersonalizado }){
   const [category, setCategory] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -5771,29 +5806,46 @@ function ServiceListScreenV2({ categoryId, authUser, onBack, onSelectService, on
   const sectionRefs = useRef({})
 
   useEffect(() => {
+    // Esperar pelo cache de categorias (null = ainda a carregar)
+    if(categoriesCache === null) return
+    // Cache vazio = fetch inicial falhou
+    if(categoriesCache.length === 0){
+      setError('Sem categorias disponíveis (verifique ligação à base de dados).')
+      setLoading(false)
+      return
+    }
+    const baseRow = categoriesCache.find(c => c.id === categoryId)
+    if(!baseRow){
+      setError(`Categoria "${categoryId}" não existe no catálogo (${categoriesCache.length} disponíveis).`)
+      setLoading(false)
+      return
+    }
+
     let active = true
     setLoading(true); setError(null)
-    fetchCategoryFull(categoryId, authUser?.token)
+    fetchCategoryFull(categoryId, authUser?.token, baseRow)
       .then(data => {
         if(!active) return
-        if(!data) setError(`Categoria "${categoryId}" não encontrada.`)
+        if(!data) setError(`Não foi possível carregar o catálogo de "${baseRow.nome}".`)
         else setCategory(data)
         setLoading(false)
       })
       .catch(e => { if(active){ setError(e.message || 'Erro ao carregar categoria'); setLoading(false) } })
     return () => { active = false }
-  }, [categoryId, authUser?.token])
+  }, [categoryId, authUser?.token, categoriesCache])
 
-  if(loading) return (
+  if(loading || categoriesCache === null) return (
     <CCShell>
       <CCTopBar onBack={onBack} title="A carregar..." />
-      <div style={{ padding:40, textAlign:"center", color:CC.stone, fontSize:13 }}>A obter serviços…</div>
+      <div style={{ padding:40, textAlign:"center", color:CC.stone, fontSize:13 }}>
+        {categoriesCache === null ? 'A carregar catálogo…' : 'A obter serviços…'}
+      </div>
     </CCShell>
   )
   if(error || !category) return (
     <CCShell>
       <CCTopBar onBack={onBack} title="Erro" />
-      <div style={{ padding:40, textAlign:"center", color:CC.stone, fontSize:13 }}>{error || 'Categoria indisponível.'}</div>
+      <div style={{ padding:40, textAlign:"center", color:CC.stone, fontSize:13, lineHeight:1.5 }}>{error || 'Categoria indisponível.'}</div>
     </CCShell>
   )
 
@@ -7317,6 +7369,24 @@ export default function App() {
   const [sel,    setSel]    = useState(null)
   const [svcNova,setSvcNova]= useState(null)
 
+  // ── Cache de categorias (lido 1× da BD no arranque, partilhado pelos ecrãs V2) ──
+  const [categoriesCache, setCategoriesCache] = useState(null)
+  useEffect(() => {
+    let active = true
+    sbGet('categorias', '?activo=eq.true&order=ordem', authUser?.token)
+      .then(data => {
+        if(!active) return
+        console.log('[V2 catalog] categorias fetch →', Array.isArray(data) ? `${data.length} rows` : data)
+        setCategoriesCache(data || [])
+      })
+      .catch(e => {
+        if(!active) return
+        console.warn('[V2 catalog] erro ao carregar categorias:', e)
+        setCategoriesCache([])
+      })
+    return () => { active = false }
+  }, [authUser?.token])
+
   // ── Estado do novo fluxo Canalização (catálogo + personalizado) ──
   const [catScreen, setCatScreen] = useState(null) // null | 'list' | 'landing' | 'form' | 'detail' | 'checkout' | 'done'
   const [catSelected, setCatSelected] = useState(null)
@@ -7617,7 +7687,7 @@ export default function App() {
             {ecra==='chat_c'      && <Chat titulo='Suporte' msgs={CHAT_C} lado='cliente' onBack={()=>setEcra('home')}/>}
             {ecra==='chat_ordem_c'&& sel && <OrderChat ordem={sel} role='cliente' prest={TECNICOS.find(t=>t.id===sel.tid)} onBack={()=>setEcra('ordem')} onUpdate={o=>{upd(o);setSel(o)}}/>}
             {!cliOver && <>
-              {tab==='inicio'   && <CHome    ordens={ordens} onSvc={s=>{setSvcNova(s);setEcra('nova')}} onOrdem={o=>{setSel(o);setEcra('ordem')}} authUser={authUser} onCanalizacao={()=>setCatScreen('list')}/>}
+              {tab==='inicio'   && <CHome    ordens={ordens} onSvc={s=>{setSvcNova(s);setEcra('nova')}} onOrdem={o=>{setSel(o);setEcra('ordem')}} authUser={authUser} onCanalizacao={()=>setCatScreen('list')} categoriesCache={categoriesCache}/>}
               {tab==='explorar' && <CExplorar onSvc={s=>{setSvcNova(s);setEcra('nova')}}/>}
               {tab==='pedidos'  && <CPedidos  ordens={ordens} onOrdem={o=>{setSel(o);setEcra('ordem')}} authUser={authUser}/>}
               {tab==='perfil'   && <CPerfil/>}
