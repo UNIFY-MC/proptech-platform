@@ -7648,36 +7648,88 @@ export default function App() {
 
         {/* ── CLIENTE ── */}
         {role==='cliente' && <>
-          {/* Novo fluxo Canalização (catálogo + personalizado) — tem prioridade sobre home/tabs */}
-          {catScreen==='list' && (
-            <ServiceListScreen
+          {/* Novo fluxo catálogo V2 — data-driven por categoria (só canalização na 2c-A) */}
+          {catScreen==='list' && catCategoryId && (
+            <ServiceListScreenV2
+              categoryId={catCategoryId}
+              categoriesCache={categoriesCache}
+              authUser={authUser}
               onBack={catReset}
-              onSelectService={(s)=>{ setCatSelected(s); setCatIsPersonalizado(false); setCatScreen('detail') }}
-              onSelectPersonalizado={()=>{ setCatSelected(PERSONALIZADO); setCatIsPersonalizado(true); setCatScreen('landing') }}
+              onSelectService={(service, category)=>{
+                if(service.tipo === 'grupo'){
+                  setCatParent(service); setCatSelected(service); setCatIsPersonalizado(false)
+                  setCatScreen('variant')
+                } else {
+                  setCatParent(null); setCatSelected(service); setCatIsPersonalizado(false)
+                  setCatScreen('detail')
+                }
+              }}
+              onSelectPersonalizado={()=>{
+                setCatParent(null); setCatSelected(null); setCatIsPersonalizado(true)
+                setCatScreen('landing')
+              }}
             />
           )}
-          {catScreen==='landing' && (
-            <PersonalizadoLanding onBack={()=>setCatScreen('list')} onContinue={()=>setCatScreen('form')}/>
-          )}
-          {catScreen==='form' && (
-            <PersonalizadoForm onBack={()=>setCatScreen('landing')} onContinue={()=>setCatScreen('checkout')}
-              state={catState} setState={setCatState}/>
-          )}
-          {catScreen==='detail' && catSelected && (
-            <ServiceDetailScreen service={catSelected}
+          {catScreen==='variant' && catParent && catCategoryMeta && (
+            <VariantPickerScreenV2
+              parent={catParent} category={catCategoryMeta} authUser={authUser}
               onBack={()=>setCatScreen('list')}
-              onContinue={()=>setCatScreen('checkout')}/>
+              onContinue={(variant, parent)=>{
+                setCatSelected(variant); setCatParent(parent)
+                setCatScreen('detail')
+              }}
+            />
           )}
-          {catScreen==='checkout' && catSelected && (
-            <FinalizarPedido
+          {catScreen==='landing' && catCategoryMeta && (
+            <PersonalizadoLandingV2
+              category={catCategoryMeta}
+              onBack={()=>setCatScreen('list')}
+              onContinue={()=>setCatScreen('form')}
+            />
+          )}
+          {catScreen==='form' && catCategoryMeta && (
+            <PersonalizadoFormV2
+              category={catCategoryMeta}
+              onBack={()=>setCatScreen('landing')}
+              onContinue={()=>setCatScreen('checkout')}
+              state={catState} setState={setCatState}
+            />
+          )}
+          {catScreen==='detail' && catSelected && catCategoryMeta && (
+            <ServiceDetailScreenV2
+              serviceId={catSelected.id}
+              category={catCategoryMeta}
+              authUser={authUser}
+              onBack={()=>setCatScreen(catParent ? 'variant' : 'list')}
+              onContinue={(opts)=>{
+                // Guarda opções dinâmicas e serviço enriquecido para o checkout usar
+                setCatState(p => ({...p, serviceOptions:{
+                  productsId:     opts.productsId,
+                  frequencyId:    opts.frequencyId,
+                  effectivePrice: opts.effectivePrice,
+                  priceSuffix:    opts.priceSuffix,
+                }}))
+                if(opts.service) setCatSelected(opts.service)
+                if(opts.parent)  setCatParent(opts.parent)
+                setCatScreen('checkout')
+              }}
+            />
+          )}
+          {catScreen==='checkout' && (catSelected || catIsPersonalizado) && catCategoryMeta && (
+            <FinalizarPedidoV2
               selected={catSelected}
+              category={catCategoryMeta}
               isPersonalizado={catIsPersonalizado}
-              onBack={()=>setCatScreen(catIsPersonalizado?'form':'detail')}
-              onConfirm={({ total, scheduleSurcharge })=>addCatalogOrder({ selected:catSelected, isPersonalizado:catIsPersonalizado, state:catState, total, scheduleSurcharge })}
-              state={catState} setState={setCatState}/>
+              onBack={()=>setCatScreen(catIsPersonalizado ? 'form' : 'detail')}
+              onConfirm={({ total, scheduleSurcharge })=>addCatalogOrder({
+                selected:catSelected, isPersonalizado:catIsPersonalizado,
+                state:catState, total, scheduleSurcharge,
+              })}
+              state={catState} setState={setCatState}
+            />
           )}
           {catScreen==='done' && (
-            <ConfirmadoScreen onRestart={()=>{ catReset(); setTab('pedidos') }}/>
+            <ConfirmadoScreenV2 onRestart={()=>{ catReset(); setTab('pedidos') }}/>
           )}
 
           {/* Fluxo antigo (activo apenas quando catScreen === null) */}
@@ -7687,7 +7739,7 @@ export default function App() {
             {ecra==='chat_c'      && <Chat titulo='Suporte' msgs={CHAT_C} lado='cliente' onBack={()=>setEcra('home')}/>}
             {ecra==='chat_ordem_c'&& sel && <OrderChat ordem={sel} role='cliente' prest={TECNICOS.find(t=>t.id===sel.tid)} onBack={()=>setEcra('ordem')} onUpdate={o=>{upd(o);setSel(o)}}/>}
             {!cliOver && <>
-              {tab==='inicio'   && <CHome    ordens={ordens} onSvc={s=>{setSvcNova(s);setEcra('nova')}} onOrdem={o=>{setSel(o);setEcra('ordem')}} authUser={authUser} onCanalizacao={()=>setCatScreen('list')} categoriesCache={categoriesCache}/>}
+              {tab==='inicio'   && <CHome    ordens={ordens} onSvc={s=>{setSvcNova(s);setEcra('nova')}} onOrdem={o=>{setSel(o);setEcra('ordem')}} authUser={authUser} onCanalizacao={()=>{ setCatCategoryId('canalizacao'); setCatScreen('list') }} categoriesCache={categoriesCache}/>}
               {tab==='explorar' && <CExplorar onSvc={s=>{setSvcNova(s);setEcra('nova')}}/>}
               {tab==='pedidos'  && <CPedidos  ordens={ordens} onOrdem={o=>{setSel(o);setEcra('ordem')}} authUser={authUser}/>}
               {tab==='perfil'   && <CPerfil/>}
