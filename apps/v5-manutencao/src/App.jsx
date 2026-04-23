@@ -2903,11 +2903,18 @@ function CNovaOrdem({ svcI, onBack, onOk, moradas=[], setMoradas }) {
 function COrdem({ o, onBack, onChat }) {
   const [aval, setAval] = useState(o.aval)
   const s = svcById(o.sid); const t = tecById(o.tid)
+  // V2 fallbacks — ordens V2 não têm s.n/s.p/s.u (sid é null), leem servico_nome/valor_cobrado
+  const titulo = s?.n || o.servico_nome || (o.is_personalizado ? 'Serviço personalizado' : 'Serviço')
+  const valorText = o.valor_cobrado != null
+    ? `€${Number(o.valor_cobrado).toFixed(2).replace('.',',')}`
+    : (s?.p != null ? `€${s.p}${s.u ? ' ' + s.u : ''}` : null)
+  // ordemLocal.morada tem fallback literal 'Morada por definir' — esconder se não houver morada real
+  const moradaText = (o.morada && o.morada !== 'Morada por definir') ? o.morada : null
   return (
     <div style={{ minHeight:'100vh', background:C.mist }}>
       <div style={{ background:C.white, padding:'13px 16px', display:'flex', alignItems:'center', gap:10, borderBottom:`1px solid ${C.border}`, position:'sticky', top:0, zIndex:20 }}>
         <button onClick={onBack} style={{ background:'none', border:'none', fontSize:22, cursor:'pointer', color:C.navy }}>←</button>
-        <div style={{ flex:1 }}><div style={{ fontSize:14, fontWeight:700, color:C.navy }}>{s?.n}</div><div style={{ fontSize:10, color:C.slate }}>{o.data}</div></div>
+        <div style={{ flex:1 }}><div style={{ fontSize:14, fontWeight:700, color:C.navy }}>{titulo}</div><div style={{ fontSize:10, color:C.slate }}>{o.data}</div></div>
         <EstBadge st={o.st}/>
       </div>
       <div style={{ padding:'14px 16px 40px' }}>
@@ -2927,9 +2934,9 @@ function COrdem({ o, onBack, onChat }) {
         </Card>}
         <Card style={{ padding:15, marginBottom:10 }}>
           {[
-            ['Morada', o.morada],
+            moradaText && ['Morada', moradaText],
             o.cp && ['Cód. postal', o.cp],
-            ['Valor', `€${s?.p} ${s?.u}`],
+            valorText && ['Valor', valorText],
             o.dt_pedido && ['Pedido em', o.dt_pedido],
             o.inicio_ts && ['Início', new Date(o.inicio_ts).toLocaleTimeString('pt-PT',{hour:'2-digit',minute:'2-digit'})],
             o.fim_ts    && ['Fim',    new Date(o.fim_ts).toLocaleTimeString('pt-PT',{hour:'2-digit',minute:'2-digit'})],
