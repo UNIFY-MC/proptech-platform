@@ -549,31 +549,10 @@ async function sbGet(table, filter='', token) {
   } catch { return null }
 }
 
-// TEMP(debug): decodificar payload JWT para ver o claim "role" que o PostgREST usa.
-// Remover quando RLS estiver validado.
-function _decodeJwtRole(jwt){
-  try {
-    const parts = String(jwt||'').split('.')
-    if (parts.length !== 3) return { ok:false, reason:'not-a-jwt' }
-    // base64url → base64
-    const b64 = parts[1].replace(/-/g,'+').replace(/_/g,'/').padEnd(Math.ceil(parts[1].length/4)*4, '=')
-    const payload = JSON.parse(atob(b64))
-    return { ok:true, role:payload.role, iss:payload.iss, ref:payload.ref, aud:payload.aud, exp:payload.exp }
-  } catch (e) { return { ok:false, reason:e.message } }
-}
-
 async function sbSave(table, data, token) {
   if (!SB_KEY) return null
   try {
     const effectiveToken = token || SB_KEY
-    // TEMP(debug): ver exactamente qual token vai ser usado + role que o PostgREST vai resolver
-    console.log(`[sbSave ${table}] auth diag`, {
-      token_provided: !!token,
-      using: token ? 'provided-token' : 'anon-key-fallback',
-      token_head: String(effectiveToken).slice(0, 30) + '...',
-      apikey_head: String(SB_KEY).slice(0, 30) + '...',
-      jwt_decoded: _decodeJwtRole(effectiveToken),
-    })
     const r = await fetch(`${SB_URL}/rest/v1/${table}`, {
       method:'POST',
       headers: {...sbHeaders(effectiveToken), 'Prefer':'return=representation,resolution=merge-duplicates'},
@@ -7952,16 +7931,12 @@ export default function App() {
         faturacao_cp:        state.billing?.cp || null,
         faturacao_localidade:state.billing?.localidade || null,
       }
-      // DEBUG(2c): logging verboso para diagnosticar INSERT silencioso.
-      // Remover em commit de limpeza quando o bug estiver resolvido.
-      console.log('[sbSave] payload →', payload)
       try {
         const r = await sbSave('ordens', payload, authUser?.token)
         if (!r) {
-          console.error('[sbSave] INSERT ERROR — retornou null; ver log anterior [sbSave ordens] HTTP XXX para detalhes do PostgREST')
-          alert('Erro ao criar pedido: não foi possível gravar no servidor. Ver consola (F12) para detalhes do erro PostgREST.')
+          console.error('[sbSave] INSERT ordens retornou null — ver [sbSave ordens] HTTP XXX anterior')
+          alert('Erro ao criar pedido: não foi possível gravar no servidor. Ver consola (F12) para detalhes.')
         } else {
-          console.log('[sbSave] SUCCESS →', r)
           // PostgREST retorna array (com Prefer: return=representation). Guarda 1ª row.
           const row = Array.isArray(r) ? r[0] : r
           setCatLastOrdem(row)
