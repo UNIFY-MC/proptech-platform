@@ -137,6 +137,18 @@ Quando auth real for implementada (primeiro débito técnico listado
 acima), considerar arrancar 2d imediatamente a seguir — são
 prerequisitos mútuos.
 
+## Pre-launch checklist (antes do primeiro cliente real)
+
+- [ ] Implementar auth real (ver débito "Auth dos botões demo")
+- [ ] Arrancar Fase 2d (perfil do cliente + moradas — ver TODO)
+- [ ] Reset da sequência de ordens:
+      `ALTER SEQUENCE ordens_numero_seq RESTART WITH 1;`
+      `TRUNCATE ordens RESTART IDENTITY CASCADE;`
+- [ ] Remover policies temporárias `pre_auth_*` e substituir por
+      policies proper com `auth.uid() = cliente_id`
+- [ ] Limpar quaisquer contas de teste/demo
+- [ ] Apagar dados de desenvolvimento em profiles/catalog/etc.
+
 ## Supabase — tabelas
 
 Tabelas principais:
