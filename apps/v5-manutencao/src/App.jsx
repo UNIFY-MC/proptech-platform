@@ -6686,15 +6686,15 @@ function FinalizarPedidoV2({ selected, category, isPersonalizado, onBack, onConf
                             <button key={p.id}
                               onClick={()=>setLightbox(i)}
                               style={{
-                                width:44, height:44, borderRadius:8, flexShrink:0,
+                                width:40, height:40, borderRadius:6, flexShrink:0,
                                 background:CC.emeraldPale,
                                 border:`1px solid ${CC.emeraldSoft}`,
                                 display:"grid", placeItems:"center", cursor:"pointer", padding:0,
-                              }}><FileImage size={16} color={CC.emerald}/></button>
+                              }}><FileImage size={14} color={CC.emerald}/></button>
                           ))}
                           {hiddenCount > 0 && (
                             <button onClick={()=>setLightbox(visibleCount)} style={{
-                              width:44, height:44, borderRadius:8, flexShrink:0,
+                              width:40, height:40, borderRadius:6, flexShrink:0,
                               background:CC.stoneLight, color:CC.stone,
                               display:"grid", placeItems:"center",
                               fontSize:11, fontWeight:700, cursor:"pointer", padding:0,
