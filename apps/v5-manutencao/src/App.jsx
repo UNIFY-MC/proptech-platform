@@ -6421,26 +6421,26 @@ function PersonalizadoFormV2({ category, onBack, onContinue, state, setState }){
           <div style={{ fontSize:12.5, color:CC.stone, marginTop:4, lineHeight:1.4 }}>
             Opcional. Adicione imagens para ajudar o técnico a preparar-se.
           </div>
-          <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:8, marginTop:12 }}>
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(5,1fr)", gap:6, marginTop:12 }}>
             {(state.photos || []).map(p => (
               <div key={p.id} style={{
-                aspectRatio:"1", borderRadius:12, background:CC.emeraldPale,
+                aspectRatio:"1", borderRadius:10, background:CC.emeraldPale,
                 border:`1px solid ${CC.emeraldSoft}`, display:"grid", placeItems:"center", position:"relative",
               }}>
-                <FileImage size={24} color={CC.emerald}/>
+                <FileImage size={18} color={CC.emerald}/>
                 <button onClick={()=>setState(p2=>({...p2, photos:(p2.photos || []).filter(x=>x.id!==p.id)}))} style={{
-                  position:"absolute", top:4, right:4, width:24, height:24, borderRadius:999,
+                  position:"absolute", top:2, right:2, width:18, height:18, borderRadius:999,
                   background:"rgba(0,0,0,0.6)", color:CC.paper, border:"none", cursor:"pointer",
                   display:"grid", placeItems:"center",
-                }}><X size={12}/></button>
+                }}><X size={10}/></button>
               </div>
             ))}
             {(state.photos || []).length < 5 && (
               <button onClick={()=>setState(p=>({...p, photos:[...(p.photos || []), { id:Date.now(), placeholder:true }]}))} style={{
-                aspectRatio:"1", borderRadius:12, background:CC.paper,
+                aspectRatio:"1", borderRadius:10, background:CC.paper,
                 border:`1.5px dashed ${CC.stoneLight}`,
                 display:"grid", placeItems:"center", cursor:"pointer", color:CC.stone,
-              }}><Plus size={24}/></button>
+              }}><Plus size={18}/></button>
             )}
           </div>
           <div style={{ fontSize:11, color:CC.stone, marginTop:4, textAlign:"right" }}>{(state.photos || []).length}/5 fotografias</div>
