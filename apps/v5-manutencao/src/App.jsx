@@ -2982,6 +2982,7 @@ function COrdem({ o, onBack, onChat }) {
         </Card>}
         <Card style={{ padding:15, marginBottom:10 }}>
           {[
+            o.descricao_personalizada && ['Descrição', o.descricao_personalizada],
             moradaText && ['Morada', moradaText],
             o.cp && ['Cód. postal', o.cp],
             valorText && ['Valor', valorText],
@@ -7940,7 +7941,7 @@ export default function App() {
       fotos:    (state.photos || []).map(()=>'📷'),
       ass:      false,
       aval:     null,
-      notas:    state.notes || (isPersonalizado ? state.description : ''),
+      notas:    state.notes || null,
       val:      totalNumber,
       taxa:     18,
       dt_pedido:     new Date().toLocaleString('pt-PT', {day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}),
@@ -7948,16 +7949,17 @@ export default function App() {
       pago:     true,
       nome:     nome, // permite apresentação mesmo sem sid legacy
       // Campos V2 (espelham o payload Supabase) — numero_sequencial é preenchido após sbSave
-      servico_id:       servicoId,
-      servico_nome:     nome,
-      categoria_id:     categoryId,
-      is_personalizado: !!isPersonalizado,
-      valor_cobrado:    totalNumber,
-      schedule_mode:    state.scheduleMode || null,
-      data_agendada:    dataAgendada,
-      hora_agendada:    horaAgendada,
-      slots_flexiveis:  state.selectedSlots || [],
-      created_at:       new Date().toISOString(),
+      servico_id:              servicoId,
+      servico_nome:            nome,
+      categoria_id:            categoryId,
+      is_personalizado:        !!isPersonalizado,
+      descricao_personalizada: isPersonalizado ? (state.description || null) : null,
+      valor_cobrado:           totalNumber,
+      schedule_mode:           state.scheduleMode || null,
+      data_agendada:           dataAgendada,
+      hora_agendada:           horaAgendada,
+      slots_flexiveis:         state.selectedSlots || [],
+      created_at:              new Date().toISOString(),
     }
     setOrdens(p => [ordemLocal, ...p])
 
