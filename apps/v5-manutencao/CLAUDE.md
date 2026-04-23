@@ -80,6 +80,38 @@ Entre cada fase, apresenta o plano ou o resultado e espera confirmação.
 7. **Não tocar** nos textos e fluxos do admin e do prestador (só adicionar módulo novo na Fase 6, sem alterar o existente).
 8. **Copy em português de Portugal** (não PT-BR): "escolha", "serviço", "morada" (não "endereço"), "técnico".
 
+## Auth dos botões demo (DÉBITO TÉCNICO)
+
+Os botões Cliente/Prestador/Admin no login mudam state local sem fazer
+signin real no Supabase. Consequências e workarounds actuais:
+
+1. **RLS de ordens** tem policy temporária permitindo INSERT a role `anon`
+   (`temp_anon_insert_ordens`, migração `20260423_temp_anon_insert_ordens.sql`).
+2. **`auth.uid()` retorna null** em todos os fluxos demo.
+3. Os IDs dos demos (`demo-cli`, `demo-pro`, `demo-adm`) são strings
+   não-UUID. INSERT em colunas UUID com estes IDs falha (erro `22P02:
+   invalid input syntax for type uuid`). Workaround: no payload de
+   `ordens`, `cliente_id` fica NULL quando `authUser.user.id.startsWith('demo-')`
+   (ver `addCatalogOrder` em `App.jsx`). O `prestador_id` já é NULL por
+   padrão até ser atribuído.
+
+### Consequências conhecidas do workaround
+
+- Ordens criadas em modo demo têm `cliente_id = NULL`.
+- A listagem "Meus Pedidos" V2 (quando implementada) vai precisar de
+  tratar este caso — ou a implementação de auth real virá antes.
+
+### Plano de resolução (Fase futura — "Auth real para botões demo")
+
+1. Criar 3 contas mock no Supabase (`cliente@demo.v5`, `prestador@demo.v5`,
+   `admin@demo.v5`) via `POST /auth/v1/admin/users` com service_role key.
+2. Botões demo passam a fazer `signInWithPassword` com password fixa.
+3. Substituir policies permissivas por `cliente_id = auth.uid()` em `ordens`.
+4. Remover o check `startsWith('demo-')` em `addCatalogOrder`.
+5. `DROP POLICY "temp_anon_insert_ordens"` em `ordens`.
+
+**Prioridade**: alta antes de qualquer teste externo ou convite a clientes reais.
+
 ## Supabase — tabelas
 
 Tabelas principais:

@@ -7550,9 +7550,16 @@ export default function App() {
 
     // Persistir na Supabase
     if (SB_KEY) {
+      // Débito técnico: os botões demo (Cliente/Prestador/Admin) usam ids string tipo
+      // 'demo-cli', 'demo-pro', 'demo-adm' que não são UUIDs válidos. A coluna
+      // ordens.cliente_id é UUID com FK para clientes(id). Sem auth real, passamos
+      // NULL nestes casos para evitar erro 22P02 (invalid input syntax for uuid).
+      // Ver secção "Auth dos botões demo (DÉBITO TÉCNICO)" no CLAUDE.md.
+      const rawUserId = authUser?.user?.id
+      const clienteIdFinal = (rawUserId && !String(rawUserId).startsWith('demo-')) ? rawUserId : null
       const payload = {
         servico_id:          servicoId,                    // TEXT PK em public.servicos
-        cliente_id:          authUser?.user?.id || null,
+        cliente_id:          clienteIdFinal,
         prestador_id:        null,
         estado:              'pendente',
         morada:              state.billing?.morada || null,
