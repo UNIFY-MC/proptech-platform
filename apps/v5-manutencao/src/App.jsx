@@ -549,16 +549,37 @@ async function sbGet(table, filter='', token) {
   } catch { return null }
 }
 
+// TEMP(debug): decodificar payload JWT para ver o claim "role" que o PostgREST usa.
+// Remover quando RLS estiver validado.
+function _decodeJwtRole(jwt){
+  try {
+    const parts = String(jwt||'').split('.')
+    if (parts.length !== 3) return { ok:false, reason:'not-a-jwt' }
+    // base64url → base64
+    const b64 = parts[1].replace(/-/g,'+').replace(/_/g,'/').padEnd(Math.ceil(parts[1].length/4)*4, '=')
+    const payload = JSON.parse(atob(b64))
+    return { ok:true, role:payload.role, iss:payload.iss, ref:payload.ref, aud:payload.aud, exp:payload.exp }
+  } catch (e) { return { ok:false, reason:e.message } }
+}
+
 async function sbSave(table, data, token) {
   if (!SB_KEY) return null
   try {
+    const effectiveToken = token || SB_KEY
+    // TEMP(debug): ver exactamente qual token vai ser usado + role que o PostgREST vai resolver
+    console.log(`[sbSave ${table}] auth diag`, {
+      token_provided: !!token,
+      using: token ? 'provided-token' : 'anon-key-fallback',
+      token_head: String(effectiveToken).slice(0, 30) + '...',
+      apikey_head: String(SB_KEY).slice(0, 30) + '...',
+      jwt_decoded: _decodeJwtRole(effectiveToken),
+    })
     const r = await fetch(`${SB_URL}/rest/v1/${table}`, {
       method:'POST',
-      headers: {...sbHeaders(token||SB_KEY), 'Prefer':'return=representation,resolution=merge-duplicates'},
+      headers: {...sbHeaders(effectiveToken), 'Prefer':'return=representation,resolution=merge-duplicates'},
       body: JSON.stringify(data),
     })
     if (!r.ok) {
-      // TEMP(debug): capturar corpo do erro para diagnóstico — remover quando INSERT funcionar
       const errorBody = await r.text().catch(()=>'<unreadable>')
       console.warn(`[sbSave ${table}] HTTP ${r.status}`, errorBody, '\npayload keys:', Object.keys(data))
       return null
@@ -6665,24 +6686,109 @@ function FinalizarPedidoV2({ selected, category, isPersonalizado, onBack, onConf
   )
 }
 
-/* ── ConfirmadoScreenV2 — ecrã final de sucesso ── */
-function ConfirmadoScreenV2({ onRestart }){
+/* ── ConfirmadoScreenV2 — ecrã final de sucesso com detalhe da ordem ── */
+function ConfirmadoScreenV2({ ordem, servicoNome, categoriaNome, onRestart }){
+  // Formato do agendamento: "Imediato · 30-40 min" | "Sáb, 25 abr · 14:00" | "3 horários flexíveis"
+  const agendamento = (() => {
+    if(!ordem) return null
+    if(ordem.schedule_mode === 'imediato') return 'Imediato · 30-40 min'
+    const slots = Array.isArray(ordem.slots_flexiveis) ? ordem.slots_flexiveis : []
+    if(slots.length === 0) return ordem.data_agendada ? `${ordem.data_agendada} · ${ordem.hora_agendada || ''}`.trim() : null
+    if(slots.length === 1) return `${slots[0].dayLabel || ''} ${slots[0].dayDate || ''} · ${slots[0].time || ''}`.trim()
+    return `${slots.length} horários flexíveis`
+  })()
+  const valor = ordem?.valor_cobrado != null ? Number(ordem.valor_cobrado) : null
+  const moradaLinha = ordem?.morada ? `${ordem.morada}${ordem.cidade ? `, ${ordem.cidade}` : ''}` : null
+
   return (
     <CCShell>
       <div style={{
         minHeight:"100vh", display:"flex", flexDirection:"column",
-        alignItems:"center", justifyContent:"center", padding:32, textAlign:"center",
+        alignItems:"center", padding:"48px 24px 32px", textAlign:"center",
       }}>
+        {/* Ícone de sucesso */}
         <div style={{
           width:80, height:80, borderRadius:999,
           background:CC.emeraldSoft, color:CC.emerald,
           display:"grid", placeItems:"center",
           boxShadow:`0 12px 40px -12px ${CC.emerald}`,
         }}><Check size={36} strokeWidth={3}/></div>
-        <div className="serif" style={{ fontSize:28, fontWeight:500, marginTop:24, letterSpacing:-0.4 }}>Pedido confirmado</div>
-        <div style={{ fontSize:14, color:CC.stone, marginTop:10, maxWidth:300, lineHeight:1.5 }}>
+
+        <div className="serif" style={{ fontSize:28, fontWeight:500, marginTop:24, letterSpacing:-0.4 }}>
+          Pedido confirmado
+        </div>
+
+        {/* Numero sequencial em destaque (fallback se não houver row da BD) */}
+        {ordem?.numero_sequencial && (
+          <div className="serif" style={{
+            fontSize:32, fontWeight:600, color:CC.forest, marginTop:6,
+            letterSpacing:-0.3, fontVariantNumeric:"tabular-nums",
+          }}>
+            {ordem.numero_sequencial}
+          </div>
+        )}
+
+        <div style={{ fontSize:14, color:CC.stone, marginTop:14, maxWidth:300, lineHeight:1.5 }}>
           Estamos a atribuir o seu técnico de confiança. Receberá notificação em instantes.
         </div>
+
+        {/* Card de resumo */}
+        {ordem && (
+          <div style={{
+            marginTop:28, width:"100%", maxWidth:340,
+            background:CC.paper, border:`1px solid ${CC.line}`, borderRadius:14,
+            padding:"16px 18px", textAlign:"left",
+          }}>
+            {servicoNome && (
+              <div style={{ marginBottom:12 }}>
+                <div style={{ fontSize:10, fontWeight:700, color:CC.stone, letterSpacing:0.5, textTransform:"uppercase" }}>Serviço</div>
+                <div style={{ fontSize:14, fontWeight:600, color:CC.ink, marginTop:3 }}>{servicoNome}</div>
+                {categoriaNome && (
+                  <div style={{ fontSize:11.5, color:CC.stone, marginTop:2 }}>{categoriaNome}</div>
+                )}
+              </div>
+            )}
+            {valor != null && (
+              <div style={{
+                display:"flex", justifyContent:"space-between", alignItems:"baseline",
+                padding:"10px 0", borderTop:`1px solid ${CC.line}`,
+              }}>
+                <span style={{ fontSize:12, color:CC.stone }}>Valor total</span>
+                <span className="serif" style={{ fontSize:18, fontWeight:600, color:CC.forest }}>{eur(valor)}</span>
+              </div>
+            )}
+            {agendamento && (
+              <div style={{
+                display:"flex", justifyContent:"space-between", alignItems:"baseline",
+                padding:"10px 0", borderTop:`1px solid ${CC.line}`, gap:10,
+              }}>
+                <span style={{ fontSize:12, color:CC.stone, flexShrink:0 }}>Agendamento</span>
+                <span style={{ fontSize:12.5, fontWeight:600, color:CC.ink, textAlign:"right" }}>{agendamento}</span>
+              </div>
+            )}
+            {moradaLinha && (
+              <div style={{
+                display:"flex", justifyContent:"space-between", alignItems:"baseline",
+                padding:"10px 0", borderTop:`1px solid ${CC.line}`, gap:10,
+              }}>
+                <span style={{ fontSize:12, color:CC.stone, flexShrink:0 }}>Morada</span>
+                <span style={{ fontSize:12.5, fontWeight:600, color:CC.ink, textAlign:"right" }}>{moradaLinha}</span>
+              </div>
+            )}
+            {ordem.metodo_pagamento && (
+              <div style={{
+                display:"flex", justifyContent:"space-between", alignItems:"baseline",
+                padding:"10px 0", borderTop:`1px solid ${CC.line}`,
+              }}>
+                <span style={{ fontSize:12, color:CC.stone }}>Pagamento</span>
+                <span style={{ fontSize:12.5, fontWeight:600, color:CC.ink }}>
+                  {ordem.metodo_pagamento === 'dinheiro' ? 'Dinheiro' : 'Cartão'}
+                </span>
+              </div>
+            )}
+          </div>
+        )}
+
         <button onClick={onRestart} style={{
           marginTop:32, background:"transparent",
           color:CC.emerald, border:`1px solid ${CC.emerald}`,
@@ -7389,6 +7495,9 @@ export default function App() {
     notes:"", photos:[], billing:null, paymentMethod:null,
     serviceOptions:null, // {productsId, frequencyId, effectivePrice, priceSuffix} — vem do ServiceDetailScreenV2
   })
+  // Row real da ordem acabada de inserir (vinda do sbSave com numero_sequencial, valor, etc.)
+  // Consumida pelo ConfirmadoScreenV2 para mostrar número + preço efectivos da BD.
+  const [catLastOrdem, setCatLastOrdem] = useState(null)
   // Meta da categoria activa, combinada a partir de BD (categoriesCache) + design tokens (CATEGORY_META).
   // null enquanto categoriesCache carrega ou categoria não resolvida.
   const catCategoryMeta = (() => {
@@ -7417,6 +7526,7 @@ export default function App() {
       notes:"", photos:[], billing:null, paymentMethod:null,
       serviceOptions:null,
     })
+    setCatLastOrdem(null)
     setCatScreen(null)
   }
   const [moradasCli, setMoradasCli] = useState(() => {
@@ -7599,6 +7709,8 @@ export default function App() {
           alert('Erro ao criar pedido: não foi possível gravar no servidor. Ver consola (F12) para detalhes do erro PostgREST.')
         } else {
           console.log('[sbSave] SUCCESS →', r)
+          // PostgREST retorna array (com Prefer: return=representation). Guarda 1ª row.
+          setCatLastOrdem(Array.isArray(r) ? r[0] : r)
         }
       } catch (e) {
         console.error('[sbSave] EXCEPTION →', e)
@@ -7764,7 +7876,12 @@ export default function App() {
             />
           )}
           {catScreen==='done' && (
-            <ConfirmadoScreenV2 onRestart={()=>{ catReset(); setTab('pedidos') }}/>
+            <ConfirmadoScreenV2
+              ordem={catLastOrdem}
+              servicoNome={catIsPersonalizado ? 'Serviço personalizado' : (catSelected?.nome || catSelected?.name || null)}
+              categoriaNome={catCategoryMeta?.nome || null}
+              onRestart={()=>{ catReset(); setTab('pedidos') }}
+            />
           )}
 
           {/* Fluxo antigo (activo apenas quando catScreen === null) */}
