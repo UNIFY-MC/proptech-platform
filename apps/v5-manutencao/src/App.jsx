@@ -557,8 +557,17 @@ async function sbSave(table, data, token) {
       headers: {...sbHeaders(token||SB_KEY), 'Prefer':'return=representation,resolution=merge-duplicates'},
       body: JSON.stringify(data),
     })
-    return r.ok ? r.json() : null
-  } catch { return null }
+    if (!r.ok) {
+      // TEMP(debug): capturar corpo do erro para diagnóstico — remover quando INSERT funcionar
+      const errorBody = await r.text().catch(()=>'<unreadable>')
+      console.warn(`[sbSave ${table}] HTTP ${r.status}`, errorBody, '\npayload keys:', Object.keys(data))
+      return null
+    }
+    return r.json()
+  } catch (e) {
+    console.warn(`[sbSave ${table}] exception:`, e)
+    return null
+  }
 }
 
 async function sbUpload(bucket, path, file, token) {
@@ -7573,9 +7582,21 @@ export default function App() {
         faturacao_cp:        state.billing?.cp || null,
         faturacao_localidade:state.billing?.localidade || null,
       }
-      sbSave('ordens', payload, authUser?.token)
-        .then(r => r && console.log('[Supabase] Ordem (catálogo) guardada:', r[0]?.id))
-        .catch(e => console.warn('[Supabase] Erro ao guardar ordem (catálogo):', e))
+      // DEBUG(2c): logging verboso para diagnosticar INSERT silencioso.
+      // Remover em commit de limpeza quando o bug estiver resolvido.
+      console.log('[sbSave] payload →', payload)
+      try {
+        const r = await sbSave('ordens', payload, authUser?.token)
+        if (!r) {
+          console.error('[sbSave] INSERT ERROR — retornou null; ver log anterior [sbSave ordens] HTTP XXX para detalhes do PostgREST')
+          alert('Erro ao criar pedido: não foi possível gravar no servidor. Ver consola (F12) para detalhes do erro PostgREST.')
+        } else {
+          console.log('[sbSave] SUCCESS →', r)
+        }
+      } catch (e) {
+        console.error('[sbSave] EXCEPTION →', e)
+        alert('Exceção ao criar pedido: ' + (e?.message || e))
+      }
     }
 
     setCatScreen('done')
