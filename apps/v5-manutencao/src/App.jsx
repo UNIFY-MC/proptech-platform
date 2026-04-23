@@ -2497,20 +2497,36 @@ function CHome({ ordens, onSvc, onOrdem, authUser, onCanalizacao, categoriesCach
       <div style={{ padding:'0 16px' }}>
         {meus.length>0 && <>
           <SectTitle t="Os meus pedidos"/>
-          {meus.map(o => { const s=svcById(o.sid); const t=tecById(o.tid); return (
-            <Card key={o.id} style={{ padding:14, marginBottom:8 }} onClick={() => onOrdem(o)}>
-              <div style={{ display:'flex', gap:10, alignItems:'center' }}>
-                <span style={{ fontSize:24 }}>{s?.ic||'🔧'}</span>
-                <div style={{ flex:1 }}>
-                  <div style={{ display:'flex', justifyContent:'space-between' }}>
-                    <span style={{ fontSize:13, fontWeight:700, color:C.navy }}>{s?.n}</span>
-                    <EstBadge st={o.st}/>
+          {meus.map(o => {
+            const s = svcById(o.sid)
+            const t = tecById(o.tid)
+            const titulo = s?.n || o.servico_nome || (o.is_personalizado ? 'Serviço personalizado' : 'Serviço')
+            let quando = o.data
+            if(o.schedule_mode === 'imediato') quando = 'Imediato · 30-40 min'
+            else if(o.data_agendada && o.hora_agendada){
+              try {
+                const d = new Date(o.data_agendada + 'T00:00:00')
+                quando = `${d.toLocaleDateString('pt-PT', { weekday:'short', day:'numeric', month:'short' })} · ${o.hora_agendada}`
+              } catch {}
+            }
+            return (
+              <Card key={o.id} style={{ padding:14, marginBottom:8 }} onClick={() => onOrdem(o)}>
+                <div style={{ display:'flex', gap:10, alignItems:'center' }}>
+                  <span style={{ fontSize:24 }}>{s?.ic||'🔧'}</span>
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:1 }}>
+                      {o.numero_sequencial
+                        ? <span style={{ fontSize:10, fontWeight:700, color:C.slate, fontFamily:'ui-monospace,monospace', letterSpacing:0.3 }}>{o.numero_sequencial}</span>
+                        : <span/>}
+                      <EstBadge st={o.st}/>
+                    </div>
+                    <div style={{ fontSize:13, fontWeight:700, color:C.navy, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{titulo}</div>
+                    <div style={{ fontSize:11, color:C.slate, marginTop:2 }}>{quando}{t&&<span style={{ color:C.g, fontWeight:600 }}> · 👤 {t.n}</span>}</div>
                   </div>
-                  <div style={{ fontSize:11, color:C.slate, marginTop:2 }}>{o.data}{t&&<span style={{ color:C.g, fontWeight:600 }}> · 👤 {t.n}</span>}</div>
                 </div>
-              </div>
-            </Card>
-          )})}
+              </Card>
+            )
+          })}
           <div style={{ height:6 }}/>
         </>}
         {/* Categorias */}
