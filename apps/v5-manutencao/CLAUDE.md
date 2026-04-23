@@ -137,6 +137,36 @@ Quando auth real for implementada (primeiro débito técnico listado
 acima), considerar arrancar 2d imediatamente a seguir — são
 prerequisitos mútuos.
 
+### Design target do selector de morada no checkout
+
+Substituir o card "Localização" actual por um dropdown selector:
+
+```
+📍 Localização
+   ┌─────────────────────────────────────┐
+   │ Casa (Rua Palmira Bastos, 4)      ▼ │
+   └─────────────────────────────────────┘
+```
+
+Abre dropdown com:
+- Moradas guardadas (labels "Casa", "Escritório", "Casa da mãe")
+- Localização actual (via `navigator.geolocation` + reverse geocoding)
+- + Nova morada (abre modal completo)
+
+### Integração técnica
+
+- `navigator.geolocation.getCurrentPosition()` para obter lat/lng
+- Reverse geocoding via Nominatim (free) ou Google Geocoding API
+  para derivar rua+número+CP+cidade
+- Guardar em `cliente_moradas` como default ou morada temporária
+- Lat/lng guardados em `cliente_moradas.lat` e `.lng` para usar
+  no app do técnico (navegação GPS na Fase 3)
+
+### Dependências
+
+- Auth real implementada (ver débito técnico anterior)
+- Sem user identificado, não há moradas a listar nem a guardar
+
 ## Pre-launch checklist (antes do primeiro cliente real)
 
 - [ ] Implementar auth real (ver débito "Auth dos botões demo")
