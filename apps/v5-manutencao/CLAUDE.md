@@ -80,7 +80,21 @@ Entre cada fase, apresenta o plano ou o resultado e espera confirmação.
 7. **Não tocar** nos textos e fluxos do admin e do prestador (só adicionar módulo novo na Fase 6, sem alterar o existente).
 8. **Copy em português de Portugal** (não PT-BR): "escolha", "serviço", "morada" (não "endereço"), "técnico".
 
-## Auth dos botões demo (DÉBITO TÉCNICO)
+## Auth dos botões demo — Fase 2d IN PROGRESS
+
+### Contas demo criadas (2d.1 done · 2026-04-24)
+
+| Role      | Email                 | Password   | UUID                                   |
+|-----------|-----------------------|------------|----------------------------------------|
+| Admin     | `admin@demov5.pt`     | `Demo2026!` | `204d8383-5f14-4632-a24a-a523e7106bfb` |
+| Prestador | `prestador@demov5.pt` | `Demo2026!` | `16f12108-47d5-4b15-adf6-c2835707aafe` |
+| Cliente   | `cliente@demov5.pt`   | `Demo2026!` | `351c1e38-9be5-4420-8b03-7cb53f05a21a` |
+
+Auto Confirm activo no Supabase Auth. As contas ficam no repo
+propositadamente (são só demo). Remover no pre-launch — já listado
+no checklist.
+
+### Workarounds ainda activos até 2d.2/2d.3 aplicarem
 
 Os botões Cliente/Prestador/Admin no login mudam state local sem fazer
 signin real no Supabase. Consequências e workarounds actuais:
@@ -106,17 +120,24 @@ signin real no Supabase. Consequências e workarounds actuais:
 - A listagem "Meus Pedidos" V2 (quando implementada) vai precisar de
   tratar este caso — ou a implementação de auth real virá antes.
 
-### Plano de resolução (Fase futura — "Auth real para botões demo")
+### Plano de resolução — Fase 2d sub-fases
 
-1. Criar 3 contas mock no Supabase (`cliente@demo.v5`, `prestador@demo.v5`,
-   `admin@demo.v5`) via `POST /auth/v1/admin/users` com service_role key.
-2. Botões demo passam a fazer `signInWithPassword` com password fixa.
-3. Substituir policies `pre_auth_*` por policies proper com
-   `auth.uid() = cliente_id OR prestador_id` (ver header da migração
-   `20260423_fix_ordens_rls_pre_auth.sql` para template SQL completo).
-4. Remover o check `startsWith('demo-')` em `addCatalogOrder`.
-5. `DROP POLICY pre_auth_select_ordens` e `pre_auth_insert_ordens`
-   em `ordens`; recriar com auth.uid() match.
+1. **2d.1** ✅ Contas criadas via Supabase Dashboard (cliente/prestador/admin
+   `@demov5.pt`, password `Demo2026!`, Auto Confirm). UUIDs na tabela
+   acima. _[done 2026-04-24]_
+2. **2d.2** Botões demo passam a fazer `signInWithPassword` com o
+   email/password do quadro. Remover check `startsWith('demo-')` em
+   `addCatalogOrder` (o `cliente_id` deixa de ser NULL forçado).
+3. **2d.3** Substituir policies `pre_auth_*` por policies proper com
+   `auth.uid() = cliente_id OR auth.uid() = prestador_id` (ver header
+   da migração `20260423_fix_ordens_rls_pre_auth.sql` para template
+   SQL completo). `DROP POLICY pre_auth_select_ordens` e
+   `pre_auth_insert_ordens` em `ordens`.
+4. **2d.4** Schema `cliente_moradas` (ver secção 2d abaixo) + RLS +
+   seed 1 morada por demo.
+5. **2d.5** Extender `profiles` com NIF + morada_fiscal + cp_fiscal.
+6. **2d.6** Perfil UI + address selector no checkout (substituir a
+   morada do billing modal por dropdown com moradas guardadas).
 
 **Prioridade**: alta antes de qualquer teste externo ou convite a clientes reais.
 
@@ -167,6 +188,77 @@ Abre dropdown com:
 - Auth real implementada (ver débito técnico anterior)
 - Sem user identificado, não há moradas a listar nem a guardar
 
+## Fase 2e pendente — Registo Real de Cliente
+
+A Fase 2d implementa auth apenas para os demo users (signIn nos 3
+UUIDs já existentes). O flow de signup real — ecrã "Criar conta",
+`supabase.auth.signUp`, trigger `handle_new_user` no Postgres para
+criar a row em `profiles`, verificação por email/SMS e wizard de
+onboarding (NIF, morada fiscal, primeira morada de serviço) — é
+scope separado da Fase 2e.
+
+### Documentação
+
+https://www.notion.so/34b84147fa608169a3cbfbe056831bbd
+
+## Fase 3a pendente — Lista de Tarefas do Cliente (Wishlist)
+
+Cliente mantém "lista aberta" de coisas para fazer em casa. Acumula
+items (fixos + personalizados) ao longo do tempo. Quando satisfeito,
+submete a lista inteira como ordem agrupada e multi-especialidade.
+
+### Valor
+
+- Reduz fricção de decisão ("vale a pena chamar alguém só por isto?")
+- Aumenta ticket médio (visita agrupada vs múltiplas pequenas)
+- Retenção: cliente com lista aberta volta à app regularmente
+- Diferenciador real face a Zaask/Habitissimo/Fixando (todos
+  pedido-único)
+
+### Schema (provisório)
+
+```sql
+listas_cliente (
+  id UUID PRIMARY KEY,
+  cliente_id UUID REFERENCES profiles,
+  estado TEXT,              -- aberta | submetida | concluida
+  morada_id UUID REFERENCES cliente_moradas,
+  created_at, submetida_at
+)
+
+lista_items (
+  id UUID PRIMARY KEY,
+  lista_id UUID REFERENCES listas_cliente,
+  tipo TEXT,                -- fixo | personalizado
+  servico_id TEXT NULL,     -- preenchido quando tipo=fixo
+  descricao TEXT NULL,      -- preenchido quando tipo=personalizado
+  fotos JSONB,
+  preco_estimado NUMERIC,
+  categoria_id TEXT,
+  created_at
+)
+```
+
+### Decisões pendentes (ver página Notion para detalhe)
+
+- **Multi-especialidade**: 1 técnico handyman, coordenação de 2, ou
+  dividir em sub-ordens
+- **Agendamento**: slots obrigatórios 2-4h em vez de "imediato"
+- **Cotação**: estimativa preliminar → técnico confirma → cliente
+  aceita
+
+### Dependência
+
+Fase 2d concluída (cliente autenticado + morada na BD).
+
+### Posição no roadmap
+
+Fase 3a, imediatamente depois de 2d.
+
+### Página Notion
+
+https://www.notion.so/34b84147fa6081929d9ccf47183dc971
+
 ## Pre-launch checklist (antes do primeiro cliente real)
 
 - [ ] Implementar auth real (ver débito "Auth dos botões demo")
@@ -176,7 +268,9 @@ Abre dropdown com:
       `TRUNCATE ordens RESTART IDENTITY CASCADE;`
 - [ ] Remover policies temporárias `pre_auth_*` e substituir por
       policies proper com `auth.uid() = cliente_id`
-- [ ] Limpar quaisquer contas de teste/demo
+- [ ] Remover contas demo do Supabase Auth:
+      `admin@demov5.pt` · `prestador@demov5.pt` · `cliente@demov5.pt`
+- [ ] Limpar quaisquer outras contas de teste
 - [ ] Apagar dados de desenvolvimento em profiles/catalog/etc.
 - [ ] DROP colunas órfãs da tabela `ordens`:
       `ALTER TABLE ordens DROP COLUMN descricao_cliente;`
