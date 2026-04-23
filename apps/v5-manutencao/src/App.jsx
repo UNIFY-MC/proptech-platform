@@ -4818,6 +4818,9 @@ function AdminServicos({svcs,setSvcs}){
     setSyncing(true)
     const updated=modal==='new'?{...form,r:5.0,rv:0}:{...form}
     if(modal==='new')setSvcs(p=>[...p,updated]);else setSvcs(p=>p.map(s=>s.id===form.id?{...s,...form}:s))
+    // TODO(admin): schema mismatch — envia {id,n,p,u,d,cat,ic,badge,r,rv}
+    // mas BD tem {id,nome,preco,unidade,duracao_tipica,icon,categoria_id,
+    // popular,urgent}. Silent 400 desde sempre. Fase paralela, não Fase 2.
     await sbSave('servicos',updated)
     setSyncing(false); setModal(null)
   }
