@@ -5892,9 +5892,16 @@ function ServiceListScreenV2({ categoryId, categoriesCache, authUser, onBack, on
 
       {!search && (
         <div className="cc-no-scrollbar" style={{
-          display:"flex", gap:6, overflowX:"auto",
+          display:"flex", gap:6, overflowX:"auto", overflowY:"hidden",
           padding:"14px 18px 6px", scrollSnapType:"x proximity",
-        }}>
+          scrollBehavior:"smooth", WebkitOverflowScrolling:"touch",
+        }}
+          onWheel={e => {
+            // Converter scroll vertical do rato em horizontal (desktop sem touchpad horizontal)
+            if(e.deltaY !== 0 && e.deltaX === 0){
+              e.currentTarget.scrollLeft += e.deltaY
+            }
+          }}>
           <CCSubPill active={activeSub==='todos'} onClick={()=>scrollToSub('todos')}>Todos</CCSubPill>
           {category.subcategorias.map(sub => (
             <CCSubPill key={sub.id} active={activeSub===sub.id} onClick={()=>scrollToSub(sub.id)}>{sub.icon} {sub.nome}</CCSubPill>
