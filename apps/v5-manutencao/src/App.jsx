@@ -6347,6 +6347,52 @@ function PersonalizadoFormV2({ category, onBack, onContinue, state, setState }){
         </div>
 
         <div style={{ marginTop:20 }}>
+          <div className="serif" style={{ fontSize:17, fontWeight:600 }}>Fotografias</div>
+          <div style={{ fontSize:12.5, color:CC.stone, marginTop:4, lineHeight:1.4 }}>
+            Opcional. Adicione imagens para ajudar o técnico a preparar-se.
+          </div>
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:8, marginTop:12 }}>
+            {(state.photos || []).map(p => (
+              <div key={p.id} style={{
+                aspectRatio:"1", borderRadius:12, background:CC.emeraldPale,
+                border:`1px solid ${CC.emeraldSoft}`, display:"grid", placeItems:"center", position:"relative",
+              }}>
+                <FileImage size={24} color={CC.emerald}/>
+                <button onClick={()=>setState(p2=>({...p2, photos:(p2.photos || []).filter(x=>x.id!==p.id)}))} style={{
+                  position:"absolute", top:4, right:4, width:24, height:24, borderRadius:999,
+                  background:"rgba(0,0,0,0.6)", color:CC.paper, border:"none", cursor:"pointer",
+                  display:"grid", placeItems:"center",
+                }}><X size={12}/></button>
+              </div>
+            ))}
+            {(state.photos || []).length < 5 && (
+              <button onClick={()=>setState(p=>({...p, photos:[...(p.photos || []), { id:Date.now(), placeholder:true }]}))} style={{
+                aspectRatio:"1", borderRadius:12, background:CC.paper,
+                border:`1.5px dashed ${CC.stoneLight}`,
+                display:"grid", placeItems:"center", cursor:"pointer", color:CC.stone,
+              }}><Plus size={24}/></button>
+            )}
+          </div>
+          <div style={{ fontSize:11, color:CC.stone, marginTop:4, textAlign:"right" }}>{(state.photos || []).length}/5 fotografias</div>
+        </div>
+
+        <div style={{ marginTop:20 }}>
+          <div className="serif" style={{ fontSize:17, fontWeight:600 }}>Notas adicionais</div>
+          <div style={{ fontSize:12.5, color:CC.stone, marginTop:4, lineHeight:1.4 }}>
+            Opcional. Instruções de acesso, marca e modelo do aparelho, ou áreas específicas.
+          </div>
+          <textarea value={state.notes || ""} onChange={e=>setState(p=>({...p, notes:e.target.value}))} maxLength={200}
+            placeholder="Ex: porteiro no R/C, código 1234. Cozinha no 2.º piso."
+            style={{
+              marginTop:12, width:"100%", minHeight:90,
+              background:CC.paper, border:`1px solid ${CC.line}`,
+              borderRadius:12, padding:14, fontSize:13.5,
+              fontFamily:"inherit", color:CC.ink, resize:"vertical", outline:"none",
+            }}/>
+          <div style={{ fontSize:11, color:CC.stone, marginTop:4, textAlign:"right" }}>{(state.notes || "").length}/200</div>
+        </div>
+
+        <div style={{ marginTop:20 }}>
           <div className="serif" style={{ fontSize:17, fontWeight:600 }}>Horas estimadas</div>
           <div style={{ fontSize:12.5, color:CC.stone, marginTop:4, lineHeight:1.4 }}>
             O valor final é ajustado ao tempo real (mínimo 1h, arredondado a 30 min).
@@ -6518,7 +6564,7 @@ function FinalizarPedidoV2({ selected, category, isPersonalizado, onBack, onConf
               background:`${category.color}15`, color:category.color,
               display:"grid", placeItems:"center", fontSize:22,
             }}>{category.emoji}</div>
-            <div style={{ flex:1 }}>
+            <div style={{ flex:1, minWidth:0 }}>
               <div style={{ fontSize:14, fontWeight:600 }}>
                 {isPersonalizado ? `${category.nome} · Personalizado` : selectedNome}
               </div>
@@ -6527,6 +6573,33 @@ function FinalizarPedidoV2({ selected, category, isPersonalizado, onBack, onConf
                   ? `${state.horas || 1}h × ${eur(category.personalizadoRate)}/h`
                   : category.nome}
               </div>
+              {isPersonalizado && state.description && (
+                <div style={{
+                  fontSize:12, color:CC.stone, marginTop:6, lineHeight:1.4,
+                  overflow:"hidden", display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical",
+                }}>
+                  {state.description.length > 80 ? state.description.slice(0,80) + "…" : state.description}
+                </div>
+              )}
+              {isPersonalizado && (state.photos || []).length > 0 && (
+                <div style={{ display:"flex", gap:6, marginTop:8 }}>
+                  {(state.photos || []).slice(0,3).map(p => (
+                    <div key={p.id} style={{
+                      width:36, height:36, borderRadius:8, flexShrink:0,
+                      background:CC.emeraldPale, border:`1px solid ${CC.emeraldSoft}`,
+                      display:"grid", placeItems:"center",
+                    }}><FileImage size={14} color={CC.emerald}/></div>
+                  ))}
+                  {(state.photos || []).length > 3 && (
+                    <div style={{
+                      width:36, height:36, borderRadius:8, flexShrink:0,
+                      background:CC.stoneLight, color:CC.stone,
+                      display:"grid", placeItems:"center",
+                      fontSize:11, fontWeight:700,
+                    }}>+{(state.photos || []).length - 3}</div>
+                  )}
+                </div>
+              )}
               <div style={{ display:"flex", alignItems:"baseline", gap:6, marginTop:6 }}>
                 {servicePriceOriginal && servicePriceOriginal>servicePrice && (
                   <span style={{ fontSize:11.5, color:CC.stone, textDecoration:"line-through" }}>{eur(servicePriceOriginal)}</span>
@@ -6541,32 +6614,6 @@ function FinalizarPedidoV2({ selected, category, isPersonalizado, onBack, onConf
               display:"grid", placeItems:"center", cursor:"pointer", color:CC.stone,
             }}><Trash2 size={14}/></button>
           </div>
-
-          <button onClick={()=>setModal("photos")} style={{
-            marginTop:10, width:"100%",
-            background:CC.paper, border:`1px solid ${CC.line}`,
-            borderRadius:14, padding:14,
-            display:"flex", alignItems:"center", gap:12,
-            cursor:"pointer", textAlign:"left",
-          }}>
-            <div style={{
-              width:36, height:36, flexShrink:0, borderRadius:10,
-              background: state.notes || (state.photos || []).length ? CC.emeraldPale : CC.stoneLight,
-              color: state.notes || (state.photos || []).length ? CC.emerald : CC.stone,
-              display:"grid", placeItems:"center",
-            }}><FileImage size={18}/></div>
-            <div style={{ flex:1 }}>
-              <div style={{ fontSize:13.5, fontWeight:600 }}>Fotografias e notas</div>
-              <div style={{ fontSize:12, color:CC.stone, marginTop:2, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
-                {state.notes
-                  ? state.notes.slice(0,48) + (state.notes.length>48 ? "..." : "")
-                  : (state.photos || []).length>0
-                    ? `${(state.photos || []).length} fotografia${(state.photos || []).length>1 ? "s" : ""}`
-                    : "Adicionar detalhes e imagens"}
-              </div>
-            </div>
-            <ChevronRight size={18} color={CC.stone}/>
-          </button>
         </div>
 
         <CCDivisor/>
@@ -6680,10 +6727,6 @@ function FinalizarPedidoV2({ selected, category, isPersonalizado, onBack, onConf
       {modal==="schedule" && (
         <CCScheduleModal slots={state.selectedSlots} onClose={()=>setModal(null)}
           onConfirm={(slots)=>{ setState(p=>({...p, selectedSlots:slots, scheduleMode:"agendar"})); setModal(null) }}/>
-      )}
-      {modal==="photos" && (
-        <CCPhotosNotesModal notes={state.notes} photos={state.photos} onClose={()=>setModal(null)}
-          onConfirm={({ notes, photos })=>{ setState(p=>({...p, notes, photos})); setModal(null) }}/>
       )}
       {modal==="billing" && (
         <CCBillingModal billing={state.billing} onClose={()=>setModal(null)}
