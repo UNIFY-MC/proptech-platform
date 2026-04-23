@@ -120,6 +120,23 @@ signin real no Supabase. Consequências e workarounds actuais:
 
 **Prioridade**: alta antes de qualquer teste externo ou convite a clientes reais.
 
+## Fase 2d pendente — Perfil do cliente + Moradas
+
+Actualmente no checkout, a morada do billing é reutilizada como
+morada do serviço. Isto é um placeholder que precisa ser separado
+num refactor futuro (Fase 2d):
+
+- Perfil do cliente passa a ter morada fiscal e NIF permanentes
+- Tabela `cliente_moradas` com múltiplas habitações por cliente
+  (tipologia, notas de acesso, GPS)
+- Checkout pré-preenche com morada default e permite escolher outra
+- Técnico na Fase 3 vai precisar das notas de acesso + GPS
+  para navegar até ao serviço
+
+Quando auth real for implementada (primeiro débito técnico listado
+acima), considerar arrancar 2d imediatamente a seguir — são
+prerequisitos mútuos.
+
 ## Supabase — tabelas
 
 Tabelas principais:
