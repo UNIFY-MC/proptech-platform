@@ -2637,24 +2637,104 @@ function CExplorar({ onSvc }) {
 function CPedidos({ ordens, onOrdem, authUser }) {
   const nomeCliente = authUser?.nome || 'Cliente'
   const meus = ordens.filter(o => o.cli===nomeCliente)
+
+  const CATEGORY_NAMES_LOCAL = {
+    limpeza:'Limpeza', manutencao:'Manutenção', jardim:'Jardim',
+    piscina:'Piscina', pintura:'Pintura', eletrica:'Eléctrica',
+    canalizacao:'Canalização', pos_obra:'Pós-obra',
+  }
+  const eurFmt = v => v==null ? null : `€${Number(v).toFixed(2).replace('.',',')}`
+  const haMin = iso => {
+    if(!iso) return ''
+    const ms = Date.now() - new Date(iso).getTime()
+    if(ms < 0 || Number.isNaN(ms)) return ''
+    const m = Math.floor(ms / 60000)
+    if(m < 1) return 'há instantes'
+    if(m < 60) return `há ${m} min`
+    const h = Math.floor(m / 60)
+    if(h < 24) return `há ${h}h`
+    return `há ${Math.floor(h/24)} dias`
+  }
+  const quandoLabel = o => {
+    if(o.schedule_mode === 'imediato') return 'Imediato · 30-40 min'
+    if(o.data_agendada && o.hora_agendada){
+      try {
+        const d = new Date(o.data_agendada + 'T00:00:00')
+        return `${d.toLocaleDateString('pt-PT', { weekday:'short', day:'numeric', month:'short' })} · ${o.hora_agendada}`
+      } catch {}
+    }
+    return o.data || 'Em breve'
+  }
+  const nomeServico = o => {
+    if(o.sid){ const s = svcById(o.sid); if(s?.n) return s.n }
+    if(o.servico_id){
+      for(const sub of SUBCATEGORIES){
+        const hit = sub.services.find(x => x.id === o.servico_id)
+        if(hit) return hit.name
+      }
+    }
+    if(o.is_personalizado) return 'Serviço personalizado'
+    if(o.servico_nome) return o.servico_nome
+    if(o.nome) return o.nome
+    return 'Serviço'
+  }
+  const icServico = o => {
+    if(o.sid){ const s = svcById(o.sid); if(s?.ic) return s.ic }
+    return '🔧'
+  }
+
   return (
     <div style={{ minHeight:'100vh', background:C.mist, paddingBottom:80 }}>
       <div style={{ background:C.white, padding:'18px 16px 14px', borderBottom:`1px solid ${C.border}` }}>
         <h1 style={{ fontSize:19, fontWeight:800, color:C.navy }}>Os meus pedidos</h1>
       </div>
       <div style={{ padding:'14px 16px 20px' }}>
-        {meus.map(o => { const s=svcById(o.sid); const t=tecById(o.tid); return (
-          <Card key={o.id} style={{ padding:15, marginBottom:8 }} onClick={() => onOrdem(o)}>
-            <div style={{ display:'flex', gap:10, alignItems:'center' }}>
-              <span style={{ fontSize:26 }}>{s?.ic||'🔧'}</span>
-              <div style={{ flex:1 }}>
-                <div style={{ display:'flex', justifyContent:'space-between', marginBottom:2 }}><span style={{ fontSize:13, fontWeight:700, color:C.navy }}>{s?.n}</span><EstBadge st={o.st}/></div>
-                <div style={{ fontSize:11, color:C.slate }}>{o.data}</div>
-                {t ? <div style={{ fontSize:10, color:C.g, fontWeight:600, marginTop:1 }}>👤 {t.n}</div> : <div style={{ fontSize:10, color:C.amber, fontWeight:600, marginTop:1 }}>⏳ A atribuir técnico</div>}
+        {meus.map(o => {
+          const t = tecById(o.tid)
+          const svc = nomeServico(o)
+          const catNome = o.categoria_id ? CATEGORY_NAMES_LOCAL[o.categoria_id] : null
+          const valor = eurFmt(o.valor_cobrado ?? o.val)
+          const quando = quandoLabel(o)
+          const pedido = o.dt_pedido_iso || o.created_at
+          const pedidoLabel = pedido ? haMin(pedido) : ''
+          return (
+            <Card key={o.id} style={{ padding:15, marginBottom:8 }} onClick={() => onOrdem(o)}>
+              <div style={{ display:'flex', gap:10, alignItems:'flex-start' }}>
+                <span style={{ fontSize:26, lineHeight:1 }}>{icServico(o)}</span>
+                <div style={{ flex:1, minWidth:0 }}>
+                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:3 }}>
+                    <span style={{ fontSize:11, fontWeight:700, color:C.slate, fontFamily:'ui-monospace,monospace', letterSpacing:0.3 }}>
+                      {o.numero_sequencial || 'Pedido recente'}
+                    </span>
+                    <EstBadge st={o.st}/>
+                  </div>
+                  <div style={{ fontSize:13, fontWeight:700, color:C.navy, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                    {svc}
+                  </div>
+                  {(catNome || valor) && (
+                    <div style={{ fontSize:11, color:C.slate, marginTop:2 }}>
+                      {catNome && <span>{catNome}</span>}
+                      {catNome && valor && <span> · </span>}
+                      {valor && <span style={{ fontWeight:700, color:C.navy }}>{valor}</span>}
+                    </div>
+                  )}
+                  <div style={{ fontSize:11, color:C.slate, marginTop:2 }}>{quando}</div>
+                  {t
+                    ? <div style={{ fontSize:10, color:C.g, fontWeight:600, marginTop:2 }}>👤 {t.n}</div>
+                    : <div style={{ fontSize:10, color:C.amber, fontWeight:600, marginTop:2 }}>⏳ A atribuir técnico</div>}
+                  {pedidoLabel && (
+                    <div style={{ fontSize:10, color:C.slate, marginTop:2 }}>{pedidoLabel}</div>
+                  )}
+                </div>
               </div>
-            </div>
-          </Card>
-        )})}
+            </Card>
+          )
+        })}
+        {meus.length===0 && (
+          <div style={{ padding:'40px 20px', textAlign:'center', color:C.slate, fontSize:13 }}>
+            Ainda não tem pedidos.
+          </div>
+        )}
       </div>
     </div>
   )
@@ -7683,7 +7763,8 @@ export default function App() {
 
     const totalNumber = Number(total?.toFixed?.(2) ?? precoBase)
 
-    // Reflexo local para UI imediata (usa o mesmo formato que o fluxo antigo espera)
+    // Reflexo local para UI imediata (usa o mesmo formato que o fluxo antigo espera,
+    // + campos V2 em snake_case para que CPedidos/COrdem possam renderizar o novo catálogo)
     const ordemLocal = {
       id:       `ot${Date.now()}`,
       sid:      null, // SVCS legacy não tem estes ids; deixamos null
@@ -7705,6 +7786,17 @@ export default function App() {
       dt_pedido_iso: new Date().toISOString(),
       pago:     true,
       nome:     nome, // permite apresentação mesmo sem sid legacy
+      // Campos V2 (espelham o payload Supabase) — numero_sequencial é preenchido após sbSave
+      servico_id:       servicoId,
+      servico_nome:     nome,
+      categoria_id:     categoryId,
+      is_personalizado: !!isPersonalizado,
+      valor_cobrado:    totalNumber,
+      schedule_mode:    state.scheduleMode || null,
+      data_agendada:    dataAgendada,
+      hora_agendada:    horaAgendada,
+      slots_flexiveis:  state.selectedSlots || [],
+      created_at:       new Date().toISOString(),
     }
     setOrdens(p => [ordemLocal, ...p])
 
@@ -7760,7 +7852,15 @@ export default function App() {
         } else {
           console.log('[sbSave] SUCCESS →', r)
           // PostgREST retorna array (com Prefer: return=representation). Guarda 1ª row.
-          setCatLastOrdem(Array.isArray(r) ? r[0] : r)
+          const row = Array.isArray(r) ? r[0] : r
+          setCatLastOrdem(row)
+          // Enriquecer a ordem local com numero_sequencial + id da BD para que
+          // CPedidos/COrdem possam mostrar o número e deep-link para o detalhe.
+          if(row){
+            setOrdens(p => p.map(x => x.id === ordemLocal.id
+              ? { ...x, numero_sequencial: row.numero_sequencial, bd_id: row.id }
+              : x))
+          }
         }
       } catch (e) {
         console.error('[sbSave] EXCEPTION →', e)
