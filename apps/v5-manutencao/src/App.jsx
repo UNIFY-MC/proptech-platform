@@ -1180,7 +1180,7 @@ const CATS = [
   {id:'pintura',    l:'Pintura',     ic:'🎨', cor:'#f97316'},
   {id:'eletrica',   l:'Elétrica',    ic:'⚡', cor:'#eab308'},
   {id:'canalizacao',l:'Canalização', ic:'🚿', cor:'#8b5cf6'},
-  {id:'obra',       l:'Pós-Obra',    ic:'🏗️', cor:'#78716c'},
+  {id:'pos_obra',   l:'Pós-Obra',    ic:'🏗️', cor:'#78716c'},
 ]
 const SVCS = [
   // ── LIMPEZA ──────────────────────────────────────────
@@ -2457,7 +2457,7 @@ function Chat({ titulo, msgs: iM, lado, onBack }) {
 /* ══════════════════════════════════
    CLIENTE
 ══════════════════════════════════ */
-function CHome({ ordens, onSvc, onOrdem, authUser, onCanalizacao, categoriesCache }) {
+function CHome({ ordens, onSvc, onOrdem, authUser, onCategoryV2, categoriesCache }) {
   const [cat, setCat] = useState(null)
   const [q,   setQ]   = useState('')
   const nomeCliente = authUser?.nome || 'Cliente'
@@ -2566,7 +2566,7 @@ function CHome({ ordens, onSvc, onOrdem, authUser, onCanalizacao, categoriesCach
         <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:8, marginBottom:18 }}>
           {CATS.map(c => (
             <button key={c.id} onClick={() => {
-              if (c.id === 'canalizacao' && onCanalizacao) { onCanalizacao(); return }
+              if (onCategoryV2) { onCategoryV2(c.id); return }
               setCat(cat===c.id ? null : c.id)
             }} style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:4, background: cat===c.id ? c.cor : C.white, border:`2px solid ${cat===c.id ? c.cor : C.border}`, borderRadius:13, padding:'10px 4px', cursor:'pointer' }}>
               <span style={{ fontSize:20 }}>{c.ic}</span>
@@ -8200,7 +8200,7 @@ export default function App() {
             {ecra==='chat_c'      && <Chat titulo='Suporte' msgs={CHAT_C} lado='cliente' onBack={()=>setEcra('home')}/>}
             {ecra==='chat_ordem_c'&& sel && <OrderChat ordem={sel} role='cliente' prest={TECNICOS.find(t=>t.id===sel.tid)} onBack={()=>setEcra('ordem')} onUpdate={o=>{upd(o);setSel(o)}}/>}
             {!cliOver && <>
-              {tab==='inicio'   && <CHome    ordens={ordens} onSvc={s=>{setSvcNova(s);setEcra('nova')}} onOrdem={o=>{setSel(o);setEcra('ordem')}} authUser={authUser} onCanalizacao={()=>{ setCatCategoryId('canalizacao'); setCatScreen('list') }} categoriesCache={categoriesCache}/>}
+              {tab==='inicio'   && <CHome    ordens={ordens} onSvc={s=>{setSvcNova(s);setEcra('nova')}} onOrdem={o=>{setSel(o);setEcra('ordem')}} authUser={authUser} onCategoryV2={(id)=>{ setCatCategoryId(id); setCatScreen('list') }} categoriesCache={categoriesCache}/>}
               {tab==='explorar' && <CExplorar onSvc={s=>{setSvcNova(s);setEcra('nova')}}/>}
               {tab==='pedidos'  && <CPedidos  ordens={ordens} onOrdem={o=>{setSel(o);setEcra('ordem')}} authUser={authUser}/>}
               {tab==='perfil'   && <CPerfil/>}
