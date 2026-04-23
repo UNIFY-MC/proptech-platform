@@ -7362,21 +7362,46 @@ export default function App() {
     return () => { active = false }
   }, [authUser?.token])
 
-  // ── Estado do novo fluxo Canalização (catálogo + personalizado) ──
-  const [catScreen, setCatScreen] = useState(null) // null | 'list' | 'landing' | 'form' | 'detail' | 'checkout' | 'done'
-  const [catSelected, setCatSelected] = useState(null)
+  // ── Estado do novo fluxo de catálogo V2 (multi-categoria, preparado para 2c) ──
+  // catScreen adiciona 'variant' para o VariantPickerScreenV2 de grupos.
+  const [catScreen, setCatScreen] = useState(null) // null | 'list' | 'landing' | 'form' | 'variant' | 'detail' | 'checkout' | 'done'
+  const [catCategoryId, setCatCategoryId] = useState(null) // string (ex: 'canalizacao')
+  const [catSelected, setCatSelected] = useState(null)     // row de servicos (V2: preco/nome) ou PERSONALIZADO const (V1 antigo)
+  const [catParent,   setCatParent]   = useState(null)     // row do grupo-pai quando catScreen='variant' ou detalhe de variante
   const [catIsPersonalizado, setCatIsPersonalizado] = useState(false)
   const [catState, setCatState] = useState({
     description:"", horas:1,
     scheduleMode:null, selectedSlots:[],
     notes:"", photos:[], billing:null, paymentMethod:null,
+    serviceOptions:null, // {productsId, frequencyId, effectivePrice, priceSuffix} — vem do ServiceDetailScreenV2
   })
+  // Meta da categoria activa, combinada a partir de BD (categoriesCache) + design tokens (CATEGORY_META).
+  // null enquanto categoriesCache carrega ou categoria não resolvida.
+  const catCategoryMeta = (() => {
+    if(!catCategoryId || !categoriesCache) return null
+    const row = categoriesCache.find(c => c.id === catCategoryId)
+    if(!row) return null
+    const meta = CATEGORY_META[catCategoryId] || { color:'#10B981', hero:'Serviço à medida — descreva o trabalho e enviamos o técnico certo.' }
+    return {
+      id:    row.id,
+      nome:  row.nome,
+      emoji: row.icon,
+      color: meta.color,
+      hero:  meta.hero,
+      // personalizadoRate / personalizadoRateOriginal são carregados pelo ServiceListScreenV2
+      // via fetchCategoryFull e guardados em catState.serviceOptions quando relevante. Aqui
+      // deixamos defaults sensatos para os ecrãs Personalizado usarem enquanto a BD não responde.
+      personalizadoRate:         49.90,
+      personalizadoRateOriginal: 54.90,
+    }
+  })()
   const catReset = () => {
-    setCatSelected(null); setCatIsPersonalizado(false)
+    setCatCategoryId(null); setCatSelected(null); setCatParent(null); setCatIsPersonalizado(false)
     setCatState({
       description:"", horas:1,
       scheduleMode:null, selectedSlots:[],
       notes:"", photos:[], billing:null, paymentMethod:null,
+      serviceOptions:null,
     })
     setCatScreen(null)
   }
