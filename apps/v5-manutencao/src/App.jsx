@@ -5975,6 +5975,8 @@ function ServiceListScreenV2({ categoryId, categoriesCache, authUser, onBack, on
           display:"flex", gap:6, overflowX:"auto", overflowY:"hidden",
           padding:"14px 18px 6px", scrollSnapType:"x proximity",
           scrollBehavior:"smooth", WebkitOverflowScrolling:"touch",
+          maskImage:"linear-gradient(to right, black calc(100% - 24px), transparent)",
+          WebkitMaskImage:"linear-gradient(to right, black calc(100% - 24px), transparent)",
         }}
           onWheel={e => {
             // Converter scroll vertical do rato em horizontal (desktop sem touchpad horizontal)
