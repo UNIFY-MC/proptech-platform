@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo, useEffect, useRef } from 'react'
 import {
-  ArrowLeft, X, Check, Camera, Plus, MapPin, ChevronRight,
+  ArrowLeft, X, Check, Camera, Clock, Plus, MapPin, ChevronRight,
   Shield, Lock, MessageSquare, FileImage, RefreshCw, Wrench,
   Sparkles, Trash2, Tag, Receipt, Banknote, CreditCard, Info,
   Calendar, MapPinned, PartyPopper, Search, Star, Leaf, Zap,
@@ -1994,7 +1994,7 @@ const CATEGORY_PREFIX = {
   limpeza:'cln', manutencao:'mnt', jardim:'jar', piscina:'pol',
   pintura:'pnt', eletrica:'elc', canalizacao:'can', pos_obra:'pos',
 }
-const personalizadoId = (categoriaId) => `personalizado-${CATEGORY_PREFIX[categoriaId]||'can'}`
+const getPersonalizadoId = (categoryId) => `personalizado-${CATEGORY_PREFIX[categoryId]}`
 
 /* Templates de frequência — alinhadas com a tabela frequency_templates da BD.
    Cada serviço aplicável aponta a uma destas via campo frequencyTemplate. */
@@ -2454,6 +2454,9 @@ function CHome({ ordens, onSvc, onOrdem, authUser, onCanalizacao }) {
   const nomeCliente = authUser?.nome || 'Cliente'
   const meus = ordens.filter(o => o.cli===nomeCliente && o.st!=='concluida')
   const svcs = SVCS.filter(s => (cat ? s.cat===cat : true) && (q ? s.n.toLowerCase().includes(q.toLowerCase()) : true))
+  // TEMP(2b): descomenta para testar ServiceListScreenV2 com uma categoria à escolha.
+  // if (true) return <ServiceListScreenV2 categoryId="limpeza" authUser={authUser} onBack={()=>{}} onSelectService={(s,c)=>console.log('svc',s,c)} onSelectPersonalizado={()=>console.log('personalizado')} />
+  // Remover em 2c quando os screens V2 forem ligados pelo root via estado dedicado.
   return (
     <div style={{ minHeight:'100vh', background:C.mist, paddingBottom:80 }}>
       {/* Hero */}
@@ -5595,6 +5598,566 @@ function AIChat() {
         </div>
       </div>
     </div>
+  )
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   ══ FASE 2b-A — ecrãs data-driven (Supabase) ══
+   Prefixo V2 distingue dos ecrãs antigos da canalização (mantidos até 2c)
+   ════════════════════════════════════════════════════════════════════ */
+
+/* Design tokens por categoria (cor + hero copy — decisões de design, não BD) */
+const CATEGORY_META = {
+  limpeza:     { color:'#10B981', hero:'Precisa de algo fora do catálogo? Combine connosco e enviamos a técnica certa.' },
+  manutencao:  { color:'#F59E0B', hero:'Várias pequenas reparações? Combine tudo numa única visita e poupe tempo.' },
+  jardim:      { color:'#22C55E', hero:'Jardim à medida — qualquer tarefa específica que não esteja no catálogo.' },
+  piscina:     { color:'#06B6D4', hero:'Problema específico na sua piscina ou emergência? Enviamos o técnico certo.' },
+  pintura:     { color:'#F97316', hero:'Projecto de pintura especial ou acabamento à medida? Combine connosco.' },
+  eletrica:    { color:'#EAB308', hero:'Intervenção eléctrica específica com técnico certificado CTI.' },
+  canalizacao: { color:'#8B5CF6', hero:'Algo fora do comum? Descreva o trabalho e enviamos o técnico certo.' },
+  pos_obra:    { color:'#78716C', hero:'Acabamento pós-obra à medida — limpeza + retoques + entulho conforme precisar.' },
+}
+
+/* Fetch completo de uma categoria (categoria + subcategorias + serviços-top + variantes + personalizado).
+   Retorna estrutura aninhada igual à que os ecrãs V2 esperam. */
+async function fetchCategoryFull(categoryId, token){
+  const meta = CATEGORY_META[categoryId]
+  if(!meta) return null
+
+  const [catRows, subRows, personalizadoRows, topServicos, allVariants] = await Promise.all([
+    sbGet('categorias',    `?id=eq.${categoryId}&select=id,nome,icon,activo`, token),
+    sbGet('subcategorias', `?categoria_id=eq.${categoryId}&order=ordem`, token),
+    sbGet('servicos',      `?id=eq.${getPersonalizadoId(categoryId)}&select=preco,preco_original`, token),
+    sbGet('servicos',      `?categoria_id=eq.${categoryId}&activo=eq.true&servico_pai_id=is.null&tipo=neq.personalizado&order=ordem`, token),
+    sbGet('servicos',      `?categoria_id=eq.${categoryId}&activo=eq.true&servico_pai_id=not.is.null&order=ordem`, token),
+  ])
+
+  if(!catRows || catRows.length === 0) return null
+  const cat = catRows[0]
+  const personalizado = personalizadoRows?.[0]
+
+  const variantsByParent = {}
+  for(const v of (allVariants || [])){
+    const pid = v.servico_pai_id
+    if(!variantsByParent[pid]) variantsByParent[pid] = []
+    variantsByParent[pid].push(v)
+  }
+
+  const subcategorias = (subRows || []).map(sub => ({
+    id: sub.id, nome: sub.nome, icon: sub.icon,
+    services: (topServicos || [])
+      .filter(s => s.subcategoria_id === sub.id)
+      .map(s => s.tipo === 'grupo'
+        ? { ...s, variants: variantsByParent[s.id] || [] }
+        : s
+      ),
+  })).filter(sub => sub.services.length > 0)
+
+  return {
+    id:    cat.id,
+    nome:  cat.nome,
+    emoji: cat.icon,
+    color: meta.color,
+    hero:  meta.hero,
+    subcategorias,
+    personalizadoRate:         Number(personalizado?.preco) || 49.90,
+    personalizadoRateOriginal: Number(personalizado?.preco_original) || 54.90,
+  }
+}
+
+/* Fetch de variantes de um grupo-pai */
+async function fetchGroupVariants(parentId, token){
+  const rows = await sbGet('servicos', `?servico_pai_id=eq.${parentId}&activo=eq.true&order=ordem`, token)
+  return rows || []
+}
+
+/* Fetch de um serviço + pai (se existir) */
+async function fetchServiceWithParent(serviceId, token){
+  const rows = await sbGet('servicos', `?id=eq.${serviceId}&limit=1`, token)
+  if(!rows || rows.length === 0) return { service:null, parent:null }
+  const service = rows[0]
+  let parent = null
+  if(service.servico_pai_id){
+    const parentRows = await sbGet('servicos', `?id=eq.${service.servico_pai_id}&limit=1`, token)
+    parent = parentRows?.[0] || null
+  }
+  return { service, parent }
+}
+
+/* ── ServiceCardV2 — distingue grupo ("desde €X · N tipologias") vs fixo ── */
+function ServiceCardV2({ service, categoryColor, onClick }){
+  const isGrupo = service.tipo === 'grupo'
+  const nome = service.nome || service.name
+  const preco = Number(service.preco ?? service.price ?? 0)
+  const precoOriginal = service.preco_original != null ? Number(service.preco_original) : (service.priceOriginal || null)
+  const hasDiscount = precoOriginal && precoOriginal > preco
+  const pct = hasDiscount ? Math.round(((precoOriginal - preco) / precoOriginal) * 100) : 0
+  const variantCount = service.variants?.length || 0
+  const minVariantPrice = isGrupo && variantCount > 0
+    ? Math.min(...service.variants.map(v => Number(v.preco ?? v.price)))
+    : preco
+
+  return (
+    <button onClick={onClick} style={{
+      background:CC.paper, border:`1px solid ${CC.line}`,
+      borderRadius:14, padding:12,
+      display:"flex", gap:12, alignItems:"center",
+      cursor:"pointer", textAlign:"left", width:"100%",
+    }}>
+      <div style={{
+        width:56, height:56, flexShrink:0, borderRadius:12,
+        background: service.eco ? "#E8F5EE" : `${categoryColor || CC.emerald}15`,
+        color: service.eco ? "#2D7A5F" : (categoryColor || CC.emerald),
+        display:"grid", placeItems:"center", position:"relative",
+      }}>
+        {service.eco ? <Leaf size={24}/> : <Wrench size={22}/>}
+        {service.popular && (
+          <div style={{
+            position:"absolute", top:-6, right:-6,
+            background:CC.emerald, color:CC.paper,
+            width:22, height:22, borderRadius:999,
+            display:"grid", placeItems:"center",
+            boxShadow:`0 2px 6px -1px ${CC.emeraldDark}`,
+          }}><Star size={11} fill={CC.paper} color={CC.paper}/></div>
+        )}
+      </div>
+      <div style={{ flex:1, minWidth:0 }}>
+        <div style={{ fontSize:13.5, fontWeight:600, color:CC.ink, lineHeight:1.25 }}>{nome}</div>
+        <div style={{ display:"flex", gap:6, alignItems:"center", marginTop:6, flexWrap:"wrap" }}>
+          {service.eco && <CCChip tone="eco" icon={Leaf}>Eco</CCChip>}
+          {service.popular && <CCChip tone="emerald" icon={Star}>Popular</CCChip>}
+          {!isGrupo && hasDiscount && pct >= 10 && <CCChip tone="discount">−{pct}%</CCChip>}
+        </div>
+        <div style={{ marginTop:6, display:"flex", alignItems:"baseline", gap:8, flexWrap:"wrap" }}>
+          {isGrupo ? (
+            <>
+              <span style={{ fontSize:11, color:CC.stone, fontWeight:500 }}>desde</span>
+              <span style={{ fontSize:15, fontWeight:700, color:CC.ink }}>{eur(minVariantPrice)}</span>
+              {variantCount > 0 && (
+                <span style={{ fontSize:11, color:CC.stone }}>· {variantCount} tipologia{variantCount>1?'s':''}</span>
+              )}
+            </>
+          ) : (
+            <CCPriceTag price={preco} priceOriginal={precoOriginal} size="sm"/>
+          )}
+        </div>
+      </div>
+      <ChevronRight size={18} color={CC.stone} style={{ flexShrink:0 }}/>
+    </button>
+  )
+}
+
+/* ── ServiceListScreenV2 — lista data-driven por categoria ── */
+function ServiceListScreenV2({ categoryId, authUser, onBack, onSelectService, onSelectPersonalizado }){
+  const [category, setCategory] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const [activeSub, setActiveSub] = useState('todos')
+  const [search, setSearch] = useState('')
+  const sectionRefs = useRef({})
+
+  useEffect(() => {
+    let active = true
+    setLoading(true); setError(null)
+    fetchCategoryFull(categoryId, authUser?.token)
+      .then(data => {
+        if(!active) return
+        if(!data) setError(`Categoria "${categoryId}" não encontrada.`)
+        else setCategory(data)
+        setLoading(false)
+      })
+      .catch(e => { if(active){ setError(e.message || 'Erro ao carregar categoria'); setLoading(false) } })
+    return () => { active = false }
+  }, [categoryId, authUser?.token])
+
+  if(loading) return (
+    <CCShell>
+      <CCTopBar onBack={onBack} title="A carregar..." />
+      <div style={{ padding:40, textAlign:"center", color:CC.stone, fontSize:13 }}>A obter serviços…</div>
+    </CCShell>
+  )
+  if(error || !category) return (
+    <CCShell>
+      <CCTopBar onBack={onBack} title="Erro" />
+      <div style={{ padding:40, textAlign:"center", color:CC.stone, fontSize:13 }}>{error || 'Categoria indisponível.'}</div>
+    </CCShell>
+  )
+
+  const filtered = search
+    ? category.subcategorias.map(sub => ({
+        ...sub,
+        services: sub.services.filter(s => (s.nome || s.name || '').toLowerCase().includes(search.toLowerCase())),
+      })).filter(sub => sub.services.length > 0)
+    : activeSub === 'todos' ? category.subcategorias : category.subcategorias.filter(s => s.id === activeSub)
+
+  const scrollToSub = (id) => {
+    setActiveSub(id)
+    setTimeout(()=>sectionRefs.current[id]?.scrollIntoView({ behavior:"smooth", block:"start" }), 50)
+  }
+  const totalServicos = category.subcategorias.reduce((n,s)=>n+s.services.length, 0)
+
+  return (
+    <CCShell>
+      <CCTopBar onBack={onBack} title={category.nome} subtitle={`${totalServicos} serviços · Caldas da Rainha`}/>
+
+      <div style={{ padding:"14px 18px 0" }}>
+        <div style={{
+          display:"flex", alignItems:"center", gap:10,
+          background:CC.paper, border:`1px solid ${CC.line}`,
+          borderRadius:12, padding:"10px 14px",
+        }}>
+          <Search size={16} color={CC.stone}/>
+          <input value={search} onChange={e=>setSearch(e.target.value)}
+            placeholder={`Procurar em ${category.nome}...`}
+            style={{ flex:1, border:"none", outline:"none", background:"transparent", fontSize:14, fontFamily:"inherit", color:CC.ink }}/>
+          {search && (
+            <button onClick={()=>setSearch('')} style={{
+              background:"transparent", border:"none", cursor:"pointer", color:CC.stone,
+              display:"grid", placeItems:"center",
+            }}><X size={14}/></button>
+          )}
+        </div>
+      </div>
+
+      {!search && (
+        <div className="cc-no-scrollbar" style={{
+          display:"flex", gap:6, overflowX:"auto",
+          padding:"14px 18px 6px", scrollSnapType:"x proximity",
+        }}>
+          <CCSubPill active={activeSub==='todos'} onClick={()=>scrollToSub('todos')}>Todos</CCSubPill>
+          {category.subcategorias.map(sub => (
+            <CCSubPill key={sub.id} active={activeSub===sub.id} onClick={()=>scrollToSub(sub.id)}>{sub.icon} {sub.nome}</CCSubPill>
+          ))}
+        </div>
+      )}
+
+      <div style={{ padding:"4px 18px 140px" }}>
+        {!search && (
+          <button onClick={onSelectPersonalizado} style={{
+            width:"100%", textAlign:"left", cursor:"pointer",
+            background:`linear-gradient(135deg,${CC.forest} 0%,${CC.forestSoft} 100%)`,
+            color:CC.paper, border:"none",
+            borderRadius:20, padding:20, marginTop:12,
+            position:"relative", overflow:"hidden",
+            boxShadow:`0 16px 40px -18px ${CC.forestDeep}`,
+          }}>
+            <div style={{ position:"absolute", right:-24, top:-24, fontSize:140, opacity:0.08, pointerEvents:"none" }}>{category.emoji}</div>
+            <div style={{ display:"flex", alignItems:"center", gap:6, fontSize:10, fontWeight:700, letterSpacing:1.2, textTransform:"uppercase", color:CC.emeraldBright }}>
+              <Sparkles size={11}/> À medida em {category.nome}
+            </div>
+            <div className="serif" style={{ fontSize:22, fontWeight:500, marginTop:8, lineHeight:1.2 }}>Serviço personalizado</div>
+            <div style={{ fontSize:13, opacity:0.85, marginTop:6, maxWidth:320, lineHeight:1.4 }}>{category.hero}</div>
+            <div style={{ marginTop:14, paddingTop:14, borderTop:"1px solid rgba(255,255,255,0.15)", display:"flex", justifyContent:"space-between", alignItems:"flex-end" }}>
+              <div>
+                <div style={{ fontSize:11, opacity:0.7 }}>Por hora</div>
+                <div style={{ display:"flex", alignItems:"baseline", gap:6, marginTop:2 }}>
+                  <span style={{ fontSize:12, opacity:0.6, textDecoration:"line-through" }}>{eur(category.personalizadoRateOriginal)}</span>
+                  <span className="serif" style={{ fontSize:22, fontWeight:600, color:CC.emeraldBright }}>{eur(category.personalizadoRate)}</span>
+                </div>
+              </div>
+              <div style={{ background:CC.emerald, color:CC.paper, padding:"8px 14px", borderRadius:999, fontSize:12, fontWeight:600, display:"flex", alignItems:"center", gap:4 }}>
+                Personalizar <ChevronRight size={14}/>
+              </div>
+            </div>
+          </button>
+        )}
+
+        {filtered.map(sub => (
+          <div key={sub.id} ref={el => (sectionRefs.current[sub.id] = el)} style={{ marginTop:28, scrollMarginTop:140 }}>
+            <div style={{ display:"flex", alignItems:"baseline", justifyContent:"space-between", marginBottom:10 }}>
+              <div className="serif" style={{ fontSize:17, fontWeight:600, letterSpacing:-0.15 }}>{sub.icon} {sub.nome}</div>
+              <div style={{ fontSize:11, color:CC.stone, fontWeight:500 }}>{sub.services.length}</div>
+            </div>
+            <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+              {sub.services.map(s => (
+                <ServiceCardV2 key={s.id} service={s} categoryColor={category.color} onClick={()=>onSelectService(s, category)}/>
+              ))}
+            </div>
+          </div>
+        ))}
+
+        {filtered.length === 0 && (
+          <div style={{ textAlign:"center", padding:40, color:CC.stone, fontSize:14 }}>
+            Nenhum serviço encontrado para "{search}".
+          </div>
+        )}
+      </div>
+    </CCShell>
+  )
+}
+
+/* ── VariantPickerScreenV2 — selector de tipologia/tamanho para grupos ── */
+function VariantPickerScreenV2({ parent, category, authUser, onBack, onContinue }){
+  const [variants, setVariants] = useState(parent.variants || null)
+  const [loading, setLoading] = useState(!parent.variants)
+  const [selectedId, setSelectedId] = useState(null)
+
+  useEffect(() => {
+    if(parent.variants && parent.variants.length > 0){
+      const pop = parent.variants.find(v => v.popular)
+      setSelectedId((pop || parent.variants[0]).id)
+      return
+    }
+    let active = true
+    setLoading(true)
+    fetchGroupVariants(parent.id, authUser?.token).then(vs => {
+      if(!active) return
+      setVariants(vs); setLoading(false)
+      const pop = vs.find(v => v.popular)
+      if(vs.length > 0) setSelectedId((pop || vs[0]).id)
+    })
+    return () => { active = false }
+  }, [parent.id, authUser?.token])
+
+  if(loading || !variants) return (
+    <CCShell>
+      <CCTopBar onBack={onBack} title={parent.nome || parent.name}/>
+      <div style={{ padding:40, textAlign:"center", color:CC.stone, fontSize:13 }}>A carregar tipologias…</div>
+    </CCShell>
+  )
+
+  const selected = variants.find(v => v.id === selectedId) || variants[0]
+
+  return (
+    <CCShell>
+      <CCTopBar onBack={onBack} title={parent.nome || parent.name} subtitle="Escolha a tipologia"/>
+      <div style={{ padding:"16px 18px 140px" }}>
+        <div style={{
+          background:`${category.color}15`, borderRadius:20,
+          padding:"24px 20px", textAlign:"center",
+        }}>
+          <div style={{ fontSize:48 }}>{category.emoji}</div>
+          <div className="serif" style={{ fontSize:19, fontWeight:500, marginTop:10 }}>{parent.nome || parent.name}</div>
+          {parent.tagline && (
+            <div style={{ fontSize:12.5, color:CC.stone, marginTop:8, lineHeight:1.4, fontStyle:"italic" }}>{parent.tagline}</div>
+          )}
+        </div>
+
+        <div style={{ marginTop:22, fontSize:13, fontWeight:600, color:CC.ink, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+          <span>Qual a tipologia da sua casa?</span>
+          <span style={{ fontSize:11, color:CC.stone, fontWeight:500 }}>{variants.length} opções</span>
+        </div>
+
+        <div style={{ marginTop:10, display:"flex", flexDirection:"column", gap:8 }}>
+          {variants.map(v => {
+            const isSel = v.id === selectedId
+            const preco = Number(v.preco ?? v.price ?? 0)
+            const precoOri = v.preco_original != null ? Number(v.preco_original) : (v.priceOriginal || null)
+            const hasDiscount = precoOri && precoOri > preco
+            const label = v.nome || v.name || v.label
+            return (
+              <button key={v.id} onClick={()=>setSelectedId(v.id)} style={{
+                background: isSel ? `${category.color}08` : CC.paper,
+                border:`2px solid ${isSel ? category.color : CC.line}`,
+                borderRadius:12, padding:"14px",
+                display:"flex", alignItems:"center", gap:12,
+                cursor:"pointer", textAlign:"left", width:"100%",
+                transition:"all 0.15s",
+              }}>
+                <div style={{
+                  width:20, height:20, borderRadius:999,
+                  border:`2px solid ${isSel ? category.color : CC.stoneLight}`,
+                  background: isSel ? category.color : "transparent",
+                  display:"grid", placeItems:"center", flexShrink:0,
+                }}>{isSel && <Check size={12} color={CC.paper} strokeWidth={3}/>}</div>
+                <div style={{ flex:1, minWidth:0 }}>
+                  <div style={{ display:"flex", alignItems:"baseline", gap:8, flexWrap:"wrap" }}>
+                    <span style={{ fontSize:14.5, fontWeight:600, color:CC.ink }}>{label}</span>
+                    {v.popular && <CCChip tone="emerald" icon={Star}>Popular</CCChip>}
+                  </div>
+                </div>
+                <div style={{ textAlign:"right", flexShrink:0 }}>
+                  <div style={{ fontSize:15, fontWeight:700, color:CC.ink }}>{eur(preco)}</div>
+                  {hasDiscount && (
+                    <div style={{ fontSize:11, color:CC.stone, textDecoration:"line-through" }}>{eur(precoOri)}</div>
+                  )}
+                </div>
+              </button>
+            )
+          })}
+        </div>
+
+        {(parent.duracao_tipica || parent.duracao) && (
+          <div style={{
+            marginTop:18, padding:"12px 14px",
+            background:CC.cream, borderRadius:10,
+            fontSize:12, color:CC.stone,
+            display:"flex", alignItems:"center", gap:8,
+          }}>
+            <Clock size={14} color={CC.emerald}/>
+            Duração: <strong style={{ color:CC.ink }}>{parent.duracao_tipica || parent.duracao}</strong>
+          </div>
+        )}
+      </div>
+
+      <CCStickyCTA>
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"baseline", marginBottom:10, padding:"0 4px" }}>
+          <span style={{ fontSize:12, color:CC.stone }}>{selected.nome || selected.name} · Preço</span>
+          <CCPriceTag price={Number(selected.preco ?? selected.price)} priceOriginal={selected.preco_original ?? selected.priceOriginal} size="lg"/>
+        </div>
+        <CCPrimaryBtn onClick={()=>onContinue(selected, parent)}>Continuar</CCPrimaryBtn>
+      </CCStickyCTA>
+    </CCShell>
+  )
+}
+
+/* ── ServiceDetailScreenV2 — detalhe rico data-driven, com opções dinâmicas ── */
+function ServiceDetailScreenV2({ serviceId, category, authUser, onBack, onContinue }){
+  const [service, setService] = useState(null)
+  const [parent, setParent] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+
+  useEffect(() => {
+    let active = true
+    setLoading(true); setError(null)
+    fetchServiceWithParent(serviceId, authUser?.token).then(({ service, parent }) => {
+      if(!active) return
+      if(!service) setError('Serviço indisponível.')
+      else { setService(service); setParent(parent) }
+      setLoading(false)
+    }).catch(e => { if(active){ setError(e.message); setLoading(false) } })
+    return () => { active = false }
+  }, [serviceId, authUser?.token])
+
+  const optionSource = parent || service
+  const frequencyOptions = service ? getFrequencyOptions(
+    { frequencyTemplate: service.frequency_template },
+    parent ? { frequencyTemplate: parent.frequency_template } : null
+  ) : null
+  const hasFrequency = !!frequencyOptions
+  const hasAnyOption = !!(optionSource?.has_products_option || hasFrequency)
+  const defaultFrequencyId = hasFrequency ? frequencyOptions[0].id : 'pontual'
+
+  const [productsId, setProductsId]   = useState('cliente')
+  const [frequencyId, setFrequencyId] = useState(defaultFrequencyId)
+  useEffect(() => { setFrequencyId(defaultFrequencyId) }, [defaultFrequencyId])
+
+  if(loading) return (
+    <CCShell><CCTopBar onBack={onBack} title="A carregar..."/>
+      <div style={{ padding:40, textAlign:"center", color:CC.stone, fontSize:13 }}>A obter detalhe…</div>
+    </CCShell>
+  )
+  if(error || !service) return (
+    <CCShell><CCTopBar onBack={onBack} title="Erro"/>
+      <div style={{ padding:40, textAlign:"center", color:CC.stone, fontSize:13 }}>{error || 'Serviço indisponível.'}</div>
+    </CCShell>
+  )
+
+  const nome = service.nome
+  const basePrice = Number(service.preco)
+  const basePriceOriginal = service.preco_original != null ? Number(service.preco_original) : null
+  const productsExtra = optionSource?.products_extra_price || 0
+  // Deep price (para mensal+profunda trimestral, cln_home): por agora null — será refinado na 2c
+  const deepPriceForBundle = null
+  const effectivePrice = hasAnyOption
+    ? calcDynamicPrice(basePrice, productsId, frequencyId, productsExtra, deepPriceForBundle, frequencyOptions)
+    : basePrice
+  const currentFreq = hasFrequency ? frequencyOptions.find(f => f.id === frequencyId) : null
+  const priceSuffix = currentFreq ? currentFreq.suffix : ''
+
+  // Shim: OptionsSection espera camelCase + array inclui/naoInclui/faq em objectos com {q,a}. Adaptamos.
+  const optionSourceShim = {
+    hasProductsOption:   !!optionSource?.has_products_option,
+    productsExtraPrice:  productsExtra,
+    frequencyTemplate:   optionSource?.frequency_template,
+  }
+  const serviceShim = {
+    frequencyTemplate: service.frequency_template,
+  }
+
+  const incluiArr    = Array.isArray(service.inclui)     ? service.inclui     : []
+  const naoIncluiArr = Array.isArray(service.nao_inclui) ? service.nao_inclui : []
+  const faqArr       = Array.isArray(service.faq)        ? service.faq        : []
+
+  return (
+    <CCShell>
+      <CCTopBar onBack={onBack} title={nome}/>
+      <div style={{ padding:"16px 18px 140px" }}>
+        <div style={{ background:`${category.color}15`, borderRadius:20, padding:"32px 20px", textAlign:"center", overflow:"hidden" }}>
+          <div style={{ fontSize:60 }}>{category.emoji}</div>
+          <div className="serif" style={{ fontSize:22, fontWeight:500, marginTop:12 }}>{nome}</div>
+          <div style={{ display:"flex", justifyContent:"center", gap:6, marginTop:12, flexWrap:"wrap" }}>
+            <CCChip icon={Shield} tone="emerald">{service.garantia_dias || 90} dias garantia</CCChip>
+            {service.eco && <CCChip icon={Leaf} tone="eco">Eco</CCChip>}
+            {service.popular && <CCChip icon={Star} tone="emerald">Popular</CCChip>}
+          </div>
+        </div>
+
+        <div style={{ marginTop:20, padding:"14px 0", borderTop:`1px solid ${CC.line}`, borderBottom:`1px solid ${CC.line}` }}>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+            <div>
+              <div style={{ fontSize:12, color:CC.stone, marginBottom:4 }}>
+                {priceSuffix ? 'Preço do plano' : 'Preço fixo do serviço'}
+              </div>
+              <div style={{ display:"flex", alignItems:"baseline", gap:8 }}>
+                <span style={{ fontSize:22, fontWeight:700, color:CC.ink }}>{eur(effectivePrice)}</span>
+                {priceSuffix && <span style={{ fontSize:12, color:CC.stone, fontWeight:500 }}>{priceSuffix}</span>}
+                {basePriceOriginal && basePriceOriginal > basePrice && !priceSuffix && (
+                  <span style={{ fontSize:13, color:CC.stone, textDecoration:"line-through" }}>{eur(basePriceOriginal)}</span>
+                )}
+              </div>
+            </div>
+            <CCChip tone="emerald" icon={Lock}>Sem surpresas</CCChip>
+          </div>
+        </div>
+
+        {service.tagline && (
+          <div style={{
+            marginTop:18, padding:"14px 16px", background:`${category.color}08`,
+            border:`1px solid ${category.color}20`, borderRadius:12,
+          }}>
+            <div style={{ fontSize:13, color:CC.ink, lineHeight:1.5, fontStyle:"italic" }}>{service.tagline}</div>
+            {service.duracao_tipica && (
+              <div style={{ fontSize:11.5, color:CC.stone, marginTop:8, display:"flex", alignItems:"center", gap:6 }}>
+                <Clock size={12}/> Duração típica: <strong style={{ color:CC.ink }}>{service.duracao_tipica}</strong>
+              </div>
+            )}
+          </div>
+        )}
+
+        <OptionsSection
+          service={serviceShim} parent={optionSourceShim}
+          productsId={productsId} setProductsId={setProductsId}
+          frequencyId={frequencyId} setFrequencyId={setFrequencyId}
+          accent={category.color}/>
+
+        {incluiArr.length > 0 && (
+          <DetailSection title="O que está incluído" icon={Check} iconColor={CC.emerald}>
+            {incluiArr.map((item, i) => <DetailItem key={i} icon={Check} iconColor={CC.emerald}>{item}</DetailItem>)}
+          </DetailSection>
+        )}
+        {naoIncluiArr.length > 0 && (
+          <DetailSection title="O que não está incluído" icon={X} iconColor={CC.stone}>
+            {naoIncluiArr.map((item, i) => <DetailItem key={i} icon={X} iconColor={CC.stone}>{item}</DetailItem>)}
+          </DetailSection>
+        )}
+        {faqArr.length > 0 && (
+          <DetailSection title="Perguntas frequentes" icon={MessageSquare} iconColor={CC.forest}>
+            {faqArr.map((item, i) => <FaqItem key={i} q={item.q} a={item.a}/>)}
+          </DetailSection>
+        )}
+
+        {incluiArr.length === 0 && (
+          <div style={{ marginTop:20, display:"flex", flexDirection:"column", gap:16 }}>
+            <CCValueRow icon={Lock}          title="Técnico fixo, escolhido por si"       desc="Sempre o mesmo profissional da nossa rede de confiança."/>
+            <CCValueRow icon={Shield}        title={`${service.garantia_dias || 90} dias de garantia`} desc="Se o problema voltar, regressamos sem custos adicionais."/>
+            <CCValueRow icon={MessageSquare} title="Chat directo e relatório fotográfico" desc="Fala com o técnico e recebe relatório no fim."/>
+          </div>
+        )}
+      </div>
+
+      <CCStickyCTA>
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"baseline", marginBottom:10, padding:"0 4px" }}>
+          <span style={{ fontSize:12, color:CC.stone }}>{priceSuffix ? 'Preço do plano' : 'Preço'}</span>
+          <div style={{ display:"flex", alignItems:"baseline", gap:6 }}>
+            <span style={{ fontSize:20, fontWeight:700, color:CC.ink }}>{eur(effectivePrice)}</span>
+            {priceSuffix && <span style={{ fontSize:12, color:CC.stone, fontWeight:500 }}>{priceSuffix}</span>}
+          </div>
+        </div>
+        <CCPrimaryBtn onClick={()=>onContinue({ service, parent, productsId, frequencyId, effectivePrice, priceSuffix })}>Continuar</CCPrimaryBtn>
+      </CCStickyCTA>
+    </CCShell>
   )
 }
 
