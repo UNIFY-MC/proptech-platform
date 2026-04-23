@@ -5671,17 +5671,31 @@ async function fetchGroupVariants(parentId, token){
   return rows || []
 }
 
-/* Fetch de um serviço + pai (se existir) */
+/* Fetch de um serviço + pai + extras (todos os servico_extras do pai ou do serviço).
+   Extras de produto têm id com prefixo "ext-prod-" (ver seed em sec 17 do SQL). */
 async function fetchServiceWithParent(serviceId, token){
   const rows = await sbGet('servicos', `?id=eq.${serviceId}&limit=1`, token)
-  if(!rows || rows.length === 0) return { service:null, parent:null }
+  if(!rows || rows.length === 0) return { service:null, parent:null, extras:[] }
   const service = rows[0]
   let parent = null
   if(service.servico_pai_id){
     const parentRows = await sbGet('servicos', `?id=eq.${service.servico_pai_id}&limit=1`, token)
     parent = parentRows?.[0] || null
   }
-  return { service, parent }
+  const extrasSource = parent?.id || service.id
+  const extrasRows = await sbGet('servico_extras', `?servico_id=eq.${extrasSource}&order=ordem`, token)
+  return { service, parent, extras: extrasRows || [] }
+}
+
+/* Extrai do array de extras o "extra de produtos" (id começa por ext-prod-).
+   Retorna { hasProductsOption: bool, productsExtraPrice: number, productsExtra: row|null } */
+function pickProductsExtra(extras){
+  const row = (extras || []).find(e => typeof e.id === 'string' && e.id.startsWith('ext-prod-'))
+  return {
+    hasProductsOption:  !!row,
+    productsExtraPrice: row ? Number(row.preco) : 0,
+    productsExtra:      row || null,
+  }
 }
 
 /* ── ServiceCardV2 — distingue grupo ("desde €X · N tipologias") vs fixo ── */
@@ -6005,28 +6019,30 @@ function VariantPickerScreenV2({ parent, category, authUser, onBack, onContinue 
 function ServiceDetailScreenV2({ serviceId, category, authUser, onBack, onContinue }){
   const [service, setService] = useState(null)
   const [parent, setParent] = useState(null)
+  const [extras, setExtras] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
   useEffect(() => {
     let active = true
     setLoading(true); setError(null)
-    fetchServiceWithParent(serviceId, authUser?.token).then(({ service, parent }) => {
+    fetchServiceWithParent(serviceId, authUser?.token).then(({ service, parent, extras }) => {
       if(!active) return
       if(!service) setError('Serviço indisponível.')
-      else { setService(service); setParent(parent) }
+      else { setService(service); setParent(parent); setExtras(extras) }
       setLoading(false)
     }).catch(e => { if(active){ setError(e.message); setLoading(false) } })
     return () => { active = false }
   }, [serviceId, authUser?.token])
 
   const optionSource = parent || service
+  const { hasProductsOption, productsExtraPrice } = pickProductsExtra(extras)
   const frequencyOptions = service ? getFrequencyOptions(
     { frequencyTemplate: service.frequency_template },
     parent ? { frequencyTemplate: parent.frequency_template } : null
   ) : null
   const hasFrequency = !!frequencyOptions
-  const hasAnyOption = !!(optionSource?.has_products_option || hasFrequency)
+  const hasAnyOption = !!(hasProductsOption || hasFrequency)
   const defaultFrequencyId = hasFrequency ? frequencyOptions[0].id : 'pontual'
 
   const [productsId, setProductsId]   = useState('cliente')
@@ -6047,20 +6063,19 @@ function ServiceDetailScreenV2({ serviceId, category, authUser, onBack, onContin
   const nome = service.nome
   const basePrice = Number(service.preco)
   const basePriceOriginal = service.preco_original != null ? Number(service.preco_original) : null
-  const productsExtra = optionSource?.products_extra_price || 0
-  // Deep price (para mensal+profunda trimestral, cln_home): por agora null — será refinado na 2c
+  // Deep price (para mensal+profunda trimestral, cln_home): hardcoded → refinamento 2c
   const deepPriceForBundle = null
   const effectivePrice = hasAnyOption
-    ? calcDynamicPrice(basePrice, productsId, frequencyId, productsExtra, deepPriceForBundle, frequencyOptions)
+    ? calcDynamicPrice(basePrice, productsId, frequencyId, productsExtraPrice, deepPriceForBundle, frequencyOptions)
     : basePrice
   const currentFreq = hasFrequency ? frequencyOptions.find(f => f.id === frequencyId) : null
   const priceSuffix = currentFreq ? currentFreq.suffix : ''
 
-  // Shim: OptionsSection espera camelCase + array inclui/naoInclui/faq em objectos com {q,a}. Adaptamos.
+  // Shim: OptionsSection espera camelCase. Adaptamos.
   const optionSourceShim = {
-    hasProductsOption:   !!optionSource?.has_products_option,
-    productsExtraPrice:  productsExtra,
-    frequencyTemplate:   optionSource?.frequency_template,
+    hasProductsOption:  hasProductsOption,
+    productsExtraPrice: productsExtraPrice,
+    frequencyTemplate:  optionSource?.frequency_template,
   }
   const serviceShim = {
     frequencyTemplate: service.frequency_template,
@@ -6155,8 +6170,490 @@ function ServiceDetailScreenV2({ serviceId, category, authUser, onBack, onContin
             {priceSuffix && <span style={{ fontSize:12, color:CC.stone, fontWeight:500 }}>{priceSuffix}</span>}
           </div>
         </div>
-        <CCPrimaryBtn onClick={()=>onContinue({ service, parent, productsId, frequencyId, effectivePrice, priceSuffix })}>Continuar</CCPrimaryBtn>
+        <CCPrimaryBtn onClick={()=>onContinue({ service, parent, extras, productsId, frequencyId, productsExtraPrice, effectivePrice, priceSuffix })}>Continuar</CCPrimaryBtn>
       </CCStickyCTA>
+    </CCShell>
+  )
+}
+
+/* ── PersonalizadoLandingV2 — landing do personalizado por categoria ── */
+function PersonalizadoLandingV2({ category, onBack, onContinue }){
+  const discountPct = Math.round((1 - category.personalizadoRate / category.personalizadoRateOriginal) * 100)
+  return (
+    <CCShell>
+      <CCTopBar onBack={onBack} title=""/>
+      <div style={{ padding:"8px 18px 140px" }}>
+        <div style={{
+          background:CC.emeraldPale, borderRadius:24,
+          padding:"36px 20px 28px", textAlign:"center", overflow:"hidden",
+        }}>
+          <div style={{ fontSize:76, lineHeight:1 }}>{category.emoji}</div>
+          <div style={{
+            display:"inline-flex", gap:5, alignItems:"center",
+            background:CC.paper, color:CC.emerald,
+            padding:"5px 12px", borderRadius:999,
+            fontSize:10, fontWeight:700, letterSpacing:1.3, textTransform:"uppercase",
+            marginTop:16, border:`1px solid ${CC.emeraldSoft}`,
+          }}><Sparkles size={11}/> {category.nome} · Personalizado</div>
+          <div className="serif" style={{
+            fontSize:26, fontWeight:500, marginTop:12, lineHeight:1.15,
+            letterSpacing:-0.4, color:CC.ink,
+          }}>
+            Procura um serviço <em style={{ color:CC.emerald, fontStyle:"italic" }}>à medida</em>?
+          </div>
+          <div style={{ fontSize:13.5, color:CC.stone, marginTop:10, lineHeight:1.5, maxWidth:320, margin:"10px auto 0" }}>
+            {category.hero}
+          </div>
+        </div>
+
+        <div style={{
+          marginTop:16, background:CC.paper,
+          border:`1.5px solid ${CC.emeraldSoft}`, borderRadius:16, padding:"16px 18px",
+          display:"flex", justifyContent:"space-between", alignItems:"center",
+        }}>
+          <div>
+            <div style={{ fontSize:11, color:CC.stone, fontWeight:600, letterSpacing:0.5, textTransform:"uppercase" }}>Preço por hora</div>
+            <div style={{ display:"flex", alignItems:"baseline", gap:8, marginTop:4 }}>
+              <span style={{ fontSize:13, color:CC.stone, textDecoration:"line-through" }}>{eur(category.personalizadoRateOriginal)}</span>
+              <span className="serif" style={{ fontSize:26, fontWeight:600, color:CC.forest }}>{eur(category.personalizadoRate)}</span>
+            </div>
+          </div>
+          <div style={{
+            background:CC.emeraldSoft, color:CC.emeraldDark,
+            padding:"6px 10px", borderRadius:999,
+            fontSize:11, fontWeight:700, letterSpacing:0.3,
+          }}>−{discountPct}%</div>
+        </div>
+
+        <div style={{ marginTop:28 }}>
+          <div style={{ textAlign:"center" }}>
+            <div className="serif" style={{ fontSize:20, fontWeight:600, letterSpacing:-0.2 }}>Ideal para</div>
+            <div style={{ width:36, height:2, background:CC.emerald, margin:"8px auto 20px", borderRadius:2 }}/>
+          </div>
+          <div style={{ display:"flex", flexDirection:"column", gap:18 }}>
+            <CCValueRow icon={Wrench}    title="Trabalho à medida, sem complicações"                desc="Pelo seu técnico de confiança, que já conhece a sua casa."/>
+            <CCValueRow icon={Sparkles}  title="Tarefas únicas ou difíceis de explicar"             desc={`Ideal para quando o trabalho não está no catálogo de ${category.nome}.`}/>
+            <CCValueRow icon={RefreshCw} title="Várias pequenas tarefas numa só visita"             desc="Agrupa e resolve tudo numa deslocação — poupa tempo e taxa."/>
+            <CCValueRow icon={Check}     title="Podemos já ter o que procura"                       desc={`Antes de pedir à medida, consulte os serviços fixos de ${category.nome}.`}/>
+          </div>
+        </div>
+      </div>
+      <CCStickyCTA>
+        <CCPrimaryBtn onClick={onContinue}>Continuar</CCPrimaryBtn>
+      </CCStickyCTA>
+    </CCShell>
+  )
+}
+
+/* ── PersonalizadoFormV2 — descrição + horas estimadas ── */
+function PersonalizadoFormV2({ category, onBack, onContinue, state, setState }){
+  const hoursEstimate = (state.horas || 1) * category.personalizadoRate
+  const canContinue = (state.description || "").length >= 30
+  return (
+    <CCShell>
+      <CCTopBar onBack={onBack} title={`${category.nome} · Personalizado`}/>
+      <div style={{ padding:"8px 18px 140px" }}>
+        <div style={{
+          background:CC.emeraldPale, border:`1px solid ${CC.emeraldSoft}`,
+          borderRadius:12, padding:"12px 16px",
+          display:"flex", justifyContent:"space-between", alignItems:"center",
+        }}>
+          <div style={{ fontSize:12, color:CC.stone, fontWeight:500 }}>Por hora</div>
+          <div style={{ display:"flex", alignItems:"baseline", gap:6 }}>
+            <span style={{ fontSize:11.5, color:CC.stone, textDecoration:"line-through" }}>{eur(category.personalizadoRateOriginal)}</span>
+            <span className="serif" style={{ fontSize:16, fontWeight:600, color:CC.forest }}>{eur(category.personalizadoRate)}</span>
+          </div>
+        </div>
+
+        <div style={{ marginTop:24 }}>
+          <div className="serif" style={{ fontSize:17, fontWeight:600 }}>Em que podemos ajudar?</div>
+          <div style={{ fontSize:12.5, color:CC.stone, marginTop:4, lineHeight:1.4 }}>
+            Quanto mais detalhe, mais fácil será encontrar o profissional certo para si.
+          </div>
+          <textarea value={state.description || ""} onChange={e=>setState(p=>({...p, description:e.target.value}))}
+            placeholder={`Descreva o trabalho de ${category.nome.toLowerCase()}...`}
+            maxLength={500}
+            style={{
+              marginTop:12, width:"100%", minHeight:130,
+              background:CC.paper, border:`1px solid ${CC.line}`,
+              borderRadius:12, padding:14, fontSize:13.5,
+              fontFamily:"inherit", color:CC.ink, resize:"vertical", outline:"none",
+            }}/>
+          <div style={{ fontSize:11, color:CC.stone, marginTop:4, textAlign:"right" }}>{(state.description || "").length}/500</div>
+        </div>
+
+        <div style={{ marginTop:20 }}>
+          <div className="serif" style={{ fontSize:17, fontWeight:600 }}>Horas estimadas</div>
+          <div style={{ fontSize:12.5, color:CC.stone, marginTop:4, lineHeight:1.4 }}>
+            O valor final é ajustado ao tempo real (mínimo 1h, arredondado a 30 min).
+          </div>
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:8, marginTop:12 }}>
+            {[1,2,3,4].map(h => {
+              const sel = (state.horas || 1) === h
+              return (
+                <button key={h} onClick={()=>setState(p=>({...p, horas:h}))} style={{
+                  background: sel?CC.forest:CC.paper, color: sel?CC.paper:CC.ink,
+                  border:`2px solid ${sel?CC.forest:CC.line}`,
+                  borderRadius:12, padding:"14px 0",
+                  fontSize:15, fontWeight:600, cursor:"pointer",
+                }}>{h===4 ? "+3h" : `${h}h`}</button>
+              )
+            })}
+          </div>
+        </div>
+      </div>
+      <CCStickyCTA>
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"baseline", marginBottom:10, padding:"0 4px" }}>
+          <span style={{ fontSize:12, color:CC.stone }}>Estimativa para {state.horas || 1}h</span>
+          <span className="serif" style={{ fontSize:20, fontWeight:600, color:CC.forest }}>{eur(hoursEstimate)}</span>
+        </div>
+        <CCPrimaryBtn onClick={onContinue} disabled={!canContinue}>
+          {canContinue ? "Continuar" : "Descreva o trabalho (mín. 30 carac.)"}
+        </CCPrimaryBtn>
+      </CCStickyCTA>
+    </CCShell>
+  )
+}
+
+/* ── FinalizarPedidoV2 — checkout unificado (personalizado + fixo) com categoria ── */
+function FinalizarPedidoV2({ selected, category, isPersonalizado, onBack, onConfirm, state, setState }){
+  const [modal, setModal] = useState(null)
+
+  // Se o cliente configurou opções no detalhe (produtos/frequência), usa o preço efectivo
+  const serviceOptions = state.serviceOptions
+  const selectedPrice          = selected ? Number(selected.preco ?? selected.price ?? 0) : 0
+  const selectedPriceOriginal  = selected?.preco_original != null
+    ? Number(selected.preco_original)
+    : (selected?.priceOriginal != null ? Number(selected.priceOriginal) : null)
+  const selectedNome           = selected?.nome || selected?.name || ''
+
+  const servicePrice = isPersonalizado
+    ? (state.horas || 1) * category.personalizadoRate
+    : (serviceOptions?.effectivePrice ?? selectedPrice)
+  const servicePriceOriginal = isPersonalizado
+    ? (state.horas || 1) * category.personalizadoRateOriginal
+    : (serviceOptions?.effectivePrice ? null : selectedPriceOriginal)
+  const priceSuffix = serviceOptions?.priceSuffix || ""
+
+  let scheduleSurcharge = 0
+  let scheduleSurchargeLabel = null
+  if(state.scheduleMode === "imediato"){
+    scheduleSurcharge = IMEDIATO_FEE
+    scheduleSurchargeLabel = "Serviço imediato"
+  } else if(state.scheduleMode === "agendar" &&
+            (state.selectedSlots || []).length > 0 &&
+            (state.selectedSlots || []).every(s => s.day === "hoje")){
+    scheduleSurcharge = HOJE_FEE
+    scheduleSurchargeLabel = "Agendado para hoje"
+  }
+
+  const total = servicePrice + TRAVEL_FEE + PROTECTION_FEE_NOW + scheduleSurcharge
+  const scheduleOk = state.scheduleMode === "imediato" ||
+    (state.scheduleMode === "agendar" && (state.selectedSlots || []).length > 0)
+  const canBook = state.paymentMethod !== null && scheduleOk
+  const slots = state.selectedSlots || []
+  const hasBilling = state.billing?.nif
+
+  return (
+    <CCShell>
+      <CCTopBar onBack={onBack} title="Finalizar pedido"/>
+
+      <div style={{ padding:"0 0 200px" }}>
+        {/* Mapa (decorativo — geolocalização fica para tarefa futura) */}
+        <div style={{
+          height:160, background:CC.emeraldPale,
+          position:"relative", overflow:"hidden",
+          borderBottom:`1px solid ${CC.line}`,
+        }}>
+          <div style={{
+            position:"absolute", inset:0,
+            background:`repeating-linear-gradient(45deg,${CC.emeraldSoft} 0,${CC.emeraldSoft} 1px,transparent 1px,transparent 12px)`,
+            opacity:0.6,
+          }}/>
+          <div style={{ position:"absolute", top:"50%", left:"50%", transform:"translate(-50%, -60%)" }}>
+            <div style={{
+              width:32, height:32, borderRadius:999,
+              background:CC.forest, color:CC.paper,
+              display:"grid", placeItems:"center",
+              boxShadow:`0 8px 20px -4px ${CC.forestDeep}`,
+            }}><MapPin size={16} fill={CC.paper}/></div>
+          </div>
+          <button style={{
+            position:"absolute", bottom:14, left:"50%", transform:"translateX(-50%)",
+            background:CC.paper, color:CC.ink,
+            border:`1px solid ${CC.line}`, borderRadius:999,
+            padding:"6px 14px", fontSize:12, fontWeight:600,
+            cursor:"pointer", boxShadow:"0 4px 12px -4px rgba(0,0,0,0.1)",
+          }}>Editar localização</button>
+        </div>
+
+        <div style={{ padding:"16px 18px 0" }}>
+          <div style={{
+            display:"flex", alignItems:"center", gap:12,
+            padding:"12px 0", borderBottom:`1px solid ${CC.line}`,
+          }}>
+            <div style={{
+              width:36, height:36, borderRadius:10,
+              background:CC.emeraldPale, color:CC.emerald,
+              display:"grid", placeItems:"center", flexShrink:0,
+            }}><MapPin size={18}/></div>
+            <div style={{ flex:1 }}>
+              <div style={{ fontSize:14, fontWeight:600 }}>{state.billing?.morada || "Rua Palmira Bastos, 4"}</div>
+              <div style={{ fontSize:12, color:CC.stone }}>{state.billing?.localidade || "Caldas da Rainha"}</div>
+            </div>
+            <ChevronRight size={18} color={CC.stone}/>
+          </div>
+
+          <div style={{ marginTop:16, display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
+            <button onClick={()=>{ setState(p=>({...p, scheduleMode:"agendar"})); setModal("schedule") }}
+              style={{
+                background: state.scheduleMode==="agendar"?CC.emeraldPale:CC.paper,
+                border:`2px solid ${state.scheduleMode==="agendar"?CC.emerald:CC.line}`,
+                borderRadius:14, padding:14, textAlign:"left", cursor:"pointer",
+              }}>
+              <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                <Calendar size={16} color={state.scheduleMode==="agendar"?CC.emerald:CC.stone}/>
+                <span style={{ fontSize:14, fontWeight:600 }}>Agendar</span>
+              </div>
+              <div style={{ fontSize:11.5, color:CC.stone, marginTop:4, lineHeight:1.3 }}>
+                {state.scheduleMode==="agendar" && slots.length>0
+                  ? (slots.length===1 ? `${slots[0].dayLabel}, ${slots[0].time}` : `${slots.length} horários flexíveis`)
+                  : "Selecione dia e hora"}
+              </div>
+            </button>
+            <button onClick={()=>setState(p=>({...p, scheduleMode:"imediato", selectedSlots:[]}))}
+              style={{
+                background: state.scheduleMode==="imediato"?CC.emeraldPale:CC.paper,
+                border:`2px solid ${state.scheduleMode==="imediato"?CC.emerald:CC.line}`,
+                borderRadius:14, padding:14, textAlign:"left", cursor:"pointer",
+              }}>
+              <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                <Zap size={16} color={state.scheduleMode==="imediato"?CC.emerald:CC.stone}/>
+                <span style={{ fontSize:14, fontWeight:600 }}>Imediato</span>
+                <span style={{
+                  marginLeft:"auto", fontSize:10, color:"#92400E", fontWeight:700,
+                  background:CC.amberSoft, padding:"1px 5px", borderRadius:4,
+                }}>+{eur(IMEDIATO_FEE)}</span>
+              </div>
+              <div style={{ fontSize:11.5, color:CC.stone, marginTop:4, lineHeight:1.3 }}>30-40 minutos</div>
+            </button>
+          </div>
+        </div>
+
+        <CCDivisor/>
+
+        <div style={{ padding:"0 18px" }}>
+          <div className="serif" style={{ fontSize:18, fontWeight:600 }}>O seu serviço</div>
+          <div style={{
+            marginTop:12, display:"flex", gap:12, alignItems:"flex-start",
+            padding:14, background:CC.paper,
+            border:`1px solid ${CC.line}`, borderRadius:14,
+          }}>
+            <div style={{
+              width:48, height:48, flexShrink:0, borderRadius:10,
+              background:`${category.color}15`, color:category.color,
+              display:"grid", placeItems:"center", fontSize:22,
+            }}>{category.emoji}</div>
+            <div style={{ flex:1 }}>
+              <div style={{ fontSize:14, fontWeight:600 }}>
+                {isPersonalizado ? `${category.nome} · Personalizado` : selectedNome}
+              </div>
+              <div style={{ fontSize:11.5, color:CC.stone, marginTop:2 }}>
+                {isPersonalizado
+                  ? `${state.horas || 1}h × ${eur(category.personalizadoRate)}/h`
+                  : category.nome}
+              </div>
+              <div style={{ display:"flex", alignItems:"baseline", gap:6, marginTop:6 }}>
+                {servicePriceOriginal && servicePriceOriginal>servicePrice && (
+                  <span style={{ fontSize:11.5, color:CC.stone, textDecoration:"line-through" }}>{eur(servicePriceOriginal)}</span>
+                )}
+                <span className="serif" style={{ fontSize:16, fontWeight:600, color:CC.forest }}>{eur(servicePrice)}</span>
+                {priceSuffix && <span style={{ fontSize:11.5, color:CC.stone }}>{priceSuffix}</span>}
+              </div>
+            </div>
+            <button style={{
+              background:CC.paper, border:`1px solid ${CC.line}`,
+              borderRadius:999, width:32, height:32,
+              display:"grid", placeItems:"center", cursor:"pointer", color:CC.stone,
+            }}><Trash2 size={14}/></button>
+          </div>
+
+          <button onClick={()=>setModal("photos")} style={{
+            marginTop:10, width:"100%",
+            background:CC.paper, border:`1px solid ${CC.line}`,
+            borderRadius:14, padding:14,
+            display:"flex", alignItems:"center", gap:12,
+            cursor:"pointer", textAlign:"left",
+          }}>
+            <div style={{
+              width:36, height:36, flexShrink:0, borderRadius:10,
+              background: state.notes || (state.photos || []).length ? CC.emeraldPale : CC.stoneLight,
+              color: state.notes || (state.photos || []).length ? CC.emerald : CC.stone,
+              display:"grid", placeItems:"center",
+            }}><FileImage size={18}/></div>
+            <div style={{ flex:1 }}>
+              <div style={{ fontSize:13.5, fontWeight:600 }}>Fotografias e notas</div>
+              <div style={{ fontSize:12, color:CC.stone, marginTop:2, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+                {state.notes
+                  ? state.notes.slice(0,48) + (state.notes.length>48 ? "..." : "")
+                  : (state.photos || []).length>0
+                    ? `${(state.photos || []).length} fotografia${(state.photos || []).length>1 ? "s" : ""}`
+                    : "Adicionar detalhes e imagens"}
+              </div>
+            </div>
+            <ChevronRight size={18} color={CC.stone}/>
+          </button>
+        </div>
+
+        <CCDivisor/>
+
+        <div style={{ padding:"0 18px" }}>
+          <div className="serif" style={{ fontSize:18, fontWeight:600 }}>Detalhes do pagamento</div>
+          <div style={{
+            marginTop:12, padding:16, background:CC.paper,
+            border:`1px solid ${CC.line}`, borderRadius:14,
+          }}>
+            <CCLineRow label="Subtotal" value={servicePrice} valueOriginal={servicePriceOriginal}/>
+            <CCLineRow label="Taxa de deslocação" value={TRAVEL_FEE}/>
+            <CCLineRow label="Taxa de proteção" value={PROTECTION_FEE_NOW} valueOriginal={PROTECTION_FEE} strike/>
+            {scheduleSurcharge>0 && <CCLineRow label={scheduleSurchargeLabel} value={scheduleSurcharge}/>}
+            <div style={{
+              marginTop:10, paddingTop:12, borderTop:`1px solid ${CC.line}`,
+              display:"flex", justifyContent:"space-between", alignItems:"baseline",
+            }}>
+              <span style={{ fontSize:15, fontWeight:700 }}>Total a pagar</span>
+              <span className="serif" style={{ fontSize:22, fontWeight:600, color:CC.forest }}>{eur(total)}</span>
+            </div>
+          </div>
+        </div>
+
+        <div style={{ padding:"20px 18px 0" }}><CCJaFaltaPouco/></div>
+
+        <div style={{ padding:"24px 18px 0" }}>
+          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+            <div className="serif" style={{ fontSize:18, fontWeight:600 }}>Concluir pedido</div>
+            <CCChip tone="amber">Obrigatório</CCChip>
+          </div>
+          <div style={{ marginTop:12, display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
+            <button onClick={()=>setState(p=>({...p, paymentMethod:"dinheiro"}))} style={{
+              background:CC.paper,
+              border:`2px solid ${state.paymentMethod==="dinheiro"?CC.emerald:CC.line}`,
+              borderRadius:12, padding:"14px 16px",
+              display:"flex", alignItems:"center", gap:8, cursor:"pointer",
+            }}>
+              <Banknote size={18} color={state.paymentMethod==="dinheiro"?CC.emerald:CC.stone}/>
+              <span style={{ fontSize:14, fontWeight:600 }}>Dinheiro</span>
+            </button>
+            <button onClick={()=>setState(p=>({...p, paymentMethod:"cartao"}))} style={{
+              background:CC.paper,
+              border:`2px solid ${state.paymentMethod==="cartao"?CC.emerald:CC.line}`,
+              borderRadius:12, padding:"14px 16px",
+              display:"flex", alignItems:"center", gap:8, cursor:"pointer",
+            }}>
+              <CreditCard size={18} color={state.paymentMethod==="cartao"?CC.emerald:CC.stone}/>
+              <span style={{ fontSize:14, fontWeight:600 }}>Cartão</span>
+            </button>
+          </div>
+
+          <button style={{
+            marginTop:12, width:"100%",
+            background:CC.emeraldPale, border:`1px solid ${CC.emeraldSoft}`,
+            borderRadius:12, padding:"12px 14px",
+            display:"flex", alignItems:"center", gap:10, cursor:"pointer", textAlign:"left",
+          }}>
+            <Tag size={16} color={CC.emerald}/>
+            <span style={{ fontSize:13, color:CC.emeraldDark, fontWeight:600, flex:1 }}>Promo {PROMO_CODE} aplicado</span>
+            <span style={{
+              fontSize:11, color:CC.emeraldDark, fontWeight:700,
+              background:CC.paper, padding:"3px 8px", borderRadius:999,
+            }}>−{eur(PROMO_SAVINGS)}</span>
+          </button>
+
+          <button onClick={()=>setModal("billing")} style={{
+            marginTop:8, width:"100%",
+            background: hasBilling?CC.emeraldPale:CC.paper,
+            border:`1px solid ${hasBilling?CC.emeraldSoft:CC.line}`,
+            borderRadius:12, padding:"12px 14px",
+            display:"flex", alignItems:"center", gap:10, cursor:"pointer", textAlign:"left",
+          }}>
+            <Receipt size={16} color={hasBilling?CC.emerald:CC.stone}/>
+            <div style={{ flex:1 }}>
+              <div style={{ fontSize:13, color:CC.ink, fontWeight:600 }}>
+                {hasBilling ? "Dados de faturação" : "Adicionar dados de faturação"}
+              </div>
+              {hasBilling && (
+                <div style={{ fontSize:11.5, color:CC.stone, marginTop:2 }}>{state.billing.nome} · NIF {state.billing.nif}</div>
+              )}
+            </div>
+            <ChevronRight size={16} color={CC.stone}/>
+          </button>
+        </div>
+
+        <CCDivisor/>
+
+        <div style={{ padding:"0 18px" }}>
+          <div className="serif" style={{ fontSize:18, fontWeight:600 }}>O que inclui sempre</div>
+          <div style={{ marginTop:16, display:"flex", flexDirection:"column", gap:18 }}>
+            <CCValueRow icon={Lock}          title="Técnico fixo, escolhido por si"         desc="Sempre o mesmo profissional da nossa rede de confiança — nunca anónimo."/>
+            <CCValueRow icon={Shield}        title="90 dias de garantia"                    desc="Se o mesmo problema voltar, regressamos sem custos adicionais."/>
+            <CCValueRow icon={RefreshCw}     title="Cancelamento livre"                     desc="Cancele ou reagende gratuitamente até 15 min ou antes de ser atribuído."/>
+            <CCValueRow icon={Wrench}        title="Materiais aprovados por si"             desc="Qualquer custo extra precisa da sua confirmação antes de ser cobrado."/>
+            <CCValueRow icon={MessageSquare} title="Chat directo e relatório fotográfico"   desc="Fala com o técnico a qualquer momento e recebe relatório no fim."/>
+          </div>
+        </div>
+      </div>
+
+      <CCStickyCTA banner={`Reserve agora e poupe ${eur(PROMO_SAVINGS)} em descontos`}>
+        <CCPrimaryBtn onClick={()=>onConfirm({ total, scheduleSurcharge, servicePrice })} disabled={!canBook}>
+          {!state.paymentMethod
+            ? "Escolha método de pagamento"
+            : !scheduleOk
+              ? "Escolha Agendar ou Imediato"
+              : "Agendar serviço"}
+        </CCPrimaryBtn>
+      </CCStickyCTA>
+
+      {modal==="schedule" && (
+        <CCScheduleModal slots={state.selectedSlots} onClose={()=>setModal(null)}
+          onConfirm={(slots)=>{ setState(p=>({...p, selectedSlots:slots, scheduleMode:"agendar"})); setModal(null) }}/>
+      )}
+      {modal==="photos" && (
+        <CCPhotosNotesModal notes={state.notes} photos={state.photos} onClose={()=>setModal(null)}
+          onConfirm={({ notes, photos })=>{ setState(p=>({...p, notes, photos})); setModal(null) }}/>
+      )}
+      {modal==="billing" && (
+        <CCBillingModal billing={state.billing} onClose={()=>setModal(null)}
+          onConfirm={(billing)=>{ setState(p=>({...p, billing})); setModal(null) }}/>
+      )}
+    </CCShell>
+  )
+}
+
+/* ── ConfirmadoScreenV2 — ecrã final de sucesso ── */
+function ConfirmadoScreenV2({ onRestart }){
+  return (
+    <CCShell>
+      <div style={{
+        minHeight:"100vh", display:"flex", flexDirection:"column",
+        alignItems:"center", justifyContent:"center", padding:32, textAlign:"center",
+      }}>
+        <div style={{
+          width:80, height:80, borderRadius:999,
+          background:CC.emeraldSoft, color:CC.emerald,
+          display:"grid", placeItems:"center",
+          boxShadow:`0 12px 40px -12px ${CC.emerald}`,
+        }}><Check size={36} strokeWidth={3}/></div>
+        <div className="serif" style={{ fontSize:28, fontWeight:500, marginTop:24, letterSpacing:-0.4 }}>Pedido confirmado</div>
+        <div style={{ fontSize:14, color:CC.stone, marginTop:10, maxWidth:300, lineHeight:1.5 }}>
+          Estamos a atribuir o seu técnico de confiança. Receberá notificação em instantes.
+        </div>
+        <button onClick={onRestart} style={{
+          marginTop:32, background:"transparent",
+          color:CC.emerald, border:`1px solid ${CC.emerald}`,
+          borderRadius:12, padding:"10px 20px",
+          fontSize:13, fontWeight:600, cursor:"pointer",
+        }}>← Voltar ao início</button>
+      </div>
     </CCShell>
   )
 }
