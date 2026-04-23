@@ -7458,7 +7458,9 @@ export default function App() {
     // Guarda no Supabase em background
     if (SB_KEY) {
       await sbSave('ordens', {
-        servico_id:    d.sid,
+        // ids do SVCS legacy (s1..s63) não existem em public.servicos (schema TEXT);
+        // o fluxo V2 usa addCatalogOrder e envia servico_id correcto. Aqui null.
+        servico_id:    null,
         cliente_id:    authUser?.user?.id || null,
         prestador_id:  d.tid || null,
         estado:        'pendente',
@@ -7477,25 +7479,21 @@ export default function App() {
     }
   }
 
-  // ── Criar ordem a partir do novo fluxo Canalização ──
-  // Faz lookup slug→UUID em `servicos`, escreve todos os campos novos, e
-  // reflete localmente no estado de ordens para aparecer na lista "Os meus pedidos".
-  const addCatalogOrder = async ({ selected, isPersonalizado, state, total, scheduleSurcharge }) => {
-    const slug = isPersonalizado ? 'personalizado' : selected.id
-    const name = isPersonalizado ? 'Serviço personalizado' : selected.name
+  // ── Criar ordem a partir do novo fluxo V2 (catálogo + personalizado) ──
+  // servico_id é o id TEXT do catálogo (ex: 'auto-repair' ou 'personalizado-can').
+  // A tabela public.servicos usa TEXT PRIMARY KEY — não há lookup intermédio.
+  const addCatalogOrder = async ({ selected, isPersonalizado, categoryId, state, total, scheduleSurcharge, servicePrice }) => {
+    // Resolver id do serviço e nome para apresentação
+    const servicoId = isPersonalizado
+      ? getPersonalizadoId(categoryId)                              // 'personalizado-cln', 'personalizado-can', etc.
+      : (selected?.id || null)                                      // 'auto-repair', 'cln-home-t2', etc.
+    const nome = isPersonalizado
+      ? 'Serviço personalizado'
+      : (selected?.nome || selected?.name || 'Serviço')
 
-    // Lookup slug → UUID
-    let servico_uuid = null
-    if (SB_KEY) {
-      try {
-        const rows = await sbGet('servicos', `?slug=eq.${encodeURIComponent(slug)}&select=id`, authUser?.token)
-        if (Array.isArray(rows) && rows.length > 0) servico_uuid = rows[0].id
-      } catch (e) { console.warn('[Supabase] lookup slug falhou:', e) }
-    }
+    // Preço base do serviço (pode ser o servicePrice calculado no checkout ou fallback a preco/price do row)
+    const precoBase = Number(servicePrice ?? selected?.preco ?? selected?.price ?? 0)
 
-    const servicePrice = isPersonalizado
-      ? (state.horas || 1) * PERSONALIZADO.pricePerHour
-      : selected.price
     const firstSlot = (state.selectedSlots || [])[0]
     const dataAgendada = firstSlot?.dayDate
       ? (() => {
@@ -7508,6 +7506,8 @@ export default function App() {
         })()
       : null
     const horaAgendada = firstSlot?.time || null
+
+    const totalNumber = Number(total?.toFixed?.(2) ?? precoBase)
 
     // Reflexo local para UI imediata (usa o mesmo formato que o fluxo antigo espera)
     const ordemLocal = {
@@ -7525,19 +7525,19 @@ export default function App() {
       ass:      false,
       aval:     null,
       notas:    state.notes || (isPersonalizado ? state.description : ''),
-      val:      Number(total?.toFixed?.(2) ?? servicePrice),
+      val:      totalNumber,
       taxa:     18,
       dt_pedido:     new Date().toLocaleString('pt-PT', {day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}),
       dt_pedido_iso: new Date().toISOString(),
       pago:     true,
-      nome:     name, // permite apresentação mesmo sem sid legacy
+      nome:     nome, // permite apresentação mesmo sem sid legacy
     }
     setOrdens(p => [ordemLocal, ...p])
 
     // Persistir na Supabase
     if (SB_KEY) {
       const payload = {
-        servico_id:          servico_uuid,
+        servico_id:          servicoId,                    // TEXT PK em public.servicos
         cliente_id:          authUser?.user?.id || null,
         prestador_id:        null,
         estado:              'pendente',
@@ -7546,10 +7546,10 @@ export default function App() {
         cidade:              state.billing?.localidade || null,
         data_agendada:       dataAgendada,
         hora_agendada:       horaAgendada,
-        valor_cobrado:       Number(total?.toFixed?.(2) ?? servicePrice),
+        valor_cobrado:       totalNumber,
         taxa_pct:            18,
-        valor_plataforma:    ((Number(total?.toFixed?.(2) ?? servicePrice)) * 0.18).toFixed(2),
-        valor_prestador:     ((Number(total?.toFixed?.(2) ?? servicePrice)) * 0.82).toFixed(2),
+        valor_plataforma:    (totalNumber * 0.18).toFixed(2),
+        valor_prestador:     (totalNumber * 0.82).toFixed(2),
         notas:               state.notes || null,
         // Campos novos da migração 20260422
         is_personalizado:    !!isPersonalizado,
@@ -7721,9 +7721,11 @@ export default function App() {
               category={catCategoryMeta}
               isPersonalizado={catIsPersonalizado}
               onBack={()=>setCatScreen(catIsPersonalizado ? 'form' : 'detail')}
-              onConfirm={({ total, scheduleSurcharge })=>addCatalogOrder({
-                selected:catSelected, isPersonalizado:catIsPersonalizado,
-                state:catState, total, scheduleSurcharge,
+              onConfirm={({ total, scheduleSurcharge, servicePrice })=>addCatalogOrder({
+                selected:catSelected,
+                isPersonalizado:catIsPersonalizado,
+                categoryId:catCategoryId,
+                state:catState, total, scheduleSurcharge, servicePrice,
               })}
               state={catState} setState={setCatState}
             />
