@@ -20,6 +20,7 @@ Este ficheiro é lido automaticamente pelo Claude Code a cada invocação. Mant�
 - **Sem router externo** — o routing é feito por state (`ecra`, `role`, etc.) dentro do `App`.
 - **Estilos inline** — usa `style={{...}}` com uma constante `C = {...}` no topo como design tokens. Não usar Tailwind.
 - **Fontes**: Fraunces (display, serif) + Outfit (body, sans) via Google Fonts.
+- **Ícones**: lucide-react.
 
 ## Paleta canónica (design tokens)
 
@@ -34,31 +35,76 @@ const C = {
 };
 ```
 
-## Regras de edição
+## Estado do catálogo
+
+- **177 serviços** em 8 categorias (limpeza, manutenção, jardim, piscina, pintura, elétrica, canalização, pós-obra)
+- **11 grupos-pai** com variantes (tipologia/tamanho) — ex: `cln-home` tem t1/t2/t3/t4, `cln-move` tem t1/t2/t3/t4, `mnt-xmas-lights` tem interior/exterior/full
+- **36 serviços variantes** ligados a grupos-pai via `servico_pai_id`
+- **8 templates de frequência** configuráveis via admin (tabela `frequency_templates`)
+- **166/166 com detalhe rico (100%)**: tagline, inclui, nao_inclui, duracao_tipica, faq (exclui os 11 grupos-pai — esses têm detalhe próprio orientado a ecrã de agrupamento, não a checkout)
+- **45 subcategorias** incluindo a nova **Sazonal e festivo** (`mnt_sazonal` — Natal, decorações) e **Segurança doméstica** (`mnt_seguranca` — baby proofing)
+- Ver `docs/CATALOGO-COMPLETO.md` para tabela completa
+
+## Documentos de referência
+
+- `docs/TASK-fluxo-completo.md` — 8 fases de implementação (Fase 1 a 8)
+- `docs/CATALOGO-COMPLETO.md` — catálogo completo por categoria, com IDs e preços
+- `docs/v5-complete-flow-reference.jsx` — demo visual de referência (3111 linhas, NÃO copiar para src/)
+- `supabase/migrations/20260422_catalogo_completo.sql` — migração completa e idempotente (21 secções)
+
+## Workflow preferido por fase
+
+Sempre em sequência, com confirmação entre fases:
+
+1. **Fase 1** — Aplicar SQL + verificar (cheque de contagens)
+2. **Fase 2a** — Adicionar primitivos UI ao App.jsx (sem ecrãs)
+2. **Fase 2b** — Adicionar os 7 ecrãs novos
+2. **Fase 2c** — Ligar à Home + substituir checkout
+3. **Fase 3** — Testar manualmente os 8 caminhos × 4 variações
+4. **Fase 4** — Botão Personalizado CTA na Home (já na 2c)
+5. **Fase 5** — Ícone sparkle AI (stub, só alert)
+6. **Fase 6** — UI admin templates frequência
+7. **Fase 7** — Bottom nav com FAB central
+8. **Fase 8** — Sazonais e campanhas (opcional MVP)
+
+Entre cada fase, apresenta o plano ou o resultado e espera confirmação.
+
+## Guard-rails absolutos (NÃO TOCAR)
 
 1. **Preservar sempre** a autenticação Supabase, rotas de role (cliente/prestador/admin), integração do chat, pipeline de estados das ordens.
 2. **Nunca refactorizar** o `App.jsx` monolítico em múltiplos ficheiros sem pedido explícito.
 3. **Nunca eliminar** os botões de demo (Cliente / Prestador / Admin) no login — são essenciais para testes rápidos.
-4. **Nunca apagar nem fazer TRUNCATE** em tabelas Supabase. Migrations são sempre aditivas (`ADD COLUMN IF NOT EXISTS`, `CREATE TABLE IF NOT EXISTS`).
+4. **Nunca apagar nem fazer TRUNCATE** em tabelas Supabase. Migrations são sempre aditivas (`ADD COLUMN IF NOT EXISTS`, `CREATE TABLE IF NOT EXISTS`, `ON CONFLICT DO UPDATE`).
 5. **Nunca commitar** ficheiros com credenciais. `.env.local` está no `.gitignore`.
-6. **Copy em português de Portugal** (não PT-BR): "escolha", "serviço", "morada" (não "endereço"), "técnico" (não "prestador" para o cliente).
+6. **Nunca fazer `git push`** — deixar ao Mario decidir quando empurrar.
+7. **Não tocar** nos textos e fluxos do admin e do prestador (só adicionar módulo novo na Fase 6, sem alterar o existente).
+8. **Copy em português de Portugal** (não PT-BR): "escolha", "serviço", "morada" (não "endereço"), "técnico".
 
-## Supabase — tabelas relevantes
+## Supabase — tabelas
 
-Tabelas principais (esquema resumido): `profiles` (users), `ordens`, `ordem_mensagens` (chat), `prestadores`, `categorias`, `subcategorias`, `servicos`, `servico_variacoes`, `servico_extras`.
+Tabelas principais:
+- `profiles` (users), `prestadores`
+- `ordens` (com pipeline de 10 estados), `ordem_mensagens` (chat)
+- `categorias`, `subcategorias`
+- `servicos` (com `servico_pai_id` para grupos e `frequency_template` para recorrência)
+- `servico_variacoes`, `servico_extras`
+- `frequency_templates` (nova — 8 templates configuráveis)
 
-A tabela `ordens` tem um pipeline de 10 estados documentado no Notion. Para detalhe, ver página Notion "🔄 Fluxo Completo de Ordem — v5 Manutenção".
+Colunas novas em `ordens`:
+- `metadata` JSONB — guarda opções dinâmicas escolhidas pelo cliente (produtos, frequência, preço efectivo)
+- `slots_flexiveis` JSONB, `schedule_mode` TEXT, `notas_cliente`, `fotos_cliente`, `faturacao_*`, `metodo_pagamento`, `promo_code`
 
-## Workflow preferido
+## Workflow técnico
 
-1. Antes de editar o `App.jsx`, fazer `grep` da secção que se vai alterar para confirmar âncoras.
+1. Antes de editar `App.jsx`, fazer `grep` da secção que se vai alterar para confirmar âncoras.
 2. Depois de cada alteração grande, correr `npm run build` para garantir que não quebrou.
 3. Commits em inglês, prefixo convencional: `feat:`, `fix:`, `chore:`, `refactor:`, `docs:`.
-4. Não fazer `git push` automático — deixar o Mario decidir quando empurrar.
+4. Não fazer `git push` automático.
 
 ## Estilo de comunicação
 
 - Responder em português de Portugal
 - Ser directo, sem elogios vazios
 - Propor planos antes de executar mudanças com mais de ~50 linhas
+- Parar e esperar confirmação entre fases
 - Ao terminar, listar brevemente o que foi alterado e qual o impacto esperado
