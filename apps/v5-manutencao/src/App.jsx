@@ -5279,6 +5279,26 @@ function AdminPipeline({ordens, setOrdens, prest}){
 }
 
 // ══ AdminServicos ══════════════════════
+// Nota: o state local `svcs` continua a usar o shape curto {id,n,p,u,d,cat,ic,badge,r,rv}
+// vindo do SVCS hardcoded. Ao persistir na BD, mapeamos para o schema real
+// {id,nome,preco,unidade,duracao_tipica,categoria_id,icon,popular,urgent,tipo,activo}
+// para evitar o 400 silencioso que existia pre-2e.
+function toDbServico(s){
+  return {
+    id:             s.id,
+    categoria_id:   s.cat || null,
+    nome:           s.n || '',
+    preco:          Number(s.p) || 0,
+    tipo:           s.tipo || 'fixo',
+    unidade:        s.u || null,
+    duracao_tipica: s.d || null,
+    icon:           s.ic || null,
+    popular:        s.badge === 'Popular',
+    urgent:         s.badge === 'Urgente',
+    activo:         true,
+  }
+}
+
 function AdminServicos({svcs,setSvcs}){
   const [q,setQ]=useState(''), [cat,setCat]=useState('all'), [modal,setModal]=useState(null), [form,setForm]=useState({})
   const [syncing,setSyncing]=useState(false)
@@ -5287,12 +5307,17 @@ function AdminServicos({svcs,setSvcs}){
   const save=async()=>{
     setSyncing(true)
     const updated=modal==='new'?{...form,r:5.0,rv:0}:{...form}
-    if(modal==='new')setSvcs(p=>[...p,updated]);else setSvcs(p=>p.map(s=>s.id===form.id?{...s,...form}:s))
-    // TODO(admin): schema mismatch — envia {id,n,p,u,d,cat,ic,badge,r,rv}
-    // mas BD tem {id,nome,preco,unidade,duracao_tipica,icon,categoria_id,
-    // popular,urgent}. Silent 400 desde sempre. Fase paralela, não Fase 2.
-    await sbSave('servicos',updated)
-    setSyncing(false); setModal(null)
+    const dbRow = toDbServico(updated)
+    const result = await sbSave('servicos', dbRow)
+    setSyncing(false)
+    if(!result){
+      alert('Erro ao guardar o serviço na base de dados. Ver consola (F12) para detalhes.')
+      return
+    }
+    // Sucesso: actualizar estado local
+    if(modal==='new') setSvcs(p=>[...p,updated])
+    else setSvcs(p=>p.map(s=>s.id===form.id?{...s,...form}:s))
+    setModal(null)
   }
   const del=id=>{if(window.confirm('Eliminar este serviço?'))setSvcs(p=>p.filter(s=>s.id!==id))}
   return(
