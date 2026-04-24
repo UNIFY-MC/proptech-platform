@@ -3363,6 +3363,16 @@ function CasaScreen({ localizacoes, equipamentos, onNavigate }){
     ? equipamentos.filter(e => !loc || e.localizacao_id === loc.id)
     : []
   const loading = localizacoes === null || equipamentos === null
+  const [alertasMeteo, setAlertasMeteo] = useState([])
+  useEffect(() => {
+    if(!loc?.concelho) return
+    let active = true
+    fetchPrevisaoIPMA(loc.concelho).then(prev => {
+      if(!active) return
+      setAlertasMeteo(gerarAlertasMeteoManutencao(prev))
+    })
+    return () => { active = false }
+  }, [loc?.concelho])
 
   const scores = loc ? [
     ['AVAC',      loc.score_avac      ?? 0],
@@ -3442,17 +3452,26 @@ function CasaScreen({ localizacoes, equipamentos, onNavigate }){
         ))}
       </div>
 
-      {/* ALERTA METEO (mock até Fase 3.5) */}
-      {loc?.concelho && (
-        <div style={{ margin:'10px 12px 0', background:CASA.amberLt, borderRadius:11, padding:'10px 12px', border:'1px solid #EF9F27', display:'flex', gap:10, alignItems:'flex-start' }}>
-          <span style={{ fontSize:20, flexShrink:0 }}>🌧️</span>
-          <div>
-            <div style={{ fontSize:12, fontWeight:700, color:CASA.amber }}>Chuva intensa prevista — 48h</div>
-            <div style={{ fontSize:11, color:CASA.amber, marginTop:2, lineHeight:1.45 }}>IPMA: 35mm · {loc.concelho} · Verificar caleiras e terraço</div>
-            <button onClick={()=>onNavigate?.('agendar')} style={{ background:'none', border:'none', padding:0, marginTop:6, color:'#185FA5', fontSize:11, fontWeight:600, cursor:'pointer' }}>Agendar vistoria →</button>
+      {/* ALERTAS METEO IPMA */}
+      {alertasMeteo.map((a, i) => {
+        const laranja = a.nivel === 'laranja'
+        return (
+          <div key={i} style={{
+            margin: i===0 ? '10px 12px 0' : '6px 12px 0',
+            background: laranja ? '#FFE9CE' : CASA.amberLt,
+            borderRadius:11, padding:'10px 12px',
+            border:`1px solid ${laranja ? '#E8871D' : '#EF9F27'}`,
+            display:'flex', gap:10, alignItems:'flex-start',
+          }}>
+            <span style={{ fontSize:20, flexShrink:0 }}>{a.ic}</span>
+            <div style={{ flex:1, minWidth:0 }}>
+              <div style={{ fontSize:12, fontWeight:700, color:CASA.amber }}>{a.titulo}</div>
+              <div style={{ fontSize:11, color:CASA.amber, marginTop:2, lineHeight:1.45 }}>IPMA · {loc?.concelho} · {a.desc}</div>
+              <button onClick={()=>onNavigate?.('aiexpert', { context: a })} style={{ background:'none', border:'none', padding:0, marginTop:6, color:'#185FA5', fontSize:11, fontWeight:600, cursor:'pointer' }}>Perguntar à AI →</button>
+            </div>
           </div>
-        </div>
-      )}
+        )
+      })}
 
       {/* EQUIPAMENTOS */}
       <div style={{ padding:'12px 12px 0' }}>
@@ -3514,7 +3533,7 @@ function CasaScreen({ localizacoes, equipamentos, onNavigate }){
 }
 
 /* EquipamentoFicha — detalhe com 4 tabs + edição (Fase 3.3) */
-function EquipamentoFicha({ equipamento, authUser, onBack, onUpdated, onDeleted }){
+function EquipamentoFicha({ equipamento, authUser, onBack, onUpdated, onDeleted, onAskAI }){
   const [tab, setTab] = useState('detalhes')
   const [editing, setEditing] = useState(false)
   const [form, setForm] = useState({})
@@ -3679,8 +3698,8 @@ function EquipamentoFicha({ equipamento, authUser, onBack, onUpdated, onDeleted 
             <div style={{ fontSize:11, color:CASA.amber, lineHeight:1.55 }}>{recomendacao}</div>
           </div>
           <div style={{ display:'flex', gap:8, padding:'0 12px 14px' }}>
-            <button onClick={()=>alert('Agendar revisão — liga ao fluxo V2 na Fase 3.5')} style={{ flex:2, padding:12, borderRadius:11, border:'none', background:CASA.greenLt, color:'#fff', fontSize:13, fontWeight:700, cursor:'pointer' }}>Agendar revisão ↗</button>
-            <button onClick={()=>alert('AI Expert disponível na Fase 3.5.')} style={{ flex:1, padding:12, borderRadius:11, border:`1px solid ${CASA.border}`, background:CASA.bg, fontSize:13, cursor:'pointer' }}>AI Expert</button>
+            <button onClick={()=>onAskAI?.({ context:{ titulo:`Pedir orçamento para revisão de ${equipamento.nome}`, desc:`Categoria ${CATLABEL}. Qual técnico e quando agendar?` }})} style={{ flex:2, padding:12, borderRadius:11, border:'none', background:CASA.greenLt, color:'#fff', fontSize:13, fontWeight:700, cursor:'pointer' }}>Agendar revisão ↗</button>
+            <button onClick={()=>onAskAI?.({ context:{ titulo:`Dúvidas sobre ${equipamento.nome}`, desc:`Manutenção e consumo do modelo ${equipamento.modelo||'—'}` }})} style={{ flex:1, padding:12, borderRadius:11, border:`1px solid ${CASA.border}`, background:CASA.bg, fontSize:13, cursor:'pointer' }}>AI Expert</button>
           </div>
         </div>
       )}
@@ -3867,6 +3886,81 @@ const PECAS_COMPAT = {
   daikin:  [['Filtro HEPA','ref. DK-FT-025'], ['Condensador','ref. DK-CD-220'], ['Controlo remoto','ref. DK-RM-FTXC']],
   vulcano: [['Electrová­lvula','ref. VL-EV-14'], ['Permutador','ref. VL-PRM-14L'], ['Kit ignição','ref. VL-IG-A1']],
   bosch:   [['Sensor caudal','ref. BS-SC-09'], ['Termopar','ref. BS-TP-34']],
+}
+
+/* ══════════════════════════════════
+   IPMA — Previsão + alertas de manutenção (Fase 3.5)
+══════════════════════════════════ */
+const IPMA_LOCALS = {
+  'Coimbra':1060300, 'Lisboa':1110600, 'Porto':1131200, 'Braga':1030300, 'Aveiro':1010500,
+  'Faro':1080500, 'Leiria':1100900, 'Setúbal':1151200, 'Évora':1070500, 'Viseu':1182300,
+  'Caldas da Rainha':1101000, 'Cascais':1110700, 'Sintra':1111400, 'Almada':1151500,
+  'Vila Nova de Gaia':1131700,
+}
+async function fetchPrevisaoIPMA(concelho){
+  const id = IPMA_LOCALS[concelho]
+  if(!id) return null
+  try {
+    const r = await fetch(`https://api.ipma.pt/open-data/forecast/meteorology/cities/daily/${id}.json`)
+    if(!r.ok) return null
+    const j = await r.json()
+    return Array.isArray(j?.data) ? j.data : null
+  } catch { return null }
+}
+function gerarAlertasMeteoManutencao(previsao){
+  if(!Array.isArray(previsao)) return []
+  const out = []
+  previsao.slice(0,3).forEach((d, i) => {
+    const t = d.tMax != null ? Number(d.tMax) : null
+    const tMin = d.tMin != null ? Number(d.tMin) : null
+    const vento = Number(d.classWindSpeed || 0)
+    const chuva = Number(d.classPrecInt || 0)  // 0=nenhuma,1=fraca,2=moderada,3=forte
+    const ref = i===0 ? 'hoje' : i===1 ? 'amanhã' : `em ${i+1} dias`
+    if(chuva >= 2) out.push({ nivel: chuva>=3?'laranja':'amarelo', tipo:'chuva_intensa',
+      ic:'🌧️', titulo:`Chuva ${chuva>=3?'forte':'moderada'} ${ref}`, desc:'Verificar caleiras, terraço e escoamento.' })
+    if(t != null && t >= 33) out.push({ nivel: t>=35?'laranja':'amarelo', tipo:'calor',
+      ic:'☀️', titulo:`Calor ${t>=35?'extremo':'intenso'} ${ref} (${t.toFixed(0)}°C)`, desc:'Verificar AC, filtros e isolamento de cobertura.' })
+    if(tMin != null && tMin <= 3) out.push({ nivel: tMin<=0?'laranja':'amarelo', tipo:'frio',
+      ic:'❄️', titulo:`Frio intenso ${ref} (mín ${tMin.toFixed(0)}°C)`, desc:'Verificar caldeira e canalização exterior.' })
+    if(vento >= 3) out.push({ nivel:'amarelo', tipo:'vento',
+      ic:'💨', titulo:`Vento forte ${ref}`, desc:'Fixar antenas, toldos e elementos exteriores soltos.' })
+  })
+  return out.slice(0,3)
+}
+
+/* ══════════════════════════════════
+   Claude API helpers (Fase 3.5)
+══════════════════════════════════ */
+const ANTHROPIC_KEY = import.meta.env?.VITE_ANTHROPIC_API_KEY || ''
+const ANTHROPIC_MODEL = 'claude-sonnet-4-5-20250929'
+
+async function callClaudeText(prompt, { system, images } = {}){
+  if(!ANTHROPIC_KEY) return { error:'Sem chave API. Adicione VITE_ANTHROPIC_API_KEY ao .env.local e reinicie o Vite.' }
+  try {
+    const content = [{ type:'text', text: prompt }]
+    ;(images || []).forEach(img => content.unshift({
+      type:'image',
+      source:{ type:'base64', media_type: img.mime || 'image/jpeg', data: img.data },
+    }))
+    const r = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{
+        'content-type':'application/json',
+        'x-api-key': ANTHROPIC_KEY,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+      body: JSON.stringify({
+        model: ANTHROPIC_MODEL, max_tokens: 1024,
+        ...(system ? { system } : {}),
+        messages: [{ role:'user', content }],
+      }),
+    })
+    const j = await r.json()
+    if(!r.ok) return { error: j?.error?.message || `HTTP ${r.status}` }
+    const text = (j.content || []).map(c => c.type==='text' ? c.text : '').join('').trim()
+    return { text }
+  } catch (e) { return { error: e.message } }
 }
 
 const DOC_TIPOS = [
@@ -4159,6 +4253,314 @@ function EnergiaScreen({ localizacao, equipamentos, authUser, onBack }){
             </div>
           )
         })}
+      </div>
+    </div>
+  )
+}
+
+/* CameraScreen — captura foto + Claude API identifica equipamento (Fase 3.5) */
+function CameraScreen({ localizacao, authUser, onBack, onCreated }){
+  const [stream, setStream] = useState(null)
+  const [useFileFallback, setUseFileFallback] = useState(false)
+  const [captureB64, setCaptureB64] = useState(null) // { mime, data }
+  const [analysing, setAnalysing] = useState(false)
+  const [ai, setAi] = useState(null) // resultado parsed
+  const [saving, setSaving] = useState(false)
+  const videoRef = useRef(null)
+  const canvasRef = useRef(null)
+
+  const startCamera = async () => {
+    try {
+      const s = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:'environment' }, audio:false })
+      setStream(s)
+      if(videoRef.current){ videoRef.current.srcObject = s; videoRef.current.play() }
+    } catch {
+      setUseFileFallback(true)
+    }
+  }
+  useEffect(() => {
+    startCamera()
+    return () => {
+      if(stream) stream.getTracks().forEach(t => t.stop())
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const capture = () => {
+    const v = videoRef.current, c = canvasRef.current
+    if(!v || !c) return
+    c.width = v.videoWidth; c.height = v.videoHeight
+    c.getContext('2d').drawImage(v, 0, 0)
+    const dataUrl = c.toDataURL('image/jpeg', 0.85)
+    const b64 = dataUrl.split(',')[1]
+    setCaptureB64({ mime:'image/jpeg', data: b64 })
+    if(stream){ stream.getTracks().forEach(t => t.stop()); setStream(null) }
+  }
+  const pickFile = async e => {
+    const f = e.target.files?.[0]; if(!f) return
+    const reader = new FileReader()
+    reader.onload = () => {
+      const result = String(reader.result || '')
+      const b64 = result.split(',')[1]
+      setCaptureB64({ mime: f.type || 'image/jpeg', data: b64 })
+    }
+    reader.readAsDataURL(f)
+  }
+
+  const analyse = async () => {
+    if(!captureB64) return
+    setAnalysing(true)
+    const prompt = `Analisa esta imagem de um equipamento doméstico (caldeira, AC, esquentador, painel solar, elevador, etc.). Extrai os dados técnicos visíveis.
+
+Responde APENAS com um objecto JSON neste formato, sem markdown nem texto extra:
+{
+  "categoria": "aquecimento|climatizacao|aguas_quentes|canalizacao|eletrica|cobertura|estrutura|piscina|solar|elevador|gerador|outros",
+  "nome": "string curta com marca+modelo",
+  "marca": "string ou null",
+  "modelo": "string ou null",
+  "numero_serie": "string ou null",
+  "classe_energetica": "A+++|A++|A+|A|B|C|D|E|F|G ou null",
+  "ano_estimado": número ou null,
+  "potencia_kw": número ou null,
+  "eficiencia_estimada": número 0-100 ou null,
+  "confianca": número 0-100,
+  "notas_tecnicas": "string curta em português"
+}`
+    const res = await callClaudeText(prompt, { images:[captureB64] })
+    setAnalysing(false)
+    if(res.error){ alert(`Análise falhou: ${res.error}`); return }
+    // Parse resposta (pode estar envolvida em ```json)
+    let parsed = null
+    try {
+      const m = res.text.match(/\{[\s\S]*\}/)
+      parsed = m ? JSON.parse(m[0]) : JSON.parse(res.text)
+    } catch {
+      alert('Não consegui interpretar a resposta da IA. Tenta de novo.'); return
+    }
+    setAi(parsed)
+  }
+
+  const guardar = async () => {
+    if(!ai || !localizacao) return
+    setSaving(true)
+    const payload = {
+      localizacao_id:       localizacao.id,
+      categoria:            ai.categoria || 'outros',
+      nome:                 ai.nome || 'Equipamento',
+      marca:                ai.marca || null,
+      modelo:               ai.modelo || null,
+      numero_serie:         ai.numero_serie || null,
+      classe_energetica:    ai.classe_energetica || null,
+      potencia_kw:          ai.potencia_kw || null,
+      eficiencia_estimada:  ai.eficiencia_estimada || null,
+      health_score:         ai.eficiencia_estimada || 50,
+      dados_ia:             ai,
+    }
+    const r = await sbSaveV5('equipamentos', payload, authUser?.token)
+    setSaving(false)
+    if(!r){ alert('Erro ao guardar.'); return }
+    onCreated?.(Array.isArray(r) ? r[0] : r)
+  }
+
+  return (
+    <div style={{ minHeight:'100vh', background:'#000', color:'#fff', paddingBottom:88 }}>
+      <div style={{ background:CASA.green, padding:'11px 14px', display:'flex', alignItems:'center', gap:10 }}>
+        <button onClick={onBack} style={{ background:'none', border:'none', color:'#fff', fontSize:20, cursor:'pointer' }}>←</button>
+        <div style={{ fontSize:14, fontWeight:700 }}>Câmara IA</div>
+      </div>
+
+      {!ANTHROPIC_KEY && (
+        <div style={{ padding:'14px 16px', background:'#7f1d1d', color:'#fff', fontSize:12, lineHeight:1.55 }}>
+          ⚠️ Falta a chave <b>VITE_ANTHROPIC_API_KEY</b> em <code>.env.local</code>. Reinicia o Vite após adicionar para a análise funcionar. Nota: expor a chave no browser é aceitável em DEV, <b>não</b> em produção — em prod encaminhar por edge function.
+        </div>
+      )}
+
+      {/* Captura */}
+      {!captureB64 && (
+        <div style={{ padding:14 }}>
+          {!useFileFallback ? (
+            <>
+              <video ref={videoRef} playsInline muted style={{ width:'100%', borderRadius:12, background:'#111' }}/>
+              <canvas ref={canvasRef} style={{ display:'none' }}/>
+              <button onClick={capture} disabled={!stream} style={{ width:'100%', marginTop:12, padding:14, borderRadius:12, border:'none', background:stream?CASA.greenLt:'#333', color:'#fff', fontWeight:700, fontSize:14, cursor:stream?'pointer':'default' }}>
+                {stream ? '📸 Capturar' : 'A obter câmara…'}
+              </button>
+              <button onClick={()=>{ if(stream) stream.getTracks().forEach(t=>t.stop()); setUseFileFallback(true) }} style={{ width:'100%', marginTop:8, padding:10, borderRadius:10, border:`1px solid #444`, background:'transparent', color:'#ccc', fontSize:12, cursor:'pointer' }}>
+                Usar foto do dispositivo
+              </button>
+            </>
+          ) : (
+            <div style={{ background:'#111', borderRadius:12, padding:40, textAlign:'center' }}>
+              <div style={{ fontSize:36, marginBottom:10 }}>🖼️</div>
+              <input type="file" accept="image/*" onChange={pickFile} style={{ color:'#ccc' }}/>
+              <div style={{ fontSize:11, color:'#888', marginTop:12 }}>Seleccione uma foto do equipamento.</div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Preview + análise */}
+      {captureB64 && !ai && (
+        <div style={{ padding:14 }}>
+          <img src={`data:${captureB64.mime};base64,${captureB64.data}`} alt="" style={{ width:'100%', borderRadius:12 }}/>
+          <div style={{ display:'flex', gap:8, marginTop:12 }}>
+            <button onClick={()=>{ setCaptureB64(null); startCamera() }} style={{ flex:1, padding:12, borderRadius:10, border:'1px solid #444', background:'transparent', color:'#ccc', fontSize:13, cursor:'pointer' }}>Nova foto</button>
+            <button onClick={analyse} disabled={analysing || !ANTHROPIC_KEY} style={{ flex:2, padding:12, borderRadius:10, border:'none', background: (analysing||!ANTHROPIC_KEY)?'#333':CASA.greenLt, color:'#fff', fontWeight:700, fontSize:13, cursor:(analysing||!ANTHROPIC_KEY)?'default':'pointer' }}>
+              {analysing ? 'A analisar…' : '✨ Analisar com IA'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Resultado */}
+      {ai && (
+        <div style={{ padding:14, color:'#111', background:'#fff', minHeight:'calc(100vh - 48px)' }}>
+          <div style={{ fontSize:10, fontWeight:700, color:'#999', textTransform:'uppercase', letterSpacing:0.5, marginBottom:6 }}>Identificado (confiança {ai.confianca ?? '—'}%)</div>
+          <div style={{ fontSize:16, fontWeight:700 }}>{ai.nome || 'Equipamento'}</div>
+          <div style={{ fontSize:12, color:'#555', marginTop:2 }}>{CASA_CAT_LABELS[ai.categoria] || ai.categoria || '—'}</div>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:0, marginTop:14, border:`1px solid ${CASA.border}`, borderRadius:10, overflow:'hidden' }}>
+            {[
+              ['Marca',    ai.marca],
+              ['Modelo',   ai.modelo],
+              ['Nº Série', ai.numero_serie],
+              ['Classe',   ai.classe_energetica],
+              ['Ano',      ai.ano_estimado],
+              ['Potência', ai.potencia_kw != null ? `${ai.potencia_kw} kW` : null],
+              ['Eficiência', ai.eficiencia_estimada != null ? `${ai.eficiencia_estimada}%` : null],
+            ].map(([l,v],i) => (
+              <div key={l} style={{ padding:'9px 12px', borderRight:i%2===0?`1px solid ${CASA.border}`:'none', borderBottom:`1px solid ${CASA.border}` }}>
+                <div style={{ fontSize:9, color:'#999', textTransform:'uppercase', letterSpacing:0.3, marginBottom:2 }}>{l}</div>
+                <div style={{ fontSize:12, fontWeight:600 }}>{v ?? '—'}</div>
+              </div>
+            ))}
+          </div>
+          {ai.notas_tecnicas && (
+            <div style={{ marginTop:12, padding:'10px 12px', background:CASA.amberLt, border:'1px solid #EF9F27', borderRadius:10, fontSize:11, color:CASA.amber, lineHeight:1.55 }}>
+              ✨ {ai.notas_tecnicas}
+            </div>
+          )}
+          <div style={{ display:'flex', gap:8, marginTop:16 }}>
+            <button onClick={()=>{ setAi(null); setCaptureB64(null); startCamera() }} style={{ flex:1, padding:12, borderRadius:10, border:`1px solid ${CASA.border}`, background:'#fff', fontSize:13, cursor:'pointer' }}>Nova análise</button>
+            <button onClick={guardar} disabled={saving} style={{ flex:2, padding:12, borderRadius:10, border:'none', background:saving?'#ccc':CASA.greenLt, color:'#fff', fontWeight:700, fontSize:13, cursor:saving?'default':'pointer' }}>{saving ? 'A guardar…' : '+ Guardar equipamento'}</button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+/* AIExpertScreen — chat com contexto completo da casa (Fase 3.5) */
+function AIExpertScreen({ localizacao, equipamentos, authUser, onBack, initialContext }){
+  const [msgs, setMsgs] = useState([])
+  const [input, setInput] = useState('')
+  const [loading, setLoading] = useState(false)
+  const eqs = (equipamentos || []).filter(e => !localizacao || e.localizacao_id === localizacao.id)
+
+  const systemPrompt = `És o AI Expert de manutenção doméstica do utilizador. Tens o contexto real da casa abaixo.
+
+Localização: ${localizacao?.nome || '—'} (${localizacao?.concelho || '—'}, construção ${localizacao?.ano_construcao || '—'}, ${localizacao?.tipologia || '—'})
+Home Score: ${localizacao?.home_score ?? '—'}/100
+
+Equipamentos activos:
+${eqs.map(e => `- ${e.nome} (${e.categoria}, classe ${e.classe_energetica || '—'}, ${e.potencia_kw ? e.potencia_kw+'kW' : '—'}, health ${e.health_score ?? '—'})`).join('\n') || '(sem equipamentos)'}
+
+Responde em português de Portugal, conciso, com dados concretos. Quando sugeres acções, referencia os modelos/equipamentos específicos acima. Se não tens dados suficientes, indica explicitamente.`
+
+  const quickChips = [
+    'Qual caldeira devo trocar primeiro?',
+    'Como reduzo consumo do AC?',
+    'Quais revisões estão atrasadas?',
+    'Vale a pena painel solar?',
+  ]
+
+  // Se entrou com contexto inicial (ex: alerta IPMA), pré-preenche primeira mensagem
+  useEffect(() => {
+    if(initialContext?.context){
+      const c = initialContext.context
+      setInput(`${c.titulo}. ${c.desc} — o que recomendas verificar nos equipamentos?`)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const ask = async (text) => {
+    const q = (text || input).trim()
+    if(!q) return
+    setInput('')
+    const history = [...msgs, { role:'user', text:q }]
+    setMsgs(history)
+    setLoading(true)
+    const res = await callClaudeText(q, { system: systemPrompt })
+    setLoading(false)
+    if(res.error){
+      setMsgs(p => [...p, { role:'assistant', text:`Erro: ${res.error}`, error:true }])
+      return
+    }
+    setMsgs(p => [...p, { role:'assistant', text: res.text }])
+  }
+
+  return (
+    <div style={{ minHeight:'100vh', background:CASA.bg, display:'flex', flexDirection:'column', paddingBottom:88 }}>
+      <div style={{ background:CASA.green, padding:'11px 14px', color:'#fff', display:'flex', alignItems:'center', gap:10 }}>
+        <button onClick={onBack} style={{ background:'none', border:'none', color:'#fff', fontSize:20, cursor:'pointer' }}>←</button>
+        <div style={{ flex:1 }}>
+          <div style={{ fontSize:14, fontWeight:700 }}>AI Expert</div>
+          <div style={{ fontSize:10, opacity:0.75 }}>{eqs.length} equipamento{eqs.length===1?'':'s'} no contexto</div>
+        </div>
+      </div>
+
+      {!ANTHROPIC_KEY && (
+        <div style={{ padding:'12px 16px', background:'#7f1d1d', color:'#fff', fontSize:11.5, lineHeight:1.5 }}>
+          ⚠️ Falta <b>VITE_ANTHROPIC_API_KEY</b> em <code>.env.local</code>. O AI Expert só responde após configurar a chave e reiniciar o Vite.
+        </div>
+      )}
+
+      <div style={{ flex:1, padding:'14px 14px 0', overflowY:'auto' }}>
+        {msgs.length === 0 && (
+          <div style={{ marginBottom:10 }}>
+            <div style={{ background:'#fff', border:`1px solid ${CASA.border}`, borderRadius:12, padding:'12px 14px', fontSize:12.5, color:'#333', lineHeight:1.5 }}>
+              👋 Sou o AI Expert da sua casa. Posso ajudar com manutenção, substituições, consumos e prioridades. Experimente uma das sugestões abaixo ou escreva uma pergunta.
+            </div>
+            <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginTop:10 }}>
+              {quickChips.map(q => (
+                <button key={q} onClick={()=>ask(q)} disabled={loading || !ANTHROPIC_KEY} style={{
+                  background:'#fff', border:`1px solid ${CASA.border}`, borderRadius:14,
+                  padding:'6px 12px', fontSize:11, cursor:(loading||!ANTHROPIC_KEY)?'default':'pointer', color:'#555',
+                  opacity:(loading||!ANTHROPIC_KEY)?0.5:1,
+                }}>{q}</button>
+              ))}
+            </div>
+          </div>
+        )}
+        {msgs.map((m,i) => (
+          <div key={i} style={{
+            display:'flex', justifyContent: m.role==='user' ? 'flex-end' : 'flex-start',
+            marginBottom:8,
+          }}>
+            <div style={{
+              maxWidth:'82%', padding:'9px 12px', borderRadius:12,
+              background: m.role==='user' ? CASA.greenLt : (m.error ? '#FEE2E2' : '#fff'),
+              color: m.role==='user' ? '#fff' : (m.error ? '#991b1b' : '#111'),
+              border: m.role==='user' ? 'none' : `1px solid ${CASA.border}`,
+              fontSize:12.5, lineHeight:1.5, whiteSpace:'pre-wrap',
+            }}>{m.text}</div>
+          </div>
+        ))}
+        {loading && (
+          <div style={{ display:'flex', justifyContent:'flex-start', marginBottom:8 }}>
+            <div style={{ padding:'9px 12px', borderRadius:12, background:'#fff', border:`1px solid ${CASA.border}`, fontSize:12, color:'#999' }}>A pensar…</div>
+          </div>
+        )}
+      </div>
+
+      <div style={{ padding:'10px 14px', borderTop:`1px solid ${CASA.border}`, background:'#fff', display:'flex', gap:8 }}>
+        <input value={input} onChange={e=>setInput(e.target.value)} onKeyDown={e=>{ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); ask() } }}
+          placeholder="Escreva a sua pergunta…"
+          style={{ flex:1, padding:'10px 12px', borderRadius:9, border:`1px solid ${CASA.border}`, fontSize:13, outline:'none' }}/>
+        <button onClick={()=>ask()} disabled={loading || !input.trim() || !ANTHROPIC_KEY} style={{
+          background: (loading||!input.trim()||!ANTHROPIC_KEY)?'#ccc':CASA.greenLt, color:'#fff',
+          border:'none', borderRadius:9, padding:'10px 16px', fontSize:13, fontWeight:700,
+          cursor:(loading||!input.trim()||!ANTHROPIC_KEY)?'default':'pointer',
+        }}>Enviar</button>
       </div>
     </div>
   )
@@ -9816,7 +10218,8 @@ export default function App() {
   const [casaLocalizacoes, setCasaLocalizacoes] = useState(null)
   const [casaEquipamentos, setCasaEquipamentos] = useState(null)
   const [casaActiveEq,     setCasaActiveEq]     = useState(null)
-  const [casaSub,          setCasaSub]          = useState(null) // 'docs' | 'energia' | null
+  const [casaSub,          setCasaSub]          = useState(null) // 'docs' | 'energia' | 'camera' | 'aiexpert'
+  const [casaSubPayload,   setCasaSubPayload]   = useState(null) // contexto inicial p/ sub-ecrã (ex: alerta IPMA)
   useEffect(() => {
     if(!authUser) return
     let active = true
@@ -10286,9 +10689,11 @@ export default function App() {
                 equipamentos={casaEquipamentos}
                 onNavigate={(target, payload)=>{
                   if(target==='ficha' && payload){ setCasaActiveEq(payload); return }
-                  if(target==='docs'){    setCasaSub('docs');    return }
-                  if(target==='energia'){ setCasaSub('energia'); return }
-                  alert(`"${target}" disponível na Fase 3.5.`)
+                  if(target==='docs')    { setCasaSub('docs');    setCasaSubPayload(null); return }
+                  if(target==='energia') { setCasaSub('energia'); setCasaSubPayload(null); return }
+                  if(target==='camera')  { setCasaSub('camera');  setCasaSubPayload(null); return }
+                  if(target==='aiexpert'){ setCasaSub('aiexpert'); setCasaSubPayload(payload || null); return }
+                  if(target==='locais')  { alert('Gestão de múltiplas localizações numa fase seguinte.'); return }
                 }}
               />}
               {tab==='casa' && casaActiveEq && <EquipamentoFicha
@@ -10303,6 +10708,7 @@ export default function App() {
                   setCasaEquipamentos(prev => (prev || []).filter(e => e.id !== id))
                   setCasaActiveEq(null)
                 }}
+                onAskAI={(payload)=>{ setCasaActiveEq(null); setCasaSub('aiexpert'); setCasaSubPayload(payload) }}
               />}
               {tab==='casa' && casaSub==='docs' && <DocsScreen
                 localizacao={(casaLocalizacoes || [])[0]}
@@ -10314,6 +10720,23 @@ export default function App() {
                 equipamentos={casaEquipamentos}
                 authUser={authUser}
                 onBack={()=>setCasaSub(null)}
+              />}
+              {tab==='casa' && casaSub==='camera' && <CameraScreen
+                localizacao={(casaLocalizacoes || [])[0]}
+                authUser={authUser}
+                onBack={()=>setCasaSub(null)}
+                onCreated={(eq)=>{
+                  setCasaEquipamentos(prev => [...(prev || []), eq])
+                  setCasaSub(null)
+                  setCasaActiveEq(eq)
+                }}
+              />}
+              {tab==='casa' && casaSub==='aiexpert' && <AIExpertScreen
+                localizacao={(casaLocalizacoes || [])[0]}
+                equipamentos={casaEquipamentos}
+                authUser={authUser}
+                initialContext={casaSubPayload}
+                onBack={()=>{ setCasaSub(null); setCasaSubPayload(null) }}
               />}
               {tab==='pedidos'  && <CPedidos  ordens={ordens} onOrdem={o=>{setSel(o);setEcra('ordem')}} authUser={authUser}/>}
               {tab==='perfil'   && ecra!=='moradas' && ecra!=='wishlist' && (
