@@ -5924,16 +5924,34 @@ function toDbServico(s){
   }
 }
 
-function AdminServicos({svcs,setSvcs}){
+// Inverso de toDbServico: converte a row BD (schema longo) para a shape curta
+// usada pelo state local do admin e pelos componentes UI do AdminServicos.
+function fromDbServico(row){
+  return {
+    id:     row.id,
+    cat:    row.categoria_id || '',
+    n:      row.nome || '',
+    p:      row.preco != null ? Number(row.preco) : 0,
+    u:      row.unidade || '',
+    d:      row.duracao_tipica || '',
+    ic:     row.icon || '🔧',
+    tipo:   row.tipo || 'fixo',
+    badge:  row.urgent ? 'Urgente' : (row.popular ? 'Popular' : ''),
+    r:      5.0,    // rating/reviews não existem na BD; mantemos defaults para UI
+    rv:     0,
+  }
+}
+
+function AdminServicos({svcs,setSvcs,authUser}){
   const [q,setQ]=useState(''), [cat,setCat]=useState('all'), [modal,setModal]=useState(null), [form,setForm]=useState({})
   const [syncing,setSyncing]=useState(false)
-  const filtered=svcs.filter(s=>(cat==='all'||s.cat===cat)&&s.n.toLowerCase().includes(q.toLowerCase()))
+  const filtered=svcs.filter(s=>(cat==='all'||s.cat===cat)&&(s.n||'').toLowerCase().includes(q.toLowerCase()))
   const openNew=()=>{setForm({id:`s${Date.now()}`,cat:'limpeza',n:'',p:0,u:'/visita',d:'60min',ic:'🔧',badge:''});setModal('new')}
   const save=async()=>{
     setSyncing(true)
     const updated=modal==='new'?{...form,r:5.0,rv:0}:{...form}
     const dbRow = toDbServico(updated)
-    const result = await sbSave('servicos', dbRow)
+    const result = await sbSave('servicos', dbRow, authUser?.token)
     setSyncing(false)
     if(!result){
       alert('Erro ao guardar o serviço na base de dados. Ver consola (F12) para detalhes.')
@@ -5944,7 +5962,12 @@ function AdminServicos({svcs,setSvcs}){
     else setSvcs(p=>p.map(s=>s.id===form.id?{...s,...form}:s))
     setModal(null)
   }
-  const del=id=>{if(window.confirm('Eliminar este serviço?'))setSvcs(p=>p.filter(s=>s.id!==id))}
+  const del=async(id)=>{
+    if(!window.confirm('Eliminar este serviço?')) return
+    const ok = await sbDelete('servicos', `?id=eq.${id}`, authUser?.token)
+    if(!ok){ alert('Erro ao eliminar na BD. Ver consola.'); return }
+    setSvcs(p=>p.filter(s=>s.id!==id))
+  }
   return(
     <>
       <ATopBar title='🔧 Serviços' sub={`${svcs.length} serviços configurados`}>
@@ -6343,7 +6366,7 @@ function AdminConfig(){
 }
 
 // ══ AdminDash — contentor principal ════
-function AdminDash({svcs,setSvcs,prestadores,setPrestadores,niveis,setNiveis,clientes,setClientes,ordens,setOrdens,onLogout}){
+function AdminDash({svcs,setSvcs,prestadores,setPrestadores,niveis,setNiveis,clientes,setClientes,ordens,setOrdens,onLogout,authUser}){
   const [page,setPage]=useState('dashboard')
   return(
     <div style={{position:'fixed',inset:0,display:'flex',background:A.bg,fontFamily:'system-ui,-apple-system,sans-serif',overflow:'hidden'}}>
@@ -6352,7 +6375,7 @@ function AdminDash({svcs,setSvcs,prestadores,setPrestadores,niveis,setNiveis,cli
       <div style={{marginLeft:240,flex:1,height:'100vh',overflowY:'auto',overflowX:'hidden',background:A.bg}}>
         {page==='dashboard'   &&<AdminDashboard svcs={svcs} prest={prestadores} clientes={clientes}/>}
         {page==='pipeline'    &&<AdminPipeline  ordens={ordens} setOrdens={setOrdens} prest={prestadores}/>}
-        {page==='servicos'    &&<AdminServicos   svcs={svcs} setSvcs={setSvcs}/>}
+        {page==='servicos'    &&<AdminServicos   svcs={svcs} setSvcs={setSvcs} authUser={authUser}/>}
         {page==='clientes'    &&<AdminClientes   clientes={clientes} setClientes={setClientes}/>}
         {page==='prestadores' &&<AdminPrestadores prest={prestadores} setPrest={setPrestadores} niveis={niveis}/>}
         {page==='escaloes'    &&<AdminEscaloes   niveis={niveis} setNiveis={setNiveis}/>}
@@ -8777,10 +8800,28 @@ export default function App() {
 
   // ── Estado Admin ──────────────────────────
   const [adminAuth,     setAdminAuth]    = useState(false)
+  // adminSvcs arranca com o seed SVCS para dev sem Supabase;
+  // quando a auth admin real fica activa, fetchServicos() troca pelo conteúdo da BD.
   const [adminSvcs,     setAdminSvcs]    = useState([...SVCS])
   const [adminPrest,    setAdminPrest]   = useState([...TECNICOS])
   const [adminNiveis,   setAdminNiveis]  = useState({...NIVEIS})
   const [adminClientes, setAdminClientes]= useState([...CLIENTES_INIT])
+
+  // Quando a sessão admin real fica activa, trocamos o SVCS seed pelas rows
+  // reais de public.servicos (ordenadas por categoria + ordem). A policy
+  // servicos_admin_all dá acesso total a quem tem perfis.role='admin'.
+  useEffect(() => {
+    if(role !== 'admin' || !adminAuth || !authUser?.token) return
+    let active = true
+    sbGet('servicos', '?select=*&order=categoria_id.asc,ordem.asc', authUser.token).then(rows => {
+      if(!active) return
+      if(Array.isArray(rows)){
+        setAdminSvcs(rows.map(fromDbServico))
+      }
+    })
+    return () => { active = false }
+  }, [role, adminAuth, authUser?.token])
+
   // ── Disponibilidade partilhada (reflecte no calendário) ──
   const [bloqueados, setBloqueados] = useState([])
   const [diasDisponib, setDiasDisponib] = useState({0:'todo',1:'todo',2:'todo',3:'todo',4:'manha'})
@@ -9038,6 +9079,7 @@ export default function App() {
               niveis={adminNiveis}       setNiveis={setAdminNiveis}
               clientes={adminClientes}   setClientes={setAdminClientes}
               ordens={ordens}            setOrdens={setOrdens}
+              authUser={authUser}
               onLogout={onLogout}
             />
           : <AdminLogin onLogin={() => setAdminAuth(true)}/>
