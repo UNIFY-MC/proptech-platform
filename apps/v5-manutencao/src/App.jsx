@@ -10674,7 +10674,7 @@ export default function App() {
   }
   useEffect(() => { refetchCasa() /* eslint-disable-next-line */ }, [authUser?.token])
 
-  const casaActiveLoc = (casaLocalizacoes || []).find(l => l.id === casaActiveLocId) || casaActiveLoc || null
+  const casaActiveLoc = (casaLocalizacoes || []).find(l => l.id === casaActiveLocId) || (casaLocalizacoes || [])[0] || null
   // Meta da categoria activa, combinada a partir de BD (categoriesCache) + design tokens (CATEGORY_META).
   // null enquanto categoriesCache carrega ou categoria não resolvida.
   const catCategoryMeta = (() => {
