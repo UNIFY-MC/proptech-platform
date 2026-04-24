@@ -3341,7 +3341,9 @@ function CWishlist({ authUser, onBack, onCreateNew, onSubmitted }){
     setItems(p => (p || []).filter(x => x.id !== item.id))
   }
 
-  const totalEstimado = (items || []).reduce((s,i) => s + Number(i.preco_estimado || 0), 0)
+  // Preço não é mostrado (modelo: técnico contrata tempo, acerto no fim).
+  // A variável totalEstimado é mantida só para analytics futuro se preciso.
+  // const totalEstimado = ...
 
   // Agrupar items por categoria_id (default 'outros' quando null)
   const byCategoria = (items || []).reduce((acc, it) => {
@@ -3362,13 +3364,16 @@ function CWishlist({ authUser, onBack, onCreateNew, onSubmitted }){
     const results = []
     for(const cat of Object.keys(byCategoria)){
       const group = byCategoria[cat]
-      const descricao = `Lista de tarefas agrupada (${CATNAMES[cat] || cat}):\n\n` + group.map(it => {
-        if(it.tipo === 'fixo'){
-          return `• ${it.servico_id || 'Serviço'}${it.preco_estimado != null ? ` — ~€${Number(it.preco_estimado).toFixed(2)}` : ''}`
-        }
-        const head = (it.descricao || '').slice(0, 120)
-        return `• ${head}${it.descricao && it.descricao.length > 120 ? '…' : ''}${it.horas_estimadas ? ` (${it.horas_estimadas}h est.)` : ''}`
-      }).join('\n')
+      const nomeItem = it => {
+        if(it.tipo === 'fixo') return it.descricao || it.servico_id || 'Serviço'
+        const d = (it.descricao || '').slice(0, 200)
+        return d + ((it.descricao || '').length > 200 ? '…' : '')
+      }
+      const descricao =
+        `Lista de tarefas — ${CATNAMES[cat] || cat}\n` +
+        `Modelo: técnico resolve tudo numa visita, factura por tempo efectivo.\n\n` +
+        `Tarefas:\n` +
+        group.map(it => `• ${nomeItem(it)}${it.horas_estimadas ? ` (~${it.horas_estimadas}h)` : ''}`).join('\n')
       const servicoId = CATEGORY_PREFIX[cat] ? `personalizado-${CATEGORY_PREFIX[cat]}` : null
       const payload = {
         servico_id:       servicoId,
@@ -3381,13 +3386,13 @@ function CWishlist({ authUser, onBack, onCreateNew, onSubmitted }){
         data_agendada:    scheduleMode === 'agendar' ? dataAgendada : null,
         hora_agendada:    scheduleMode === 'agendar' ? horaAgendada : null,
         schedule_mode:    scheduleMode,
-        valor_cobrado:    null,           // a confirmar pelo prestador
+        valor_cobrado:    null,           // sem valor antecipado
         is_personalizado: true,
         descricao_personalizada: descricao,
-        notas:            `Submetido via lista (${group.length} item${group.length===1?'':'s'}).`,
-        categoria_id:     cat,
+        notas:            `Lista agrupada: ${group.length} tarefa${group.length===1?'':'s'} em ${CATNAMES[cat] || cat}.`,
       }
       const r = await sbSave('ordens', payload, authUser?.token)
+      if(!r){ console.warn('[wishlist] falha ao criar ordem para cat', cat) }
       results.push({ cat, ok: !!r })
     }
     const successCount = results.filter(r => r.ok).length
@@ -3414,7 +3419,7 @@ function CWishlist({ authUser, onBack, onCreateNew, onSubmitted }){
         <button onClick={onBack} style={{ background:'none', border:'none', fontSize:22, cursor:'pointer', color:C.navy }}>←</button>
         <div style={{ flex:1 }}>
           <div style={{ fontSize:14, fontWeight:700, color:C.navy }}>A minha lista</div>
-          <div style={{ fontSize:10, color:C.slate }}>{items?.length || 0} item{(items?.length||0)===1?'':'s'}{totalEstimado>0 && ` · ≈ €${totalEstimado.toFixed(2).replace('.',',')}`}</div>
+          <div style={{ fontSize:10, color:C.slate }}>{items?.length || 0} tarefa{(items?.length||0)===1?'':'s'} · orçamento no final</div>
         </div>
       </div>
 
@@ -3432,30 +3437,32 @@ function CWishlist({ authUser, onBack, onCreateNew, onSubmitted }){
           </div>
         )}
 
-        {items && items.map(it => (
-          <Card key={it.id} style={{ padding:14, marginBottom:8 }}>
-            <div style={{ display:'flex', gap:12, alignItems:'flex-start' }}>
-              <div style={{ width:36, height:36, borderRadius:10, background:'#f1f5f9', color:C.slate, display:'grid', placeItems:'center', fontSize:18, flexShrink:0 }}>{it.tipo==='fixo' ? '🔧' : '✨'}</div>
-              <div style={{ flex:1, minWidth:0 }}>
-                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'baseline', gap:10 }}>
-                  <div style={{ fontSize:13, fontWeight:700, color:C.navy, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
-                    {it.tipo==='fixo' ? (it.servico_id || 'Serviço') : (it.descricao?.slice(0,60) || 'Personalizado')}{it.descricao && it.descricao.length > 60 ? '…' : ''}
-                  </div>
-                  {it.preco_estimado != null && (
-                    <span style={{ fontSize:12, fontWeight:700, color:C.navy, whiteSpace:'nowrap' }}>€{Number(it.preco_estimado).toFixed(2).replace('.',',')}</span>
+        {items && items.map(it => {
+          const CATNAMES = { limpeza:'Limpeza', manutencao:'Manutenção', jardim:'Jardim', piscina:'Piscina', pintura:'Pintura', eletrica:'Eléctrica', canalizacao:'Canalização', pos_obra:'Pós-obra' }
+          // Nome a mostrar: para fixo temos snapshot em it.descricao (desde a fix); para personalizado é a própria descrição.
+          // Fallback para servico_id quando descricao em falta (items antigos pre-fix).
+          const nome = (it.descricao && it.tipo === 'fixo') ? it.descricao
+            : it.tipo === 'fixo' ? (it.servico_id || 'Serviço')
+            : (it.descricao ? it.descricao.slice(0,60) + (it.descricao.length > 60 ? '…' : '') : 'Serviço personalizado')
+          const cat = it.categoria_id ? (CATNAMES[it.categoria_id] || it.categoria_id) : null
+          return (
+            <Card key={it.id} style={{ padding:14, marginBottom:8 }}>
+              <div style={{ display:'flex', gap:12, alignItems:'flex-start' }}>
+                <div style={{ width:36, height:36, borderRadius:10, background:'#f1f5f9', color:C.slate, display:'grid', placeItems:'center', fontSize:18, flexShrink:0 }}>{it.tipo==='fixo' ? '🔧' : '✨'}</div>
+                <div style={{ flex:1, minWidth:0 }}>
+                  <div style={{ fontSize:13.5, fontWeight:700, color:C.navy, lineHeight:1.35 }}>{nome}</div>
+                  {cat && <div style={{ fontSize:11, color:C.slate, marginTop:2 }}>{cat}</div>}
+                  {it.tipo==='personalizado' && it.descricao && it.descricao.length > 60 && (
+                    <div style={{ fontSize:11.5, color:C.slate, marginTop:6, lineHeight:1.45, whiteSpace:'pre-wrap' }}>{it.descricao}</div>
                   )}
                 </div>
-                {it.categoria_id && <div style={{ fontSize:11, color:C.slate, marginTop:2 }}>{it.categoria_id}</div>}
-                {it.tipo==='personalizado' && it.descricao && it.descricao.length > 60 && (
-                  <div style={{ fontSize:11, color:C.slate, marginTop:4, lineHeight:1.4 }}>{it.descricao}</div>
-                )}
               </div>
-            </div>
-            <div style={{ display:'flex', gap:6, marginTop:10 }}>
-              <button onClick={()=>remove(it)} style={{ padding:'7px 12px', borderRadius:8, border:`1px solid #fecaca`, background:C.white, color:'#ef4444', fontSize:12, fontWeight:600, cursor:'pointer' }}>🗑 Remover</button>
-            </div>
-          </Card>
-        ))}
+              <div style={{ display:'flex', gap:6, marginTop:10 }}>
+                <button onClick={()=>remove(it)} style={{ padding:'7px 12px', borderRadius:8, border:`1px solid #fecaca`, background:C.white, color:'#ef4444', fontSize:12, fontWeight:600, cursor:'pointer' }}>🗑 Remover</button>
+              </div>
+            </Card>
+          )
+        })}
 
         {items && items.length > 0 && (
           <>
@@ -3494,8 +3501,8 @@ function CWishlist({ authUser, onBack, onCreateNew, onSubmitted }){
                 )}
               </div>
 
-              <div style={{ fontSize:11, color:C.slate, marginBottom:10, lineHeight:1.5, background:'#f8fafc', padding:'8px 10px', borderRadius:8 }}>
-                <b>{nCategorias}</b> pedido{nCategorias===1?'':'s'} agrupado{nCategorias===1?'':'s'} (um por categoria) — o prestador vai confirmar um orçamento antes de avançar.
+              <div style={{ fontSize:11.5, color:C.slate, marginBottom:10, lineHeight:1.5, background:'#f8fafc', padding:'10px 12px', borderRadius:8 }}>
+                <b>{nCategorias}</b> pedido{nCategorias===1?'':'s'} agrupado{nCategorias===1?'':'s'} (um por categoria). Sem valor antecipado — o técnico resolve as tarefas da categoria numa única visita e factura pelo tempo efectivo.
               </div>
 
               <button onClick={submeter} disabled={!canSubmit || submitting} style={{
@@ -7218,15 +7225,17 @@ function ServiceDetailScreenV2({ serviceId, category, authUser, onBack, onContin
             if(!uid){ alert('Tem de iniciar sessão para guardar na lista.'); return }
             const lista = await sbGetOrCreateListaAberta(uid, authUser?.token)
             if(!lista){ alert('Erro ao criar lista.'); return }
+            const nomeSnap = service.nome || service.name || 'Serviço'
             const r = await sbSave('lista_items', {
               lista_id: lista.id,
               tipo: 'fixo',
               servico_id: service.id,
+              descricao: nomeSnap,  // snapshot legível do nome
               categoria_id: category.id,
               preco_estimado: effectivePrice,
             }, authUser?.token)
             if(!r){ alert('Erro ao adicionar à lista.'); return }
-            alert(`✓ "${service.nome || service.name}" adicionado à sua lista.`)
+            alert(`✓ "${nomeSnap}" adicionado à sua lista.`)
           }} style={{
             flexShrink:0, padding:"14px 16px", borderRadius:12,
             background:CC.paper, border:`1px solid ${CC.line}`,
