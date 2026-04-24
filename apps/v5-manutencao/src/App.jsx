@@ -6074,7 +6074,7 @@ function ServiceListScreenV2({ categoryId, categoriesCache, authUser, onBack, on
         const id = visible[0].target.dataset.subId
         if(id) setActiveSub(id)
       }
-    }, { rootMargin:'-120px 0px -45% 0px', threshold:0 })
+    }, { rootMargin:'-170px 0px -45% 0px', threshold:0 })
     Object.entries(sectionRefs.current).forEach(([, el]) => {
       if(el) obs.observe(el)
     })
@@ -6139,30 +6139,31 @@ function ServiceListScreenV2({ categoryId, categoriesCache, authUser, onBack, on
     <CCShell>
       <CCTopBar onBack={onBack} title={category.nome} subtitle={`${totalServicos} serviços · Caldas da Rainha`}/>
 
-      <div style={{ padding:"14px 18px 0" }}>
-        <div style={{
-          display:"flex", alignItems:"center", gap:10,
-          background:CC.paper, border:`1px solid ${CC.line}`,
-          borderRadius:12, padding:"10px 14px",
-        }}>
-          <Search size={16} color={CC.stone}/>
-          <input value={search} onChange={e=>setSearch(e.target.value)}
-            placeholder={`Procurar em ${category.nome}...`}
-            style={{ flex:1, border:"none", outline:"none", background:"transparent", fontSize:14, fontFamily:"inherit", color:CC.ink }}/>
-          {search && (
-            <button onClick={()=>setSearch('')} style={{
-              background:"transparent", border:"none", cursor:"pointer", color:CC.stone,
-              display:"grid", placeItems:"center",
-            }}><X size={14}/></button>
-          )}
+      {/* Sticky wrapper: search + (quando !search) pill bar */}
+      <div style={{
+        position:"sticky", top:62, zIndex:15,
+        background:CC.cream, borderBottom:`1px solid ${CC.line}`,
+      }}>
+        <div style={{ padding:"10px 18px 0" }}>
+          <div style={{
+            display:"flex", alignItems:"center", gap:10,
+            background:CC.paper, border:`1px solid ${CC.line}`,
+            borderRadius:12, padding:"10px 14px",
+          }}>
+            <Search size={16} color={CC.stone}/>
+            <input value={search} onChange={e=>setSearch(e.target.value)}
+              placeholder={`Procurar em ${category.nome}...`}
+              style={{ flex:1, border:"none", outline:"none", background:"transparent", fontSize:14, fontFamily:"inherit", color:CC.ink }}/>
+            {search && (
+              <button onClick={()=>setSearch('')} style={{
+                background:"transparent", border:"none", cursor:"pointer", color:CC.stone,
+                display:"grid", placeItems:"center",
+              }}><X size={14}/></button>
+            )}
+          </div>
         </div>
-      </div>
 
-      {!search && (
-        <div style={{
-          position:"sticky", top:62, zIndex:15,
-          background:CC.cream, borderBottom:`1px solid ${CC.line}`,
-        }}>
+        {!search && (
           <div ref={pillBarRef} className="cc-no-scrollbar" style={{
             display:"flex", gap:6, overflowX:"auto", overflowY:"hidden",
             padding:"10px 18px 10px", scrollSnapType:"x proximity",
@@ -6181,8 +6182,11 @@ function ServiceListScreenV2({ categoryId, categoriesCache, authUser, onBack, on
               <CCSubPill key={sub.id} subId={sub.id} active={activeSub===sub.id} onClick={()=>scrollToSub(sub.id)}>{sub.icon} {sub.nome}</CCSubPill>
             ))}
           </div>
-        </div>
-      )}
+        )}
+
+        {/* Spacer para que o border do sticky alinhe bem quando só search está visível */}
+        {search && <div style={{ height:10 }}/>}
+      </div>
 
       <div style={{ padding:"4px 18px 140px" }}>
         {!search && (
@@ -6216,7 +6220,7 @@ function ServiceListScreenV2({ categoryId, categoriesCache, authUser, onBack, on
         )}
 
         {filtered.map(sub => (
-          <div key={sub.id} ref={el => (sectionRefs.current[sub.id] = el)} data-sub-id={sub.id} style={{ marginTop:28, scrollMarginTop:120 }}>
+          <div key={sub.id} ref={el => (sectionRefs.current[sub.id] = el)} data-sub-id={sub.id} style={{ marginTop:28, scrollMarginTop:170 }}>
             <div style={{ display:"flex", alignItems:"baseline", justifyContent:"space-between", marginBottom:10 }}>
               <div className="serif" style={{ fontSize:17, fontWeight:600, letterSpacing:-0.15 }}>{sub.icon} {sub.nome}</div>
               <div style={{ fontSize:11, color:CC.stone, fontWeight:500 }}>{sub.services.length}</div>
