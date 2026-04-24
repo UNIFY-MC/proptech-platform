@@ -6074,7 +6074,7 @@ function ServiceListScreenV2({ categoryId, categoriesCache, authUser, onBack, on
         const id = visible[0].target.dataset.subId
         if(id) setActiveSub(id)
       }
-    }, { rootMargin:'-140px 0px -45% 0px', threshold:0 })
+    }, { rootMargin:'-120px 0px -45% 0px', threshold:0 })
     Object.entries(sectionRefs.current).forEach(([, el]) => {
       if(el) obs.observe(el)
     })
@@ -6159,23 +6159,28 @@ function ServiceListScreenV2({ categoryId, categoriesCache, authUser, onBack, on
       </div>
 
       {!search && (
-        <div ref={pillBarRef} className="cc-no-scrollbar" style={{
-          display:"flex", gap:6, overflowX:"auto", overflowY:"hidden",
-          padding:"14px 18px 6px", scrollSnapType:"x proximity",
-          scrollBehavior:"smooth", WebkitOverflowScrolling:"touch",
-          maskImage:"linear-gradient(to right, black calc(100% - 24px), transparent)",
-          WebkitMaskImage:"linear-gradient(to right, black calc(100% - 24px), transparent)",
-        }}
-          onWheel={e => {
-            // Converter scroll vertical do rato em horizontal (desktop sem touchpad horizontal)
-            if(e.deltaY !== 0 && e.deltaX === 0){
-              e.currentTarget.scrollLeft += e.deltaY
-            }
-          }}>
-          <CCSubPill subId="todos" active={activeSub==='todos'} onClick={()=>scrollToSub('todos')}>Todos</CCSubPill>
-          {category.subcategorias.map(sub => (
-            <CCSubPill key={sub.id} subId={sub.id} active={activeSub===sub.id} onClick={()=>scrollToSub(sub.id)}>{sub.icon} {sub.nome}</CCSubPill>
-          ))}
+        <div style={{
+          position:"sticky", top:62, zIndex:15,
+          background:CC.cream, borderBottom:`1px solid ${CC.line}`,
+        }}>
+          <div ref={pillBarRef} className="cc-no-scrollbar" style={{
+            display:"flex", gap:6, overflowX:"auto", overflowY:"hidden",
+            padding:"10px 18px 10px", scrollSnapType:"x proximity",
+            scrollBehavior:"smooth", WebkitOverflowScrolling:"touch",
+            maskImage:"linear-gradient(to right, black calc(100% - 24px), transparent)",
+            WebkitMaskImage:"linear-gradient(to right, black calc(100% - 24px), transparent)",
+          }}
+            onWheel={e => {
+              // Converter scroll vertical do rato em horizontal (desktop sem touchpad horizontal)
+              if(e.deltaY !== 0 && e.deltaX === 0){
+                e.currentTarget.scrollLeft += e.deltaY
+              }
+            }}>
+            <CCSubPill subId="todos" active={activeSub==='todos'} onClick={()=>scrollToSub('todos')}>Todos</CCSubPill>
+            {category.subcategorias.map(sub => (
+              <CCSubPill key={sub.id} subId={sub.id} active={activeSub===sub.id} onClick={()=>scrollToSub(sub.id)}>{sub.icon} {sub.nome}</CCSubPill>
+            ))}
+          </div>
         </div>
       )}
 
@@ -6211,7 +6216,7 @@ function ServiceListScreenV2({ categoryId, categoriesCache, authUser, onBack, on
         )}
 
         {filtered.map(sub => (
-          <div key={sub.id} ref={el => (sectionRefs.current[sub.id] = el)} data-sub-id={sub.id} style={{ marginTop:28, scrollMarginTop:140 }}>
+          <div key={sub.id} ref={el => (sectionRefs.current[sub.id] = el)} data-sub-id={sub.id} style={{ marginTop:28, scrollMarginTop:120 }}>
             <div style={{ display:"flex", alignItems:"baseline", justifyContent:"space-between", marginBottom:10 }}>
               <div className="serif" style={{ fontSize:17, fontWeight:600, letterSpacing:-0.15 }}>{sub.icon} {sub.nome}</div>
               <div style={{ fontSize:11, color:CC.stone, fontWeight:500 }}>{sub.services.length}</div>
