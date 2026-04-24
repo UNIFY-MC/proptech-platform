@@ -10355,16 +10355,18 @@ export default function App() {
   const [adminNiveis,   setAdminNiveis]  = useState({...NIVEIS})
   const [adminClientes, setAdminClientes]= useState([...CLIENTES_INIT])
 
-  // Carrega v5_manutencao.catalogo_servicos quando o admin faz login.
+  // Carrega public.servicos (177 rows) quando o admin faz login.
+  // Nota: v5_manutencao.catalogo_servicos só tem 8 rows (seed inicial do schema.sql).
+  // A unificação dos dois catálogos está prevista para a Fase 3.1.
   // Retry manual via botão no banner de erro.
   const fetchAdminSvcs = () => {
     if(role !== 'admin' || !adminAuth) return
     setAdminSvcsLoading(true)
     setAdminSvcsError(null)
-    sbGetV5('catalogo_servicos', '?select=*&ativo=eq.true&order=categoria.asc,nome.asc', authUser?.token)
+    sbGet('servicos', '?select=*&order=categoria_id.asc,ordem.asc', authUser?.token)
       .then(rows => {
         setAdminSvcsLoading(false)
-        if(Array.isArray(rows)) setAdminSvcs(rows.map(fromCatalogServico))
+        if(Array.isArray(rows)) setAdminSvcs(rows.map(fromDbServico))
         else setAdminSvcsError('Não foi possível carregar o catálogo. Verifica a ligação à base de dados.')
       })
       .catch(() => {
@@ -10377,11 +10379,11 @@ export default function App() {
     let active = true
     setAdminSvcsLoading(true)
     setAdminSvcsError(null)
-    sbGetV5('catalogo_servicos', '?select=*&ativo=eq.true&order=categoria.asc,nome.asc', authUser?.token)
+    sbGet('servicos', '?select=*&order=categoria_id.asc,ordem.asc', authUser?.token)
       .then(rows => {
         if(!active) return
         setAdminSvcsLoading(false)
-        if(Array.isArray(rows)) setAdminSvcs(rows.map(fromCatalogServico))
+        if(Array.isArray(rows)) setAdminSvcs(rows.map(fromDbServico))
         else setAdminSvcsError('Não foi possível carregar o catálogo. Verifica a ligação à base de dados.')
       })
       .catch(() => {
