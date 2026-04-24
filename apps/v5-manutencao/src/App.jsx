@@ -1495,6 +1495,7 @@ function CCShell({ children }){
     <div className="cc-root" style={{
       maxWidth:440, margin:"0 auto", minHeight:"100vh", background:CC.cream,
       color:CC.ink, display:"flex", flexDirection:"column", position:"relative",
+      animation:"screenIn 0.22s ease-out",
     }}>
       {children}
     </div>
@@ -7235,6 +7236,7 @@ function ConfirmadoScreenV2({ ordem, servicoNome, categoriaNome, onRestart }){
           background:CC.emeraldSoft, color:CC.emerald,
           display:"grid", placeItems:"center",
           boxShadow:`0 12px 40px -12px ${CC.emerald}`,
+          animation:"checkIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)",
         }}><Check size={36} strokeWidth={3}/></div>
 
         <div className="serif" style={{ fontSize:28, fontWeight:500, marginTop:24, letterSpacing:-0.4 }}>
@@ -8312,6 +8314,8 @@ export default function App() {
         @keyframes popIn { from { transform: scale(0.5); opacity: 0; } to { transform: scale(1); opacity: 1; } }
         @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
         .sk { background: linear-gradient(90deg, #ECE9E2 0%, #F5F2EC 50%, #ECE9E2 100%); background-size: 200% 100%; animation: shimmer 1.4s infinite; border-radius: 8px; }
+        @keyframes screenIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes checkIn { 0% { transform: scale(0.3); opacity: 0; } 60% { transform: scale(1.08); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
       `}</style>
 
       {/* ── ADMIN DESKTOP (full-width, fora do container de 430px) ── */}
