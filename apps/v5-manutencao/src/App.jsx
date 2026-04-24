@@ -3357,13 +3357,15 @@ const CASA_CAT_LABELS = {
 /* CasaScreen — ecrã principal do módulo Casa.
    Fases seguintes (3.3-3.5) vão substituir os alerts placeholder
    por ecrãs reais de câmara, locais, docs, energia, ficha, etc. */
-function CasaScreen({ localizacoes, equipamentos, onNavigate }){
-  const loc = Array.isArray(localizacoes) ? localizacoes[0] : null
+function CasaScreen({ localizacoes, localizacao, equipamentos, authUser, onNavigate }){
+  const loc = localizacao || (Array.isArray(localizacoes) ? localizacoes[0] : null)
+  const nLocs = (localizacoes || []).length
   const eqs = Array.isArray(equipamentos)
     ? equipamentos.filter(e => !loc || e.localizacao_id === loc.id)
     : []
   const loading = localizacoes === null || equipamentos === null
   const [alertasMeteo, setAlertasMeteo] = useState([])
+  const [faturas, setFaturas] = useState(null)
   useEffect(() => {
     if(!loc?.concelho) return
     let active = true
@@ -3373,6 +3375,30 @@ function CasaScreen({ localizacoes, equipamentos, onNavigate }){
     })
     return () => { active = false }
   }, [loc?.concelho])
+
+  // Histórico de faturas com OCR para esta localização
+  useEffect(() => {
+    if(!loc?.id) { setFaturas([]); return }
+    let active = true
+    sbGetV5('documentos',
+      `?localizacao_id=eq.${loc.id}&tipo=eq.fatura&dados_ocr=not.is.null&order=created_at.desc&limit=24`,
+      authUser?.token).then(rows => {
+      if(active) setFaturas(rows || [])
+    })
+    return () => { active = false }
+  }, [loc?.id, authUser?.token])
+
+  // Sumário dos consumos a partir das faturas OCR
+  const consumoResumo = (() => {
+    if(!faturas || faturas.length === 0) return null
+    const valid = faturas.map(f => f.dados_ocr).filter(o => o && (o.consumo_kwh || o.custo_total_eur))
+    if(valid.length === 0) return null
+    const totalKwh = valid.reduce((s,o) => s + Number(o.consumo_kwh || 0), 0)
+    const totalEur = valid.reduce((s,o) => s + Number(o.custo_total_eur || 0), 0)
+    const mediaKwh = totalKwh / valid.length
+    const mediaEur = totalEur / valid.length
+    return { n: valid.length, totalKwh, totalEur, mediaKwh, mediaEur }
+  })()
 
   const scores = loc ? [
     ['AVAC',      loc.score_avac      ?? 0],
@@ -3400,7 +3426,12 @@ function CasaScreen({ localizacoes, equipamentos, onNavigate }){
     <div style={{ minHeight:'100vh', background:CASA.bg, paddingBottom:88 }}>
       {/* HERO */}
       <div style={{ background:CASA.green, padding:'18px 16px 22px' }}>
-        <div style={{ fontSize:10, color:CASA.greenLt, fontWeight:700, letterSpacing:1, marginBottom:10 }}>A MINHA CASA</div>
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10 }}>
+          <div style={{ fontSize:10, color:CASA.greenLt, fontWeight:700, letterSpacing:1 }}>A MINHA CASA</div>
+          <button onClick={()=>onNavigate?.('locais')} style={{ background:'rgba(255,255,255,0.14)', border:'none', borderRadius:999, padding:'4px 10px', fontSize:10, color:'#fff', cursor:'pointer', fontWeight:600, display:'flex', alignItems:'center', gap:6 }}>
+            🏡 {loc?.nome || '—'}{nLocs > 1 && ` (${nLocs})`} ⌄
+          </button>
+        </div>
         {loading ? (
           <div className="sk" style={{ height:110, background:'rgba(255,255,255,0.12)' }}/>
         ) : !loc ? (
@@ -3472,6 +3503,66 @@ function CasaScreen({ localizacoes, equipamentos, onNavigate }){
           </div>
         )
       })}
+
+      {/* CONSUMOS HISTÓRICOS DE ELETRICIDADE */}
+      {loc && (
+        <div style={{ padding:'12px 12px 0' }}>
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8 }}>
+            <div style={{ fontSize:14, fontWeight:700 }}>Consumos de eletricidade</div>
+            <button onClick={()=>onNavigate?.('energia')} style={{ background:'none', border:'none', padding:0, fontSize:11, color:CASA.greenLt, cursor:'pointer', fontWeight:600 }}>Abrir →</button>
+          </div>
+          {faturas === null && <div className="sk" style={{ height:70 }}/>}
+          {faturas && faturas.length === 0 && (
+            <div style={{ background:'#fff', border:`1px dashed ${CASA.border}`, borderRadius:11, padding:'14px 16px', display:'flex', gap:10, alignItems:'flex-start' }}>
+              <div style={{ fontSize:24, flexShrink:0 }}>⚡</div>
+              <div style={{ flex:1 }}>
+                <div style={{ fontSize:12.5, fontWeight:700, color:'#111', marginBottom:3 }}>Adicione faturas para ver um resumo</div>
+                <div style={{ fontSize:11, color:'#555', lineHeight:1.5, marginBottom:8 }}>Carregue 3-6 faturas recentes — IA lê fornecedor, consumo e tarifa para montar o seu histórico.</div>
+                <button onClick={()=>onNavigate?.('energia')} style={{ background:CASA.greenLt, color:'#fff', border:'none', borderRadius:8, padding:'6px 12px', fontSize:11.5, fontWeight:700, cursor:'pointer' }}>+ Adicionar fatura</button>
+              </div>
+            </div>
+          )}
+          {faturas && faturas.length > 0 && consumoResumo && (
+            <div style={{ background:'#fff', border:`1px solid ${CASA.border}`, borderRadius:11, padding:'12px 14px' }}>
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:0, marginBottom:10 }}>
+                <div>
+                  <div style={{ fontSize:9, color:'#999', textTransform:'uppercase', letterSpacing:0.3 }}>Média / mês</div>
+                  <div style={{ fontSize:14, fontWeight:700, color:'#111', marginTop:2 }}>{consumoResumo.mediaKwh.toFixed(0)} kWh</div>
+                  <div style={{ fontSize:11, color:CASA.green, fontWeight:700 }}>€{consumoResumo.mediaEur.toFixed(2).replace('.',',')}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize:9, color:'#999', textTransform:'uppercase', letterSpacing:0.3 }}>Total</div>
+                  <div style={{ fontSize:14, fontWeight:700, color:'#111', marginTop:2 }}>{consumoResumo.totalKwh.toFixed(0)} kWh</div>
+                  <div style={{ fontSize:11, color:'#555' }}>€{consumoResumo.totalEur.toFixed(2).replace('.',',')}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize:9, color:'#999', textTransform:'uppercase', letterSpacing:0.3 }}>Faturas</div>
+                  <div style={{ fontSize:14, fontWeight:700, color:'#111', marginTop:2 }}>{consumoResumo.n}</div>
+                  <div style={{ fontSize:11, color:'#555' }}>OCR lidas</div>
+                </div>
+              </div>
+              {/* Sparkline simples: barras das últimas faturas */}
+              <div style={{ display:'flex', alignItems:'flex-end', gap:3, height:36, padding:'0 2px' }}>
+                {(() => {
+                  const withKwh = faturas.map(f => Number(f.dados_ocr?.consumo_kwh || 0)).filter(v => v > 0).slice(0,12).reverse()
+                  const max = Math.max(...withKwh, 1)
+                  return withKwh.map((v,i) => (
+                    <div key={i} title={`${v} kWh`} style={{
+                      flex:1, height: `${Math.max(6, (v/max)*36)}px`,
+                      background: v > max*0.8 ? '#EF4444' : v > max*0.6 ? '#F59E0B' : CASA.greenLt,
+                      borderRadius:2,
+                    }}/>
+                  ))
+                })()}
+              </div>
+              <div style={{ display:'flex', gap:6, marginTop:10 }}>
+                <button onClick={()=>onNavigate?.('energia')} style={{ flex:1, padding:'7px', borderRadius:8, border:`1px solid ${CASA.greenLt}`, background:CASA.greenXl, color:CASA.green, fontSize:11, fontWeight:700, cursor:'pointer' }}>+ Fatura histórica</button>
+                <button onClick={()=>onNavigate?.('energia')} style={{ flex:1, padding:'7px', borderRadius:8, border:`1px solid ${CASA.border}`, background:'#fff', color:'#555', fontSize:11, fontWeight:600, cursor:'pointer' }}>Ver detalhe</button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* EQUIPAMENTOS */}
       <div style={{ padding:'12px 12px 0' }}>
@@ -4628,6 +4719,166 @@ Responde APENAS com um objecto JSON neste formato, sem markdown nem texto extra:
 }
 
 /* AIExpertScreen — chat com contexto completo da casa (Fase 3.5) */
+/* CasaLocais — CRUD das localizações + selecção da activa (Fase 3.5) */
+function CasaLocais({ localizacoes, activeLocId, authUser, onBack, onRefresh, onPickActive }){
+  const [editing, setEditing] = useState(null)   // 'new' | row | null
+  const [form, setForm] = useState({ nome:'', tipo:'habitacao', morada:'', localidade:'', concelho:'', codigo_postal:'', ano_construcao:'', tipologia:'', area_m2:'' })
+  const [saving, setSaving] = useState(false)
+
+  const openNew = () => { setForm({ nome:'', tipo:'habitacao', morada:'', localidade:'', concelho:'', codigo_postal:'', ano_construcao:'', tipologia:'', area_m2:'' }); setEditing('new') }
+  const openEdit = (l) => {
+    setForm({
+      nome:           l.nome || '',
+      tipo:           l.tipo || 'habitacao',
+      morada:         l.morada || '',
+      localidade:     l.localidade || '',
+      concelho:       l.concelho || '',
+      codigo_postal:  l.codigo_postal || '',
+      ano_construcao: l.ano_construcao || '',
+      tipologia:      l.tipologia || '',
+      area_m2:        l.area_m2 || '',
+    })
+    setEditing(l)
+  }
+
+  const save = async () => {
+    if(!form.nome.trim()){ alert('Nome é obrigatório.'); return }
+    setSaving(true)
+    const payload = {
+      nome: form.nome.trim(),
+      tipo: form.tipo || 'habitacao',
+      morada: form.morada.trim() || null,
+      localidade: form.localidade.trim() || null,
+      concelho: form.concelho.trim() || null,
+      codigo_postal: form.codigo_postal.trim() || null,
+      ano_construcao: form.ano_construcao === '' ? null : Number(form.ano_construcao),
+      tipologia: form.tipologia.trim() || null,
+      area_m2: form.area_m2 === '' ? null : Number(form.area_m2),
+    }
+    let result
+    if(editing === 'new'){
+      result = await sbSaveV5('localizacoes', payload, authUser?.token)
+    } else {
+      result = await sbUpdateV5('localizacoes', `?id=eq.${editing.id}`, payload, authUser?.token)
+    }
+    setSaving(false)
+    if(!result){ alert('Erro ao guardar.'); return }
+    setEditing(null)
+    onRefresh?.()
+  }
+
+  const remove = async (l) => {
+    if(!window.confirm(`Eliminar "${l.nome}"? Os equipamentos associados também serão apagados.`)) return
+    const ok = await sbDeleteV5('localizacoes', `?id=eq.${l.id}`, authUser?.token)
+    if(!ok){ alert('Erro ao eliminar.'); return }
+    onRefresh?.()
+  }
+
+  const TIPOS = [
+    { id:'habitacao',         l:'Habitação',         ic:'🏠' },
+    { id:'segunda_habitacao', l:'Segunda habitação', ic:'🏡' },
+    { id:'condominio',        l:'Condomínio',        ic:'🏢' },
+    { id:'empresa',           l:'Empresa',           ic:'🏭' },
+  ]
+  const TIPO_META = TIPOS.reduce((a,t)=>{ a[t.id]=t; return a }, {})
+
+  return (
+    <div style={{ minHeight:'100vh', background:CASA.bg, paddingBottom:88 }}>
+      <div style={{ background:CASA.green, padding:'11px 14px', color:'#fff', display:'flex', alignItems:'center', gap:10 }}>
+        <button onClick={onBack} style={{ background:'none', border:'none', color:'#fff', fontSize:20, cursor:'pointer' }}>←</button>
+        <div style={{ flex:1, fontSize:14, fontWeight:700 }}>Os meus locais</div>
+        <button onClick={openNew} style={{ background:'rgba(255,255,255,0.2)', border:'none', borderRadius:8, padding:'5px 11px', fontSize:11, color:'#fff', cursor:'pointer', fontWeight:600 }}>+ Novo</button>
+      </div>
+
+      <div style={{ padding:14 }}>
+        {localizacoes === null && <div className="sk" style={{ height:80 }}/>}
+        {localizacoes && localizacoes.length === 0 && (
+          <div style={{ padding:'32px 20px', textAlign:'center', background:'#fff', borderRadius:11, border:`1px dashed ${CASA.border}` }}>
+            <div style={{ fontSize:32, marginBottom:10 }}>🏡</div>
+            <div style={{ fontSize:14, fontWeight:700, color:'#111', marginBottom:4 }}>Sem locais registados</div>
+            <div style={{ fontSize:12, color:'#555', lineHeight:1.5, maxWidth:280, margin:'0 auto 14px' }}>Adicione a sua casa principal, segunda habitação, escritório ou condomínio.</div>
+            <button onClick={openNew} style={{ background:CASA.greenLt, color:'#fff', border:'none', borderRadius:10, padding:'9px 18px', fontSize:13, fontWeight:700, cursor:'pointer' }}>+ Adicionar local</button>
+          </div>
+        )}
+        {localizacoes && localizacoes.map(l => {
+          const tm = TIPO_META[l.tipo] || TIPO_META.habitacao
+          const active = l.id === activeLocId
+          return (
+            <div key={l.id} style={{ background:'#fff', border:`1.5px solid ${active?CASA.greenLt:CASA.border}`, borderRadius:11, padding:'12px 14px', marginBottom:8 }}>
+              <div style={{ display:'flex', gap:12, alignItems:'flex-start' }}>
+                <div style={{ width:40, height:40, borderRadius:10, background: active ? CASA.greenXl : '#f1f5f9', display:'grid', placeItems:'center', fontSize:20, flexShrink:0 }}>{tm.ic}</div>
+                <div style={{ flex:1, minWidth:0 }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:2 }}>
+                    <span style={{ fontSize:13.5, fontWeight:700, color:'#111' }}>{l.nome}</span>
+                    {active && <span style={{ fontSize:9, fontWeight:700, color:CASA.green, background:CASA.greenXl, padding:'2px 6px', borderRadius:4, textTransform:'uppercase', letterSpacing:0.4 }}>Activa</span>}
+                  </div>
+                  <div style={{ fontSize:11, color:'#999', marginBottom:2 }}>{tm.l}{l.tipologia ? ` · ${l.tipologia}` : ''}{l.area_m2 ? ` · ${l.area_m2} m²` : ''}</div>
+                  {(l.morada || l.localidade) && <div style={{ fontSize:12, color:'#555', lineHeight:1.4 }}>{l.morada}{l.localidade ? `, ${l.localidade}` : ''}</div>}
+                  <div style={{ fontSize:11, color:'#999', marginTop:4 }}>Home Score: <b style={{ color:'#111' }}>{l.home_score ?? '—'}</b>/100</div>
+                </div>
+              </div>
+              <div style={{ display:'flex', gap:6, marginTop:10 }}>
+                {!active && <button onClick={()=>onPickActive?.(l.id)} style={{ flex:1, padding:'7px', borderRadius:8, border:`1px solid ${CASA.greenLt}`, background:'#fff', color:CASA.green, fontSize:11, fontWeight:700, cursor:'pointer' }}>✓ Activar</button>}
+                <button onClick={()=>openEdit(l)} style={{ flex:1, padding:'7px', borderRadius:8, border:`1px solid ${CASA.border}`, background:'#fff', color:'#555', fontSize:11, fontWeight:600, cursor:'pointer' }}>✏️ Editar</button>
+                <button onClick={()=>remove(l)} style={{ padding:'7px 12px', borderRadius:8, border:'1px solid #fecaca', background:'#fff', color:'#ef4444', fontSize:11, fontWeight:600, cursor:'pointer' }}>🗑</button>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      {editing && (
+        <div onClick={()=>!saving && setEditing(null)} style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.55)', zIndex:100, display:'flex', alignItems:'flex-end', justifyContent:'center' }}>
+          <div onClick={e=>e.stopPropagation()} style={{ background:'#fff', width:'100%', maxWidth:430, borderRadius:'18px 18px 0 0', padding:'18px 18px 22px', maxHeight:'88vh', overflowY:'auto', animation:'popIn 0.18s ease-out' }}>
+            <div style={{ width:38, height:4, borderRadius:2, background:'#e5e7eb', margin:'0 auto 14px' }}/>
+            <h2 style={{ margin:'0 0 14px', fontSize:17, fontWeight:700, color:'#0A1620' }}>{editing==='new' ? 'Novo local' : 'Editar local'}</h2>
+
+            <div style={{ fontSize:10, color:'#999', textTransform:'uppercase', letterSpacing:0.5, marginBottom:6 }}>Tipo</div>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:6, marginBottom:14 }}>
+              {TIPOS.map(t => {
+                const on = form.tipo === t.id
+                return (
+                  <button key={t.id} onClick={()=>setForm(p=>({...p, tipo:t.id}))} style={{ padding:'9px 10px', borderRadius:9, border:`1.5px solid ${on?CASA.greenLt:CASA.border}`, background: on?CASA.greenXl:'#fff', fontSize:11.5, fontWeight:600, cursor:'pointer', textAlign:'left', display:'flex', alignItems:'center', gap:8 }}>
+                    <span style={{ fontSize:15 }}>{t.ic}</span> {t.l}
+                  </button>
+                )
+              })}
+            </div>
+
+            <LocLine label="Nome"           value={form.nome}           onChange={v=>setForm(p=>({...p, nome:v}))}           placeholder="Ex: Casa Principal"/>
+            <LocLine label="Morada"         value={form.morada}         onChange={v=>setForm(p=>({...p, morada:v}))}/>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 2fr', gap:10 }}>
+              <LocLine label="CP"            value={form.codigo_postal}  onChange={v=>setForm(p=>({...p, codigo_postal:v}))}/>
+              <LocLine label="Localidade"    value={form.localidade}     onChange={v=>setForm(p=>({...p, localidade:v}))}/>
+            </div>
+            <LocLine label="Concelho (p/ alertas meteo IPMA)" value={form.concelho} onChange={v=>setForm(p=>({...p, concelho:v}))} placeholder="Ex: Coimbra"/>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:10 }}>
+              <LocLine label="Ano"           value={form.ano_construcao} onChange={v=>setForm(p=>({...p, ano_construcao:v}))} type="number"/>
+              <LocLine label="Tipologia"     value={form.tipologia}      onChange={v=>setForm(p=>({...p, tipologia:v}))}      placeholder="T2"/>
+              <LocLine label="Área (m²)"     value={form.area_m2}        onChange={v=>setForm(p=>({...p, area_m2:v}))}        type="number"/>
+            </div>
+
+            <div style={{ display:'flex', gap:8, marginTop:14 }}>
+              <button onClick={()=>setEditing(null)} disabled={saving} style={{ flex:1, padding:'11px 14px', borderRadius:10, border:`1px solid ${CASA.border}`, background:'#fff', color:'#555', fontWeight:600, fontSize:13, cursor:saving?'default':'pointer' }}>Cancelar</button>
+              <button onClick={save} disabled={saving} style={{ flex:2, padding:'11px 14px', borderRadius:10, border:'none', background:saving?CASA.border:CASA.greenLt, color:'#fff', fontWeight:700, fontSize:13, cursor:saving?'default':'pointer', opacity:saving?0.6:1 }}>{saving?'A guardar…':'Guardar'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function LocLine({ label, value, onChange, placeholder, type='text' }){
+  return (
+    <div style={{ marginBottom:10 }}>
+      <div style={{ fontSize:10, color:'#999', textTransform:'uppercase', letterSpacing:0.5, marginBottom:4 }}>{label}</div>
+      <input type={type} value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder}
+        style={{ width:'100%', boxSizing:'border-box', padding:'9px 12px', borderRadius:8, border:`1px solid ${CASA.border}`, fontSize:13, outline:'none', background:'#fff' }}/>
+    </div>
+  )
+}
+
 function AIExpertScreen({ localizacao, equipamentos, authUser, onBack, initialContext }){
   const [msgs, setMsgs] = useState([])
   const [input, setInput] = useState('')
@@ -10396,21 +10647,34 @@ export default function App() {
   const [casaLocalizacoes, setCasaLocalizacoes] = useState(null)
   const [casaEquipamentos, setCasaEquipamentos] = useState(null)
   const [casaActiveEq,     setCasaActiveEq]     = useState(null)
-  const [casaSub,          setCasaSub]          = useState(null) // 'docs' | 'energia' | 'camera' | 'aiexpert'
+  const [casaSub,          setCasaSub]          = useState(null) // 'docs' | 'energia' | 'camera' | 'aiexpert' | 'locais'
   const [casaSubPayload,   setCasaSubPayload]   = useState(null) // contexto inicial p/ sub-ecrã (ex: alerta IPMA)
+  const [casaActiveLocId,  setCasaActiveLocId]  = useState(() => {
+    try { return localStorage.getItem('v5_casa_active_loc') || null } catch { return null }
+  })
   useEffect(() => {
+    try {
+      if(casaActiveLocId) localStorage.setItem('v5_casa_active_loc', casaActiveLocId)
+      else localStorage.removeItem('v5_casa_active_loc')
+    } catch {}
+  }, [casaActiveLocId])
+
+  const refetchCasa = async () => {
     if(!authUser) return
-    let active = true
-    Promise.all([
+    const [locs, eqs] = await Promise.all([
       sbGetV5('localizacoes', '?select=*&ativo=eq.true&order=created_at.asc', authUser?.token),
       sbGetV5('equipamentos', '?select=*&estado=eq.ativo&order=categoria.asc', authUser?.token),
-    ]).then(([locs, eqs]) => {
-      if(!active) return
-      setCasaLocalizacoes(locs || [])
-      setCasaEquipamentos(eqs || [])
-    })
-    return () => { active = false }
-  }, [authUser?.token])
+    ])
+    setCasaLocalizacoes(locs || [])
+    setCasaEquipamentos(eqs || [])
+    // Auto-selecciona primeira se a activa não existe
+    if((locs || []).length > 0 && !(locs || []).some(l => l.id === casaActiveLocId)){
+      setCasaActiveLocId(locs[0].id)
+    }
+  }
+  useEffect(() => { refetchCasa() /* eslint-disable-next-line */ }, [authUser?.token])
+
+  const casaActiveLoc = (casaLocalizacoes || []).find(l => l.id === casaActiveLocId) || casaActiveLoc || null
   // Meta da categoria activa, combinada a partir de BD (categoriesCache) + design tokens (CATEGORY_META).
   // null enquanto categoriesCache carrega ou categoria não resolvida.
   const catCategoryMeta = (() => {
@@ -10864,14 +11128,16 @@ export default function App() {
               {tab==='inicio'   && <CHome    ordens={ordens} onSvc={s=>{setSvcNova(s);setEcra('nova')}} onOrdem={o=>{setSel(o);setEcra('ordem')}} authUser={authUser} onCategoryV2={(id)=>{ setCatCategoryId(id); setCatScreen('list') }} onDrawerOpen={()=>setClienteDrawerOpen(true)} categoriesCache={categoriesCache}/>}
               {tab==='casa' && !casaActiveEq && !casaSub && <CasaScreen
                 localizacoes={casaLocalizacoes}
+                localizacao={casaActiveLoc}
                 equipamentos={casaEquipamentos}
+                authUser={authUser}
                 onNavigate={(target, payload)=>{
                   if(target==='ficha' && payload){ setCasaActiveEq(payload); return }
                   if(target==='docs')    { setCasaSub('docs');    setCasaSubPayload(null); return }
                   if(target==='energia') { setCasaSub('energia'); setCasaSubPayload(null); return }
                   if(target==='camera')  { setCasaSub('camera');  setCasaSubPayload(null); return }
                   if(target==='aiexpert'){ setCasaSub('aiexpert'); setCasaSubPayload(payload || null); return }
-                  if(target==='locais')  { alert('Gestão de múltiplas localizações numa fase seguinte.'); return }
+                  if(target==='locais')  { setCasaSub('locais');  setCasaSubPayload(null); return }
                 }}
               />}
               {tab==='casa' && casaActiveEq && <EquipamentoFicha
@@ -10889,18 +11155,18 @@ export default function App() {
                 onAskAI={(payload)=>{ setCasaActiveEq(null); setCasaSub('aiexpert'); setCasaSubPayload(payload) }}
               />}
               {tab==='casa' && casaSub==='docs' && <DocsScreen
-                localizacao={(casaLocalizacoes || [])[0]}
+                localizacao={casaActiveLoc}
                 authUser={authUser}
                 onBack={()=>setCasaSub(null)}
               />}
               {tab==='casa' && casaSub==='energia' && <EnergiaScreen
-                localizacao={(casaLocalizacoes || [])[0]}
+                localizacao={casaActiveLoc}
                 equipamentos={casaEquipamentos}
                 authUser={authUser}
                 onBack={()=>setCasaSub(null)}
               />}
               {tab==='casa' && casaSub==='camera' && <CameraScreen
-                localizacao={(casaLocalizacoes || [])[0]}
+                localizacao={casaActiveLoc}
                 authUser={authUser}
                 onBack={()=>setCasaSub(null)}
                 onCreated={(eq)=>{
@@ -10910,11 +11176,19 @@ export default function App() {
                 }}
               />}
               {tab==='casa' && casaSub==='aiexpert' && <AIExpertScreen
-                localizacao={(casaLocalizacoes || [])[0]}
+                localizacao={casaActiveLoc}
                 equipamentos={casaEquipamentos}
                 authUser={authUser}
                 initialContext={casaSubPayload}
                 onBack={()=>{ setCasaSub(null); setCasaSubPayload(null) }}
+              />}
+              {tab==='casa' && casaSub==='locais' && <CasaLocais
+                localizacoes={casaLocalizacoes}
+                activeLocId={casaActiveLocId}
+                authUser={authUser}
+                onBack={()=>setCasaSub(null)}
+                onRefresh={refetchCasa}
+                onPickActive={(id)=>setCasaActiveLocId(id)}
               />}
               {tab==='pedidos'  && <CPedidos  ordens={ordens} onOrdem={o=>{setSel(o);setEcra('ordem')}} authUser={authUser}/>}
               {tab==='perfil'   && ecra!=='moradas' && ecra!=='wishlist' && (
