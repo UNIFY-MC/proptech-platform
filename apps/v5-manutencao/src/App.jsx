@@ -6059,6 +6059,45 @@ function ServiceListScreenV2({ categoryId, categoriesCache, authUser, onBack, on
     return () => { active = false }
   }, [categoryId, authUser?.token, categoriesCache])
 
+  // Scroll-spy — IntersectionObserver detecta qual subcategoria está visível
+  // e actualiza a pill activa. Rootmargin negativo no topo compensa o
+  // scrollMarginTop das secções (140). No fundo ignoramos os últimos 45%
+  // para que a primeira secção com topo visível ganhe prioridade.
+  useEffect(() => {
+    if(!category || search) return
+    const obs = new IntersectionObserver(entries => {
+      if(suppressSpyRef.current) return
+      const visible = entries
+        .filter(e => e.isIntersecting)
+        .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)
+      if(visible.length > 0){
+        const id = visible[0].target.dataset.subId
+        if(id) setActiveSub(id)
+      }
+    }, { rootMargin:'-140px 0px -45% 0px', threshold:0 })
+    Object.entries(sectionRefs.current).forEach(([, el]) => {
+      if(el) obs.observe(el)
+    })
+    const onScroll = () => {
+      if(suppressSpyRef.current) return
+      if(window.scrollY < 80) setActiveSub('todos')
+    }
+    window.addEventListener('scroll', onScroll, { passive:true })
+    return () => { obs.disconnect(); window.removeEventListener('scroll', onScroll) }
+  }, [category, search])
+
+  // Auto-scroll da pill bar para centrar a pill activa
+  useEffect(() => {
+    const bar = pillBarRef.current
+    if(!bar) return
+    const pill = bar.querySelector(`[data-sub-id="${activeSub}"]`)
+    if(!pill) return
+    const barRect = bar.getBoundingClientRect()
+    const pillRect = pill.getBoundingClientRect()
+    const offset = (pillRect.left + pillRect.width/2) - (barRect.left + barRect.width/2)
+    if(Math.abs(offset) > 4) bar.scrollBy({ left:offset, behavior:'smooth' })
+  }, [activeSub])
+
   if(loading || categoriesCache === null) return (
     <CCShell>
       <CCTopBar onBack={onBack} title="A carregar..." />
@@ -6093,46 +6132,6 @@ function ServiceListScreenV2({ categoryId, categoriesCache, authUser, onBack, on
       sectionRefs.current[id]?.scrollIntoView({ behavior:'smooth', block:'start' })
     }
   }
-
-  // Scroll-spy — IntersectionObserver detecta qual subcategoria está visível
-  // e actualiza a pill activa. Rootmargin negativo no topo compensa o
-  // scrollMarginTop das secções (140). No fundo ignoramos os últimos 40%
-  // para que a primeira secção com topo visível ganhe prioridade.
-  useEffect(() => {
-    if(search) return // em modo pesquisa, scroll-spy desliga
-    const obs = new IntersectionObserver(entries => {
-      if(suppressSpyRef.current) return
-      const visible = entries
-        .filter(e => e.isIntersecting)
-        .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)
-      if(visible.length > 0){
-        const id = visible[0].target.dataset.subId
-        if(id) setActiveSub(id)
-      }
-    }, { rootMargin:'-140px 0px -45% 0px', threshold:0 })
-    Object.entries(sectionRefs.current).forEach(([id, el]) => {
-      if(el) obs.observe(el)
-    })
-    // Também ouvimos o scroll para voltar ao "Todos" no topo da página
-    const onScroll = () => {
-      if(suppressSpyRef.current) return
-      if(window.scrollY < 80) setActiveSub('todos')
-    }
-    window.addEventListener('scroll', onScroll, { passive:true })
-    return () => { obs.disconnect(); window.removeEventListener('scroll', onScroll) }
-  }, [category, search])
-
-  // Auto-scroll da pill bar para centrar a pill activa
-  useEffect(() => {
-    const bar = pillBarRef.current
-    if(!bar) return
-    const pill = bar.querySelector(`[data-sub-id="${activeSub}"]`)
-    if(!pill) return
-    const barRect = bar.getBoundingClientRect()
-    const pillRect = pill.getBoundingClientRect()
-    const offset = (pillRect.left + pillRect.width/2) - (barRect.left + barRect.width/2)
-    if(Math.abs(offset) > 4) bar.scrollBy({ left:offset, behavior:'smooth' })
-  }, [activeSub])
 
   const totalServicos = category.subcategorias.reduce((n,s)=>n+s.services.length, 0)
 
