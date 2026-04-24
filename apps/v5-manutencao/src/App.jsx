@@ -2433,16 +2433,96 @@ function RoleBar({ role, onChange }) {
   )
 }
 
-function BNav({ tab, set }) {
+function BNav({ tab, set, onFabClick }) {
+  const tabsL = [{id:'inicio',ic:'🏠',l:'Início'},{id:'explorar',ic:'🔍',l:'Explorar'}]
+  const tabsR = [{id:'pedidos',ic:'📋',l:'Pedidos'},{id:'perfil',ic:'👤',l:'Perfil'}]
+  const renderTab = t => (
+    <button key={t.id} onClick={() => set(t.id)} style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', padding:'8px 0 6px', background:'none', border:'none', cursor:'pointer', gap:2 }}>
+      <span style={{ fontSize:20 }}>{t.ic}</span>
+      <span style={{ fontSize:10, fontWeight:700, color: tab===t.id ? C.g : '#94a3b8' }}>{t.l}</span>
+      {tab===t.id && <div style={{ width:16, height:2, borderRadius:2, background:C.g }}/>}
+    </button>
+  )
   return (
     <div style={{ position:'fixed', bottom:0, left:'50%', transform:'translateX(-50%)', width:'100%', maxWidth:430, background:C.white, borderTop:`1px solid ${C.border}`, display:'flex', zIndex:50 }}>
-      {[{id:'inicio',ic:'🏠',l:'Início'},{id:'explorar',ic:'🔍',l:'Explorar'},{id:'pedidos',ic:'📋',l:'Pedidos'},{id:'perfil',ic:'👤',l:'Perfil'}].map(t => (
-        <button key={t.id} onClick={() => set(t.id)} style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', padding:'8px 0 6px', background:'none', border:'none', cursor:'pointer', gap:2 }}>
-          <span style={{ fontSize:20 }}>{t.ic}</span>
-          <span style={{ fontSize:10, fontWeight:700, color: tab===t.id ? C.g : '#94a3b8' }}>{t.l}</span>
-          {tab===t.id && <div style={{ width:16, height:2, borderRadius:2, background:C.g }}/>}
+      {tabsL.map(renderTab)}
+      {/* FAB central — assistente de pedido (Fase 2e) */}
+      <div style={{ flex:1, display:'flex', justifyContent:'center', alignItems:'flex-start', position:'relative' }}>
+        <button onClick={onFabClick} aria-label="Novo pedido" style={{
+          position:'absolute', top:-22,
+          width:56, height:56, borderRadius:'50%',
+          background:`linear-gradient(135deg,${C.g},#16a34a)`,
+          border:'3px solid #fff', cursor:'pointer',
+          display:'grid', placeItems:'center',
+          boxShadow:'0 8px 24px -6px rgba(22,163,74,0.55)',
+          color:'#fff',
+        }}>
+          <Sparkles size={24} strokeWidth={2.2}/>
         </button>
-      ))}
+      </div>
+      {tabsR.map(renderTab)}
+    </div>
+  )
+}
+
+/* Picker modal do FAB central — 8 categorias em grid + descrição livre.
+   Click numa categoria abre ServiceListScreenV2 dessa categoria.
+   "Descrever livremente" leva ao PersonalizadoLandingV2 de Manutenção
+   (catch-all mais abrangente) com a descrição pré-preenchida. */
+function FabPickerModal({ onClose, onPickCategory, onPickPersonalizado }) {
+  const [description, setDescription] = useState('')
+  return (
+    <div onClick={onClose} style={{
+      position:'fixed', inset:0, background:'rgba(10,22,32,0.55)',
+      zIndex:80, display:'flex', alignItems:'flex-end', justifyContent:'center',
+    }}>
+      <div onClick={e=>e.stopPropagation()} style={{
+        background:'#fff', width:'100%', maxWidth:430,
+        borderRadius:'18px 18px 0 0', padding:'18px 18px 22px',
+        maxHeight:'86vh', overflowY:'auto',
+        animation:'popIn 0.18s ease-out',
+      }}>
+        <div style={{ width:38, height:4, borderRadius:2, background:'#e5e7eb', margin:'0 auto 14px' }}/>
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:4 }}>
+          <h2 style={{ margin:0, fontSize:17, fontWeight:700, color:'#0A1620' }}>Como podemos ajudar?</h2>
+          <button onClick={onClose} aria-label="Fechar" style={{ background:'none', border:'none', cursor:'pointer', padding:6, color:'#6B7685' }}><X size={18}/></button>
+        </div>
+        <div style={{ fontSize:12, color:'#6B7685', marginBottom:14 }}>Escolha uma categoria ou descreva o serviço que precisa.</div>
+
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:8, marginBottom:16 }}>
+          {CATS.map(c => (
+            <button key={c.id} onClick={()=>{ onPickCategory(c.id); onClose() }} style={{
+              display:'flex', flexDirection:'column', alignItems:'center', gap:6,
+              background:'#fff', border:`1.5px solid #ECE9E2`, borderRadius:12,
+              padding:'12px 4px', cursor:'pointer',
+            }}>
+              <span style={{ fontSize:22 }}>{c.ic}</span>
+              <span style={{ fontSize:10, fontWeight:700, color:'#0A1620', textAlign:'center', lineHeight:1.2 }}>{c.l}</span>
+            </button>
+          ))}
+        </div>
+
+        <div style={{ fontSize:10, fontWeight:700, color:'#6B7685', textTransform:'uppercase', letterSpacing:0.6, marginBottom:6 }}>Ou descreva livremente</div>
+        <textarea value={description} onChange={e=>setDescription(e.target.value)} rows={3} maxLength={500}
+          placeholder="Ex: torneira a pingar na cozinha, barulho quando abro. Tem uma semana."
+          style={{
+            width:'100%', background:'#FAFAF6', border:'1px solid #ECE9E2',
+            borderRadius:12, padding:12, fontSize:13.5, fontFamily:'inherit',
+            color:'#0A1620', resize:'vertical', outline:'none', marginBottom:10,
+          }}/>
+        <button
+          onClick={()=>{ onPickPersonalizado(description.trim()); onClose() }}
+          disabled={description.trim().length < 10}
+          style={{
+            width:'100%', padding:'12px 16px', borderRadius:12,
+            background: description.trim().length < 10 ? '#E5E7EB' : `linear-gradient(135deg,${C.g},#16a34a)`,
+            color: description.trim().length < 10 ? '#94a3b8' : '#fff',
+            border:'none', cursor: description.trim().length < 10 ? 'default' : 'pointer',
+            fontSize:14, fontWeight:700,
+          }}>
+          {description.trim().length < 10 ? 'Descreva pelo menos 10 caracteres' : 'Continuar com descrição livre →'}
+        </button>
+      </div>
     </div>
   )
 }
@@ -7811,6 +7891,9 @@ export default function App() {
   // Row real da ordem acabada de inserir (vinda do sbSave com numero_sequencial, valor, etc.)
   // Consumida pelo ConfirmadoScreenV2 para mostrar número + preço efectivos da BD.
   const [catLastOrdem, setCatLastOrdem] = useState(null)
+
+  // FAB central — abre picker de categorias + descrição livre (Fase 2e)
+  const [fabOpen, setFabOpen] = useState(false)
   // Meta da categoria activa, combinada a partir de BD (categoriesCache) + design tokens (CATEGORY_META).
   // null enquanto categoriesCache carrega ou categoria não resolvida.
   const catCategoryMeta = (() => {
@@ -8223,7 +8306,20 @@ export default function App() {
               {tab==='explorar' && <CExplorar onSvc={s=>{setSvcNova(s);setEcra('nova')}}/>}
               {tab==='pedidos'  && <CPedidos  ordens={ordens} onOrdem={o=>{setSel(o);setEcra('ordem')}} authUser={authUser}/>}
               {tab==='perfil'   && <CPerfil/>}
-              <BNav tab={tab} set={t=>{setTab(t);setEcra('home')}}/>
+              <BNav tab={tab} set={t=>{setTab(t);setEcra('home')}} onFabClick={()=>setFabOpen(true)}/>
+              {fabOpen && (
+                <FabPickerModal
+                  onClose={()=>setFabOpen(false)}
+                  onPickCategory={(id)=>{ setCatCategoryId(id); setCatScreen('list') }}
+                  onPickPersonalizado={(desc)=>{
+                    // Entra no form personalizado da Manutenção com a descrição pré-preenchida
+                    setCatCategoryId('manutencao')
+                    setCatIsPersonalizado(true)
+                    setCatState(p=>({...p, description:desc}))
+                    setCatScreen('form')
+                  }}
+                />
+              )}
             </>}
           </>}
         </>}
