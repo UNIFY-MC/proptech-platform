@@ -2860,8 +2860,26 @@ function CPedidos({ ordens, onOrdem, authUser }) {
           )
         })}
         {meus.length===0 && (
-          <div style={{ padding:'40px 20px', textAlign:'center', color:C.slate, fontSize:13 }}>
-            Ainda não tem pedidos.
+          <div style={{
+            padding:'40px 24px 32px', textAlign:'center',
+            background:C.white, borderRadius:14, border:`1px dashed ${C.border}`,
+            margin:'12px 4px',
+          }}>
+            <div style={{
+              width:64, height:64, margin:'0 auto 14px', borderRadius:999,
+              background:'rgba(22,163,74,0.08)', color:C.g,
+              display:'grid', placeItems:'center',
+              fontSize:32,
+            }}>📋</div>
+            <div style={{ fontSize:15, fontWeight:700, color:C.navy, marginBottom:6 }}>
+              Ainda não tem pedidos
+            </div>
+            <div style={{ fontSize:12.5, color:C.slate, lineHeight:1.5, maxWidth:260, margin:'0 auto 16px' }}>
+              Toque no botão central ✨ para criar um serviço ou escolha uma categoria no Início.
+            </div>
+            <div style={{ fontSize:10, color:C.g, fontWeight:700, letterSpacing:0.5, textTransform:'uppercase' }}>
+              Técnico fixo · 90 dias de garantia
+            </div>
           </div>
         )}
       </div>
@@ -6125,9 +6143,35 @@ function ServiceListScreenV2({ categoryId, categoriesCache, authUser, onBack, on
 
   if(loading || categoriesCache === null) return (
     <CCShell>
-      <CCTopBar onBack={onBack} title="A carregar..." />
-      <div style={{ padding:40, textAlign:"center", color:CC.stone, fontSize:13 }}>
-        {categoriesCache === null ? 'A carregar catálogo…' : 'A obter serviços…'}
+      <CCTopBar onBack={onBack} title="A carregar..."/>
+      {/* Skeleton: search + pills + personalizado hero + 3 cards */}
+      <div style={{ padding:"10px 18px 0" }}>
+        <div className="sk" style={{ height:40, borderRadius:12 }}/>
+      </div>
+      <div style={{ display:"flex", gap:6, padding:"10px 18px 10px", overflow:"hidden" }}>
+        {[44,96,76,104,82].map((w,i) => (
+          <div key={i} className="sk" style={{ width:w, height:30, borderRadius:999, flexShrink:0 }}/>
+        ))}
+      </div>
+      <div style={{ padding:"4px 18px 0" }}>
+        <div className="sk" style={{ height:120, borderRadius:20, marginTop:12 }}/>
+        <div style={{ marginTop:28 }}>
+          <div className="sk" style={{ width:180, height:18, marginBottom:14 }}/>
+          {[0,1,2].map(i => (
+            <div key={i} style={{
+              display:"flex", gap:12, alignItems:"center",
+              background:CC.paper, border:`1px solid ${CC.line}`, borderRadius:14,
+              padding:12, marginBottom:8,
+            }}>
+              <div className="sk" style={{ width:44, height:44, borderRadius:10, flexShrink:0 }}/>
+              <div style={{ flex:1, minWidth:0 }}>
+                <div className="sk" style={{ width:'72%', height:14, marginBottom:6 }}/>
+                <div className="sk" style={{ width:'45%', height:11 }}/>
+              </div>
+              <div className="sk" style={{ width:58, height:20, flexShrink:0 }}/>
+            </div>
+          ))}
+        </div>
       </div>
     </CCShell>
   )
@@ -8266,6 +8310,8 @@ export default function App() {
         @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes blink { 50% { opacity: 0; } }
         @keyframes popIn { from { transform: scale(0.5); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+        .sk { background: linear-gradient(90deg, #ECE9E2 0%, #F5F2EC 50%, #ECE9E2 100%); background-size: 200% 100%; animation: shimmer 1.4s infinite; border-radius: 8px; }
       `}</style>
 
       {/* ── ADMIN DESKTOP (full-width, fora do container de 430px) ── */}
