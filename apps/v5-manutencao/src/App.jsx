@@ -3094,21 +3094,30 @@ function CMoradas({ authUser, onBack }){
   useEffect(() => { refetch() /* eslint-disable-next-line */ }, [uid])
 
   const openNew = () => { setForm({ label:'', morada:'', cp:'', cidade:'', tipologia:'', notas_acesso:'', is_default:false }); setEditing('new') }
-  const openEdit = (m) => { setForm({ ...m }); setEditing(m) }
+  const openEdit = (m) => { setForm({
+    label:        m.label        || '',
+    morada:       m.morada       || '',
+    cp:           m.cp           || '',
+    cidade:       m.cidade       || '',
+    tipologia:    m.tipologia    || '',
+    notas_acesso: m.notas_acesso || '',
+    is_default:   !!m.is_default,
+  }); setEditing(m) }
 
   const save = async () => {
     if(!uid) return
-    if(!form.label.trim() || !form.morada.trim()){ alert('Label e morada são obrigatórios.'); return }
+    const clean = s => (s || '').trim()
+    if(!clean(form.label) || !clean(form.morada)){ alert('Label e morada são obrigatórios.'); return }
     setSaving(true)
     const payload = {
       cliente_id: uid,
-      label: form.label.trim(),
-      morada: form.morada.trim(),
-      cp: form.cp.trim() || null,
-      cidade: form.cidade.trim() || null,
-      tipologia: form.tipologia.trim() || null,
-      notas_acesso: form.notas_acesso.trim() || null,
-      is_default: !!form.is_default,
+      label:        clean(form.label),
+      morada:       clean(form.morada),
+      cp:           clean(form.cp)           || null,
+      cidade:       clean(form.cidade)       || null,
+      tipologia:    clean(form.tipologia)    || null,
+      notas_acesso: clean(form.notas_acesso) || null,
+      is_default:   !!form.is_default,
     }
     // Se marcar esta como default, primeiro tira o default das outras
     if(payload.is_default){
