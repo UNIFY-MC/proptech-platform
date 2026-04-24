@@ -3294,7 +3294,7 @@ async function sbGetOrCreateListaAberta(uid, token){
   return row || null
 }
 
-function CWishlist({ authUser, onBack, onCreateNew, onSubmitted }){
+function CWishlist({ authUser, onBack, onCreateNew, onSubmitted, setOrdens }){
   const [lista, setLista] = useState(null)     // { id, estado, ... }
   const [items, setItems] = useState(null)     // array | null while loading
   const [moradas, setMoradas] = useState(null)
@@ -3303,6 +3303,8 @@ function CWishlist({ authUser, onBack, onCreateNew, onSubmitted }){
   const [dataAgendada, setDataAgendada] = useState('')          // YYYY-MM-DD
   const [horaAgendada, setHoraAgendada] = useState('')          // HH:MM
   const [submitting, setSubmitting] = useState(false)
+  const [rates, setRates] = useState({})                         // { canalizacao: 44.91, ... }
+  const [horasPorCat, setHorasPorCat] = useState({})             // { canalizacao: 2, ... }
   const uid = authUser?.user?.id
 
   const refetch = async () => {
@@ -3335,6 +3337,22 @@ function CWishlist({ authUser, onBack, onCreateNew, onSubmitted }){
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [uid])
 
+  // Fetch rates por categoria (usa os rows personalizado-<prefix> da BD)
+  useEffect(() => {
+    let active = true
+    sbGet('servicos', '?id=like.personalizado-*&select=id,preco', authUser?.token).then(rows => {
+      if(!active) return
+      const map = {}
+      ;(rows || []).forEach(r => {
+        const prefix = String(r.id).replace('personalizado-','')
+        const entry = Object.entries(CATEGORY_PREFIX).find(([, v]) => v === prefix)
+        if(entry) map[entry[0]] = Number(r.preco) || 0
+      })
+      setRates(map)
+    })
+    return () => { active = false }
+  }, [authUser?.token])
+
   const remove = async (item) => {
     const ok = await sbDelete('lista_items', `?id=eq.${item.id}`, authUser?.token)
     if(!ok){ alert('Erro ao remover.'); return }
@@ -3353,47 +3371,80 @@ function CWishlist({ authUser, onBack, onCreateNew, onSubmitted }){
     return acc
   }, {})
   const nCategorias = Object.keys(byCategoria).length
+  const nTarefas = (items || []).length
   const moradaSelected = (moradas || []).find(m => m.id === selectedMoradaId)
-  const canSubmit = (items || []).length > 0 && !!moradaSelected &&
+
+  // Inicializar horas por categoria (1h default por tarefa, mínimo 1h total)
+  useEffect(() => {
+    if(!items) return
+    setHorasPorCat(prev => {
+      const next = { ...prev }
+      Object.entries(byCategoria).forEach(([cat, arr]) => {
+        if(next[cat] == null){
+          const sum = arr.reduce((s,i)=> s + Number(i.horas_estimadas || 1), 0)
+          next[cat] = Math.max(1, Math.round(sum))
+        }
+      })
+      // Remover cats que já não estão
+      Object.keys(next).forEach(k => { if(!byCategoria[k]) delete next[k] })
+      return next
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [items])
+
+  const totalPorCat = cat => Number((horasPorCat[cat] || 0)) * Number(rates[cat] || 0)
+  const totalGlobal = Object.keys(byCategoria).reduce((s,cat) => s + totalPorCat(cat), 0)
+  const ratesLoaded = Object.keys(rates).length > 0
+  const canSubmit = nTarefas > 0 && !!moradaSelected && ratesLoaded &&
     (scheduleMode === 'imediato' || (scheduleMode === 'agendar' && dataAgendada && horaAgendada))
 
   const submeter = async () => {
     if(!canSubmit || !uid || !lista) return
     setSubmitting(true)
     const CATNAMES = { limpeza:'Limpeza', manutencao:'Manutenção', jardim:'Jardim', piscina:'Piscina', pintura:'Pintura', eletrica:'Eléctrica', canalizacao:'Canalização', pos_obra:'Pós-obra', outros:'Outros' }
+    const nomeItem = it => {
+      if(it.tipo === 'fixo') return it.descricao || it.servico_id || 'Serviço'
+      const d = (it.descricao || '').slice(0, 200)
+      return d + ((it.descricao || '').length > 200 ? '…' : '')
+    }
+    const createdRows = []
     const results = []
     for(const cat of Object.keys(byCategoria)){
       const group = byCategoria[cat]
-      const nomeItem = it => {
-        if(it.tipo === 'fixo') return it.descricao || it.servico_id || 'Serviço'
-        const d = (it.descricao || '').slice(0, 200)
-        return d + ((it.descricao || '').length > 200 ? '…' : '')
-      }
+      const horas = Number(horasPorCat[cat] || 1)
+      const rate = Number(rates[cat] || 0)
+      const valor = +(horas * rate).toFixed(2)
       const descricao =
         `Lista de tarefas — ${CATNAMES[cat] || cat}\n` +
-        `Modelo: técnico resolve tudo numa visita, factura por tempo efectivo.\n\n` +
+        `${horas}h pré-pagas · ${rate.toFixed(2).replace('.',',')}€/h · técnico único resolve tudo.\n\n` +
         `Tarefas:\n` +
-        group.map(it => `• ${nomeItem(it)}${it.horas_estimadas ? ` (~${it.horas_estimadas}h)` : ''}`).join('\n')
+        group.map(it => `• ${nomeItem(it)}`).join('\n')
       const servicoId = CATEGORY_PREFIX[cat] ? `personalizado-${CATEGORY_PREFIX[cat]}` : null
       const payload = {
         servico_id:       servicoId,
         cliente_id:       uid,
         prestador_id:     null,
-        estado:           'pendente_orcamento',
+        estado:           'pendente_pagamento',
         morada:           moradaSelected.morada,
         cod_postal:       moradaSelected.cp || null,
         cidade:           moradaSelected.cidade || null,
         data_agendada:    scheduleMode === 'agendar' ? dataAgendada : null,
         hora_agendada:    scheduleMode === 'agendar' ? horaAgendada : null,
         schedule_mode:    scheduleMode,
-        valor_cobrado:    null,           // sem valor antecipado
+        valor_cobrado:    valor,
+        taxa_pct:         18,
+        valor_plataforma: +(valor * 0.18).toFixed(2),
+        valor_prestador:  +(valor * 0.82).toFixed(2),
         is_personalizado: true,
         descricao_personalizada: descricao,
+        horas_estimadas:  horas,
         notas:            `Lista agrupada: ${group.length} tarefa${group.length===1?'':'s'} em ${CATNAMES[cat] || cat}.`,
       }
       const r = await sbSave('ordens', payload, authUser?.token)
-      if(!r){ console.warn('[wishlist] falha ao criar ordem para cat', cat) }
-      results.push({ cat, ok: !!r })
+      if(!r){ console.warn('[wishlist] falha ao criar ordem para cat', cat); results.push({cat, ok:false}); continue }
+      const row = Array.isArray(r) ? r[0] : r
+      if(row) createdRows.push({ row, cat, horas, rate, group })
+      results.push({ cat, ok: true })
     }
     const successCount = results.filter(r => r.ok).length
     if(successCount === 0){
@@ -3401,14 +3452,57 @@ function CWishlist({ authUser, onBack, onCreateNew, onSubmitted }){
       setSubmitting(false)
       return
     }
-    // Marca lista como submetida
+
+    // Sincronizar estado local `ordens` para que CPedidos/CHome mostrem imediatamente
+    if(setOrdens && createdRows.length > 0){
+      const nomeCliente = authUser?.nome || 'Cliente'
+      const nowIso = new Date().toISOString()
+      const locals = createdRows.map(({ row, cat, horas, rate }) => ({
+        id:               row.id ? `bd${row.id.slice(0,8)}` : `ot${Date.now()}-${cat}`,
+        bd_id:            row.id || null,
+        sid:              null,
+        cli:              nomeCliente,
+        cliId:            uid,
+        morada:           row.morada,
+        cp:               row.cod_postal || '',
+        data:             scheduleMode === 'imediato' ? 'Imediato' : (dataAgendada ? `${dataAgendada} ${horaAgendada}` : 'Em breve'),
+        hora:             horaAgendada || '—',
+        tid:              null,
+        st:               'pendente',
+        fotos:            [],
+        ass:              false,
+        aval:             null,
+        notas:            row.notas,
+        val:              row.valor_cobrado,
+        taxa:             18,
+        dt_pedido:        new Date().toLocaleString('pt-PT', {day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}),
+        dt_pedido_iso:    nowIso,
+        pago:             false,
+        nome:             'Serviço agrupado',
+        numero_sequencial: row.numero_sequencial,
+        servico_id:       row.servico_id,
+        servico_nome:     'Serviço agrupado',
+        categoria_id:     cat,
+        is_personalizado: true,
+        valor_cobrado:    row.valor_cobrado,
+        schedule_mode:    row.schedule_mode,
+        data_agendada:    row.data_agendada,
+        hora_agendada:    row.hora_agendada,
+        descricao_personalizada: row.descricao_personalizada,
+        created_at:       row.created_at || nowIso,
+      }))
+      setOrdens(prev => [...locals, ...prev])
+    }
+
+    // Marcar lista como submetida
     await sbUpdate('listas_cliente', `?id=eq.${lista.id}`, {
       estado: 'submetida',
       submetida_at: new Date().toISOString(),
       morada_id: moradaSelected.id,
     }, authUser?.token)
+
     setSubmitting(false)
-    alert(`✓ ${successCount} pedido(s) criado(s) com orçamento a confirmar pelo prestador.`)
+    alert(`✓ ${successCount} pedido(s) submetido(s) · total €${totalGlobal.toFixed(2).replace('.',',')}.`)
     if(onSubmitted) onSubmitted()
     else onBack?.()
   }
@@ -3502,7 +3596,46 @@ function CWishlist({ authUser, onBack, onCreateNew, onSubmitted }){
               </div>
 
               <div style={{ fontSize:11.5, color:C.slate, marginBottom:10, lineHeight:1.5, background:'#f8fafc', padding:'10px 12px', borderRadius:8 }}>
-                <b>{nCategorias}</b> pedido{nCategorias===1?'':'s'} agrupado{nCategorias===1?'':'s'} (um por categoria). Sem valor antecipado — o técnico resolve as tarefas da categoria numa única visita e factura pelo tempo efectivo.
+                <b>{nTarefas}</b> tarefa{nTarefas===1?'':'s'} → <b>{nCategorias}</b> pedido{nCategorias===1?'':'s'} (um por categoria). Escolhe quantas horas quer pré-pagar por categoria; o técnico resolve tudo nessa janela.
+              </div>
+
+              {/* Horas + preço por categoria */}
+              <div style={{ marginBottom:12 }}>
+                {Object.entries(byCategoria).map(([cat, arr]) => {
+                  const CATNAMES = { limpeza:'Limpeza', manutencao:'Manutenção', jardim:'Jardim', piscina:'Piscina', pintura:'Pintura', eletrica:'Eléctrica', canalizacao:'Canalização', pos_obra:'Pós-obra', outros:'Outros' }
+                  const rate = rates[cat]
+                  const horas = horasPorCat[cat] || 1
+                  const total = rate ? (horas * rate) : null
+                  return (
+                    <div key={cat} style={{ border:`1px solid ${C.border}`, borderRadius:10, padding:'10px 12px', marginBottom:8 }}>
+                      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'baseline', marginBottom:6 }}>
+                        <span style={{ fontSize:12.5, fontWeight:700, color:C.navy }}>{CATNAMES[cat] || cat}</span>
+                        <span style={{ fontSize:10, color:C.slate }}>{arr.length} tarefa{arr.length===1?'':'s'}</span>
+                      </div>
+                      <div style={{ display:'flex', gap:8, alignItems:'center' }}>
+                        <span style={{ fontSize:11, color:C.slate, flexShrink:0 }}>Horas</span>
+                        <div style={{ display:'flex', alignItems:'center', gap:4 }}>
+                          <button onClick={()=>setHorasPorCat(p=>({...p,[cat]:Math.max(1,(p[cat]||1)-1)}))}
+                            style={{ width:26, height:26, borderRadius:6, border:`1px solid ${C.border}`, background:C.white, cursor:'pointer', fontSize:14, fontWeight:700, color:C.navy }}>−</button>
+                          <span style={{ width:28, textAlign:'center', fontSize:13, fontWeight:700, color:C.navy }}>{horas}</span>
+                          <button onClick={()=>setHorasPorCat(p=>({...p,[cat]:(p[cat]||1)+1}))}
+                            style={{ width:26, height:26, borderRadius:6, border:`1px solid ${C.border}`, background:C.white, cursor:'pointer', fontSize:14, fontWeight:700, color:C.navy }}>+</button>
+                        </div>
+                        <span style={{ fontSize:10, color:C.slate, flex:1 }}>
+                          {rate ? `× €${rate.toFixed(2).replace('.',',')}/h` : '(tarifa a carregar…)'}
+                        </span>
+                        <span style={{ fontSize:13, fontWeight:700, color:C.g }}>
+                          {total != null ? `€${total.toFixed(2).replace('.',',')}` : '—'}
+                        </span>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'baseline', padding:'0 4px 10px', borderTop:`1px solid ${C.border}`, paddingTop:10 }}>
+                <span style={{ fontSize:12.5, color:C.slate, fontWeight:600 }}>Total a pagar</span>
+                <span style={{ fontSize:18, fontWeight:800, color:C.navy }}>€{totalGlobal.toFixed(2).replace('.',',')}</span>
               </div>
 
               <button onClick={submeter} disabled={!canSubmit || submitting} style={{
@@ -3512,7 +3645,10 @@ function CWishlist({ authUser, onBack, onCreateNew, onSubmitted }){
                 fontSize:14, fontWeight:700,
                 cursor: !canSubmit || submitting ? 'default' : 'pointer',
               }}>
-                {submitting ? 'A submeter…' : canSubmit ? `Submeter ${nCategorias} pedido${nCategorias===1?'':'s'}` : 'Complete morada e horário'}
+                {submitting ? 'A submeter…'
+                  : !ratesLoaded ? 'A carregar tarifas…'
+                  : canSubmit ? `Pagar €${totalGlobal.toFixed(2).replace('.',',')} e submeter`
+                  : 'Complete morada e horário'}
               </button>
             </div>
           </>
@@ -9239,6 +9375,7 @@ export default function App() {
                   onBack={()=>setEcra('home')}
                   onCreateNew={()=>{ setTab('inicio'); setEcra('home') }}
                   onSubmitted={()=>{ setTab('pedidos'); setEcra('home') }}
+                  setOrdens={setOrdens}
                 />
               )}
               <BNav tab={tab} set={t=>{setTab(t);setEcra('home')}} onFabClick={()=>setFabOpen(true)}/>
