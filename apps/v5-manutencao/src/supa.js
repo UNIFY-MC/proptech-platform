@@ -14,3 +14,9 @@ export const supaCore = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   db: { schema: 'core' },
   auth: { persistSession: false },
 });
+
+// Helper para aceder ao schema public (catálogo de serviços, etc.)
+export const supaPublic = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  db: { schema: 'public' },
+  auth: { persistSession: false },
+});

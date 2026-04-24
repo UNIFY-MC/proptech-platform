@@ -4,6 +4,8 @@ import React, { useState, useMemo, useEffect, useRef } from 'react'
 import CWishlist from './CWishlist'
 import IniciaScreen from './IniciaScreen.jsx'
 import CasaScreen from './CasaScreen.jsx'
+import ServicosScreen from './ServicosScreen.jsx'
+import PedidosScreen from './PedidosScreen.jsx'
 import {
   ArrowLeft, X, Check, Camera, Clock, Plus, MapPin, ChevronRight,
   Shield, Lock, MessageSquare, FileImage, RefreshCw, Wrench,
@@ -2927,6 +2929,7 @@ function CHome({ ordens, onSvc, onOrdem, authUser, onCategoryV2, onDrawerOpen, c
   )
 }
 
+// DEPRECATED 3.2C: replaced by ServicosScreen. Safe to delete in next cleanup pass.
 function CExplorar({ onSvc }) {
   const [cat, setCat] = useState(null)
   return (
@@ -2957,6 +2960,7 @@ function CExplorar({ onSvc }) {
   )
 }
 
+// DEPRECATED 3.2C: replaced by PedidosScreen. Safe to delete in next cleanup pass.
 function CPedidos({ ordens, onOrdem, authUser }) {
   const nomeCliente = authUser?.nome || 'Cliente'
   const meus = ordens.filter(o => o.cli===nomeCliente)
@@ -10532,14 +10536,7 @@ export default function App() {
                   cursor:'pointer', boxShadow:'0 2px 8px rgba(0,0,0,0.18)',
                 }}
               >{(authUser?.nome||'U')[0].toUpperCase()}</button>
-              {/* Placeholder 3.2B — substituído por ServicosScreen na próxima sessão */}
-              {tab==='servicos' && (
-                <div style={{ minHeight:'100vh', background:'#f8fafc', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:12, paddingBottom:80, color:'#64748b' }}>
-                  <span style={{ fontSize:32 }}>🔧</span>
-                  <span style={{ fontSize:14, fontWeight:600 }}>Serviços</span>
-                  <span style={{ fontSize:12 }}>Em construção · fase 3.2B</span>
-                </div>
-              )}
+              {tab==='servicos' && <ServicosScreen authUser={authUser} />}
               {tab==='inicio'   && <IniciaScreen authUser={authUser} onNavigateCasa={()=>{ setTab('casa'); setEcra('home') }} />}
               {tab==='casa' && !casaActiveEq && !casaSub && <CasaScreen
                 localizacoes={casaLocalizacoes}
@@ -10605,7 +10602,7 @@ export default function App() {
                 onRefresh={refetchCasa}
                 onPickActive={(id)=>setCasaActiveLocId(id)}
               />}
-              {tab==='pedidos'  && <CPedidos  ordens={ordens} onOrdem={o=>{setSel(o);setEcra('ordem')}} authUser={authUser}/>}
+              {tab==='pedidos'  && <PedidosScreen ordens={ordens} authUser={authUser} onOrdem={o=>{setSel(o);setEcra('ordem')}} />}
               {tab==='perfil'   && ecra!=='moradas' && ecra!=='wishlist' && (
                 <CPerfil
                   authUser={authUser}
