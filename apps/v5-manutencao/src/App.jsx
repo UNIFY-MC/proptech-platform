@@ -3300,8 +3300,8 @@ function CWishlist({ authUser, onBack, onCreateNew, onSubmitted, setOrdens }){
   const [moradas, setMoradas] = useState(null)
   const [selectedMoradaId, setSelectedMoradaId] = useState(null)
   const [scheduleMode, setScheduleMode] = useState('imediato')  // 'imediato' | 'agendar'
-  const [dataAgendada, setDataAgendada] = useState('')          // YYYY-MM-DD
-  const [horaAgendada, setHoraAgendada] = useState('')          // HH:MM
+  const [selectedSlots, setSelectedSlots] = useState([])        // array de { key, day, time, dayLabel, dayDate }
+  const [scheduleModalOpen, setScheduleModalOpen] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [rates, setRates] = useState({})                         // { canalizacao: 44.91, ... }
   const [horasPorCat, setHorasPorCat] = useState({})             // { canalizacao: 2, ... }
@@ -3396,7 +3396,7 @@ function CWishlist({ authUser, onBack, onCreateNew, onSubmitted, setOrdens }){
   const totalGlobal = Object.keys(byCategoria).reduce((s,cat) => s + totalPorCat(cat), 0)
   const ratesLoaded = Object.keys(rates).length > 0
   const canSubmit = nTarefas > 0 && !!moradaSelected && ratesLoaded &&
-    (scheduleMode === 'imediato' || (scheduleMode === 'agendar' && dataAgendada && horaAgendada))
+    (scheduleMode === 'imediato' || (scheduleMode === 'agendar' && selectedSlots.length > 0))
 
   const submeter = async () => {
     if(!canSubmit || !uid || !lista) return
@@ -3420,6 +3420,15 @@ function CWishlist({ authUser, onBack, onCreateNew, onSubmitted, setOrdens }){
         `Tarefas:\n` +
         group.map(it => `• ${nomeItem(it)}`).join('\n')
       const servicoId = CATEGORY_PREFIX[cat] ? `personalizado-${CATEGORY_PREFIX[cat]}` : null
+      // Converter o dayDate "DD mmm YYYY" do slot para ISO YYYY-MM-DD
+      const firstSlot = (scheduleMode === 'agendar' && selectedSlots[0]) || null
+      const dataIso = firstSlot?.dayDate ? (()=>{
+        try {
+          const [d, m, y] = firstSlot.dayDate.split(' ')
+          const MM = {jan:'01',fev:'02',mar:'03',abr:'04',mai:'05',jun:'06',jul:'07',ago:'08',set:'09',out:'10',nov:'11',dez:'12'}
+          return `${y}-${MM[m.toLowerCase()]}-${String(d).padStart(2,'0')}`
+        } catch { return null }
+      })() : null
       const payload = {
         servico_id:       servicoId,
         cliente_id:       uid,
@@ -3428,9 +3437,10 @@ function CWishlist({ authUser, onBack, onCreateNew, onSubmitted, setOrdens }){
         morada:           moradaSelected.morada,
         cod_postal:       moradaSelected.cp || null,
         cidade:           moradaSelected.cidade || null,
-        data_agendada:    scheduleMode === 'agendar' ? dataAgendada : null,
-        hora_agendada:    scheduleMode === 'agendar' ? horaAgendada : null,
+        data_agendada:    dataIso,
+        hora_agendada:    firstSlot?.time || null,
         schedule_mode:    scheduleMode,
+        slots_flexiveis:  scheduleMode === 'agendar' ? selectedSlots : [],
         valor_cobrado:    valor,
         taxa_pct:         18,
         valor_plataforma: +(valor * 0.18).toFixed(2),
@@ -3465,8 +3475,8 @@ function CWishlist({ authUser, onBack, onCreateNew, onSubmitted, setOrdens }){
         cliId:            uid,
         morada:           row.morada,
         cp:               row.cod_postal || '',
-        data:             scheduleMode === 'imediato' ? 'Imediato' : (dataAgendada ? `${dataAgendada} ${horaAgendada}` : 'Em breve'),
-        hora:             horaAgendada || '—',
+        data:             scheduleMode === 'imediato' ? 'Imediato' : (selectedSlots[0] ? `${selectedSlots[0].dayLabel} ${selectedSlots[0].time}` : 'Em breve'),
+        hora:             selectedSlots[0]?.time || '—',
         tid:              null,
         st:               'pendente',
         fotos:            [],
@@ -3588,10 +3598,19 @@ function CWishlist({ authUser, onBack, onCreateNew, onSubmitted, setOrdens }){
                   <button onClick={()=>setScheduleMode('agendar')} style={{ flex:1, padding:'9px', borderRadius:8, border:`1.5px solid ${scheduleMode==='agendar'?C.g:C.border}`, background:scheduleMode==='agendar'?'rgba(22,163,74,0.08)':C.white, color:C.navy, fontSize:12, fontWeight:600, cursor:'pointer' }}>Agendar</button>
                 </div>
                 {scheduleMode==='agendar' && (
-                  <div style={{ display:'flex', gap:8, marginTop:8 }}>
-                    <input type="date" value={dataAgendada} onChange={e=>setDataAgendada(e.target.value)} style={{ flex:1, padding:'9px 10px', borderRadius:8, border:`1px solid ${C.border}`, fontSize:12.5, color:C.navy, background:C.white, outline:'none' }}/>
-                    <input type="time" value={horaAgendada} onChange={e=>setHoraAgendada(e.target.value)} style={{ width:100, padding:'9px 10px', borderRadius:8, border:`1px solid ${C.border}`, fontSize:12.5, color:C.navy, background:C.white, outline:'none' }}/>
-                  </div>
+                  <button onClick={()=>setScheduleModalOpen(true)} style={{
+                    marginTop:8, width:'100%', padding:'10px 12px', borderRadius:8,
+                    border:`1px solid ${selectedSlots.length>0 ? C.g : C.border}`,
+                    background: selectedSlots.length>0 ? 'rgba(22,163,74,0.06)' : C.white,
+                    color: C.navy, fontSize:12.5, fontWeight:600,
+                    cursor:'pointer', textAlign:'left',
+                  }}>
+                    {selectedSlots.length === 0
+                      ? '📅 Escolher horários (até 5)'
+                      : selectedSlots.length === 1
+                        ? `📅 ${selectedSlots[0].dayLabel} ${selectedSlots[0].dayDate} · ${selectedSlots[0].time}`
+                        : `📅 ${selectedSlots.length} horários escolhidos`}
+                  </button>
                 )}
               </div>
 
@@ -3654,6 +3673,14 @@ function CWishlist({ authUser, onBack, onCreateNew, onSubmitted, setOrdens }){
           </>
         )}
       </div>
+
+      {scheduleModalOpen && (
+        <CCScheduleModal
+          slots={selectedSlots}
+          onClose={()=>setScheduleModalOpen(false)}
+          onConfirm={(slots)=>{ setSelectedSlots(slots); setScheduleModalOpen(false) }}
+        />
+      )}
     </div>
   )
 }
