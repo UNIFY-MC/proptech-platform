@@ -1685,14 +1685,15 @@ function CCLineRow({ label, value, valueOriginal, strike }){
   )
 }
 
-function CCSubPill({ children, active, onClick }){
+function CCSubPill({ children, active, onClick, subId }){
   return (
-    <button onClick={onClick} style={{
+    <button data-sub-id={subId} onClick={onClick} style={{
       padding:"8px 14px", borderRadius:999,
       background: active?CC.forest:CC.paper, color: active?CC.paper:CC.ink,
       border:`1px solid ${active?CC.forest:CC.line}`,
       fontSize:12, fontWeight:600, cursor:"pointer",
       whiteSpace:"nowrap", flexShrink:0, scrollSnapAlign:"start",
+      transition:"background 0.15s, color 0.15s, border-color 0.15s",
     }}>{children}</button>
   )
 }
@@ -6025,6 +6026,9 @@ function ServiceListScreenV2({ categoryId, categoriesCache, authUser, onBack, on
   const [activeSub, setActiveSub] = useState('todos')
   const [search, setSearch] = useState('')
   const sectionRefs = useRef({})
+  const pillBarRef = useRef(null)
+  // Quando true, bloqueia o scroll-spy durante scroll programático (click numa pill)
+  const suppressSpyRef = useRef(false)
 
   useEffect(() => {
     // Esperar pelo cache de categorias (null = ainda a carregar)
@@ -6075,12 +6079,61 @@ function ServiceListScreenV2({ categoryId, categoriesCache, authUser, onBack, on
         ...sub,
         services: sub.services.filter(s => (s.nome || s.name || '').toLowerCase().includes(search.toLowerCase())),
       })).filter(sub => sub.services.length > 0)
-    : activeSub === 'todos' ? category.subcategorias : category.subcategorias.filter(s => s.id === activeSub)
+    : category.subcategorias
 
   const scrollToSub = (id) => {
+    // Click numa pill: marca activa imediatamente e suspende o scroll-spy
+    // durante o scroll suave para evitar piscar enquanto passa por secções.
     setActiveSub(id)
-    setTimeout(()=>sectionRefs.current[id]?.scrollIntoView({ behavior:"smooth", block:"start" }), 50)
+    suppressSpyRef.current = true
+    setTimeout(()=>{ suppressSpyRef.current = false }, 700)
+    if(id === 'todos'){
+      window.scrollTo({ top:0, behavior:'smooth' })
+    } else {
+      sectionRefs.current[id]?.scrollIntoView({ behavior:'smooth', block:'start' })
+    }
   }
+
+  // Scroll-spy — IntersectionObserver detecta qual subcategoria está visível
+  // e actualiza a pill activa. Rootmargin negativo no topo compensa o
+  // scrollMarginTop das secções (140). No fundo ignoramos os últimos 40%
+  // para que a primeira secção com topo visível ganhe prioridade.
+  useEffect(() => {
+    if(search) return // em modo pesquisa, scroll-spy desliga
+    const obs = new IntersectionObserver(entries => {
+      if(suppressSpyRef.current) return
+      const visible = entries
+        .filter(e => e.isIntersecting)
+        .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)
+      if(visible.length > 0){
+        const id = visible[0].target.dataset.subId
+        if(id) setActiveSub(id)
+      }
+    }, { rootMargin:'-140px 0px -45% 0px', threshold:0 })
+    Object.entries(sectionRefs.current).forEach(([id, el]) => {
+      if(el) obs.observe(el)
+    })
+    // Também ouvimos o scroll para voltar ao "Todos" no topo da página
+    const onScroll = () => {
+      if(suppressSpyRef.current) return
+      if(window.scrollY < 80) setActiveSub('todos')
+    }
+    window.addEventListener('scroll', onScroll, { passive:true })
+    return () => { obs.disconnect(); window.removeEventListener('scroll', onScroll) }
+  }, [category, search])
+
+  // Auto-scroll da pill bar para centrar a pill activa
+  useEffect(() => {
+    const bar = pillBarRef.current
+    if(!bar) return
+    const pill = bar.querySelector(`[data-sub-id="${activeSub}"]`)
+    if(!pill) return
+    const barRect = bar.getBoundingClientRect()
+    const pillRect = pill.getBoundingClientRect()
+    const offset = (pillRect.left + pillRect.width/2) - (barRect.left + barRect.width/2)
+    if(Math.abs(offset) > 4) bar.scrollBy({ left:offset, behavior:'smooth' })
+  }, [activeSub])
+
   const totalServicos = category.subcategorias.reduce((n,s)=>n+s.services.length, 0)
 
   return (
@@ -6107,7 +6160,7 @@ function ServiceListScreenV2({ categoryId, categoriesCache, authUser, onBack, on
       </div>
 
       {!search && (
-        <div className="cc-no-scrollbar" style={{
+        <div ref={pillBarRef} className="cc-no-scrollbar" style={{
           display:"flex", gap:6, overflowX:"auto", overflowY:"hidden",
           padding:"14px 18px 6px", scrollSnapType:"x proximity",
           scrollBehavior:"smooth", WebkitOverflowScrolling:"touch",
@@ -6120,9 +6173,9 @@ function ServiceListScreenV2({ categoryId, categoriesCache, authUser, onBack, on
               e.currentTarget.scrollLeft += e.deltaY
             }
           }}>
-          <CCSubPill active={activeSub==='todos'} onClick={()=>scrollToSub('todos')}>Todos</CCSubPill>
+          <CCSubPill subId="todos" active={activeSub==='todos'} onClick={()=>scrollToSub('todos')}>Todos</CCSubPill>
           {category.subcategorias.map(sub => (
-            <CCSubPill key={sub.id} active={activeSub===sub.id} onClick={()=>scrollToSub(sub.id)}>{sub.icon} {sub.nome}</CCSubPill>
+            <CCSubPill key={sub.id} subId={sub.id} active={activeSub===sub.id} onClick={()=>scrollToSub(sub.id)}>{sub.icon} {sub.nome}</CCSubPill>
           ))}
         </div>
       )}
@@ -6159,7 +6212,7 @@ function ServiceListScreenV2({ categoryId, categoriesCache, authUser, onBack, on
         )}
 
         {filtered.map(sub => (
-          <div key={sub.id} ref={el => (sectionRefs.current[sub.id] = el)} style={{ marginTop:28, scrollMarginTop:140 }}>
+          <div key={sub.id} ref={el => (sectionRefs.current[sub.id] = el)} data-sub-id={sub.id} style={{ marginTop:28, scrollMarginTop:140 }}>
             <div style={{ display:"flex", alignItems:"baseline", justifyContent:"space-between", marginBottom:10 }}>
               <div className="serif" style={{ fontSize:17, fontWeight:600, letterSpacing:-0.15 }}>{sub.icon} {sub.nome}</div>
               <div style={{ fontSize:11, color:CC.stone, fontWeight:500 }}>{sub.services.length}</div>
