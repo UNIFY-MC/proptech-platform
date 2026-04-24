@@ -6,6 +6,8 @@ import IniciaScreen from './IniciaScreen.jsx'
 import CasaScreen from './CasaScreen.jsx'
 import ServicosScreen from './ServicosScreen.jsx'
 import PedidosScreen from './PedidosScreen.jsx'
+import PerfilSheet from './PerfilSheet.jsx'
+import SubscricaoScreen from './SubscricaoScreen.jsx'
 import {
   ArrowLeft, X, Check, Camera, Clock, Plus, MapPin, ChevronRight,
   Shield, Lock, MessageSquare, FileImage, RefreshCw, Wrench,
@@ -9973,6 +9975,10 @@ export default function App() {
   const [sel,    setSel]    = useState(null)
   const [svcNova,setSvcNova]= useState(null)
 
+  // 3.2D: PerfilSheet + SubscricaoScreen
+  const [showPerfilSheet,  setShowPerfilSheet]  = useState(false)
+  const [showSubscricao,   setShowSubscricao]   = useState(false)
+
   // ── Cache de categorias (lido 1× da BD no arranque, partilhado pelos ecrãs V2) ──
   const [categoriesCache, setCategoriesCache] = useState(null)
   useEffect(() => {
@@ -10522,9 +10528,9 @@ export default function App() {
             {ecra==='chat_c'      && <Chat titulo='Suporte' msgs={CHAT_C} lado='cliente' onBack={()=>setEcra('home')}/>}
             {ecra==='chat_ordem_c'&& sel && <OrderChat ordem={sel} role='cliente' prest={TECNICOS.find(t=>t.id===sel.tid)} onBack={()=>setEcra('ordem')} onUpdate={o=>{upd(o);setSel(o)}}/>}
             {!cliOver && <>
-              {/* Avatar perfil — fixo top-right para todos os tabs. PerfilSheet em 3.2D. */}
+              {/* Avatar perfil — fixo top-right para todos os tabs. Abre PerfilSheet (3.2D). */}
               <button
-                onClick={()=>alert('Perfil sheet em 3.2D')}
+                onClick={()=>setShowPerfilSheet(true)}
                 aria-label="Perfil"
                 style={{
                   position:'fixed', top:14, right:14, zIndex:55,
@@ -10536,6 +10542,19 @@ export default function App() {
                   cursor:'pointer', boxShadow:'0 2px 8px rgba(0,0,0,0.18)',
                 }}
               >{(authUser?.nome||'U')[0].toUpperCase()}</button>
+              <PerfilSheet
+                open={showPerfilSheet}
+                onClose={()=>setShowPerfilSheet(false)}
+                authUser={authUser}
+                onNavigate={(target)=>{
+                  if(target==='subscricao'){ setShowPerfilSheet(false); setShowSubscricao(true) }
+                }}
+              />
+              <SubscricaoScreen
+                open={showSubscricao}
+                onClose={()=>{ setShowSubscricao(false); setShowPerfilSheet(true) }}
+                authUser={authUser}
+              />
               {tab==='servicos' && <ServicosScreen authUser={authUser} />}
               {tab==='inicio'   && <IniciaScreen authUser={authUser} onNavigateCasa={()=>{ setTab('casa'); setEcra('home') }} />}
               {tab==='casa' && !casaActiveEq && !casaSub && <CasaScreen
