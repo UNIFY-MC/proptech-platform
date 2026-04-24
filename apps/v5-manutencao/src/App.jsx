@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo, useEffect, useRef } from 'react'
 import CWishlist from './CWishlist'
+import { DEMO_PESSOA_ID } from './lib/demo.js'
 import IniciaScreen from './IniciaScreen.jsx'
 import CasaScreen from './CasaScreen.jsx'
 import ServicosScreen from './ServicosScreen.jsx'
@@ -3381,6 +3382,10 @@ function EquipamentoFicha({ equipamento, authUser, onBack, onUpdated, onDeleted,
   const [intervencoes, setIntervencoes] = useState(null)
   const [documentos, setDocumentos] = useState(null)
   const [tecnicoHabitual, setTecnicoHabitual] = useState(null)
+  const [registarOpen, setRegistarOpen] = useState(false)
+  const [rForm, setRForm] = useState({ tipo:'revisao', descricao:'', data: new Date().toISOString().slice(0,10), duracao_min:'', custo_total:'', notas_tecnico:'' })
+  const [rSaving, setRSaving] = useState(false)
+  const [rSuccess, setRSuccess] = useState(false)
 
   useEffect(() => {
     if(!equipamento) return
@@ -3420,6 +3425,32 @@ function EquipamentoFicha({ equipamento, authUser, onBack, onUpdated, onDeleted,
   }, [equipamento?.id, authUser?.token])
 
   if(!equipamento) return null
+
+  const registarIntervencao = async () => {
+    if(!rForm.descricao.trim()) return
+    setRSaving(true)
+    const payload = {
+      equipamento_id: equipamento.id,
+      tipo:           rForm.tipo,
+      descricao:      rForm.descricao.trim(),
+      data:           rForm.data || new Date().toISOString().slice(0,10),
+      duracao_min:    rForm.duracao_min !== '' ? Number(rForm.duracao_min) : null,
+      custo_total:    rForm.custo_total !== '' ? Number(rForm.custo_total) : null,
+      notas_tecnico:  rForm.notas_tecnico.trim() || null,
+    }
+    const rows = await sbSaveV5('intervencoes_equipamento', payload, authUser?.token)
+    if(!rows) { setRSaving(false); alert('Erro ao registar. Ver consola.'); return }
+    const nova = Array.isArray(rows) ? rows[0] : rows
+    // +50 pontos
+    const pessoaId = authUser?.user?.id || DEMO_PESSOA_ID
+    await sbSaveV5('pontos_historico', { pessoa_id: pessoaId, pontos: 50, motivo: 'Registou intervenção em equipamento', ref_tipo: 'intervencao', ref_id: nova?.id }, authUser?.token)
+    // recarregar timeline
+    const updated = await sbGetV5('intervencoes_equipamento', `?equipamento_id=eq.${equipamento.id}&order=data.desc`, authUser?.token)
+    setIntervencoes(updated || [])
+    setRSaving(false)
+    setRSuccess(true)
+    setTimeout(() => { setRSuccess(false); setRegistarOpen(false); setRForm({ tipo:'revisao', descricao:'', data: new Date().toISOString().slice(0,10), duracao_min:'', custo_total:'', notas_tecnico:'' }) }, 1200)
+  }
 
   const save = async () => {
     setSaving(true)
@@ -3625,7 +3656,7 @@ function EquipamentoFicha({ equipamento, authUser, onBack, onUpdated, onDeleted,
               </div>
             )
           })}
-          <button onClick={()=>alert('Registo de intervenção — disponível em breve (técnico cria quando conclui).')} style={{
+          <button onClick={()=>setRegistarOpen(true)} style={{
             width:'100%', marginTop:10, padding:11, borderRadius:11, border:`1px dashed ${CASA.border}`,
             background:CASA.bg, color:CASA.greenLt, fontSize:12, fontWeight:700, cursor:'pointer',
           }}>+ Registar nova intervenção</button>
@@ -3676,6 +3707,62 @@ function EquipamentoFicha({ equipamento, authUser, onBack, onUpdated, onDeleted,
             ['Email',     tecnicoHabitual.email || '—'],
           ] : [['Ainda sem técnico designado','Atribuído automaticamente no próximo pedido']]}/>
           <FornecedorCard title="Peças compatíveis" rows={PECAS_COMPAT[equipamento.marca?.toLowerCase?.()] || [['Catálogo indisponível','Peças surgirão após intervenções']]}/>
+        </div>
+      )}
+
+      {/* MODAL REGISTAR INTERVENÇÃO */}
+      {registarOpen && (
+        <div onClick={()=>setRegistarOpen(false)} style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.55)', zIndex:200, display:'flex', alignItems:'flex-end', justifyContent:'center' }}>
+          <div onClick={e=>e.stopPropagation()} style={{ background:'#fff', borderRadius:'18px 18px 0 0', padding:'20px 18px 28px', width:'100%', maxWidth:400 }}>
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
+              <div style={{ fontSize:14, fontWeight:700 }}>Registar intervenção</div>
+              <button onClick={()=>setRegistarOpen(false)} style={{ background:'none', border:'none', fontSize:18, cursor:'pointer', color:'#999' }}>✕</button>
+            </div>
+
+            {/* Tipo */}
+            <div style={{ marginBottom:12 }}>
+              <div style={{ fontSize:9, color:'#999', textTransform:'uppercase', letterSpacing:0.3, marginBottom:6 }}>Tipo</div>
+              <div style={{ display:'flex', gap:5, flexWrap:'wrap' }}>
+                {[['revisao','🔍 Revisão'],['reparacao','🔧 Reparação'],['substituicao','🔄 Substituição'],['inspecao','📋 Inspecção'],['instalacao','🏗️ Instalação']].map(([v,l]) => {
+                  const on = rForm.tipo === v
+                  return <button key={v} onClick={()=>setRForm(p=>({...p, tipo:v}))} style={{ padding:'5px 10px', borderRadius:9, fontSize:10.5, fontWeight:600, cursor:'pointer', border:`2px solid ${on?CASA.greenLt:CASA.border}`, background:on?CASA.greenLt:CASA.bg, color:on?'#fff':'#555' }}>{l}</button>
+                })}
+              </div>
+            </div>
+
+            {/* Descrição */}
+            <div style={{ marginBottom:12 }}>
+              <div style={{ fontSize:9, color:'#999', textTransform:'uppercase', letterSpacing:0.3, marginBottom:4 }}>Descrição *</div>
+              <textarea value={rForm.descricao} onChange={e=>setRForm(p=>({...p, descricao:e.target.value}))} rows={3} placeholder="O que foi feito…"
+                style={{ width:'100%', boxSizing:'border-box', padding:'8px 11px', borderRadius:9, border:`1px solid ${rForm.descricao.trim()?CASA.border:'#EF4444'}`, fontSize:12, background:'#fafafa', outline:'none', fontFamily:'inherit', resize:'none' }}/>
+            </div>
+
+            {/* Data + Duração + Custo */}
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:8, marginBottom:12 }}>
+              {[['Data','data','date',rForm.data],['Duração (min)','duracao_min','number',rForm.duracao_min],['Custo (€)','custo_total','number',rForm.custo_total]].map(([l,k,t,v]) => (
+                <div key={k}>
+                  <div style={{ fontSize:9, color:'#999', textTransform:'uppercase', letterSpacing:0.3, marginBottom:4 }}>{l}</div>
+                  <input type={t} value={v} onChange={e=>setRForm(p=>({...p,[k]:e.target.value}))} min={t==='number'?0:undefined}
+                    style={{ width:'100%', boxSizing:'border-box', padding:'7px 9px', borderRadius:9, border:`1px solid ${CASA.border}`, fontSize:11, background:'#fafafa', outline:'none' }}/>
+                </div>
+              ))}
+            </div>
+
+            {/* Notas técnico */}
+            <div style={{ marginBottom:16 }}>
+              <div style={{ fontSize:9, color:'#999', textTransform:'uppercase', letterSpacing:0.3, marginBottom:4 }}>Notas técnico (opcional)</div>
+              <input type="text" value={rForm.notas_tecnico} onChange={e=>setRForm(p=>({...p,notas_tecnico:e.target.value}))} placeholder="Observações internas…"
+                style={{ width:'100%', boxSizing:'border-box', padding:'7px 11px', borderRadius:9, border:`1px solid ${CASA.border}`, fontSize:12, background:'#fafafa', outline:'none' }}/>
+            </div>
+
+            <button onClick={registarIntervencao} disabled={rSaving || !rForm.descricao.trim()} style={{
+              width:'100%', padding:13, borderRadius:11, border:'none',
+              background: rSuccess ? '#22C55E' : (rSaving || !rForm.descricao.trim()) ? '#ccc' : CASA.greenLt,
+              color:'#fff', fontSize:13, fontWeight:700, cursor: (rSaving || !rForm.descricao.trim()) ? 'default' : 'pointer',
+            }}>
+              {rSuccess ? '✓ Registado  +50 pts' : rSaving ? 'A registar…' : 'Registar intervenção'}
+            </button>
+          </div>
         </div>
       )}
 
