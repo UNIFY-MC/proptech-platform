@@ -2519,6 +2519,78 @@ function BNav({ tab, set, onFabClick }) {
   )
 }
 
+/* Picker modal das moradas guardadas (Fase 2f.4).
+   Lista as cliente_moradas com radio-select; atalho "Gerir moradas"
+   leva ao ecrã CMoradas para criar novas ou editar existentes. */
+function MoradaPickerModal({ moradas, selectedMoradaId, onClose, onSelect, onManage }){
+  return (
+    <div onClick={onClose} style={{
+      position:'fixed', inset:0, background:'rgba(10,22,32,0.55)',
+      zIndex:80, display:'flex', alignItems:'flex-end', justifyContent:'center',
+    }}>
+      <div onClick={e=>e.stopPropagation()} style={{
+        background:'#fff', width:'100%', maxWidth:430,
+        borderRadius:'18px 18px 0 0', padding:'18px 18px 22px',
+        maxHeight:'86vh', overflowY:'auto',
+        animation:'popIn 0.18s ease-out',
+      }}>
+        <div style={{ width:38, height:4, borderRadius:2, background:'#e5e7eb', margin:'0 auto 14px' }}/>
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:4 }}>
+          <h2 style={{ margin:0, fontSize:17, fontWeight:700, color:'#0A1620' }}>Morada do serviço</h2>
+          <button onClick={onClose} aria-label="Fechar" style={{ background:'none', border:'none', cursor:'pointer', padding:6, color:'#6B7685' }}><X size={18}/></button>
+        </div>
+        <div style={{ fontSize:12, color:'#6B7685', marginBottom:14 }}>Escolha onde o técnico deve ir. Pode gerir o quadro de moradas no Perfil.</div>
+
+        {moradas === null && (
+          <div className="sk" style={{ height:72, borderRadius:12, marginBottom:8 }}/>
+        )}
+        {moradas && moradas.length === 0 && (
+          <div style={{ padding:'22px 16px', textAlign:'center', background:'#FAFAF6', borderRadius:12, border:'1px dashed #ECE9E2', marginBottom:12 }}>
+            <div style={{ fontSize:28, marginBottom:8 }}>📍</div>
+            <div style={{ fontSize:13, fontWeight:600, color:'#0A1620', marginBottom:4 }}>Sem moradas guardadas</div>
+            <div style={{ fontSize:12, color:'#6B7685', lineHeight:1.4 }}>Adicione a sua primeira morada para avançar.</div>
+          </div>
+        )}
+        {moradas && moradas.map(m => {
+          const sel = m.id === selectedMoradaId
+          return (
+            <button key={m.id} onClick={()=>onSelect(m)} style={{
+              width:'100%', display:'flex', alignItems:'flex-start', gap:12,
+              background: sel ? 'rgba(22,163,74,0.06)' : '#fff',
+              border:`1.5px solid ${sel ? '#16a34a' : '#ECE9E2'}`, borderRadius:14,
+              padding:14, marginBottom:8, cursor:'pointer', textAlign:'left',
+            }}>
+              <div style={{
+                width:20, height:20, borderRadius:999, flexShrink:0, marginTop:2,
+                border:`2px solid ${sel ? '#16a34a' : '#CBD5E1'}`,
+                display:'grid', placeItems:'center',
+              }}>
+                {sel && <div style={{ width:10, height:10, borderRadius:999, background:'#16a34a' }}/>}
+              </div>
+              <div style={{ flex:1, minWidth:0 }}>
+                <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:2 }}>
+                  <span style={{ fontSize:13.5, fontWeight:700, color:'#0A1620' }}>{m.label}</span>
+                  {m.is_default && <span style={{ fontSize:9, fontWeight:700, color:'#16a34a', background:'rgba(22,163,74,0.12)', padding:'2px 6px', borderRadius:4, textTransform:'uppercase', letterSpacing:0.4 }}>Default</span>}
+                </div>
+                <div style={{ fontSize:12.5, color:'#0A1620', lineHeight:1.4 }}>{m.morada}</div>
+                {(m.cp || m.cidade) && <div style={{ fontSize:11.5, color:'#6B7685', marginTop:1 }}>{[m.cp, m.cidade].filter(Boolean).join(' ')}</div>}
+                {m.notas_acesso && <div style={{ fontSize:11, color:'#6B7685', marginTop:4, fontStyle:'italic' }}>🔑 {m.notas_acesso}</div>}
+              </div>
+            </button>
+          )
+        })}
+
+        <button onClick={onManage} style={{
+          width:'100%', padding:'12px 14px', borderRadius:12,
+          border:'1px dashed #ECE9E2', background:'transparent',
+          color:'#16a34a', fontSize:13, fontWeight:700, cursor:'pointer',
+          marginTop:6,
+        }}>+ Gerir moradas</button>
+      </div>
+    </div>
+  )
+}
+
 /* Picker modal do FAB central — 8 categorias em grid + descrição livre.
    Click numa categoria abre ServiceListScreenV2 dessa categoria.
    "Descrever livremente" leva ao PersonalizadoLandingV2 de Manutenção
@@ -7080,9 +7152,38 @@ function PersonalizadoFormV2({ category, onBack, onContinue, state, setState }){
 }
 
 /* ── FinalizarPedidoV2 — checkout unificado (personalizado + fixo) com categoria ── */
-function FinalizarPedidoV2({ selected, category, isPersonalizado, onBack, onConfirm, state, setState }){
+function FinalizarPedidoV2({ selected, category, isPersonalizado, authUser, onManageMoradas, onBack, onConfirm, state, setState }){
   const [modal, setModal] = useState(null)
   const [lightbox, setLightbox] = useState(null) // index da foto ou null
+  const [moradas, setMoradas] = useState(null)
+
+  // Fetch das moradas do cliente (Fase 2f.4) + auto-seleccionar default
+  useEffect(() => {
+    const uid = authUser?.user?.id
+    if(!uid || !SB_KEY) return
+    let active = true
+    sbGet('cliente_moradas', `?cliente_id=eq.${uid}&order=is_default.desc,created_at.asc`, authUser?.token).then(rows => {
+      if(!active) return
+      const list = rows || []
+      setMoradas(list)
+      // Pre-seleccionar default se o utilizador ainda não escolheu
+      if(list.length > 0 && !state.billing?.morada){
+        const def = list.find(m => m.is_default) || list[0]
+        setState(p => ({
+          ...p,
+          billing: {
+            ...(p.billing || {}),
+            morada_id:  def.id,
+            morada:     def.morada,
+            cp:         def.cp || '',
+            localidade: def.cidade || '',
+          },
+        }))
+      }
+    })
+    return () => { active = false }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authUser?.user?.id])
 
   // Se o cliente configurou opções no detalhe (produtos/frequência), usa o preço efectivo
   const serviceOptions = state.serviceOptions
@@ -7144,7 +7245,7 @@ function FinalizarPedidoV2({ selected, category, isPersonalizado, onBack, onConf
               boxShadow:`0 8px 20px -4px ${CC.forestDeep}`,
             }}><MapPin size={16} fill={CC.paper}/></div>
           </div>
-          <button onClick={()=>setModal("billing")} style={{
+          <button onClick={()=>setModal("morada")} style={{
             position:"absolute", bottom:14, left:"50%", transform:"translateX(-50%)",
             background:CC.paper, color:CC.ink,
             border:`1px solid ${CC.line}`, borderRadius:999,
@@ -7154,7 +7255,7 @@ function FinalizarPedidoV2({ selected, category, isPersonalizado, onBack, onConf
         </div>
 
         <div style={{ padding:"16px 18px 0" }}>
-          <button onClick={()=>setModal("billing")} style={{
+          <button onClick={()=>setModal("morada")} style={{
             display:"flex", alignItems:"center", gap:12, width:"100%",
             padding:"12px 0", borderBottom:`1px solid ${CC.line}`,
             background:"transparent", border:"none", cursor:"pointer", textAlign:"left",
@@ -7481,6 +7582,27 @@ function FinalizarPedidoV2({ selected, category, isPersonalizado, onBack, onConf
       {modal==="billing" && (
         <CCBillingModal billing={state.billing} onClose={()=>setModal(null)}
           onConfirm={(billing)=>{ setState(p=>({...p, billing})); setModal(null) }}/>
+      )}
+      {modal==="morada" && (
+        <MoradaPickerModal
+          moradas={moradas}
+          selectedMoradaId={state.billing?.morada_id}
+          onClose={()=>setModal(null)}
+          onSelect={(m)=>{
+            setState(p => ({
+              ...p,
+              billing: {
+                ...(p.billing || {}),
+                morada_id:  m.id,
+                morada:     m.morada,
+                cp:         m.cp || '',
+                localidade: m.cidade || '',
+              },
+            }))
+            setModal(null)
+          }}
+          onManage={onManageMoradas}
+        />
       )}
       {lightbox !== null && (state.photos || [])[lightbox] && (
         <div onClick={()=>setLightbox(null)} style={{
@@ -8733,6 +8855,8 @@ export default function App() {
               selected={catSelected}
               category={catCategoryMeta}
               isPersonalizado={catIsPersonalizado}
+              authUser={authUser}
+              onManageMoradas={()=>{ setCatScreen(null); setTab('perfil'); setEcra('moradas') }}
               onBack={()=>setCatScreen(catIsPersonalizado ? 'form' : 'detail')}
               onConfirm={({ total, scheduleSurcharge, servicePrice })=>addCatalogOrder({
                 selected:catSelected,
