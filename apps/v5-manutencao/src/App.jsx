@@ -62,7 +62,18 @@ const MENU_ITEMS = [
   { id:'ajuda',          ic:'ℹ️', l:'Ajuda' },
   { id:'sair',           ic:'🚪', l:'Sair' },
 ]
-function DrawerMenu({ open, onClose, onNavigate, user, activeItem }) {
+
+const CLIENTE_MENU_ITEMS = [
+  { id:'perfil',        ic:'👤', l:'Perfil' },
+  { id:'moradas',       ic:'📍', l:'As minhas moradas' },
+  { id:'pagamentos',    ic:'💳', l:'Métodos de pagamento' },
+  { id:'avaliacoes',    ic:'⭐', l:'As minhas avaliações' },
+  { id:'referencia',    ic:'🎁', l:'Código de referência' },
+  { id:'notificacoes',  ic:'🔔', l:'Notificações' },
+  { id:'ajuda',         ic:'ℹ️', l:'Ajuda & Suporte' },
+  { id:'sair',          ic:'🚪', l:'Terminar sessão' },
+]
+function DrawerMenu({ open, onClose, onNavigate, user, activeItem, menuItems = MENU_ITEMS }) {
   const ref = useRef(null)
   const nivel = user?.nivel
   const nc = nivel ? NIVEIS[nivel] : null
@@ -94,7 +105,7 @@ function DrawerMenu({ open, onClose, onNavigate, user, activeItem }) {
       </div>
       {/* Nav — mesma tipografia do resto da app */}
       <nav style={{ flex:1, padding:'8px 0' }}>
-        {MENU_ITEMS.map(item => {
+        {menuItems.map(item => {
           const isActive = activeItem===item.id
           const isDanger = item.id==='sair'
           return (
@@ -2560,7 +2571,7 @@ function Chat({ titulo, msgs: iM, lado, onBack }) {
 /* ══════════════════════════════════
    CLIENTE
 ══════════════════════════════════ */
-function CHome({ ordens, onSvc, onOrdem, authUser, onCategoryV2, categoriesCache }) {
+function CHome({ ordens, onSvc, onOrdem, authUser, onCategoryV2, onDrawerOpen, categoriesCache }) {
   const [cat, setCat] = useState(null)
   const [q,   setQ]   = useState('')
   const nomeCliente = authUser?.nome || 'Cliente'
@@ -2572,12 +2583,18 @@ function CHome({ ordens, onSvc, onOrdem, authUser, onCategoryV2, categoriesCache
   return (
     <div style={{ minHeight:'100vh', background:C.mist, paddingBottom:80 }}>
       {/* Hero */}
-      <div style={{ background:`linear-gradient(145deg,${C.navy},${C.gd})`, padding:'26px 20px 32px', position:'relative', overflow:'hidden' }}>
+      <div style={{ background:`linear-gradient(145deg,${C.navy},${C.gd})`, padding:'22px 20px 32px', position:'relative', overflow:'hidden' }}>
         <div style={{ position:'absolute', top:-50, right:-50, width:180, height:180, borderRadius:'50%', background:'rgba(255,255,255,0.04)' }}/>
         <div style={{ position:'relative' }}>
-          <div style={{ display:'flex', alignItems:'center', gap:7, marginBottom:10 }}>
-            <span style={{ fontSize:11 }}>🔐</span>
-            <span style={{ color:C.gm, fontSize:10, fontWeight:700, letterSpacing:'0.06em' }}>REDE DE CONFIANÇA — TÉCNICOS NOMINAIS</span>
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:10 }}>
+            {/* Hamburger ☰ → drawer do cliente */}
+            <button onClick={()=>onDrawerOpen?.()} aria-label="Menu" style={{ background:'none', border:'none', cursor:'pointer', padding:6, display:'flex', flexDirection:'column', gap:5 }}>
+              {[0,1,2].map(i => <div key={i} style={{ width:22, height:2, background:'#fff', borderRadius:2 }}/>)}
+            </button>
+            <div style={{ display:'flex', alignItems:'center', gap:7 }}>
+              <span style={{ fontSize:11 }}>🔐</span>
+              <span style={{ color:C.gm, fontSize:10, fontWeight:700, letterSpacing:'0.06em' }}>REDE DE CONFIANÇA</span>
+            </div>
           </div>
           <h1 style={{ color:'#fff', fontSize:24, fontWeight:800, lineHeight:1.2, margin:'0 0 8px', fontFamily:'Georgia,serif' }}>
             A sua equipa,<br/><span style={{ color:'#86efac' }}>sempre a mesma.</span>
@@ -8026,6 +8043,8 @@ export default function App() {
 
   // FAB central — abre picker de categorias + descrição livre (Fase 2e)
   const [fabOpen, setFabOpen] = useState(false)
+  // Drawer do cliente — menu lateral invocado pelo hamburger da CHome
+  const [clienteDrawerOpen, setClienteDrawerOpen] = useState(false)
   // Meta da categoria activa, combinada a partir de BD (categoriesCache) + design tokens (CATEGORY_META).
   // null enquanto categoriesCache carrega ou categoria não resolvida.
   const catCategoryMeta = (() => {
@@ -8454,7 +8473,7 @@ export default function App() {
             {ecra==='chat_c'      && <Chat titulo='Suporte' msgs={CHAT_C} lado='cliente' onBack={()=>setEcra('home')}/>}
             {ecra==='chat_ordem_c'&& sel && <OrderChat ordem={sel} role='cliente' prest={TECNICOS.find(t=>t.id===sel.tid)} onBack={()=>setEcra('ordem')} onUpdate={o=>{upd(o);setSel(o)}}/>}
             {!cliOver && <>
-              {tab==='inicio'   && <CHome    ordens={ordens} onSvc={s=>{setSvcNova(s);setEcra('nova')}} onOrdem={o=>{setSel(o);setEcra('ordem')}} authUser={authUser} onCategoryV2={(id)=>{ setCatCategoryId(id); setCatScreen('list') }} categoriesCache={categoriesCache}/>}
+              {tab==='inicio'   && <CHome    ordens={ordens} onSvc={s=>{setSvcNova(s);setEcra('nova')}} onOrdem={o=>{setSel(o);setEcra('ordem')}} authUser={authUser} onCategoryV2={(id)=>{ setCatCategoryId(id); setCatScreen('list') }} onDrawerOpen={()=>setClienteDrawerOpen(true)} categoriesCache={categoriesCache}/>}
               {tab==='explorar' && <CExplorar onSvc={s=>{setSvcNova(s);setEcra('nova')}}/>}
               {tab==='pedidos'  && <CPedidos  ordens={ordens} onOrdem={o=>{setSel(o);setEcra('ordem')}} authUser={authUser}/>}
               {tab==='perfil'   && <CPerfil/>}
@@ -8472,6 +8491,20 @@ export default function App() {
                   }}
                 />
               )}
+              <DrawerMenu
+                open={clienteDrawerOpen}
+                onClose={()=>setClienteDrawerOpen(false)}
+                menuItems={CLIENTE_MENU_ITEMS}
+                user={{ n:authUser?.nome||'Cliente', ini:(authUser?.nome||'C').charAt(0).toUpperCase(), id_num:authUser?.user?.email||'—' }}
+                activeItem={tab==='perfil' ? 'perfil' : null}
+                onNavigate={(id)=>{
+                  setClienteDrawerOpen(false)
+                  if(id==='sair'){ onLogout(); return }
+                  if(id==='perfil'){ setTab('perfil'); setEcra('home'); return }
+                  // Restantes items ainda não têm página própria — placeholder até Fase 2f
+                  alert(`"${CLIENTE_MENU_ITEMS.find(i=>i.id===id)?.l}" fica disponível na Fase 2f.`)
+                }}
+              />
             </>}
           </>}
         </>}
