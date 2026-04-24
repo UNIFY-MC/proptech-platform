@@ -561,6 +561,19 @@ async function sbGet(table, filter='', token) {
   } catch { return null }
 }
 
+// Variantes para schemas não-default (ex: v5_manutencao) — PostgREST usa
+// Accept-Profile para GET e Content-Profile para writes. Precisa do schema
+// estar listado como "Exposed schemas" no Supabase Dashboard → Settings → API.
+async function sbGetV5(table, filter='', token) {
+  if (!SB_KEY) return null
+  try {
+    const r = await fetch(`${SB_URL}/rest/v1/${table}${filter}`, {
+      headers: { ...sbHeaders(token||SB_KEY), 'Accept-Profile': 'v5_manutencao' },
+    })
+    return r.ok ? r.json() : null
+  } catch { return null }
+}
+
 async function sbSave(table, data, token) {
   if (!SB_KEY) return null
   try {
@@ -2489,7 +2502,8 @@ function RoleBar({ role, onChange }) {
 }
 
 function BNav({ tab, set, onFabClick }) {
-  const tabsL = [{id:'inicio',ic:'🏠',l:'Início'},{id:'explorar',ic:'🔍',l:'Explorar'}]
+  // "Casa" substitui "Explorar" no cliente — destino do módulo Casa (Fase 3).
+  const tabsL = [{id:'inicio',ic:'🏠',l:'Início'},{id:'casa',ic:'🏡',l:'Casa'}]
   const tabsR = [{id:'pedidos',ic:'📋',l:'Pedidos'},{id:'perfil',ic:'👤',l:'Perfil'}]
   const renderTab = t => (
     <button key={t.id} onClick={() => set(t.id)} style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', padding:'8px 0 6px', background:'none', border:'none', cursor:'pointer', gap:2 }}>
@@ -3281,6 +3295,183 @@ function CMoradas({ authUser, onBack }){
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+/* ══════════════════════════════════
+   MÓDULO CASA — Fase 3 (v5-casa)
+   Paleta da Casa (verde 1B4332) vive aqui, isolada do resto do app.
+══════════════════════════════════ */
+const CASA = {
+  green:"#1B4332", greenMid:"#2D6A4F", greenLt:"#52B788", greenXl:"#D8F3DC",
+  amber:"#854F0B", amberLt:"#FAEEDA", red:"#A32D2D", redLt:"#FCEBEB",
+  border:"#e5e5e3", bg:"#f5f5f3",
+}
+
+// Mapa categoria BD → label humano
+const CASA_CAT_LABELS = {
+  aquecimento:'Aquecimento', climatizacao:'Climatização', aguas_quentes:'Águas Quentes',
+  canalizacao:'Canalização', eletrica:'Eléctrica', cobertura:'Cobertura',
+  estrutura:'Estrutura', piscina:'Piscina', solar:'Solar',
+  elevador:'Elevador', gerador:'Gerador', outros:'Outros',
+}
+
+/* CasaScreen — ecrã principal do módulo Casa.
+   Fases seguintes (3.3-3.5) vão substituir os alerts placeholder
+   por ecrãs reais de câmara, locais, docs, energia, ficha, etc. */
+function CasaScreen({ localizacoes, equipamentos, onNavigate }){
+  const loc = Array.isArray(localizacoes) ? localizacoes[0] : null
+  const eqs = Array.isArray(equipamentos)
+    ? equipamentos.filter(e => !loc || e.localizacao_id === loc.id)
+    : []
+  const loading = localizacoes === null || equipamentos === null
+
+  const scores = loc ? [
+    ['AVAC',      loc.score_avac      ?? 0],
+    ['Canaliz.',  loc.score_canaliz   ?? 0],
+    ['Elétrica',  loc.score_eletrica  ?? 0],
+    ['Estrutura', loc.score_estrutura ?? 0],
+    ['Água',      loc.score_agua      ?? 0],
+  ] : []
+  const dotColor = hs => hs >= 75 ? CASA.greenLt : hs >= 50 ? '#F59E0B' : '#EF4444'
+  const nextLabel = eq => {
+    if(eq.health_score != null && eq.health_score < 50) return 'inspecionar'
+    if(eq.data_proxima_revisao){
+      const d = new Date(eq.data_proxima_revisao); const days = Math.round((d - new Date())/86400000)
+      if(days < 0) return 'revisão vencida'
+      if(days < 30) return `revisão em ${days}d`
+    }
+    if(eq.data_garantia_fim){
+      const d = new Date(eq.data_garantia_fim); const days = Math.round((d - new Date())/86400000)
+      if(days < 0) return 'garantia expirada'
+    }
+    return 'em dia'
+  }
+
+  return (
+    <div style={{ minHeight:'100vh', background:CASA.bg, paddingBottom:88 }}>
+      {/* HERO */}
+      <div style={{ background:CASA.green, padding:'18px 16px 22px' }}>
+        <div style={{ fontSize:10, color:CASA.greenLt, fontWeight:700, letterSpacing:1, marginBottom:10 }}>A MINHA CASA</div>
+        {loading ? (
+          <div className="sk" style={{ height:110, background:'rgba(255,255,255,0.12)' }}/>
+        ) : !loc ? (
+          <div style={{ fontSize:13, color:'rgba(255,255,255,0.85)', padding:'20px 0' }}>
+            Nenhuma localização registada ainda. Adicione a primeira para começar.
+          </div>
+        ) : (
+          <>
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:14 }}>
+              <div>
+                <div style={{ fontSize:13, color:'rgba(255,255,255,0.72)', marginBottom:2 }}>{loc.nome} · {loc.concelho || loc.localidade || ''}</div>
+                <div style={{ fontSize:56, fontWeight:700, color:'#fff', lineHeight:1 }}>{loc.home_score ?? 0}</div>
+                <div style={{ fontSize:11, color:'rgba(255,255,255,0.65)', marginTop:3 }}>Home Score</div>
+              </div>
+              <div style={{ display:'flex', flexDirection:'column', gap:5, paddingTop:10 }}>
+                {scores.map(([l,v]) => (
+                  <div key={l} style={{ display:'flex', alignItems:'center', gap:6 }}>
+                    <span style={{ fontSize:9, color:'rgba(255,255,255,0.6)', width:50, textAlign:'right' }}>{l}</span>
+                    <div style={{ width:46, height:4, background:'rgba(255,255,255,0.2)', borderRadius:2, overflow:'hidden' }}>
+                      <div style={{ width:`${v}%`, height:4, borderRadius:2, background: v>=85 ? CASA.greenLt : v>=70 ? '#FAC775' : '#F9BABA' }}/>
+                    </div>
+                    <span style={{ fontSize:9, color:'#fff', fontWeight:700, width:20 }}>{v}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div style={{ height:5, background:'rgba(255,255,255,0.2)', borderRadius:3, marginTop:14, overflow:'hidden' }}>
+              <div style={{ width:`${loc.home_score ?? 0}%`, height:5, background:CASA.greenLt, borderRadius:3 }}/>
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* QUICK ACTIONS */}
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1fr', gap:8, padding:'12px 12px 0' }}>
+        {[
+          ['📷','Câmara IA','camera'],
+          ['🏠','Locais',    'locais'],
+          ['📄','Docs',      'docs'],
+          ['⚡','Energia',   'energia'],
+        ].map(([ic,l,target]) => (
+          <button key={l} onClick={()=>onNavigate?.(target)} style={{
+            background:'#fff', border:`1px solid ${CASA.border}`, borderRadius:11,
+            padding:'10px 4px', textAlign:'center', cursor:'pointer',
+          }}>
+            <div style={{ fontSize:20, marginBottom:4 }}>{ic}</div>
+            <div style={{ fontSize:9, fontWeight:600, color:'#555' }}>{l}</div>
+          </button>
+        ))}
+      </div>
+
+      {/* ALERTA METEO (mock até Fase 3.5) */}
+      {loc?.concelho && (
+        <div style={{ margin:'10px 12px 0', background:CASA.amberLt, borderRadius:11, padding:'10px 12px', border:'1px solid #EF9F27', display:'flex', gap:10, alignItems:'flex-start' }}>
+          <span style={{ fontSize:20, flexShrink:0 }}>🌧️</span>
+          <div>
+            <div style={{ fontSize:12, fontWeight:700, color:CASA.amber }}>Chuva intensa prevista — 48h</div>
+            <div style={{ fontSize:11, color:CASA.amber, marginTop:2, lineHeight:1.45 }}>IPMA: 35mm · {loc.concelho} · Verificar caleiras e terraço</div>
+            <button onClick={()=>onNavigate?.('agendar')} style={{ background:'none', border:'none', padding:0, marginTop:6, color:'#185FA5', fontSize:11, fontWeight:600, cursor:'pointer' }}>Agendar vistoria →</button>
+          </div>
+        </div>
+      )}
+
+      {/* EQUIPAMENTOS */}
+      <div style={{ padding:'12px 12px 0' }}>
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8 }}>
+          <div style={{ fontSize:14, fontWeight:700 }}>Equipamentos</div>
+          {eqs.length > 3 && (
+            <button onClick={()=>onNavigate?.('equipamentos')} style={{ background:'none', border:'none', padding:0, fontSize:11, color:CASA.greenLt, cursor:'pointer', fontWeight:600 }}>Ver todos →</button>
+          )}
+        </div>
+        {loading && <div className="sk" style={{ height:54, marginBottom:7 }}/>}
+        {!loading && eqs.length === 0 && (
+          <div style={{ padding:'20px 14px', textAlign:'center', background:'#fff', border:`1px dashed ${CASA.border}`, borderRadius:11, fontSize:12, color:'#666' }}>
+            Ainda sem equipamentos. Adicione via câmara IA ou formulário.
+          </div>
+        )}
+        {eqs.slice(0,3).map(eq => {
+          const stColor = eq.health_score != null
+            ? (eq.health_score >= 75 ? CASA.greenLt : eq.health_score >= 50 ? '#F59E0B' : '#EF4444')
+            : '#ccc'
+          return (
+            <button key={eq.id} onClick={()=>onNavigate?.('ficha', eq)} style={{
+              display:'flex', alignItems:'center', gap:10, background:'#fff',
+              border:`1px solid ${CASA.border}`, borderRadius:11, padding:'10px 12px',
+              marginBottom:7, cursor:'pointer', width:'100%', textAlign:'left',
+            }}>
+              <div style={{ width:9, height:9, borderRadius:'50%', background:stColor, flexShrink:0 }}/>
+              <div style={{ flex:1, minWidth:0 }}>
+                <div style={{ fontSize:12, fontWeight:600, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{eq.nome}</div>
+                <div style={{ fontSize:10, color:'#999', marginTop:1 }}>{CASA_CAT_LABELS[eq.categoria] || eq.categoria}</div>
+              </div>
+              <div style={{ textAlign:'right', flexShrink:0 }}>
+                <div style={{ fontSize:13, fontWeight:700 }}>{eq.health_score ?? '—'}</div>
+                <div style={{ fontSize:10, color:'#999' }}>{nextLabel(eq)}</div>
+              </div>
+            </button>
+          )
+        })}
+
+        {/* POUPANÇAS (mock até Fase 3.4) */}
+        {!loading && eqs.length > 0 && (
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginTop:4, marginBottom:12 }}>
+            <button onClick={()=>onNavigate?.('energia')} style={{ border:`1px solid ${CASA.greenLt}`, borderRadius:11, padding:10, background:CASA.greenXl, cursor:'pointer', textAlign:'left' }}>
+              <div style={{ fontSize:9, background:CASA.greenLt, color:'#fff', padding:'2px 7px', borderRadius:8, display:'inline-block', marginBottom:4, fontWeight:600 }}>Troca rentável</div>
+              <div style={{ fontSize:10, color:'#555', marginBottom:2 }}>Caldeira Junkers</div>
+              <div style={{ fontSize:18, fontWeight:700, color:CASA.green }}>-28%</div>
+              <div style={{ fontSize:10, color:'#555', marginTop:2 }}>~10€/mês poupança</div>
+            </button>
+            <button onClick={()=>onNavigate?.('energia')} style={{ border:`1px solid ${CASA.border}`, borderRadius:11, padding:10, cursor:'pointer', textAlign:'left', background:'#fff' }}>
+              <div style={{ fontSize:9, background:'#FAC775', color:'#412402', padding:'2px 7px', borderRadius:8, display:'inline-block', marginBottom:4, fontWeight:600 }}>Revisão urgente</div>
+              <div style={{ fontSize:10, color:'#555', marginBottom:2 }}>AC Daikin sala</div>
+              <div style={{ fontSize:18, fontWeight:700 }}>-15%</div>
+              <div style={{ fontSize:10, color:'#555', marginTop:2 }}>Limpeza filtros imediata</div>
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
@@ -8932,6 +9123,23 @@ export default function App() {
   const [fabOpen, setFabOpen] = useState(false)
   // Drawer do cliente — menu lateral invocado pelo hamburger da CHome
   const [clienteDrawerOpen, setClienteDrawerOpen] = useState(false)
+
+  // ── Módulo Casa (Fase 3) ──
+  const [casaLocalizacoes, setCasaLocalizacoes] = useState(null)
+  const [casaEquipamentos, setCasaEquipamentos] = useState(null)
+  useEffect(() => {
+    if(!authUser) return
+    let active = true
+    Promise.all([
+      sbGetV5('localizacoes', '?select=*&ativo=eq.true&order=created_at.asc', authUser?.token),
+      sbGetV5('equipamentos', '?select=*&estado=eq.ativo&order=categoria.asc', authUser?.token),
+    ]).then(([locs, eqs]) => {
+      if(!active) return
+      setCasaLocalizacoes(locs || [])
+      setCasaEquipamentos(eqs || [])
+    })
+    return () => { active = false }
+  }, [authUser?.token])
   // Meta da categoria activa, combinada a partir de BD (categoriesCache) + design tokens (CATEGORY_META).
   // null enquanto categoriesCache carrega ou categoria não resolvida.
   const catCategoryMeta = (() => {
@@ -9383,7 +9591,11 @@ export default function App() {
             {ecra==='chat_ordem_c'&& sel && <OrderChat ordem={sel} role='cliente' prest={TECNICOS.find(t=>t.id===sel.tid)} onBack={()=>setEcra('ordem')} onUpdate={o=>{upd(o);setSel(o)}}/>}
             {!cliOver && <>
               {tab==='inicio'   && <CHome    ordens={ordens} onSvc={s=>{setSvcNova(s);setEcra('nova')}} onOrdem={o=>{setSel(o);setEcra('ordem')}} authUser={authUser} onCategoryV2={(id)=>{ setCatCategoryId(id); setCatScreen('list') }} onDrawerOpen={()=>setClienteDrawerOpen(true)} categoriesCache={categoriesCache}/>}
-              {tab==='explorar' && <CExplorar onSvc={s=>{setSvcNova(s);setEcra('nova')}}/>}
+              {tab==='casa'     && <CasaScreen
+                localizacoes={casaLocalizacoes}
+                equipamentos={casaEquipamentos}
+                onNavigate={(target)=>{ alert(`"${target}" disponível na Fase 3.${target==='ficha'?3:target==='docs'||target==='energia'?4:5}.`) }}
+              />}
               {tab==='pedidos'  && <CPedidos  ordens={ordens} onOrdem={o=>{setSel(o);setEcra('ordem')}} authUser={authUser}/>}
               {tab==='perfil'   && ecra!=='moradas' && ecra!=='wishlist' && (
                 <CPerfil
