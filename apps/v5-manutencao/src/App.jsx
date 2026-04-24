@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo, useEffect, useRef } from 'react'
 import CWishlist from './CWishlist'
-import { DEMO_PESSOA_ID } from './lib/demo.js'
+import { DEMO_PESSOA_ID, DEMO_ORGANIZATION_ID } from './lib/demo.js'
 import IniciaScreen from './IniciaScreen.jsx'
 import CasaScreen from './CasaScreen.jsx'
 import ServicosScreen from './ServicosScreen.jsx'
@@ -699,6 +699,18 @@ async function sbUpload(bucket, path, file, token) {
     })
     return r.ok ? `${SB_URL}/storage/v1/object/public/${bucket}/${path}` : null
   } catch { return null }
+}
+
+async function sbDeleteStorage(bucket, path, token) {
+  if (!SB_KEY || !path) return false
+  try {
+    const r = await fetch(`${SB_URL}/storage/v1/object/${bucket}`, {
+      method: 'DELETE',
+      headers: { ...sbHeaders(token||SB_KEY), 'Content-Type':'application/json' },
+      body: JSON.stringify({ prefixes: [path] }),
+    })
+    return r.ok
+  } catch { return false }
 }
 
 function SyncBadge({synced,loading}){
@@ -3386,6 +3398,12 @@ function EquipamentoFicha({ equipamento, authUser, onBack, onUpdated, onDeleted,
   const [rForm, setRForm] = useState({ tipo:'revisao', descricao:'', data: new Date().toISOString().slice(0,10), duracao_min:'', custo_total:'', notas_tecnico:'' })
   const [rSaving, setRSaving] = useState(false)
   const [rSuccess, setRSuccess] = useState(false)
+  const [filtroDoc, setFiltroDoc] = useState('todos')
+  const [uploadDocOpen, setUploadDocOpen] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const [uForm, setUForm] = useState({ tipo:'fatura', nome:'', data_documento:'', valido_ate:'', valor:'', file:null })
+  const [docMenuId, setDocMenuId] = useState(null)
+  const fileDocRef = useRef(null)
 
   useEffect(() => {
     if(!equipamento) return
@@ -3481,10 +3499,64 @@ function EquipamentoFicha({ equipamento, authUser, onBack, onUpdated, onDeleted,
     onDeleted?.(equipamento.id)
   }
   const doApagar = async () => {
-    const ok = await sbDeleteV5('equipamentos', `?id=eq.${equipamento.id}`, authUser?.token)
+    const r = await sbUpdateV5('equipamentos', `?id=eq.${equipamento.id}`, { estado:'apagado', updated_at:new Date().toISOString() }, authUser?.token)
     setConfirmAction(null)
-    if(!ok){ alert('Erro ao apagar.'); return }
+    if(!r){ alert('Erro ao apagar.'); return }
     onDeleted?.(equipamento.id)
+  }
+
+  const uploadDoc = async () => {
+    if(!uForm.file){ alert('Escolha um ficheiro primeiro.'); return }
+    if(uForm.file.size > 52428800){ alert('Ficheiro demasiado grande. Máximo 50MB.'); return }
+    if(!uForm.nome.trim()){ alert('Dê um nome ao documento.'); return }
+    setUploading(true)
+    const pessoaId = authUser?.user?.id || DEMO_PESSOA_ID
+    const locId = equipamento.localizacao_id
+    const ext = (uForm.file.name.split('.').pop() || 'bin').toLowerCase()
+    const safeName = uForm.nome.trim().replace(/[^a-zA-Z0-9._-]+/g,'-').slice(0,60)
+    const path = `${pessoaId}/${locId}/${uForm.tipo}/${Date.now()}-${safeName}.${ext}`
+    const url = await sbUpload('v5-casa-docs', path, uForm.file, authUser?.token)
+    if(!url){ alert('Erro de upload. Verifica a consola.'); setUploading(false); return }
+    const payload = {
+      equipamento_id: equipamento.id,
+      localizacao_id: locId,
+      organization_id: DEMO_ORGANIZATION_ID,
+      tipo: uForm.tipo,
+      nome: uForm.nome.trim(),
+      url,
+      storage_path: path,
+      mime_type: uForm.file.type || null,
+      tamanho_bytes: uForm.file.size,
+      data_documento: uForm.data_documento || null,
+      valido_ate: uForm.valido_ate || null,
+      valor_euros: uForm.valor === '' ? null : Number(uForm.valor),
+    }
+    const r = await sbSaveV5('documentos', payload, authUser?.token)
+    if(!r){
+      console.warn('[uploadDoc] INSERT falhou após upload. Orphan file:', path) // TODO(mario): cleanup job
+      alert('Upload feito mas erro a registar. Ver consola.')
+      setUploading(false)
+      return
+    }
+    const newDoc = Array.isArray(r) ? r[0] : r
+    const docsReaisEsteMes = (documentos||[]).filter(d => d.storage_path && d.created_at &&
+      new Date(d.created_at) >= new Date(new Date().getFullYear(), new Date().getMonth(), 1)).length
+    if(docsReaisEsteMes < 10){
+      await sbSaveV5('pontos_historico', { pessoa_id: pessoaId, pontos: 30, motivo: 'Upload de documento de equipamento', ref_tipo: 'documento', ref_id: newDoc?.id }, authUser?.token)
+    }
+    setUploading(false)
+    setUploadDocOpen(false)
+    setUForm({ tipo:'fatura', nome:'', data_documento:'', valido_ate:'', valor:'', file:null })
+    const updated = await sbGetV5('documentos', `?equipamento_id=eq.${equipamento.id}&order=created_at.desc`, authUser?.token)
+    setDocumentos(updated || [])
+  }
+
+  const deleteDoc = async (d) => {
+    if(!window.confirm(`Apagar "${d.nome}"? Esta acção não pode ser revertida.`)) return
+    setDocMenuId(null)
+    if(d.storage_path) await sbDeleteStorage('v5-casa-docs', d.storage_path, authUser?.token)
+    await sbDeleteV5('documentos', `?id=eq.${d.id}`, authUser?.token)
+    setDocumentos(prev => (prev||[]).filter(x => x.id !== d.id))
   }
 
   // Helpers de formatação
@@ -3665,48 +3737,96 @@ function EquipamentoFicha({ equipamento, authUser, onBack, onUpdated, onDeleted,
 
       {/* TAB DOCUMENTOS */}
       {tab==='documentos' && (
-        <div>
+        <div onClick={()=>docMenuId && setDocMenuId(null)}>
+          {/* Filter chips */}
+          <div className="cc-no-scrollbar" style={{ display:'flex', gap:6, overflowX:'auto', padding:'8px 12px', borderBottom:`1px solid ${CASA.border}` }}>
+            {DOC_TIPOS.map(t => {
+              const n = t.id==='todos' ? (documentos||[]).length : (documentos||[]).filter(d=>d.tipo===t.id).length
+              const on = filtroDoc === t.id
+              return (
+                <button key={t.id} onClick={()=>setFiltroDoc(t.id)} style={{
+                  flexShrink:0, padding:'5px 10px', borderRadius:14, fontSize:10, cursor:'pointer',
+                  border:`1px solid ${on?CASA.greenLt:CASA.border}`,
+                  background: on?CASA.greenXl:'#fff',
+                  color: on?CASA.green:'#555', fontWeight: on?700:400, whiteSpace:'nowrap',
+                }}>{t.label}{n>0 ? ` (${n})` : ''}</button>
+              )
+            })}
+          </div>
+
+          {/* Lista */}
           {documentos === null && <div className="sk" style={{ height:60, margin:12 }}/>}
-          {documentos && documentos.length === 0 && (
-            <div style={{ padding:'28px 14px', textAlign:'center', color:'#666', fontSize:12, lineHeight:1.55 }}>
-              Sem documentos deste equipamento.<br/>Upload de ficheiros fica disponível na Fase 3.4.
-            </div>
-          )}
-          {documentos && documentos.map(d => {
-            const ICS = { fatura:['🧾','#E6F1FB'], garantia:['🛡️',CASA.greenXl], contrato:['📄',CASA.amberLt], relatorio:['📋','#FAECE7'], manual:['📘','#EEEDFE'], foto:['🖼','#F3F3F3'], planta:['🗺','#F3F3F3'], outro:['📎','#F3F3F3'] }
-            const [ic,bg] = ICS[d.tipo] || ICS.outro
-            return (
-              <a key={d.id} href={d.url} target="_blank" rel="noreferrer" style={{ display:'flex', alignItems:'center', gap:10, padding:'11px 14px', borderBottom:`1px solid ${CASA.border}`, textDecoration:'none', color:'inherit' }}>
-                <div style={{ width:36, height:36, borderRadius:9, background:bg, display:'grid', placeItems:'center', fontSize:18, flexShrink:0 }}>{ic}</div>
-                <div style={{ flex:1, minWidth:0 }}>
-                  <div style={{ fontSize:12, fontWeight:600, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{d.nome}</div>
-                  <div style={{ fontSize:10, color:'#999', marginTop:1 }}>{d.descricao || d.tipo}</div>
-                </div>
-                <span style={{ fontSize:10, color:'#999' }}>›</span>
-              </a>
+          {documentos && (() => {
+            const filtered = documentos.filter(d => filtroDoc==='todos' || d.tipo===filtroDoc)
+            if(filtered.length === 0) return (
+              <div style={{ padding:'28px 20px', textAlign:'center', color:'#666', fontSize:12, lineHeight:1.6 }}>
+                {documentos.length === 0
+                  ? <><strong>Sem documentos</strong><br/>Adiciona o primeiro e ganha +30 pts (até 300 pts/mês).</>
+                  : `Sem documentos do tipo ${DOC_TIPO_META[filtroDoc]?.label || filtroDoc}.`}
+              </div>
             )
-          })}
-          <button onClick={()=>alert('Upload de documento — disponível na Fase 3.4 (Supabase Storage).')} style={{
+            return filtered.map(d => {
+              const m = DOC_TIPO_META[d.tipo] || DOC_TIPO_META.outro
+              const isPlaceholder = !d.storage_path
+              const menuOpen = docMenuId === d.id
+              return (
+                <div key={d.id} style={{ position:'relative', display:'flex', alignItems:'center', gap:10, padding:'11px 14px', borderBottom:`1px solid ${CASA.border}`, opacity: isPlaceholder ? 0.55 : 1 }}>
+                  <div style={{ width:36, height:36, borderRadius:9, background:m.bg, display:'grid', placeItems:'center', fontSize:18, flexShrink:0 }}>{m.ic}</div>
+                  <div onClick={()=>{ if(!isPlaceholder) window.open(d.url,'_blank') }}
+                    style={{ flex:1, minWidth:0, cursor: isPlaceholder?'default':'pointer' }}>
+                    <div style={{ fontSize:12, fontWeight:600, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{d.nome}</div>
+                    <div style={{ fontSize:10, color:'#999', marginTop:1 }}>
+                      {m.label}
+                      {d.tamanho_bytes ? ` · ${(d.tamanho_bytes/1024/1024).toFixed(1)} MB` : ''}
+                      {d.data_documento ? ` · ${new Date(d.data_documento).toLocaleDateString('pt-PT',{month:'short',year:'numeric'})}` : ''}
+                      {isPlaceholder ? ' · ficheiro demo' : ''}
+                    </div>
+                  </div>
+                  {!isPlaceholder && (
+                    <div style={{ position:'relative' }}>
+                      <button onClick={e=>{e.stopPropagation(); setDocMenuId(menuOpen?null:d.id)}}
+                        style={{ background:'none', border:'none', padding:'4px 8px', cursor:'pointer', fontSize:16, color:'#aaa', lineHeight:1 }}>•••</button>
+                      {menuOpen && (
+                        <div onClick={e=>e.stopPropagation()} style={{ position:'absolute', right:0, top:'110%', background:'#fff', border:`1px solid ${CASA.border}`, borderRadius:10, padding:4, zIndex:50, minWidth:130, boxShadow:'0 4px 16px -4px rgba(0,0,0,0.12)' }}>
+                          <button onClick={()=>{ window.open(d.url,'_blank'); setDocMenuId(null) }}
+                            style={{ display:'block', width:'100%', textAlign:'left', padding:'8px 12px', fontSize:12, background:'none', border:'none', cursor:'pointer', borderRadius:7, color:'#111' }}>⬇ Download</button>
+                          <button onClick={()=>deleteDoc(d)}
+                            style={{ display:'block', width:'100%', textAlign:'left', padding:'8px 12px', fontSize:12, background:'none', border:'none', cursor:'pointer', borderRadius:7, color:CASA.red }}>🗑 Apagar</button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )
+            })
+          })()}
+
+          <button onClick={()=>setUploadDocOpen(true)} style={{
             width:'calc(100% - 24px)', margin:12, padding:12, borderRadius:11, border:'none',
             background:CASA.greenLt, color:'#fff', fontSize:13, fontWeight:700, cursor:'pointer',
-          }}>+ Adicionar documento</button>
+          }}>+ Novo documento</button>
         </div>
       )}
 
       {/* TAB FORNECEDOR */}
       {tab==='fornecedor' && (
         <div style={{ padding:'10px 12px', display:'flex', flexDirection:'column', gap:10 }}>
-          <FornecedorCard title="Fabricante" rows={[
-            ['Marca',    equipamento.marca  || '—'],
-            ['Modelo',   equipamento.modelo || '—'],
-            ['Nº Série', equipamento.numero_serie || '—'],
-          ]}/>
-          <FornecedorCard title="Técnico habitual" rows={tecnicoHabitual ? [
+          <FornecedorCard icon="🏭" title="Fabricante" rows={[
+            ['Marca',      equipamento.marca  || '—'],
+            ['Modelo',     equipamento.modelo || '—'],
+            ['Instalação', fmtDate(equipamento.data_instalacao)],
+            ['Garantia',   fmtDate(equipamento.data_garantia_fim) + (garantiaExpirada ? ' ✕' : (equipamento.data_garantia_fim && new Date(equipamento.data_garantia_fim) < new Date(Date.now()+90*86400000) ? ' ⚠️' : ''))],
+          ]} cta={{ label:'🔍 Site do fabricante', onClick:()=>window.open(`https://www.google.com/search?q=${encodeURIComponent((equipamento.marca||'')+' '+(equipamento.modelo||''))}`, '_blank') }}/>
+          <FornecedorCard icon="🔧" title="Técnico habitual" rows={tecnicoHabitual ? [
             ['Nome',      tecnicoHabitual.nome || '—'],
             ['Contacto',  tecnicoHabitual.telefone || tecnicoHabitual.tel || '—'],
             ['Email',     tecnicoHabitual.email || '—'],
-          ] : [['Ainda sem técnico designado','Atribuído automaticamente no próximo pedido']]}/>
-          <FornecedorCard title="Peças compatíveis" rows={PECAS_COMPAT[equipamento.marca?.toLowerCase?.()] || [['Catálogo indisponível','Peças surgirão após intervenções']]}/>
+          ] : [['Sem técnico atribuído','Será atribuído no próximo pedido']]}
+          cta={tecnicoHabitual
+            ? { label:'📅 Agendar revisão', onClick:()=>alert('Agendamento disponível na Fase 3.6.') }
+            : { label:'+ Atribuir técnico', onClick:()=>alert('Lista de prestadores disponível em fase futura.') }}/>
+          <FornecedorCard icon="🔩" title="Peças e consumíveis" rows={PECAS_COMPAT[equipamento.marca?.toLowerCase?.()] || [['Catálogo indisponível','Peças surgirão após intervenções']]}
+          cta={{ label:'🛒 Comprar peças', onClick:()=>alert('Marketplace de peças disponível em fase futura.') }}/>
         </div>
       )}
 
@@ -3766,6 +3886,80 @@ function EquipamentoFicha({ equipamento, authUser, onBack, onUpdated, onDeleted,
         </div>
       )}
 
+      {/* MODAL UPLOAD DOCUMENTO */}
+      {uploadDocOpen && (
+        <div onClick={()=>!uploading && setUploadDocOpen(false)} style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.55)', zIndex:200, display:'flex', alignItems:'flex-end', justifyContent:'center' }}>
+          <div onClick={e=>e.stopPropagation()} style={{ background:'#fff', width:'100%', maxWidth:430, borderRadius:'18px 18px 0 0', padding:'18px 18px 28px', maxHeight:'90vh', overflowY:'auto', animation:'popIn 0.18s ease-out' }}>
+            <div style={{ width:38, height:4, borderRadius:2, background:'#e5e7eb', margin:'0 auto 14px' }}/>
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:14 }}>
+              <div style={{ fontSize:15, fontWeight:700 }}>Novo documento</div>
+              <button onClick={()=>setUploadDocOpen(false)} style={{ background:'none', border:'none', fontSize:18, cursor:'pointer', color:'#999' }}>✕</button>
+            </div>
+
+            <div style={{ fontSize:10, color:'#999', textTransform:'uppercase', letterSpacing:0.5, marginBottom:6 }}>Tipo</div>
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:6, marginBottom:14 }}>
+              {DOC_TIPOS.filter(t=>t.id!=='todos').map(t => {
+                const on = uForm.tipo === t.id
+                return (
+                  <button key={t.id} onClick={()=>setUForm(p=>({...p, tipo:t.id}))} style={{
+                    padding:'7px 4px', borderRadius:9, cursor:'pointer',
+                    border:`1.5px solid ${on?CASA.greenLt:CASA.border}`,
+                    background: on?CASA.greenXl:'#fff',
+                    fontSize:10, color:'#111', fontWeight:600, textAlign:'center',
+                  }}>
+                    <div style={{ fontSize:16, marginBottom:2 }}>{t.ic}</div>
+                    {t.label}
+                  </button>
+                )
+              })}
+            </div>
+
+            <div style={{ fontSize:10, color:'#999', textTransform:'uppercase', letterSpacing:0.5, marginBottom:4 }}>Ficheiro *</div>
+            <input ref={fileDocRef} type="file" accept="image/jpeg,image/png,image/webp,application/pdf"
+              onChange={e=>{
+                const f = e.target.files?.[0] || null
+                setUForm(p=>({ ...p, file:f, nome: p.nome || (f ? f.name.replace(/\.[^.]+$/,'').replace(/[_-]+/g,' ') : '') }))
+              }}
+              style={{ width:'100%', boxSizing:'border-box', padding:'8px 10px', borderRadius:8, border:`1px solid ${CASA.border}`, fontSize:12, background:'#fff', marginBottom:10 }}/>
+
+            <div style={{ fontSize:10, color:'#999', textTransform:'uppercase', letterSpacing:0.5, marginBottom:4 }}>Nome *</div>
+            <input value={uForm.nome} onChange={e=>setUForm(p=>({...p, nome:e.target.value}))}
+              style={{ width:'100%', boxSizing:'border-box', padding:'9px 12px', borderRadius:8, border:`1px solid ${CASA.border}`, fontSize:13, outline:'none', marginBottom:10 }}
+              placeholder="Ex: Fatura revisão caldeira jan 2026"/>
+
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:8, marginBottom:14 }}>
+              <div>
+                <div style={{ fontSize:10, color:'#999', textTransform:'uppercase', letterSpacing:0.5, marginBottom:4 }}>Data doc.</div>
+                <input type="date" value={uForm.data_documento} onChange={e=>setUForm(p=>({...p, data_documento:e.target.value}))}
+                  style={{ width:'100%', boxSizing:'border-box', padding:'8px 8px', borderRadius:8, border:`1px solid ${CASA.border}`, fontSize:12, outline:'none' }}/>
+              </div>
+              <div>
+                <div style={{ fontSize:10, color:'#999', textTransform:'uppercase', letterSpacing:0.5, marginBottom:4 }}>Válido até</div>
+                <input type="date" value={uForm.valido_ate} onChange={e=>setUForm(p=>({...p, valido_ate:e.target.value}))}
+                  style={{ width:'100%', boxSizing:'border-box', padding:'8px 8px', borderRadius:8, border:`1px solid ${CASA.border}`, fontSize:12, outline:'none' }}/>
+              </div>
+              <div>
+                <div style={{ fontSize:10, color:'#999', textTransform:'uppercase', letterSpacing:0.5, marginBottom:4 }}>Valor (€)</div>
+                <input type="number" min="0" step="0.01" value={uForm.valor} onChange={e=>setUForm(p=>({...p, valor:e.target.value}))}
+                  style={{ width:'100%', boxSizing:'border-box', padding:'8px 8px', borderRadius:8, border:`1px solid ${CASA.border}`, fontSize:12, outline:'none' }}
+                  placeholder="0.00"/>
+              </div>
+            </div>
+
+            <div style={{ display:'flex', gap:8 }}>
+              <button onClick={()=>setUploadDocOpen(false)} disabled={uploading} style={{ flex:1, padding:'11px 14px', borderRadius:10, border:`1px solid ${CASA.border}`, background:'#fff', color:'#555', fontWeight:600, fontSize:13, cursor:uploading?'default':'pointer' }}>Cancelar</button>
+              <button onClick={uploadDoc} disabled={uploading || !uForm.file || !uForm.nome.trim()} style={{
+                flex:2, padding:'11px 14px', borderRadius:10, border:'none',
+                background: uploading||!uForm.file||!uForm.nome.trim() ? CASA.border : CASA.greenLt,
+                color:'#fff', fontWeight:700, fontSize:13, cursor: uploading||!uForm.file||!uForm.nome.trim() ? 'default':'pointer',
+              }}>
+                {uploading ? 'A enviar…' : 'Enviar  +30 pts'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* CONFIRMAÇÃO ABATER / APAGAR */}
       {confirmAction && (
         <div onClick={()=>setConfirmAction(null)} style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.55)', zIndex:200, display:'flex', alignItems:'flex-end', justifyContent:'center' }}>
@@ -3792,16 +3986,24 @@ function EquipamentoFicha({ equipamento, authUser, onBack, onUpdated, onDeleted,
   )
 }
 
-function FornecedorCard({ title, rows }){
+function FornecedorCard({ icon, title, rows, cta }){
   return (
     <div style={{ background:'#fff', border:`1px solid ${CASA.border}`, borderRadius:12, padding:'12px 14px' }}>
-      <div style={{ fontSize:10, color:'#999', textTransform:'uppercase', letterSpacing:0.3, marginBottom:8, fontWeight:600 }}>{title}</div>
+      <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:8 }}>
+        {icon && <span style={{ fontSize:15 }}>{icon}</span>}
+        <span style={{ fontSize:10, color:'#999', textTransform:'uppercase', letterSpacing:0.3, fontWeight:600 }}>{title}</span>
+      </div>
       {rows.map(([l,v],i) => (
         <div key={i} style={{ display:'flex', justifyContent:'space-between', padding:'5px 0', borderBottom: i<rows.length-1 ? `1px solid ${CASA.border}` : 'none', gap:10 }}>
           <span style={{ fontSize:11, color:'#555', flexShrink:0 }}>{l}</span>
           <span style={{ fontSize:11, fontWeight:600, color:'#111', textAlign:'right', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{v}</span>
         </div>
       ))}
+      {cta && (
+        <button onClick={cta.onClick} style={{ marginTop:10, width:'100%', padding:'8px 12px', borderRadius:9, border:`1px solid ${CASA.border}`, background:CASA.bg, fontSize:11, color:CASA.green, fontWeight:600, cursor:'pointer' }}>
+          {cta.label}
+        </button>
+      )}
     </div>
   )
 }
