@@ -574,6 +574,43 @@ async function sbGetV5(table, filter='', token) {
   } catch { return null }
 }
 
+async function sbSaveV5(table, data, token) {
+  if (!SB_KEY) return null
+  try {
+    const r = await fetch(`${SB_URL}/rest/v1/${table}`, {
+      method:'POST',
+      headers: { ...sbHeaders(token||SB_KEY), 'Content-Profile':'v5_manutencao', 'Prefer':'return=representation' },
+      body: JSON.stringify(data),
+    })
+    if (!r.ok) { console.warn(`[sbSaveV5 ${table}]`, r.status, await r.text().catch(()=>'')); return null }
+    return r.json()
+  } catch (e) { console.warn(`[sbSaveV5 ${table}] ex`, e); return null }
+}
+
+async function sbUpdateV5(table, filter, data, token) {
+  if (!SB_KEY) return null
+  try {
+    const r = await fetch(`${SB_URL}/rest/v1/${table}${filter}`, {
+      method:'PATCH',
+      headers: { ...sbHeaders(token||SB_KEY), 'Content-Profile':'v5_manutencao', 'Prefer':'return=representation' },
+      body: JSON.stringify(data),
+    })
+    if (!r.ok) { console.warn(`[sbUpdateV5 ${table}]`, r.status, await r.text().catch(()=>'')); return null }
+    return r.json()
+  } catch (e) { console.warn(`[sbUpdateV5 ${table}] ex`, e); return null }
+}
+
+async function sbDeleteV5(table, filter, token) {
+  if (!SB_KEY) return false
+  try {
+    const r = await fetch(`${SB_URL}/rest/v1/${table}${filter}`, {
+      method:'DELETE',
+      headers: { ...sbHeaders(token||SB_KEY), 'Content-Profile':'v5_manutencao' },
+    })
+    return r.ok
+  } catch { return false }
+}
+
 async function sbSave(table, data, token) {
   if (!SB_KEY) return null
   try {
@@ -3474,6 +3511,362 @@ function CasaScreen({ localizacoes, equipamentos, onNavigate }){
       </div>
     </div>
   )
+}
+
+/* EquipamentoFicha — detalhe com 4 tabs + edição (Fase 3.3) */
+function EquipamentoFicha({ equipamento, authUser, onBack, onUpdated, onDeleted }){
+  const [tab, setTab] = useState('detalhes')
+  const [editing, setEditing] = useState(false)
+  const [form, setForm] = useState({})
+  const [saving, setSaving] = useState(false)
+  const [confirmAction, setConfirmAction] = useState(null) // 'abater' | 'apagar' | null
+  const [intervencoes, setIntervencoes] = useState(null)
+  const [documentos, setDocumentos] = useState(null)
+  const [tecnicoHabitual, setTecnicoHabitual] = useState(null)
+
+  useEffect(() => {
+    if(!equipamento) return
+    setForm({
+      nome:              equipamento.nome || '',
+      marca:             equipamento.marca || '',
+      modelo:            equipamento.modelo || '',
+      numero_serie:      equipamento.numero_serie || '',
+      localizacao_imovel: equipamento.localizacao_imovel || '',
+      data_instalacao:   equipamento.data_instalacao || '',
+      data_garantia_fim: equipamento.data_garantia_fim || '',
+      potencia_kw:       equipamento.potencia_kw ?? '',
+      classe_energetica: equipamento.classe_energetica || '',
+      notas:             equipamento.notas || '',
+    })
+  }, [equipamento?.id])
+
+  // Fetch intervenções + documentos associados ao equipamento
+  useEffect(() => {
+    if(!equipamento?.id) return
+    let active = true
+    Promise.all([
+      sbGetV5('intervencoes_equipamento', `?equipamento_id=eq.${equipamento.id}&order=data.desc`, authUser?.token),
+      sbGetV5('documentos',              `?equipamento_id=eq.${equipamento.id}&order=created_at.desc`, authUser?.token),
+    ]).then(([intv, docs]) => {
+      if(!active) return
+      setIntervencoes(intv || [])
+      setDocumentos(docs || [])
+    })
+    // Fetch técnico habitual se houver
+    if(equipamento.tecnico_habitual_id){
+      sbGetV5('prestadores', `?id=eq.${equipamento.tecnico_habitual_id}&select=*`, authUser?.token).then(rows => {
+        if(active) setTecnicoHabitual(Array.isArray(rows) ? rows[0] : null)
+      })
+    }
+    return () => { active = false }
+  }, [equipamento?.id, authUser?.token])
+
+  if(!equipamento) return null
+
+  const save = async () => {
+    setSaving(true)
+    const payload = {
+      nome:              form.nome.trim(),
+      marca:             form.marca.trim() || null,
+      modelo:            form.modelo.trim() || null,
+      numero_serie:      form.numero_serie.trim() || null,
+      localizacao_imovel: form.localizacao_imovel.trim() || null,
+      data_instalacao:   form.data_instalacao || null,
+      data_garantia_fim: form.data_garantia_fim || null,
+      potencia_kw:       form.potencia_kw === '' ? null : Number(form.potencia_kw),
+      classe_energetica: form.classe_energetica || null,
+      notas:             form.notas.trim() || null,
+      updated_at:        new Date().toISOString(),
+    }
+    const r = await sbUpdateV5('equipamentos', `?id=eq.${equipamento.id}`, payload, authUser?.token)
+    setSaving(false)
+    if(!r){ alert('Erro ao guardar. Ver consola.'); return }
+    setEditing(false)
+    onUpdated?.(Array.isArray(r) ? r[0] : r)
+  }
+
+  const doAbater = async () => {
+    const r = await sbUpdateV5('equipamentos', `?id=eq.${equipamento.id}`, { estado:'abatido', updated_at:new Date().toISOString() }, authUser?.token)
+    setConfirmAction(null)
+    if(!r){ alert('Erro ao abater.'); return }
+    onDeleted?.(equipamento.id)
+  }
+  const doApagar = async () => {
+    const ok = await sbDeleteV5('equipamentos', `?id=eq.${equipamento.id}`, authUser?.token)
+    setConfirmAction(null)
+    if(!ok){ alert('Erro ao apagar.'); return }
+    onDeleted?.(equipamento.id)
+  }
+
+  // Helpers de formatação
+  const fmtDate = iso => iso ? new Date(iso).toLocaleDateString('pt-PT', { month:'short', year:'numeric' }) : '—'
+  const garantiaExpirada = equipamento.data_garantia_fim && new Date(equipamento.data_garantia_fim) < new Date()
+  const healthAmber = equipamento.health_score != null && equipamento.health_score < 75
+  const CATLABEL = CASA_CAT_LABELS[equipamento.categoria] || equipamento.categoria
+
+  // Recomendação IA (mock deterministic até Fase 3.5)
+  const recomendacao = (() => {
+    const ef = equipamento.eficiencia_estimada
+    const hs = equipamento.health_score
+    if(hs != null && hs < 50) return 'Health Score crítico — recomenda-se inspecção imediata. Intervenção preventiva evita custos 3-4× maiores.'
+    if(garantiaExpirada) return 'Garantia do fabricante expirada. Considere contrato de manutenção anual para cobrir custos de peças.'
+    if(ef != null && ef < 85) return `Eficiência estimada ~${ef}% (ideal 94%+). Limpeza/calibração recupera 5-10% imediatamente. Avaliar substituição por modelo A-rated em 1-2 anos.`
+    return 'Equipamento em condições adequadas. Manter revisões anuais conforme plano do fabricante.'
+  })()
+
+  const tabs = ['Detalhes','Intervenções','Documentos','Fornecedor']
+
+  return (
+    <div style={{ minHeight:'100vh', background:CASA.bg, paddingBottom:88 }}>
+      {/* HEADER */}
+      <div style={{ background:CASA.green, padding:'12px 14px 14px', color:'#fff' }}>
+        <button onClick={onBack} style={{ background:'none', border:'none', padding:0, fontSize:10, color:'rgba(255,255,255,0.7)', cursor:'pointer', marginBottom:4 }}>← A minha casa</button>
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:10 }}>
+          <div style={{ flex:1, minWidth:0 }}>
+            <div style={{ fontSize:15, fontWeight:700, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{equipamento.nome}</div>
+            <div style={{ fontSize:11, opacity:0.75, marginTop:2 }}>{CATLABEL}{equipamento.localizacao_imovel ? ` · ${equipamento.localizacao_imovel}` : ''}</div>
+          </div>
+          <button onClick={()=>{ if(editing){ save() } else { setEditing(true) } }} disabled={saving} style={{
+            background:'rgba(255,255,255,0.2)', border:'none', borderRadius:8, padding:'5px 11px',
+            fontSize:11, color:'#fff', cursor:saving?'default':'pointer', fontWeight:600, flexShrink:0,
+          }}>{saving ? 'A guardar…' : editing ? '✓ Guardar' : '✎ Editar'}</button>
+        </div>
+        {healthAmber && !editing && (
+          <div style={{ marginTop:8, display:'inline-flex', alignItems:'center', gap:6, background:'rgba(250,199,117,0.25)', border:'1px solid rgba(250,199,117,0.5)', borderRadius:12, padding:'4px 10px', fontSize:10 }}>
+            <div style={{ width:6, height:6, borderRadius:'50%', background:'#FAC775' }}/> Health Score {equipamento.health_score}/100
+          </div>
+        )}
+      </div>
+
+      {/* TABS */}
+      <div style={{ display:'flex', borderBottom:`1px solid ${CASA.border}`, background:'#fff' }}>
+        {tabs.map(t => {
+          const k = t.toLowerCase().replace('ç','c').replace('õ','o')
+          const on = tab === k
+          return (
+            <button key={t} onClick={()=>setTab(k)} style={{
+              flex:1, padding:'9px 2px', textAlign:'center', fontSize:10.5, cursor:'pointer',
+              color: on ? CASA.greenLt : '#999', fontWeight: on ? 700 : 400,
+              borderBottom:`2px solid ${on ? CASA.greenLt : 'transparent'}`,
+              background:'none', border:'none',
+            }}>{t}</button>
+          )
+        })}
+      </div>
+
+      {/* TAB DETALHES */}
+      {tab==='detalhes' && !editing && (
+        <div>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr' }}>
+            {[
+              ['Instalação',       fmtDate(equipamento.data_instalacao),       false],
+              ['Garantia',         fmtDate(equipamento.data_garantia_fim) + (garantiaExpirada ? ' ✕' : ''), garantiaExpirada],
+              ['Última revisão',   fmtDate(equipamento.data_ultima_revisao),   false],
+              ['Técnico habitual', tecnicoHabitual?.nome || '—',               false],
+              ['Consumo/mês',      equipamento.consumo_estimado_kwh_mes ? `${equipamento.consumo_estimado_kwh_mes}kWh` : '—', false],
+              ['Health Score',     (equipamento.health_score ?? '—') + ' / 100', healthAmber],
+              ['Classe energética', equipamento.classe_energetica || '—',      ['C','D','E','F','G'].includes(equipamento.classe_energetica)],
+              ['Potência nominal', equipamento.potencia_kw ? `${equipamento.potencia_kw} kW` : '—', false],
+            ].map(([l,v,w],i) => (
+              <div key={l} style={{ padding:'9px 12px', borderRight:i%2===0?`1px solid ${CASA.border}`:'none', borderBottom:`1px solid ${CASA.border}` }}>
+                <div style={{ fontSize:9, color:'#999', textTransform:'uppercase', letterSpacing:0.3, marginBottom:2 }}>{l}</div>
+                <div style={{ fontSize:12, fontWeight:600, color: w ? CASA.amber : '#111' }}>{v}</div>
+              </div>
+            ))}
+          </div>
+          <div style={{ margin:'10px 12px', background:CASA.amberLt, borderRadius:11, padding:'10px 12px', border:'1px solid #EF9F27' }}>
+            <div style={{ fontSize:11, fontWeight:700, color:CASA.amber, marginBottom:4 }}>✨ Recomendação IA</div>
+            <div style={{ fontSize:11, color:CASA.amber, lineHeight:1.55 }}>{recomendacao}</div>
+          </div>
+          <div style={{ display:'flex', gap:8, padding:'0 12px 14px' }}>
+            <button onClick={()=>alert('Agendar revisão — liga ao fluxo V2 na Fase 3.5')} style={{ flex:2, padding:12, borderRadius:11, border:'none', background:CASA.greenLt, color:'#fff', fontSize:13, fontWeight:700, cursor:'pointer' }}>Agendar revisão ↗</button>
+            <button onClick={()=>alert('AI Expert disponível na Fase 3.5.')} style={{ flex:1, padding:12, borderRadius:11, border:`1px solid ${CASA.border}`, background:CASA.bg, fontSize:13, cursor:'pointer' }}>AI Expert</button>
+          </div>
+        </div>
+      )}
+
+      {tab==='detalhes' && editing && (
+        <div style={{ padding:12, display:'flex', flexDirection:'column', gap:10 }}>
+          {[
+            ['Nome',               'nome',              'text'],
+            ['Marca',              'marca',             'text'],
+            ['Modelo',             'modelo',            'text'],
+            ['Número de série',    'numero_serie',      'text'],
+            ['Localização',        'localizacao_imovel','text'],
+            ['Data instalação',    'data_instalacao',   'date'],
+            ['Fim da garantia',    'data_garantia_fim', 'date'],
+            ['Potência (kW)',      'potencia_kw',       'number'],
+          ].map(([label, key, type]) => (
+            <div key={key}>
+              <div style={{ fontSize:9, color:'#999', textTransform:'uppercase', letterSpacing:0.3, marginBottom:4 }}>{label}</div>
+              <input type={type} value={form[key] ?? ''} onChange={e=>setForm(p=>({...p, [key]:e.target.value}))}
+                style={{ width:'100%', boxSizing:'border-box', padding:'8px 11px', borderRadius:9, border:`1px solid ${CASA.border}`, fontSize:12, background:'#fafafa', outline:'none' }}/>
+            </div>
+          ))}
+          <div>
+            <div style={{ fontSize:9, color:'#999', textTransform:'uppercase', letterSpacing:0.3, marginBottom:6 }}>Classe energética</div>
+            <div style={{ display:'flex', gap:5, flexWrap:'wrap' }}>
+              {['A+++','A++','A+','A','B','C','D'].map(cl => {
+                const on = form.classe_energetica === cl
+                const good = ['A+++','A++','A+','A'].includes(cl)
+                const bad  = ['C','D'].includes(cl)
+                return (
+                  <button key={cl} onClick={()=>setForm(p=>({...p, classe_energetica: on ? '' : cl}))} style={{
+                    padding:'6px 12px', borderRadius:9, fontSize:11, fontWeight:700, cursor:'pointer',
+                    border:`2px solid ${on?CASA.greenLt:CASA.border}`, background: on?CASA.greenLt:CASA.bg,
+                    color: on?'#fff' : good?CASA.green : bad?CASA.red : '#111',
+                  }}>{cl}</button>
+                )
+              })}
+            </div>
+          </div>
+          <div>
+            <div style={{ fontSize:9, color:'#999', textTransform:'uppercase', letterSpacing:0.3, marginBottom:4 }}>Notas</div>
+            <textarea value={form.notas || ''} onChange={e=>setForm(p=>({...p, notas:e.target.value}))} rows={3}
+              style={{ width:'100%', boxSizing:'border-box', padding:'8px 11px', borderRadius:9, border:`1px solid ${CASA.border}`, fontSize:12, background:'#fafafa', outline:'none', fontFamily:'inherit' }}/>
+          </div>
+          <div style={{ borderTop:`1px solid ${CASA.border}`, paddingTop:12, marginTop:4 }}>
+            <div style={{ fontSize:9, color:'#999', textTransform:'uppercase', letterSpacing:0.3, marginBottom:8 }}>Ações de gestão</div>
+            <div style={{ display:'flex', gap:8 }}>
+              <button onClick={()=>setConfirmAction('abater')} style={{ flex:1, padding:10, borderRadius:11, border:'1px solid #EF9F27', background:CASA.amberLt, cursor:'pointer', textAlign:'center' }}>
+                <div style={{ fontSize:22, marginBottom:3 }}>📦</div>
+                <div style={{ fontSize:12, fontWeight:700, color:CASA.amber }}>Abater</div>
+                <div style={{ fontSize:9, color:CASA.amber, marginTop:2 }}>Manter histórico</div>
+              </button>
+              <button onClick={()=>setConfirmAction('apagar')} style={{ flex:1, padding:10, borderRadius:11, border:'1px solid #F9BABA', background:CASA.redLt, cursor:'pointer', textAlign:'center' }}>
+                <div style={{ fontSize:22, marginBottom:3 }}>🗑️</div>
+                <div style={{ fontSize:12, fontWeight:700, color:CASA.red }}>Apagar</div>
+                <div style={{ fontSize:9, color:CASA.red, marginTop:2 }}>Permanente</div>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB INTERVENÇÕES */}
+      {tab==='intervencoes' && (
+        <div style={{ padding:'8px 12px' }}>
+          {intervencoes === null && <div className="sk" style={{ height:60, marginBottom:8 }}/>}
+          {intervencoes && intervencoes.length === 0 && (
+            <div style={{ padding:'28px 14px', textAlign:'center', color:'#666', fontSize:12, lineHeight:1.55 }}>
+              Sem intervenções registadas.<br/>Quando um técnico atende este equipamento, a intervenção aparece aqui.
+            </div>
+          )}
+          {intervencoes && intervencoes.map((iv,i,arr) => {
+            const isNew = iv.data && (Date.now() - new Date(iv.data).getTime()) < 180*86400000
+            return (
+              <div key={iv.id} style={{ display:'flex', gap:9, padding:'10px 0', borderBottom:i<arr.length-1?`1px solid ${CASA.border}`:'none' }}>
+                <div style={{ width:9, height:9, borderRadius:'50%', flexShrink:0, marginTop:3, background: isNew ? CASA.greenLt : '#ccc' }}/>
+                <div style={{ flex:1, minWidth:0 }}>
+                  <div style={{ fontSize:10, color:'#999' }}>{iv.data ? new Date(iv.data).toLocaleDateString('pt-PT') : '—'}</div>
+                  <div style={{ fontSize:12, fontWeight:600, marginTop:1 }}>{iv.descricao}</div>
+                  <div style={{ fontSize:10, color:'#555', marginTop:2 }}>
+                    {iv.tipo}{iv.duracao_min ? ` · ${iv.duracao_min}min` : ''}{iv.custo_total != null ? ` · €${Number(iv.custo_total).toFixed(2)}` : ''}
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+          <button onClick={()=>alert('Registo de intervenção — disponível em breve (técnico cria quando conclui).')} style={{
+            width:'100%', marginTop:10, padding:11, borderRadius:11, border:`1px dashed ${CASA.border}`,
+            background:CASA.bg, color:CASA.greenLt, fontSize:12, fontWeight:700, cursor:'pointer',
+          }}>+ Registar nova intervenção</button>
+        </div>
+      )}
+
+      {/* TAB DOCUMENTOS */}
+      {tab==='documentos' && (
+        <div>
+          {documentos === null && <div className="sk" style={{ height:60, margin:12 }}/>}
+          {documentos && documentos.length === 0 && (
+            <div style={{ padding:'28px 14px', textAlign:'center', color:'#666', fontSize:12, lineHeight:1.55 }}>
+              Sem documentos deste equipamento.<br/>Upload de ficheiros fica disponível na Fase 3.4.
+            </div>
+          )}
+          {documentos && documentos.map(d => {
+            const ICS = { fatura:['🧾','#E6F1FB'], garantia:['🛡️',CASA.greenXl], contrato:['📄',CASA.amberLt], relatorio:['📋','#FAECE7'], manual:['📘','#EEEDFE'], foto:['🖼','#F3F3F3'], planta:['🗺','#F3F3F3'], outro:['📎','#F3F3F3'] }
+            const [ic,bg] = ICS[d.tipo] || ICS.outro
+            return (
+              <a key={d.id} href={d.url} target="_blank" rel="noreferrer" style={{ display:'flex', alignItems:'center', gap:10, padding:'11px 14px', borderBottom:`1px solid ${CASA.border}`, textDecoration:'none', color:'inherit' }}>
+                <div style={{ width:36, height:36, borderRadius:9, background:bg, display:'grid', placeItems:'center', fontSize:18, flexShrink:0 }}>{ic}</div>
+                <div style={{ flex:1, minWidth:0 }}>
+                  <div style={{ fontSize:12, fontWeight:600, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{d.nome}</div>
+                  <div style={{ fontSize:10, color:'#999', marginTop:1 }}>{d.descricao || d.tipo}</div>
+                </div>
+                <span style={{ fontSize:10, color:'#999' }}>›</span>
+              </a>
+            )
+          })}
+          <button onClick={()=>alert('Upload de documento — disponível na Fase 3.4 (Supabase Storage).')} style={{
+            width:'calc(100% - 24px)', margin:12, padding:12, borderRadius:11, border:'none',
+            background:CASA.greenLt, color:'#fff', fontSize:13, fontWeight:700, cursor:'pointer',
+          }}>+ Adicionar documento</button>
+        </div>
+      )}
+
+      {/* TAB FORNECEDOR */}
+      {tab==='fornecedor' && (
+        <div style={{ padding:'10px 12px', display:'flex', flexDirection:'column', gap:10 }}>
+          <FornecedorCard title="Fabricante" rows={[
+            ['Marca',    equipamento.marca  || '—'],
+            ['Modelo',   equipamento.modelo || '—'],
+            ['Nº Série', equipamento.numero_serie || '—'],
+          ]}/>
+          <FornecedorCard title="Técnico habitual" rows={tecnicoHabitual ? [
+            ['Nome',      tecnicoHabitual.nome || '—'],
+            ['Contacto',  tecnicoHabitual.telefone || tecnicoHabitual.tel || '—'],
+            ['Email',     tecnicoHabitual.email || '—'],
+          ] : [['Ainda sem técnico designado','Atribuído automaticamente no próximo pedido']]}/>
+          <FornecedorCard title="Peças compatíveis" rows={PECAS_COMPAT[equipamento.marca?.toLowerCase?.()] || [['Catálogo indisponível','Peças surgirão após intervenções']]}/>
+        </div>
+      )}
+
+      {/* CONFIRMAÇÃO ABATER / APAGAR */}
+      {confirmAction && (
+        <div onClick={()=>setConfirmAction(null)} style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.55)', zIndex:200, display:'flex', alignItems:'flex-end', justifyContent:'center' }}>
+          <div onClick={e=>e.stopPropagation()} style={{ background:'#fff', borderRadius:'18px 18px 0 0', padding:'22px 18px 28px', width:'100%', maxWidth:400, animation:'popIn 0.18s ease-out' }}>
+            <div style={{ fontSize:28, textAlign:'center', marginBottom:8 }}>{confirmAction==='apagar'?'🗑️':'📦'}</div>
+            <div style={{ fontSize:15, fontWeight:700, textAlign:'center', marginBottom:6 }}>
+              {confirmAction==='apagar' ? 'Apagar equipamento?' : 'Abater equipamento?'}
+            </div>
+            <div style={{ fontSize:12, color:'#555', textAlign:'center', lineHeight:1.6, marginBottom:18 }}>
+              {confirmAction==='apagar'
+                ? 'Remove permanentemente. Não pode ser revertido.'
+                : 'Fica inativo mas mantém histórico e documentos.'}
+            </div>
+            <div style={{ display:'flex', gap:9 }}>
+              <button onClick={()=>setConfirmAction(null)} style={{ flex:1, padding:12, borderRadius:11, border:`1px solid ${CASA.border}`, background:CASA.bg, fontSize:13, fontWeight:600, cursor:'pointer' }}>Cancelar</button>
+              <button onClick={confirmAction==='apagar' ? doApagar : doAbater} style={{ flex:1, padding:12, borderRadius:11, border:'none', background: confirmAction==='apagar' ? '#EF4444' : '#F59E0B', color:'#fff', fontSize:13, fontWeight:700, cursor:'pointer' }}>
+                {confirmAction==='apagar' ? 'Apagar' : 'Abater'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function FornecedorCard({ title, rows }){
+  return (
+    <div style={{ background:'#fff', border:`1px solid ${CASA.border}`, borderRadius:12, padding:'12px 14px' }}>
+      <div style={{ fontSize:10, color:'#999', textTransform:'uppercase', letterSpacing:0.3, marginBottom:8, fontWeight:600 }}>{title}</div>
+      {rows.map(([l,v],i) => (
+        <div key={i} style={{ display:'flex', justifyContent:'space-between', padding:'5px 0', borderBottom: i<rows.length-1 ? `1px solid ${CASA.border}` : 'none', gap:10 }}>
+          <span style={{ fontSize:11, color:'#555', flexShrink:0 }}>{l}</span>
+          <span style={{ fontSize:11, fontWeight:600, color:'#111', textAlign:'right', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{v}</span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// Catálogo estático de peças compatíveis por marca (Fase 3.3 — mock até pecas_catalogo existir)
+const PECAS_COMPAT = {
+  junkers: [['Válvula segurança','ref. JK-8871'], ['Ânodo magnésio','ref. JK-4421'], ['Kit juntas','ref. JK-9901']],
+  daikin:  [['Filtro HEPA','ref. DK-FT-025'], ['Condensador','ref. DK-CD-220'], ['Controlo remoto','ref. DK-RM-FTXC']],
+  vulcano: [['Electrová­lvula','ref. VL-EV-14'], ['Permutador','ref. VL-PRM-14L'], ['Kit ignição','ref. VL-IG-A1']],
+  bosch:   [['Sensor caudal','ref. BS-SC-09'], ['Termopar','ref. BS-TP-34']],
 }
 
 /* ── Helpers da Wishlist — obter ou criar a lista aberta do cliente ── */
@@ -9127,6 +9520,7 @@ export default function App() {
   // ── Módulo Casa (Fase 3) ──
   const [casaLocalizacoes, setCasaLocalizacoes] = useState(null)
   const [casaEquipamentos, setCasaEquipamentos] = useState(null)
+  const [casaActiveEq,     setCasaActiveEq]     = useState(null)
   useEffect(() => {
     if(!authUser) return
     let active = true
@@ -9591,10 +9985,26 @@ export default function App() {
             {ecra==='chat_ordem_c'&& sel && <OrderChat ordem={sel} role='cliente' prest={TECNICOS.find(t=>t.id===sel.tid)} onBack={()=>setEcra('ordem')} onUpdate={o=>{upd(o);setSel(o)}}/>}
             {!cliOver && <>
               {tab==='inicio'   && <CHome    ordens={ordens} onSvc={s=>{setSvcNova(s);setEcra('nova')}} onOrdem={o=>{setSel(o);setEcra('ordem')}} authUser={authUser} onCategoryV2={(id)=>{ setCatCategoryId(id); setCatScreen('list') }} onDrawerOpen={()=>setClienteDrawerOpen(true)} categoriesCache={categoriesCache}/>}
-              {tab==='casa'     && <CasaScreen
+              {tab==='casa' && !casaActiveEq && <CasaScreen
                 localizacoes={casaLocalizacoes}
                 equipamentos={casaEquipamentos}
-                onNavigate={(target)=>{ alert(`"${target}" disponível na Fase 3.${target==='ficha'?3:target==='docs'||target==='energia'?4:5}.`) }}
+                onNavigate={(target, payload)=>{
+                  if(target==='ficha' && payload){ setCasaActiveEq(payload); return }
+                  alert(`"${target}" disponível na Fase 3.${target==='docs'||target==='energia'?4:5}.`)
+                }}
+              />}
+              {tab==='casa' && casaActiveEq && <EquipamentoFicha
+                equipamento={casaActiveEq}
+                authUser={authUser}
+                onBack={()=>setCasaActiveEq(null)}
+                onUpdated={(updated)=>{
+                  setCasaEquipamentos(prev => (prev || []).map(e => e.id === updated.id ? updated : e))
+                  setCasaActiveEq(updated)
+                }}
+                onDeleted={(id)=>{
+                  setCasaEquipamentos(prev => (prev || []).filter(e => e.id !== id))
+                  setCasaActiveEq(null)
+                }}
               />}
               {tab==='pedidos'  && <CPedidos  ordens={ordens} onOrdem={o=>{setSel(o);setEcra('ordem')}} authUser={authUser}/>}
               {tab==='perfil'   && ecra!=='moradas' && ecra!=='wishlist' && (
