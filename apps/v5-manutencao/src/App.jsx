@@ -64,6 +64,7 @@ const MENU_ITEMS = [
 ]
 
 const CLIENTE_MENU_ITEMS = [
+  { id:'wishlist',      ic:'📝', l:'A minha lista' },
   { id:'perfil',        ic:'👤', l:'Perfil' },
   { id:'moradas',       ic:'📍', l:'As minhas moradas' },
   { id:'pagamentos',    ic:'💳', l:'Métodos de pagamento' },
@@ -3280,6 +3281,103 @@ function CMoradas({ authUser, onBack }){
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+/* ── Helpers da Wishlist — obter ou criar a lista aberta do cliente ── */
+async function sbGetOrCreateListaAberta(uid, token){
+  const existing = await sbGet('listas_cliente', `?cliente_id=eq.${uid}&estado=eq.aberta&select=*`, token)
+  if(Array.isArray(existing) && existing.length > 0) return existing[0]
+  const created = await sbSave('listas_cliente', { cliente_id:uid, estado:'aberta' }, token)
+  const row = Array.isArray(created) ? created[0] : created
+  return row || null
+}
+
+function CWishlist({ authUser, onBack, onCreateNew }){
+  const [lista, setLista] = useState(null)     // { id, estado, ... }
+  const [items, setItems] = useState(null)     // array | null while loading
+  const uid = authUser?.user?.id
+
+  const refetch = async () => {
+    if(!uid) return
+    const l = await sbGetOrCreateListaAberta(uid, authUser?.token)
+    setLista(l)
+    if(l){
+      const rows = await sbGet('lista_items', `?lista_id=eq.${l.id}&order=created_at.asc`, authUser?.token)
+      setItems(rows || [])
+    } else {
+      setItems([])
+    }
+  }
+  useEffect(() => { refetch() /* eslint-disable-next-line */ }, [uid])
+
+  const remove = async (item) => {
+    const ok = await sbDelete('lista_items', `?id=eq.${item.id}`, authUser?.token)
+    if(!ok){ alert('Erro ao remover.'); return }
+    setItems(p => (p || []).filter(x => x.id !== item.id))
+  }
+
+  const totalEstimado = (items || []).reduce((s,i) => s + Number(i.preco_estimado || 0), 0)
+
+  return (
+    <div style={{ minHeight:'100vh', background:C.mist, paddingBottom:120 }}>
+      <div style={{ background:C.white, padding:'13px 16px', display:'flex', alignItems:'center', gap:10, borderBottom:`1px solid ${C.border}`, position:'sticky', top:0, zIndex:20 }}>
+        <button onClick={onBack} style={{ background:'none', border:'none', fontSize:22, cursor:'pointer', color:C.navy }}>←</button>
+        <div style={{ flex:1 }}>
+          <div style={{ fontSize:14, fontWeight:700, color:C.navy }}>A minha lista</div>
+          <div style={{ fontSize:10, color:C.slate }}>{items?.length || 0} item{(items?.length||0)===1?'':'s'}{totalEstimado>0 && ` · ≈ €${totalEstimado.toFixed(2).replace('.',',')}`}</div>
+        </div>
+      </div>
+
+      <div style={{ padding:'14px 16px' }}>
+        {items === null && <div className="sk" style={{ height:80, marginBottom:8 }}/>}
+
+        {items && items.length === 0 && (
+          <div style={{ padding:'32px 20px', textAlign:'center', background:C.white, borderRadius:14, border:`1px dashed ${C.border}` }}>
+            <div style={{ fontSize:32, marginBottom:10 }}>📝</div>
+            <div style={{ fontSize:14, fontWeight:700, color:C.navy, marginBottom:4 }}>Sem items na lista</div>
+            <div style={{ fontSize:12, color:C.slate, lineHeight:1.5, maxWidth:280, margin:'0 auto 14px' }}>
+              Vá acumulando coisas para fazer em casa — sempre que estiver num serviço ou no personalizado, toque em <b>+ Lista</b>. Submete tudo depois de uma só vez.
+            </div>
+            <button onClick={onCreateNew} style={{ background:C.g, color:'#fff', border:'none', borderRadius:10, padding:'9px 18px', fontSize:13, fontWeight:700, cursor:'pointer' }}>+ Explorar serviços</button>
+          </div>
+        )}
+
+        {items && items.map(it => (
+          <Card key={it.id} style={{ padding:14, marginBottom:8 }}>
+            <div style={{ display:'flex', gap:12, alignItems:'flex-start' }}>
+              <div style={{ width:36, height:36, borderRadius:10, background:'#f1f5f9', color:C.slate, display:'grid', placeItems:'center', fontSize:18, flexShrink:0 }}>{it.tipo==='fixo' ? '🔧' : '✨'}</div>
+              <div style={{ flex:1, minWidth:0 }}>
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'baseline', gap:10 }}>
+                  <div style={{ fontSize:13, fontWeight:700, color:C.navy, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                    {it.tipo==='fixo' ? (it.servico_id || 'Serviço') : (it.descricao?.slice(0,60) || 'Personalizado')}{it.descricao && it.descricao.length > 60 ? '…' : ''}
+                  </div>
+                  {it.preco_estimado != null && (
+                    <span style={{ fontSize:12, fontWeight:700, color:C.navy, whiteSpace:'nowrap' }}>€{Number(it.preco_estimado).toFixed(2).replace('.',',')}</span>
+                  )}
+                </div>
+                {it.categoria_id && <div style={{ fontSize:11, color:C.slate, marginTop:2 }}>{it.categoria_id}</div>}
+                {it.tipo==='personalizado' && it.descricao && it.descricao.length > 60 && (
+                  <div style={{ fontSize:11, color:C.slate, marginTop:4, lineHeight:1.4 }}>{it.descricao}</div>
+                )}
+              </div>
+            </div>
+            <div style={{ display:'flex', gap:6, marginTop:10 }}>
+              <button onClick={()=>remove(it)} style={{ padding:'7px 12px', borderRadius:8, border:`1px solid #fecaca`, background:C.white, color:'#ef4444', fontSize:12, fontWeight:600, cursor:'pointer' }}>🗑 Remover</button>
+            </div>
+          </Card>
+        ))}
+
+        {items && items.length > 0 && (
+          <div style={{ marginTop:18, padding:14, background:'rgba(245,158,11,0.08)', border:'1px solid rgba(245,158,11,0.3)', borderRadius:12, textAlign:'center' }}>
+            <div style={{ fontSize:11, fontWeight:700, color:'#f59e0b', letterSpacing:0.5, textTransform:'uppercase', marginBottom:6 }}>Em desenvolvimento</div>
+            <div style={{ fontSize:12, color:C.slate, lineHeight:1.5 }}>
+              O submit da lista como ordem agrupada multi-especialidade fica disponível na próxima iteração. Até lá, pode continuar a adicionar items.
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
@@ -6958,7 +7056,30 @@ function ServiceDetailScreenV2({ serviceId, category, authUser, onBack, onContin
             {priceSuffix && <span style={{ fontSize:12, color:CC.stone, fontWeight:500 }}>{priceSuffix}</span>}
           </div>
         </div>
-        <CCPrimaryBtn onClick={()=>onContinue({ service, parent, extras, productsId, frequencyId, productsExtraPrice, effectivePrice, priceSuffix })}>Continuar</CCPrimaryBtn>
+        <div style={{ display:"flex", gap:8 }}>
+          <button onClick={async ()=>{
+            const uid = authUser?.user?.id
+            if(!uid){ alert('Tem de iniciar sessão para guardar na lista.'); return }
+            const lista = await sbGetOrCreateListaAberta(uid, authUser?.token)
+            if(!lista){ alert('Erro ao criar lista.'); return }
+            const r = await sbSave('lista_items', {
+              lista_id: lista.id,
+              tipo: 'fixo',
+              servico_id: service.id,
+              categoria_id: category.id,
+              preco_estimado: effectivePrice,
+            }, authUser?.token)
+            if(!r){ alert('Erro ao adicionar à lista.'); return }
+            alert(`✓ "${service.nome || service.name}" adicionado à sua lista.`)
+          }} style={{
+            flexShrink:0, padding:"14px 16px", borderRadius:12,
+            background:CC.paper, border:`1px solid ${CC.line}`,
+            color:CC.ink, fontSize:13, fontWeight:700, cursor:"pointer",
+          }}>+ Lista</button>
+          <div style={{ flex:1 }}>
+            <CCPrimaryBtn onClick={()=>onContinue({ service, parent, extras, productsId, frequencyId, productsExtraPrice, effectivePrice, priceSuffix })}>Continuar</CCPrimaryBtn>
+          </div>
+        </div>
       </CCStickyCTA>
     </CCShell>
   )
@@ -7034,7 +7155,7 @@ function PersonalizadoLandingV2({ category, onBack, onContinue }){
 }
 
 /* ── PersonalizadoFormV2 — descrição + horas estimadas ── */
-function PersonalizadoFormV2({ category, onBack, onContinue, state, setState }){
+function PersonalizadoFormV2({ category, authUser, onBack, onContinue, state, setState }){
   const hoursEstimate = (state.horas || 1) * category.personalizadoRate
   const canContinue = (state.description || "").length >= 30
   // Reset scroll ao entrar — evita herdar offset do ecrã anterior (Landing)
@@ -7143,9 +7264,39 @@ function PersonalizadoFormV2({ category, onBack, onContinue, state, setState }){
           <span style={{ fontSize:12, color:CC.stone }}>Estimativa para {state.horas || 1}h</span>
           <span className="serif" style={{ fontSize:20, fontWeight:600, color:CC.forest }}>{eur(hoursEstimate)}</span>
         </div>
-        <CCPrimaryBtn onClick={onContinue} disabled={!canContinue}>
-          {canContinue ? "Continuar" : "Descreva o trabalho (mín. 30 carac.)"}
-        </CCPrimaryBtn>
+        <div style={{ display:"flex", gap:8 }}>
+          <button disabled={!canContinue} onClick={async ()=>{
+            const uid = authUser?.user?.id
+            if(!uid){ alert('Tem de iniciar sessão para guardar na lista.'); return }
+            const lista = await sbGetOrCreateListaAberta(uid, authUser?.token)
+            if(!lista){ alert('Erro ao criar lista.'); return }
+            const r = await sbSave('lista_items', {
+              lista_id: lista.id,
+              tipo: 'personalizado',
+              descricao: state.description || null,
+              categoria_id: category.id,
+              preco_estimado: hoursEstimate,
+              horas_estimadas: state.horas || 1,
+              fotos: state.photos || [],
+              notas: state.notes || null,
+            }, authUser?.token)
+            if(!r){ alert('Erro ao adicionar à lista.'); return }
+            alert('✓ Serviço personalizado adicionado à sua lista.')
+          }} style={{
+            flexShrink:0, padding:"14px 16px", borderRadius:12,
+            background:canContinue?CC.paper:CC.stoneLight,
+            border:`1px solid ${CC.line}`,
+            color:canContinue?CC.ink:CC.stone,
+            fontSize:13, fontWeight:700,
+            cursor:canContinue?"pointer":"default",
+            opacity:canContinue?1:0.6,
+          }}>+ Lista</button>
+          <div style={{ flex:1 }}>
+            <CCPrimaryBtn onClick={onContinue} disabled={!canContinue}>
+              {canContinue ? "Continuar" : "Descreva o trabalho (mín. 30 carac.)"}
+            </CCPrimaryBtn>
+          </div>
+        </div>
       </CCStickyCTA>
     </CCShell>
   )
@@ -8825,6 +8976,7 @@ export default function App() {
           {catScreen==='form' && catCategoryMeta && (
             <PersonalizadoFormV2
               category={catCategoryMeta}
+              authUser={authUser}
               onBack={()=>setCatScreen('landing')}
               onContinue={()=>setCatScreen('checkout')}
               state={catState} setState={setCatState}
@@ -8886,7 +9038,7 @@ export default function App() {
               {tab==='inicio'   && <CHome    ordens={ordens} onSvc={s=>{setSvcNova(s);setEcra('nova')}} onOrdem={o=>{setSel(o);setEcra('ordem')}} authUser={authUser} onCategoryV2={(id)=>{ setCatCategoryId(id); setCatScreen('list') }} onDrawerOpen={()=>setClienteDrawerOpen(true)} categoriesCache={categoriesCache}/>}
               {tab==='explorar' && <CExplorar onSvc={s=>{setSvcNova(s);setEcra('nova')}}/>}
               {tab==='pedidos'  && <CPedidos  ordens={ordens} onOrdem={o=>{setSel(o);setEcra('ordem')}} authUser={authUser}/>}
-              {tab==='perfil'   && ecra!=='moradas' && (
+              {tab==='perfil'   && ecra!=='moradas' && ecra!=='wishlist' && (
                 <CPerfil
                   authUser={authUser}
                   onMoradas={()=>setEcra('moradas')}
@@ -8896,6 +9048,9 @@ export default function App() {
               )}
               {tab==='perfil'   && ecra==='moradas' && (
                 <CMoradas authUser={authUser} onBack={()=>setEcra('home')}/>
+              )}
+              {tab==='perfil'   && ecra==='wishlist' && (
+                <CWishlist authUser={authUser} onBack={()=>setEcra('home')} onCreateNew={()=>{ setTab('inicio'); setEcra('home') }}/>
               )}
               <BNav tab={tab} set={t=>{setTab(t);setEcra('home')}} onFabClick={()=>setFabOpen(true)}/>
               {fabOpen && (
@@ -8922,6 +9077,7 @@ export default function App() {
                   if(id==='sair'){ onLogout(); return }
                   if(id==='perfil'){ setTab('perfil'); setEcra('home'); return }
                   if(id==='moradas'){ setTab('perfil'); setEcra('moradas'); return }
+                  if(id==='wishlist'){ setTab('perfil'); setEcra('wishlist'); return }
                   // Restantes items ainda não têm página própria
                   alert(`"${CLIENTE_MENU_ITEMS.find(i=>i.id===id)?.l}" fica disponível numa fase seguinte.`)
                 }}
