@@ -8218,8 +8218,24 @@ export default function App() {
     setCatScreen('done')
   }
 
-  const mudar = r => {
-    if (r==='admin') { setRole('admin'); return }
+  const mudar = async r => {
+    if (r==='admin') {
+      // Para admin escrever na BD precisa de auth.uid() de admin@demov5.pt.
+      // Se a sessão actual é outro user (cliente/prestador), fazemos sign-out
+      // + sign-in na conta admin demo. Se já for admin, só muda o role local.
+      const currentEmail = authUser?.user?.email
+      if (currentEmail !== 'admin@demov5.pt' && SB_KEY) {
+        if (authUser?.token) await sbSignOut(authUser.token)
+        const res = await sbSignIn('admin@demov5.pt', 'Demo2026!')
+        if (res.error) {
+          alert(`Falha ao entrar como admin: ${res.error}`)
+          return
+        }
+        setAuthUser({ user:res.user, token:res.token, role:'admin', nome:'Admin', demo:true })
+      }
+      setRole('admin'); setAdminAuth(true)
+      return
+    }
     setRole(r); setTab('inicio'); setEcra('home'); setSel(null)
   }
 
