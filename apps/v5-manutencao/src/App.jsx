@@ -581,6 +581,47 @@ async function sbSave(table, data, token) {
   }
 }
 
+async function sbUpdate(table, filter, data, token) {
+  if (!SB_KEY) return null
+  try {
+    const effectiveToken = token || SB_KEY
+    const r = await fetch(`${SB_URL}/rest/v1/${table}${filter}`, {
+      method:'PATCH',
+      headers: {...sbHeaders(effectiveToken), 'Prefer':'return=representation'},
+      body: JSON.stringify(data),
+    })
+    if (!r.ok) {
+      const errorBody = await r.text().catch(()=>'<unreadable>')
+      console.warn(`[sbUpdate ${table}] HTTP ${r.status}`, errorBody, '\npayload keys:', Object.keys(data))
+      return null
+    }
+    return r.json()
+  } catch (e) {
+    console.warn(`[sbUpdate ${table}] exception:`, e)
+    return null
+  }
+}
+
+async function sbDelete(table, filter, token) {
+  if (!SB_KEY) return false
+  try {
+    const effectiveToken = token || SB_KEY
+    const r = await fetch(`${SB_URL}/rest/v1/${table}${filter}`, {
+      method:'DELETE',
+      headers: sbHeaders(effectiveToken),
+    })
+    if (!r.ok) {
+      const errorBody = await r.text().catch(()=>'<unreadable>')
+      console.warn(`[sbDelete ${table}] HTTP ${r.status}`, errorBody)
+      return false
+    }
+    return true
+  } catch (e) {
+    console.warn(`[sbDelete ${table}] exception:`, e)
+    return false
+  }
+}
+
 async function sbUpload(bucket, path, file, token) {
   if (!SB_KEY || !file) return null
   try {
@@ -2905,23 +2946,259 @@ function CPedidos({ ordens, onOrdem, authUser }) {
   )
 }
 
-function CPerfil() {
+function CPerfil({ authUser, onMoradas, onLogout, onPlaceholder }) {
+  const [perfil, setPerfil] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [editingFiscal, setEditingFiscal] = useState(false)
+  const [fiscal, setFiscal] = useState({ nif:'', morada_fiscal:'', cp_fiscal:'', cidade_fiscal:'' })
+  const [saving, setSaving] = useState(false)
+  const uid = authUser?.user?.id
+
+  useEffect(() => {
+    if(!uid || !SB_KEY) { setLoading(false); return }
+    let active = true
+    sbGet('perfis', `?id=eq.${uid}&select=*`, authUser?.token).then(rows => {
+      if(!active) return
+      const row = Array.isArray(rows) ? rows[0] : null
+      setPerfil(row)
+      if(row) setFiscal({
+        nif:           row.nif || '',
+        morada_fiscal: row.morada_fiscal || '',
+        cp_fiscal:     row.cp_fiscal || '',
+        cidade_fiscal: row.cidade_fiscal || '',
+      })
+      setLoading(false)
+    })
+    return () => { active = false }
+  }, [uid, authUser?.token])
+
+  const saveFiscal = async () => {
+    if(!uid) return
+    setSaving(true)
+    const res = await sbUpdate('perfis', `?id=eq.${uid}`, fiscal, authUser?.token)
+    setSaving(false)
+    if(!res){ alert('Erro ao guardar dados fiscais. Ver consola.'); return }
+    setPerfil(p => ({...p, ...fiscal}))
+    setEditingFiscal(false)
+  }
+
+  const nome = perfil?.nome || authUser?.nome || 'Cliente'
+  const email = perfil?.email || authUser?.user?.email || '—'
+  const ini = (nome[0] || 'C').toUpperCase()
+
   return (
     <div style={{ minHeight:'100vh', background:C.mist, paddingBottom:80 }}>
       <div style={{ background:`linear-gradient(135deg,${C.navy},${C.gd})`, padding:'32px 20px 26px', textAlign:'center' }}>
-        <div style={{ width:74, height:74, borderRadius:'50%', background:C.g, display:'flex', alignItems:'center', justifyContent:'center', fontSize:32, margin:'0 auto 10px' }}>👤</div>
-        <h2 style={{ color:'#fff', margin:'0 0 3px', fontSize:18, fontWeight:800 }}>Sr. Ferreira</h2>
-        <p style={{ color:'#94a3b8', margin:'0 0 14px', fontSize:12 }}>ferreira@email.com</p>
+        <div style={{ width:74, height:74, borderRadius:'50%', background:C.g, display:'flex', alignItems:'center', justifyContent:'center', fontSize:30, margin:'0 auto 10px', color:'#fff', fontWeight:800 }}>{ini}</div>
+        <h2 style={{ color:'#fff', margin:'0 0 3px', fontSize:18, fontWeight:800 }}>{nome}</h2>
+        <p style={{ color:'#94a3b8', margin:0, fontSize:12 }}>{email}</p>
       </div>
+
       <div style={{ padding:'14px 16px 20px' }}>
-        {[['📍','As minhas moradas'],['💳','Métodos de pagamento'],['⭐','As minhas avaliações'],['🎁','Código de referência'],['🔔','Notificações'],['❓','Ajuda & Suporte'],['🚪','Terminar sessão']].map(([ic,l]) => (
-          <Card key={l} style={{ padding:'14px 16px', marginBottom:7, display:'flex', alignItems:'center', gap:12, cursor:'pointer' }}>
+        {/* Dados fiscais (NIF + morada fiscal) */}
+        <div style={{ fontSize:10, fontWeight:700, color:C.slate, textTransform:'uppercase', letterSpacing:0.6, margin:'4px 4px 8px' }}>
+          Dados de faturação
+        </div>
+        <Card style={{ padding:16, marginBottom:14 }}>
+          {loading ? (
+            <div className="sk" style={{ height:48 }}/>
+          ) : editingFiscal ? (
+            <>
+              <FiscalInput label="NIF" value={fiscal.nif} onChange={v=>setFiscal(f=>({...f,nif:v}))} inputMode="numeric" maxLength={9}/>
+              <FiscalInput label="Morada fiscal" value={fiscal.morada_fiscal} onChange={v=>setFiscal(f=>({...f,morada_fiscal:v}))}/>
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 2fr', gap:10 }}>
+                <FiscalInput label="Código postal" value={fiscal.cp_fiscal} onChange={v=>setFiscal(f=>({...f,cp_fiscal:v}))}/>
+                <FiscalInput label="Localidade" value={fiscal.cidade_fiscal} onChange={v=>setFiscal(f=>({...f,cidade_fiscal:v}))}/>
+              </div>
+              <div style={{ display:'flex', gap:8, marginTop:12 }}>
+                <button onClick={()=>setEditingFiscal(false)} style={{ flex:1, padding:'10px 14px', borderRadius:10, border:`1px solid ${C.border}`, background:C.white, color:C.slate, fontWeight:600, fontSize:13, cursor:'pointer' }}>Cancelar</button>
+                <button onClick={saveFiscal} disabled={saving} style={{ flex:2, padding:'10px 14px', borderRadius:10, border:'none', background:C.g, color:'#fff', fontWeight:700, fontSize:13, cursor:saving?'default':'pointer', opacity:saving?0.6:1 }}>{saving?'A guardar…':'Guardar'}</button>
+              </div>
+            </>
+          ) : (
+            <>
+              {perfil?.nif ? (
+                <>
+                  <FiscalLine label="NIF" value={perfil.nif}/>
+                  <FiscalLine label="Morada" value={perfil.morada_fiscal || '—'}/>
+                  <FiscalLine label="Localidade" value={[perfil.cp_fiscal, perfil.cidade_fiscal].filter(Boolean).join(' ') || '—'}/>
+                </>
+              ) : (
+                <div style={{ fontSize:13, color:C.slate, lineHeight:1.45, marginBottom:10 }}>Ainda não tem dados de faturação guardados. Adicione para receber fatura automaticamente em cada serviço.</div>
+              )}
+              <button onClick={()=>setEditingFiscal(true)} style={{ width:'100%', padding:'10px 14px', borderRadius:10, border:`1px solid ${C.g}`, background:'transparent', color:C.g, fontWeight:700, fontSize:13, cursor:'pointer', marginTop:perfil?.nif?6:0 }}>
+                {perfil?.nif ? '✏️ Editar dados' : '+ Adicionar NIF e morada fiscal'}
+              </button>
+            </>
+          )}
+        </Card>
+
+        {/* Navegação principal */}
+        <div style={{ fontSize:10, fontWeight:700, color:C.slate, textTransform:'uppercase', letterSpacing:0.6, margin:'4px 4px 8px' }}>
+          Conta
+        </div>
+        {[
+          { ic:'📍', l:'As minhas moradas', act:onMoradas, show:true },
+          { ic:'💳', l:'Métodos de pagamento',  act:()=>onPlaceholder?.('Métodos de pagamento') },
+          { ic:'⭐', l:'As minhas avaliações',   act:()=>onPlaceholder?.('As minhas avaliações') },
+          { ic:'🎁', l:'Código de referência',   act:()=>onPlaceholder?.('Código de referência') },
+          { ic:'🔔', l:'Notificações',           act:()=>onPlaceholder?.('Notificações') },
+          { ic:'❓', l:'Ajuda & Suporte',        act:()=>onPlaceholder?.('Ajuda & Suporte') },
+        ].map(({ic,l,act}) => (
+          <Card key={l} onClick={act} style={{ padding:'14px 16px', marginBottom:7, display:'flex', alignItems:'center', gap:12, cursor:'pointer' }}>
             <span style={{ fontSize:19 }}>{ic}</span>
             <span style={{ flex:1, fontSize:13, color:C.navy, fontWeight:600 }}>{l}</span>
             <span style={{ color:C.border, fontSize:16 }}>›</span>
           </Card>
         ))}
+        <Card onClick={onLogout} style={{ padding:'14px 16px', marginTop:14, display:'flex', alignItems:'center', gap:12, cursor:'pointer', border:`1px solid #fecaca` }}>
+          <span style={{ fontSize:19 }}>🚪</span>
+          <span style={{ flex:1, fontSize:13, color:'#ef4444', fontWeight:700 }}>Terminar sessão</span>
+        </Card>
       </div>
+    </div>
+  )
+}
+
+function FiscalInput({ label, value, onChange, inputMode, maxLength }){
+  return (
+    <div style={{ marginBottom:10 }}>
+      <div style={{ fontSize:10, fontWeight:700, color:C.slate, textTransform:'uppercase', letterSpacing:0.5, marginBottom:4 }}>{label}</div>
+      <input value={value} onChange={e=>onChange(e.target.value)} inputMode={inputMode} maxLength={maxLength}
+        style={{ width:'100%', boxSizing:'border-box', border:`1px solid ${C.border}`, borderRadius:8, padding:'10px 12px', fontSize:13, fontFamily:'inherit', color:C.navy, outline:'none', background:C.white }}/>
+    </div>
+  )
+}
+
+function FiscalLine({ label, value }){
+  return (
+    <div style={{ display:'flex', justifyContent:'space-between', padding:'6px 0', borderBottom:'1px solid #f1f5f9', fontSize:12 }}>
+      <span style={{ color:C.slate }}>{label}</span>
+      <span style={{ color:C.navy, fontWeight:600, textAlign:'right', maxWidth:220, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{value}</span>
+    </div>
+  )
+}
+
+function CMoradas({ authUser, onBack }){
+  const [moradas, setMoradas] = useState(null)
+  const [editing, setEditing] = useState(null)   // null | 'new' | row
+  const [form, setForm] = useState({ label:'', morada:'', cp:'', cidade:'', tipologia:'', notas_acesso:'', is_default:false })
+  const [saving, setSaving] = useState(false)
+  const uid = authUser?.user?.id
+
+  const refetch = async () => {
+    if(!uid) return
+    const rows = await sbGet('cliente_moradas', `?cliente_id=eq.${uid}&order=is_default.desc,created_at.asc`, authUser?.token)
+    setMoradas(rows || [])
+  }
+  useEffect(() => { refetch() /* eslint-disable-next-line */ }, [uid])
+
+  const openNew = () => { setForm({ label:'', morada:'', cp:'', cidade:'', tipologia:'', notas_acesso:'', is_default:false }); setEditing('new') }
+  const openEdit = (m) => { setForm({ ...m }); setEditing(m) }
+
+  const save = async () => {
+    if(!uid) return
+    if(!form.label.trim() || !form.morada.trim()){ alert('Label e morada são obrigatórios.'); return }
+    setSaving(true)
+    const payload = {
+      cliente_id: uid,
+      label: form.label.trim(),
+      morada: form.morada.trim(),
+      cp: form.cp.trim() || null,
+      cidade: form.cidade.trim() || null,
+      tipologia: form.tipologia.trim() || null,
+      notas_acesso: form.notas_acesso.trim() || null,
+      is_default: !!form.is_default,
+    }
+    // Se marcar esta como default, primeiro tira o default das outras
+    if(payload.is_default){
+      await sbUpdate('cliente_moradas', `?cliente_id=eq.${uid}&is_default=eq.true`, { is_default:false }, authUser?.token)
+    }
+    let result
+    if(editing === 'new'){
+      result = await sbSave('cliente_moradas', payload, authUser?.token)
+    } else {
+      result = await sbUpdate('cliente_moradas', `?id=eq.${editing.id}`, payload, authUser?.token)
+    }
+    setSaving(false)
+    if(!result){ alert('Erro ao guardar a morada.'); return }
+    setEditing(null)
+    await refetch()
+  }
+
+  const remove = async (m) => {
+    if(!window.confirm(`Eliminar "${m.label}"?`)) return
+    const ok = await sbDelete('cliente_moradas', `?id=eq.${m.id}`, authUser?.token)
+    if(!ok){ alert('Erro ao eliminar.'); return }
+    await refetch()
+  }
+
+  return (
+    <div style={{ minHeight:'100vh', background:C.mist, paddingBottom:80 }}>
+      <div style={{ background:C.white, padding:'13px 16px', display:'flex', alignItems:'center', gap:10, borderBottom:`1px solid ${C.border}`, position:'sticky', top:0, zIndex:20 }}>
+        <button onClick={onBack} style={{ background:'none', border:'none', fontSize:22, cursor:'pointer', color:C.navy }}>←</button>
+        <div style={{ flex:1, fontSize:14, fontWeight:700, color:C.navy }}>As minhas moradas</div>
+        <button onClick={openNew} style={{ background:C.g, color:'#fff', border:'none', borderRadius:8, padding:'7px 12px', fontSize:12, fontWeight:700, cursor:'pointer' }}>+ Nova</button>
+      </div>
+
+      <div style={{ padding:'14px 16px' }}>
+        {moradas === null && (
+          <div className="sk" style={{ height:96, marginBottom:8 }}/>
+        )}
+        {moradas && moradas.length === 0 && (
+          <div style={{ padding:'32px 20px', textAlign:'center', background:C.white, borderRadius:14, border:`1px dashed ${C.border}` }}>
+            <div style={{ fontSize:32, marginBottom:10 }}>📍</div>
+            <div style={{ fontSize:14, fontWeight:700, color:C.navy, marginBottom:4 }}>Ainda não tem moradas guardadas</div>
+            <div style={{ fontSize:12, color:C.slate, lineHeight:1.5, maxWidth:260, margin:'0 auto 14px' }}>Adicione a sua morada principal para agilizar os próximos pedidos.</div>
+            <button onClick={openNew} style={{ background:C.g, color:'#fff', border:'none', borderRadius:10, padding:'9px 18px', fontSize:13, fontWeight:700, cursor:'pointer' }}>+ Adicionar morada</button>
+          </div>
+        )}
+        {moradas && moradas.map(m => (
+          <Card key={m.id} style={{ padding:14, marginBottom:8 }}>
+            <div style={{ display:'flex', gap:12, alignItems:'flex-start' }}>
+              <div style={{ width:36, height:36, borderRadius:10, background:m.is_default ? 'rgba(22,163,74,0.15)' : '#f1f5f9', color:m.is_default ? C.g : C.slate, display:'grid', placeItems:'center', fontSize:16, flexShrink:0 }}>📍</div>
+              <div style={{ flex:1, minWidth:0 }}>
+                <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:2 }}>
+                  <span style={{ fontSize:13, fontWeight:700, color:C.navy }}>{m.label}</span>
+                  {m.is_default && <span style={{ fontSize:9, fontWeight:700, color:C.g, background:'rgba(22,163,74,0.12)', padding:'2px 6px', borderRadius:4, textTransform:'uppercase', letterSpacing:0.4 }}>Default</span>}
+                </div>
+                <div style={{ fontSize:12, color:C.slate, lineHeight:1.4 }}>{m.morada}</div>
+                {(m.cp || m.cidade) && <div style={{ fontSize:11, color:C.slate, marginTop:1 }}>{[m.cp, m.cidade].filter(Boolean).join(' ')}</div>}
+                {m.notas_acesso && <div style={{ fontSize:11, color:C.slate, marginTop:4, fontStyle:'italic' }}>🔑 {m.notas_acesso}</div>}
+              </div>
+            </div>
+            <div style={{ display:'flex', gap:6, marginTop:10 }}>
+              <button onClick={()=>openEdit(m)} style={{ flex:1, padding:'7px', borderRadius:8, border:`1px solid ${C.border}`, background:C.white, color:C.slate, fontSize:12, fontWeight:600, cursor:'pointer' }}>✏️ Editar</button>
+              <button onClick={()=>remove(m)} style={{ padding:'7px 12px', borderRadius:8, border:`1px solid #fecaca`, background:C.white, color:'#ef4444', fontSize:12, fontWeight:600, cursor:'pointer' }}>🗑</button>
+            </div>
+          </Card>
+        ))}
+      </div>
+
+      {editing && (
+        <div onClick={()=>!saving && setEditing(null)} style={{ position:'fixed', inset:0, background:'rgba(10,22,32,0.55)', zIndex:80, display:'flex', alignItems:'flex-end', justifyContent:'center' }}>
+          <div onClick={e=>e.stopPropagation()} style={{ background:'#fff', width:'100%', maxWidth:430, borderRadius:'18px 18px 0 0', padding:'18px 18px 22px', maxHeight:'88vh', overflowY:'auto', animation:'popIn 0.18s ease-out' }}>
+            <div style={{ width:38, height:4, borderRadius:2, background:'#e5e7eb', margin:'0 auto 14px' }}/>
+            <h2 style={{ margin:'0 0 14px', fontSize:17, fontWeight:700, color:C.navy }}>{editing==='new' ? 'Nova morada' : 'Editar morada'}</h2>
+            <FiscalInput label="Label (Casa, Escritório, ...)" value={form.label} onChange={v=>setForm(f=>({...f,label:v}))}/>
+            <FiscalInput label="Morada" value={form.morada} onChange={v=>setForm(f=>({...f,morada:v}))}/>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 2fr', gap:10 }}>
+              <FiscalInput label="Código postal" value={form.cp} onChange={v=>setForm(f=>({...f,cp:v}))}/>
+              <FiscalInput label="Localidade" value={form.cidade} onChange={v=>setForm(f=>({...f,cidade:v}))}/>
+            </div>
+            <FiscalInput label="Tipologia (T2, Moradia, ...)" value={form.tipologia} onChange={v=>setForm(f=>({...f,tipologia:v}))}/>
+            <FiscalInput label="Notas de acesso (porteiro, código)" value={form.notas_acesso} onChange={v=>setForm(f=>({...f,notas_acesso:v}))}/>
+            <label style={{ display:'flex', alignItems:'center', gap:8, marginTop:4, marginBottom:14, cursor:'pointer' }}>
+              <input type="checkbox" checked={!!form.is_default} onChange={e=>setForm(f=>({...f,is_default:e.target.checked}))}/>
+              <span style={{ fontSize:13, color:C.navy }}>Usar como morada default</span>
+            </label>
+            <div style={{ display:'flex', gap:8 }}>
+              <button onClick={()=>setEditing(null)} disabled={saving} style={{ flex:1, padding:'11px 14px', borderRadius:10, border:`1px solid ${C.border}`, background:C.white, color:C.slate, fontWeight:600, fontSize:13, cursor:saving?'default':'pointer' }}>Cancelar</button>
+              <button onClick={save} disabled={saving} style={{ flex:2, padding:'11px 14px', borderRadius:10, border:'none', background:C.g, color:'#fff', fontWeight:700, fontSize:13, cursor:saving?'default':'pointer', opacity:saving?0.6:1 }}>{saving?'A guardar…':'Guardar'}</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -8476,7 +8753,17 @@ export default function App() {
               {tab==='inicio'   && <CHome    ordens={ordens} onSvc={s=>{setSvcNova(s);setEcra('nova')}} onOrdem={o=>{setSel(o);setEcra('ordem')}} authUser={authUser} onCategoryV2={(id)=>{ setCatCategoryId(id); setCatScreen('list') }} onDrawerOpen={()=>setClienteDrawerOpen(true)} categoriesCache={categoriesCache}/>}
               {tab==='explorar' && <CExplorar onSvc={s=>{setSvcNova(s);setEcra('nova')}}/>}
               {tab==='pedidos'  && <CPedidos  ordens={ordens} onOrdem={o=>{setSel(o);setEcra('ordem')}} authUser={authUser}/>}
-              {tab==='perfil'   && <CPerfil/>}
+              {tab==='perfil'   && ecra!=='moradas' && (
+                <CPerfil
+                  authUser={authUser}
+                  onMoradas={()=>setEcra('moradas')}
+                  onLogout={onLogout}
+                  onPlaceholder={(l)=>alert(`"${l}" fica disponível numa fase seguinte.`)}
+                />
+              )}
+              {tab==='perfil'   && ecra==='moradas' && (
+                <CMoradas authUser={authUser} onBack={()=>setEcra('home')}/>
+              )}
               <BNav tab={tab} set={t=>{setTab(t);setEcra('home')}} onFabClick={()=>setFabOpen(true)}/>
               {fabOpen && (
                 <FabPickerModal
@@ -8501,8 +8788,9 @@ export default function App() {
                   setClienteDrawerOpen(false)
                   if(id==='sair'){ onLogout(); return }
                   if(id==='perfil'){ setTab('perfil'); setEcra('home'); return }
-                  // Restantes items ainda não têm página própria — placeholder até Fase 2f
-                  alert(`"${CLIENTE_MENU_ITEMS.find(i=>i.id===id)?.l}" fica disponível na Fase 2f.`)
+                  if(id==='moradas'){ setTab('perfil'); setEcra('moradas'); return }
+                  // Restantes items ainda não têm página própria
+                  alert(`"${CLIENTE_MENU_ITEMS.find(i=>i.id===id)?.l}" fica disponível numa fase seguinte.`)
                 }}
               />
             </>}
