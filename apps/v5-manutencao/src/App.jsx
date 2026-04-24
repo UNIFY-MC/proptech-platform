@@ -4150,10 +4150,14 @@ function DocsScreen({ localizacao, authUser, onBack }){
   )
 }
 
-/* EnergiaScreen — consumo mensal + poupança estimada (Fase 3.4) */
+/* EnergiaScreen — consumo mensal + poupança estimada + fatura OCR (Fase 3.4/3.5) */
 function EnergiaScreen({ localizacao, equipamentos, authUser, onBack }){
   const eqs = (equipamentos || []).filter(e => !localizacao || e.localizacao_id === localizacao.id)
   const [consumos, setConsumos] = useState(null)
+  const [fatura, setFatura] = useState(null)           // última fatura com dados_ocr
+  const [faturaLoading, setFaturaLoading] = useState(false)
+  const faturaFileRef = useRef(null)
+
   useEffect(() => {
     if(!eqs.length){ setConsumos([]); return }
     let active = true
@@ -4165,8 +4169,98 @@ function EnergiaScreen({ localizacao, equipamentos, authUser, onBack }){
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [eqs.length, authUser?.token])
 
-  // Preço indicativo kWh para estimativa (€/kWh). Usamos 0.18€ para EDP tarifa simples default.
-  const PRECO_KWH = 0.18
+  // Fetch última fatura de eletricidade com dados_ocr para a localização
+  useEffect(() => {
+    if(!localizacao?.id) return
+    let active = true
+    sbGetV5('documentos',
+      `?localizacao_id=eq.${localizacao.id}&tipo=eq.fatura&dados_ocr=not.is.null&order=created_at.desc&limit=1`,
+      authUser?.token).then(rows => {
+      if(active) setFatura(Array.isArray(rows) ? rows[0] || null : null)
+    })
+    return () => { active = false }
+  }, [localizacao?.id, authUser?.token])
+
+  const uploadFatura = async (file) => {
+    if(!file || !localizacao) return
+    setFaturaLoading(true)
+
+    // 1. Upload do ficheiro ao bucket
+    const ext = (file.name.split('.').pop() || 'jpg').toLowerCase()
+    const path = `${localizacao.pessoa_id || 'anon'}/${localizacao.id}/fatura/${Date.now()}-fatura-eletricidade.${ext}`
+    const url = await sbUpload('v5-casa-docs', path, file, authUser?.token)
+    if(!url){ alert('Upload falhou.'); setFaturaLoading(false); return }
+
+    // 2. INSERT documento com dados_ocr=null (pendente)
+    const docPayload = {
+      localizacao_id: localizacao.id,
+      tipo: 'fatura',
+      nome: file.name || 'Fatura eletricidade',
+      url, storage_path: path,
+      mime_type: file.type || null, tamanho_bytes: file.size,
+    }
+    const docRes = await sbSaveV5('documentos', docPayload, authUser?.token)
+    const docRow = Array.isArray(docRes) ? docRes[0] : docRes
+    if(!docRow){ alert('Metadados não guardados.'); setFaturaLoading(false); return }
+
+    // 3. Claude Vision para extracção
+    if(ANTHROPIC_KEY && /^image\//.test(file.type || '')){
+      const reader = new FileReader()
+      const b64 = await new Promise(res => { reader.onload = () => res(String(reader.result).split(',')[1]); reader.readAsDataURL(file) })
+      const prompt = `Analisa esta fatura de eletricidade portuguesa. Extrai os campos abaixo. Se um campo não estiver visível, retorna null.
+
+Responde APENAS com o JSON (sem markdown, sem comentários):
+{
+  "fornecedor": "EDP|Galp|Iberdrola|Endesa|Repsol|... ou nome exacto",
+  "periodo_inicio": "YYYY-MM-DD ou null",
+  "periodo_fim": "YYYY-MM-DD ou null",
+  "consumo_kwh": número ou null,
+  "custo_total_eur": número (com IVA) ou null,
+  "custo_energia_eur": número (sem IVA nem taxas fixas) ou null,
+  "potencia_contratada_kva": número ou null,
+  "tarifa_tipo": "simples|bi-horário|tri-horário ou null",
+  "tarifa_kwh_vazio": número ou null,
+  "tarifa_kwh_cheias": número ou null,
+  "tarifa_kwh_ponta": número ou null,
+  "tarifa_kwh_simples": número ou null,
+  "codigo_cpe": "string ou null",
+  "numero_fatura": "string ou null",
+  "data_emissao": "YYYY-MM-DD ou null",
+  "confianca": 0-100
+}`
+      const res = await callClaudeText(prompt, { images:[{ mime: file.type, data: b64 }] })
+      if(res.text){
+        let parsed = null
+        try {
+          const m = res.text.match(/\{[\s\S]*\}/)
+          parsed = m ? JSON.parse(m[0]) : null
+        } catch {}
+        if(parsed){
+          const upd = await sbUpdateV5('documentos', `?id=eq.${docRow.id}`,
+            { dados_ocr: parsed, valor_euros: parsed.custo_total_eur || null }, authUser?.token)
+          const updRow = Array.isArray(upd) ? upd[0] : upd
+          setFatura(updRow || { ...docRow, dados_ocr: parsed })
+          setFaturaLoading(false)
+          return
+        }
+      }
+    }
+    // Fallback: doc guardado sem OCR
+    setFatura(docRow)
+    setFaturaLoading(false)
+    if(!ANTHROPIC_KEY) alert('Fatura guardada. Para leitura automática, configure VITE_ANTHROPIC_API_KEY.')
+    else alert('Fatura guardada mas não foi possível extrair dados.')
+  }
+
+  // Preço kWh: usa a tarifa real extraída da última fatura se disponível, caso contrário 0.18€/kWh.
+  const tarifaOCR = (() => {
+    const o = fatura?.dados_ocr
+    if(!o) return null
+    if(o.tarifa_kwh_simples) return Number(o.tarifa_kwh_simples)
+    if(o.custo_energia_eur && o.consumo_kwh) return Number(o.custo_energia_eur) / Number(o.consumo_kwh)
+    return null
+  })()
+  const PRECO_KWH = tarifaOCR || 0.18
 
   // Para cada equipamento: consumo estimado + custo + poupança se A-rated
   const rows = eqs.map(eq => {
@@ -4207,9 +4301,93 @@ function EnergiaScreen({ localizacao, equipamentos, authUser, onBack }){
         </div>
       </div>
 
+      {/* BLOCO FATURA DE ELETRICIDADE */}
+      <div style={{ padding:'12px 12px 0' }}>
+        <div style={{ fontSize:10, fontWeight:700, color:'#555', textTransform:'uppercase', letterSpacing:0.5, marginBottom:8 }}>Fatura de eletricidade</div>
+
+        {!fatura && !faturaLoading && (
+          <div style={{ background:'#fff', border:`1px dashed ${CASA.border}`, borderRadius:11, padding:'14px 16px', display:'flex', gap:12, alignItems:'flex-start' }}>
+            <div style={{ fontSize:28 }}>⚡</div>
+            <div style={{ flex:1 }}>
+              <div style={{ fontSize:12.5, fontWeight:700, color:'#111', marginBottom:3 }}>Carregue a sua última fatura</div>
+              <div style={{ fontSize:11, color:'#555', lineHeight:1.5, marginBottom:10 }}>
+                Lemos automaticamente fornecedor, consumo, tarifa e potência contratada. Pode depois simular poupança mudando para outro comercializador.
+              </div>
+              <input ref={faturaFileRef} type="file" accept="image/*,application/pdf" onChange={e=>{ const f = e.target.files?.[0]; if(f) uploadFatura(f) }} style={{ display:'none' }}/>
+              <button onClick={()=>faturaFileRef.current?.click()} style={{ background:CASA.greenLt, color:'#fff', border:'none', borderRadius:9, padding:'8px 14px', fontSize:12, fontWeight:700, cursor:'pointer' }}>
+                📤 Carregar fatura
+              </button>
+            </div>
+          </div>
+        )}
+
+        {faturaLoading && (
+          <div style={{ background:'#fff', border:`1px solid ${CASA.border}`, borderRadius:11, padding:'14px 16px', display:'flex', gap:10, alignItems:'center' }}>
+            <div className="sk" style={{ width:34, height:34, borderRadius:8 }}/>
+            <div>
+              <div style={{ fontSize:12, fontWeight:700, color:'#111' }}>A analisar fatura…</div>
+              <div style={{ fontSize:10, color:'#999', marginTop:2 }}>A extrair dados com IA.</div>
+            </div>
+          </div>
+        )}
+
+        {fatura && (() => {
+          const o = fatura.dados_ocr || {}
+          const tarifa = o.tarifa_kwh_simples ?? (o.custo_energia_eur && o.consumo_kwh ? (Number(o.custo_energia_eur)/Number(o.consumo_kwh)) : null)
+          const v4Url = 'http://127.0.0.1:5174'  // v4-energia (ajustar quando deploy)
+          return (
+            <div style={{ background:'#fff', border:`1px solid ${CASA.greenLt}`, borderRadius:11, padding:'14px 16px' }}>
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:10, marginBottom:10 }}>
+                <div>
+                  <div style={{ fontSize:10, color:'#999', textTransform:'uppercase', letterSpacing:0.5 }}>Fornecedor actual</div>
+                  <div style={{ fontSize:15, fontWeight:700, color:'#111', marginTop:2 }}>{o.fornecedor || 'Fornecedor não identificado'}</div>
+                  {(o.periodo_inicio || o.periodo_fim) && (
+                    <div style={{ fontSize:10, color:'#999', marginTop:2 }}>
+                      {o.periodo_inicio ? new Date(o.periodo_inicio).toLocaleDateString('pt-PT') : '—'}
+                      {' → '}
+                      {o.periodo_fim ? new Date(o.periodo_fim).toLocaleDateString('pt-PT') : '—'}
+                    </div>
+                  )}
+                </div>
+                <a href={fatura.url} target="_blank" rel="noreferrer" style={{ fontSize:11, color:CASA.greenLt, textDecoration:'none', fontWeight:600 }}>Ver PDF ›</a>
+              </div>
+
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:0, border:`1px solid ${CASA.border}`, borderRadius:8, overflow:'hidden' }}>
+                {[
+                  ['Consumo',   o.consumo_kwh != null ? `${o.consumo_kwh} kWh` : '—'],
+                  ['Total',     o.custo_total_eur != null ? `€${Number(o.custo_total_eur).toFixed(2).replace('.',',')}` : '—'],
+                  ['Potência',  o.potencia_contratada_kva ? `${o.potencia_contratada_kva} kVA` : '—'],
+                ].map(([l,v],i) => (
+                  <div key={l} style={{ padding:'8px 10px', borderRight: i<2 ? `1px solid ${CASA.border}` : 'none' }}>
+                    <div style={{ fontSize:8.5, color:'#999', textTransform:'uppercase', letterSpacing:0.3 }}>{l}</div>
+                    <div style={{ fontSize:12, fontWeight:700, marginTop:2 }}>{v}</div>
+                  </div>
+                ))}
+              </div>
+
+              {tarifa != null && (
+                <div style={{ marginTop:10, fontSize:11, color:'#555' }}>
+                  Tarifa efectiva: <b style={{ color:'#111' }}>{Number(tarifa).toFixed(3).replace('.',',')} €/kWh</b>
+                  {o.tarifa_tipo && <> · {o.tarifa_tipo}</>}
+                </div>
+              )}
+
+              <div style={{ display:'flex', gap:8, marginTop:12 }}>
+                <button onClick={()=>faturaFileRef.current?.click()} style={{ flex:1, padding:'9px', borderRadius:8, border:`1px solid ${CASA.border}`, background:'#fff', fontSize:11, fontWeight:600, color:'#555', cursor:'pointer' }}>📤 Nova fatura</button>
+                <button onClick={()=>window.open(v4Url, '_blank')} style={{ flex:2, padding:'9px', borderRadius:8, border:'none', background:CASA.greenLt, color:'#fff', fontSize:11.5, fontWeight:700, cursor:'pointer' }}>
+                  Simular outros fornecedores →
+                </button>
+              </div>
+              <input ref={faturaFileRef} type="file" accept="image/*,application/pdf" onChange={e=>{ const f = e.target.files?.[0]; if(f) uploadFatura(f) }} style={{ display:'none' }}/>
+            </div>
+          )
+        })()}
+      </div>
+
       <div style={{ padding:'12px 12px 0' }}>
         <div style={{ fontSize:11, color:'#555', marginBottom:10, lineHeight:1.5, background:'#fff', border:`1px solid ${CASA.border}`, borderRadius:10, padding:'10px 12px' }}>
-          💡 Estimativas baseadas em <b>{PRECO_KWH}€/kWh</b> (tarifa simples). Poupança calculada como −30% ao substituir por equivalente A-rated; equipamentos já A-rated não têm ganho.
+          💡 Estimativas baseadas em <b>{PRECO_KWH.toFixed(3).replace('.',',')}€/kWh</b>
+          {tarifaOCR ? ' (tarifa lida da sua fatura)' : ' (tarifa simples default)'}. Poupança calculada como −30% ao substituir por equivalente A-rated; equipamentos já A-rated não têm ganho.
         </div>
 
         {consumos === null && <div className="sk" style={{ height:72 }}/>}
