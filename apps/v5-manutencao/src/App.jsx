@@ -3869,6 +3869,301 @@ const PECAS_COMPAT = {
   bosch:   [['Sensor caudal','ref. BS-SC-09'], ['Termopar','ref. BS-TP-34']],
 }
 
+const DOC_TIPOS = [
+  { id:'todos',     label:'Todos',     ic:'📂', bg:'#F3F3F3' },
+  { id:'fatura',    label:'Faturas',   ic:'🧾', bg:'#E6F1FB' },
+  { id:'garantia',  label:'Garantias', ic:'🛡️', bg:CASA.greenXl },
+  { id:'contrato',  label:'Contratos', ic:'📄', bg:CASA.amberLt },
+  { id:'relatorio', label:'Relatórios',ic:'📋', bg:'#FAECE7' },
+  { id:'manual',    label:'Manuais',   ic:'📘', bg:'#EEEDFE' },
+  { id:'foto',      label:'Fotos',     ic:'🖼️', bg:'#F3F3F3' },
+  { id:'planta',    label:'Plantas',   ic:'🗺️', bg:'#F3F3F3' },
+  { id:'outro',     label:'Outros',    ic:'📎', bg:'#F3F3F3' },
+]
+const DOC_TIPO_META = DOC_TIPOS.reduce((a,t)=>{ a[t.id]=t; return a }, {})
+
+/* DocsScreen — cofre de documentos por localização (Fase 3.4) */
+function DocsScreen({ localizacao, authUser, onBack }){
+  const [docs, setDocs] = useState(null)
+  const [filtro, setFiltro] = useState('todos')
+  const [search, setSearch] = useState('')
+  const [uploadOpen, setUploadOpen] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const [uploadForm, setUploadForm] = useState({ tipo:'fatura', nome:'', valor:'', valido_ate:'', file:null })
+  const fileRef = useRef(null)
+
+  const refetch = async () => {
+    if(!localizacao?.id) return
+    const rows = await sbGetV5('documentos', `?localizacao_id=eq.${localizacao.id}&order=created_at.desc`, authUser?.token)
+    setDocs(rows || [])
+  }
+  useEffect(() => { refetch() /* eslint-disable-next-line */ }, [localizacao?.id])
+
+  const startUpload = async () => {
+    if(!uploadForm.file){ alert('Escolha um ficheiro primeiro.'); return }
+    if(!uploadForm.nome.trim()){ alert('Dê um nome ao documento.'); return }
+    setUploading(true)
+    const ext = (uploadForm.file.name.split('.').pop() || 'bin').toLowerCase()
+    const safeName = uploadForm.nome.trim().replace(/[^a-zA-Z0-9._-]+/g,'-').slice(0,60)
+    const path = `${localizacao.pessoa_id || 'anon'}/${localizacao.id}/${uploadForm.tipo}/${Date.now()}-${safeName}.${ext}`
+    const url = await sbUpload('v5-casa-docs', path, uploadForm.file, authUser?.token)
+    if(!url){ alert('Upload falhou. Ver consola.'); setUploading(false); return }
+    const payload = {
+      localizacao_id: localizacao.id,
+      tipo:           uploadForm.tipo,
+      nome:           uploadForm.nome.trim(),
+      url,
+      storage_path:   path,
+      mime_type:      uploadForm.file.type || null,
+      tamanho_bytes:  uploadForm.file.size,
+      valor_euros:    uploadForm.valor === '' ? null : Number(uploadForm.valor),
+      valido_ate:     uploadForm.valido_ate || null,
+    }
+    const r = await sbSaveV5('documentos', payload, authUser?.token)
+    setUploading(false)
+    if(!r){ alert('Upload OK mas falha a registar metadados.'); return }
+    setUploadOpen(false)
+    setUploadForm({ tipo:'fatura', nome:'', valor:'', valido_ate:'', file:null })
+    await refetch()
+  }
+
+  const filtered = (docs || [])
+    .filter(d => filtro==='todos' || d.tipo === filtro)
+    .filter(d => !search || (d.nome||'').toLowerCase().includes(search.toLowerCase()))
+  const countsByTipo = (docs || []).reduce((a,d) => { a[d.tipo] = (a[d.tipo]||0)+1; return a }, {})
+  const total = docs?.length || 0
+
+  return (
+    <div style={{ minHeight:'100vh', background:CASA.bg, paddingBottom:88 }}>
+      <div style={{ background:CASA.green, padding:'11px 14px 14px', color:'#fff' }}>
+        <button onClick={onBack} style={{ background:'none', border:'none', padding:0, fontSize:10, color:'rgba(255,255,255,0.7)', cursor:'pointer', marginBottom:4 }}>← A minha casa</button>
+        <div style={{ fontSize:15, fontWeight:700 }}>Documentos</div>
+        <div style={{ fontSize:11, opacity:0.75, marginTop:2 }}>{localizacao?.nome || '—'} · {total} ficheiro{total===1?'':'s'}</div>
+      </div>
+
+      {/* Search + filtros */}
+      <div style={{ padding:'10px 12px 0' }}>
+        <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Procurar por nome…"
+          style={{ width:'100%', boxSizing:'border-box', padding:'9px 12px', borderRadius:9, border:`1px solid ${CASA.border}`, background:'#fff', fontSize:12, outline:'none', marginBottom:8 }}/>
+      </div>
+      <div className="cc-no-scrollbar" style={{ display:'flex', gap:6, overflowX:'auto', padding:'0 12px 10px', borderBottom:`1px solid ${CASA.border}` }}>
+        {DOC_TIPOS.map(t => {
+          const n = t.id === 'todos' ? total : (countsByTipo[t.id] || 0)
+          const on = filtro === t.id
+          return (
+            <button key={t.id} onClick={()=>setFiltro(t.id)} style={{
+              flexShrink:0, padding:'5px 11px', borderRadius:14, fontSize:10, cursor:'pointer',
+              border:`1px solid ${on?CASA.greenLt:CASA.border}`,
+              background: on?CASA.greenXl:'#fff',
+              color: on?CASA.green:'#555', fontWeight: on?700:400,
+              whiteSpace:'nowrap',
+            }}>{t.label} {n>0 && `(${n})`}</button>
+          )
+        })}
+      </div>
+
+      {/* Lista */}
+      <div>
+        {docs === null && <div className="sk" style={{ height:60, margin:12 }}/>}
+        {docs && filtered.length === 0 && (
+          <div style={{ padding:'32px 20px', textAlign:'center', color:'#666', fontSize:12, lineHeight:1.55 }}>
+            {docs.length === 0 ? 'Sem documentos guardados. Adicione faturas, garantias, relatórios ou manuais.' : 'Sem resultados para este filtro.'}
+          </div>
+        )}
+        {filtered.map(d => {
+          const m = DOC_TIPO_META[d.tipo] || DOC_TIPO_META.outro
+          return (
+            <a key={d.id} href={d.url} target="_blank" rel="noreferrer" style={{ display:'flex', alignItems:'center', gap:10, padding:'11px 14px', borderBottom:`1px solid ${CASA.border}`, textDecoration:'none', color:'inherit' }}>
+              <div style={{ width:36, height:36, borderRadius:9, background:m.bg, display:'grid', placeItems:'center', fontSize:18, flexShrink:0 }}>{m.ic}</div>
+              <div style={{ flex:1, minWidth:0 }}>
+                <div style={{ fontSize:12, fontWeight:600, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{d.nome}</div>
+                <div style={{ fontSize:10, color:'#999', marginTop:1 }}>
+                  {m.label}{d.valor_euros != null ? ` · €${Number(d.valor_euros).toFixed(2)}` : ''}{d.valido_ate ? ` · válido até ${new Date(d.valido_ate).toLocaleDateString('pt-PT')}` : ''}
+                </div>
+              </div>
+              <span style={{ fontSize:10, color:'#999' }}>›</span>
+            </a>
+          )
+        })}
+      </div>
+
+      {/* Upload CTA fixo */}
+      <button onClick={()=>setUploadOpen(true)} style={{
+        position:'fixed', bottom:20, left:'50%', transform:'translateX(-50%)',
+        zIndex:50, background:CASA.greenLt, color:'#fff', border:'none',
+        borderRadius:999, padding:'12px 22px', fontSize:13, fontWeight:700,
+        boxShadow:'0 6px 18px -6px rgba(82,183,136,0.6)', cursor:'pointer',
+      }}>+ Adicionar documento</button>
+
+      {/* Modal upload */}
+      {uploadOpen && (
+        <div onClick={()=>!uploading && setUploadOpen(false)} style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.55)', zIndex:100, display:'flex', alignItems:'flex-end', justifyContent:'center' }}>
+          <div onClick={e=>e.stopPropagation()} style={{ background:'#fff', width:'100%', maxWidth:430, borderRadius:'18px 18px 0 0', padding:'18px 18px 22px', maxHeight:'86vh', overflowY:'auto', animation:'popIn 0.18s ease-out' }}>
+            <div style={{ width:38, height:4, borderRadius:2, background:'#e5e7eb', margin:'0 auto 14px' }}/>
+            <h2 style={{ margin:'0 0 14px', fontSize:17, fontWeight:700, color:'#0A1620' }}>Adicionar documento</h2>
+
+            <div style={{ fontSize:10, color:'#999', textTransform:'uppercase', letterSpacing:0.5, marginBottom:6 }}>Tipo</div>
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:6, marginBottom:14 }}>
+              {DOC_TIPOS.filter(t=>t.id!=='todos').map(t => {
+                const on = uploadForm.tipo === t.id
+                return (
+                  <button key={t.id} onClick={()=>setUploadForm(p=>({...p, tipo:t.id}))} style={{
+                    padding:'7px 4px', borderRadius:9, cursor:'pointer',
+                    border:`1.5px solid ${on?CASA.greenLt:CASA.border}`,
+                    background: on?CASA.greenXl:'#fff',
+                    fontSize:10, color:'#111', fontWeight:600, textAlign:'center',
+                  }}>
+                    <div style={{ fontSize:16, marginBottom:2 }}>{t.ic}</div>
+                    {t.label}
+                  </button>
+                )
+              })}
+            </div>
+
+            <div style={{ fontSize:10, color:'#999', textTransform:'uppercase', letterSpacing:0.5, marginBottom:4 }}>Nome</div>
+            <input value={uploadForm.nome} onChange={e=>setUploadForm(p=>({...p, nome:e.target.value}))}
+              style={{ width:'100%', boxSizing:'border-box', padding:'9px 12px', borderRadius:8, border:`1px solid ${CASA.border}`, fontSize:13, outline:'none', marginBottom:10 }}
+              placeholder="Ex: Fatura revisão caldeira"/>
+
+            <div style={{ display:'flex', gap:8, marginBottom:10 }}>
+              <div style={{ flex:1 }}>
+                <div style={{ fontSize:10, color:'#999', textTransform:'uppercase', letterSpacing:0.5, marginBottom:4 }}>Valor (€)</div>
+                <input type="number" value={uploadForm.valor} onChange={e=>setUploadForm(p=>({...p, valor:e.target.value}))}
+                  style={{ width:'100%', boxSizing:'border-box', padding:'9px 12px', borderRadius:8, border:`1px solid ${CASA.border}`, fontSize:13, outline:'none' }}
+                  placeholder="Opcional"/>
+              </div>
+              <div style={{ flex:1.3 }}>
+                <div style={{ fontSize:10, color:'#999', textTransform:'uppercase', letterSpacing:0.5, marginBottom:4 }}>Válido até</div>
+                <input type="date" value={uploadForm.valido_ate} onChange={e=>setUploadForm(p=>({...p, valido_ate:e.target.value}))}
+                  style={{ width:'100%', boxSizing:'border-box', padding:'9px 12px', borderRadius:8, border:`1px solid ${CASA.border}`, fontSize:13, outline:'none' }}/>
+              </div>
+            </div>
+
+            <div style={{ fontSize:10, color:'#999', textTransform:'uppercase', letterSpacing:0.5, marginBottom:4 }}>Ficheiro</div>
+            <input ref={fileRef} type="file" onChange={e=>setUploadForm(p=>({...p, file:e.target.files?.[0] || null}))}
+              style={{ width:'100%', boxSizing:'border-box', padding:'9px 12px', borderRadius:8, border:`1px solid ${CASA.border}`, fontSize:12, background:'#fff', marginBottom:14 }}/>
+
+            <div style={{ display:'flex', gap:8 }}>
+              <button onClick={()=>setUploadOpen(false)} disabled={uploading} style={{ flex:1, padding:'11px 14px', borderRadius:10, border:`1px solid ${CASA.border}`, background:'#fff', color:'#555', fontWeight:600, fontSize:13, cursor:uploading?'default':'pointer' }}>Cancelar</button>
+              <button onClick={startUpload} disabled={uploading} style={{ flex:2, padding:'11px 14px', borderRadius:10, border:'none', background:uploading?CASA.border:CASA.greenLt, color:'#fff', fontWeight:700, fontSize:13, cursor:uploading?'default':'pointer' }}>
+                {uploading ? 'A enviar…' : 'Enviar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+/* EnergiaScreen — consumo mensal + poupança estimada (Fase 3.4) */
+function EnergiaScreen({ localizacao, equipamentos, authUser, onBack }){
+  const eqs = (equipamentos || []).filter(e => !localizacao || e.localizacao_id === localizacao.id)
+  const [consumos, setConsumos] = useState(null)
+  useEffect(() => {
+    if(!eqs.length){ setConsumos([]); return }
+    let active = true
+    const ids = eqs.map(e => `"${e.id}"`).join(',')
+    sbGetV5('consumos_energia', `?equipamento_id=in.(${ids})&order=ano.desc,mes.desc`, authUser?.token).then(rows => {
+      if(active) setConsumos(rows || [])
+    })
+    return () => { active = false }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [eqs.length, authUser?.token])
+
+  // Preço indicativo kWh para estimativa (€/kWh). Usamos 0.18€ para EDP tarifa simples default.
+  const PRECO_KWH = 0.18
+
+  // Para cada equipamento: consumo estimado + custo + poupança se A-rated
+  const rows = eqs.map(eq => {
+    const cons = Number(eq.consumo_estimado_kwh_mes || 0)
+    const custo = cons * PRECO_KWH
+    const atual = eq.classe_energetica || null
+    const jaArated = ['A+++','A++','A+','A'].includes(atual)
+    const poupancaPct = jaArated ? 0 : 0.30
+    const poupanca = custo * poupancaPct
+    return { eq, cons, custo, poupanca, jaArated }
+  })
+  const totalKwh = rows.reduce((s,r)=>s+r.cons,0)
+  const totalCusto = rows.reduce((s,r)=>s+r.custo,0)
+  const totalPoupanca = rows.reduce((s,r)=>s+r.poupanca,0)
+
+  // Cor de barra por consumo relativo
+  const barColor = pct => pct >= 60 ? '#EF4444' : pct >= 30 ? '#F59E0B' : CASA.greenLt
+
+  return (
+    <div style={{ minHeight:'100vh', background:CASA.bg, paddingBottom:88 }}>
+      <div style={{ background:CASA.green, padding:'11px 14px 14px', color:'#fff' }}>
+        <button onClick={onBack} style={{ background:'none', border:'none', padding:0, fontSize:10, color:'rgba(255,255,255,0.7)', cursor:'pointer', marginBottom:4 }}>← A minha casa</button>
+        <div style={{ fontSize:15, fontWeight:700 }}>Energia</div>
+        <div style={{ fontSize:11, opacity:0.75, marginTop:2 }}>{localizacao?.nome || '—'}</div>
+        <div style={{ display:'flex', gap:14, marginTop:12, flexWrap:'wrap' }}>
+          <div>
+            <div style={{ fontSize:9, color:'rgba(255,255,255,0.65)', textTransform:'uppercase', letterSpacing:0.5 }}>Consumo mensal</div>
+            <div style={{ fontSize:22, fontWeight:700, marginTop:2 }}>{totalKwh.toFixed(0)} kWh</div>
+          </div>
+          <div>
+            <div style={{ fontSize:9, color:'rgba(255,255,255,0.65)', textTransform:'uppercase', letterSpacing:0.5 }}>Custo / mês</div>
+            <div style={{ fontSize:22, fontWeight:700, marginTop:2 }}>€{totalCusto.toFixed(2).replace('.',',')}</div>
+          </div>
+          <div>
+            <div style={{ fontSize:9, color:'rgba(255,255,255,0.65)', textTransform:'uppercase', letterSpacing:0.5 }}>Potencial poupança</div>
+            <div style={{ fontSize:22, fontWeight:700, marginTop:2, color:'#86efac' }}>€{totalPoupanca.toFixed(2).replace('.',',')}</div>
+          </div>
+        </div>
+      </div>
+
+      <div style={{ padding:'12px 12px 0' }}>
+        <div style={{ fontSize:11, color:'#555', marginBottom:10, lineHeight:1.5, background:'#fff', border:`1px solid ${CASA.border}`, borderRadius:10, padding:'10px 12px' }}>
+          💡 Estimativas baseadas em <b>{PRECO_KWH}€/kWh</b> (tarifa simples). Poupança calculada como −30% ao substituir por equivalente A-rated; equipamentos já A-rated não têm ganho.
+        </div>
+
+        {consumos === null && <div className="sk" style={{ height:72 }}/>}
+        {rows.length === 0 && (
+          <div style={{ padding:'28px 14px', textAlign:'center', color:'#666', fontSize:12, lineHeight:1.55, background:'#fff', border:`1px dashed ${CASA.border}`, borderRadius:11 }}>
+            Ainda sem equipamentos para calcular consumo.
+          </div>
+        )}
+
+        {rows.map(r => {
+          const pct = totalCusto > 0 ? (r.custo/totalCusto)*100 : 0
+          return (
+            <div key={r.eq.id} style={{ background:'#fff', border:`1px solid ${CASA.border}`, borderRadius:11, padding:'12px 14px', marginBottom:8 }}>
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'baseline', marginBottom:6 }}>
+                <div style={{ fontSize:13, fontWeight:700, color:'#111' }}>{r.eq.nome}</div>
+                <div style={{ fontSize:12, fontWeight:700, color:'#111' }}>€{r.custo.toFixed(2).replace('.',',')}</div>
+              </div>
+              <div style={{ fontSize:10, color:'#999', marginBottom:6 }}>
+                {CASA_CAT_LABELS[r.eq.categoria] || r.eq.categoria}
+                {r.eq.classe_energetica ? ` · Classe ${r.eq.classe_energetica}` : ''}
+                {` · ${r.cons.toFixed(0)} kWh/mês`}
+                {pct > 0 && ` · ${pct.toFixed(0)}% do total`}
+              </div>
+              <div style={{ height:6, background:'#f1f5f9', borderRadius:3, overflow:'hidden' }}>
+                <div style={{ width:`${Math.min(100,pct)}%`, height:6, background:barColor(pct), borderRadius:3 }}/>
+              </div>
+              {!r.jaArated && r.poupanca > 0 && (
+                <div style={{ marginTop:8, display:'flex', justifyContent:'space-between', alignItems:'center', gap:8 }}>
+                  <div style={{ fontSize:11, color:CASA.green, lineHeight:1.45 }}>
+                    <b>-€{r.poupanca.toFixed(2).replace('.',',')}/mês</b> se substituir por A-rated
+                  </div>
+                  <button onClick={()=>alert('Orçamento de substituição — liga ao fluxo V2 na Fase 3.5')} style={{
+                    background:CASA.greenLt, border:'none', color:'#fff', borderRadius:8,
+                    padding:'5px 10px', fontSize:10, fontWeight:700, cursor:'pointer', flexShrink:0,
+                  }}>Pedir orçamento</button>
+                </div>
+              )}
+              {r.jaArated && (
+                <div style={{ marginTop:8, fontSize:11, color:CASA.green, fontStyle:'italic' }}>✓ Já em classe óptima</div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 /* ── Helpers da Wishlist — obter ou criar a lista aberta do cliente ── */
 async function sbGetOrCreateListaAberta(uid, token){
   const existing = await sbGet('listas_cliente', `?cliente_id=eq.${uid}&estado=eq.aberta&select=*`, token)
@@ -9521,6 +9816,7 @@ export default function App() {
   const [casaLocalizacoes, setCasaLocalizacoes] = useState(null)
   const [casaEquipamentos, setCasaEquipamentos] = useState(null)
   const [casaActiveEq,     setCasaActiveEq]     = useState(null)
+  const [casaSub,          setCasaSub]          = useState(null) // 'docs' | 'energia' | null
   useEffect(() => {
     if(!authUser) return
     let active = true
@@ -9985,12 +10281,14 @@ export default function App() {
             {ecra==='chat_ordem_c'&& sel && <OrderChat ordem={sel} role='cliente' prest={TECNICOS.find(t=>t.id===sel.tid)} onBack={()=>setEcra('ordem')} onUpdate={o=>{upd(o);setSel(o)}}/>}
             {!cliOver && <>
               {tab==='inicio'   && <CHome    ordens={ordens} onSvc={s=>{setSvcNova(s);setEcra('nova')}} onOrdem={o=>{setSel(o);setEcra('ordem')}} authUser={authUser} onCategoryV2={(id)=>{ setCatCategoryId(id); setCatScreen('list') }} onDrawerOpen={()=>setClienteDrawerOpen(true)} categoriesCache={categoriesCache}/>}
-              {tab==='casa' && !casaActiveEq && <CasaScreen
+              {tab==='casa' && !casaActiveEq && !casaSub && <CasaScreen
                 localizacoes={casaLocalizacoes}
                 equipamentos={casaEquipamentos}
                 onNavigate={(target, payload)=>{
                   if(target==='ficha' && payload){ setCasaActiveEq(payload); return }
-                  alert(`"${target}" disponível na Fase 3.${target==='docs'||target==='energia'?4:5}.`)
+                  if(target==='docs'){    setCasaSub('docs');    return }
+                  if(target==='energia'){ setCasaSub('energia'); return }
+                  alert(`"${target}" disponível na Fase 3.5.`)
                 }}
               />}
               {tab==='casa' && casaActiveEq && <EquipamentoFicha
@@ -10005,6 +10303,17 @@ export default function App() {
                   setCasaEquipamentos(prev => (prev || []).filter(e => e.id !== id))
                   setCasaActiveEq(null)
                 }}
+              />}
+              {tab==='casa' && casaSub==='docs' && <DocsScreen
+                localizacao={(casaLocalizacoes || [])[0]}
+                authUser={authUser}
+                onBack={()=>setCasaSub(null)}
+              />}
+              {tab==='casa' && casaSub==='energia' && <EnergiaScreen
+                localizacao={(casaLocalizacoes || [])[0]}
+                equipamentos={casaEquipamentos}
+                authUser={authUser}
+                onBack={()=>setCasaSub(null)}
               />}
               {tab==='pedidos'  && <CPedidos  ordens={ordens} onOrdem={o=>{setSel(o);setEcra('ordem')}} authUser={authUser}/>}
               {tab==='perfil'   && ecra!=='moradas' && ecra!=='wishlist' && (
