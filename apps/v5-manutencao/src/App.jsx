@@ -2548,9 +2548,9 @@ function RoleBar({ role, onChange }) {
 }
 
 function BNav({ tab, set, onFabClick }) {
-  // "Casa" substitui "Explorar" no cliente — destino do módulo Casa (Fase 3).
-  const tabsL = [{id:'inicio',ic:'🏠',l:'Início'},{id:'casa',ic:'🏡',l:'Casa'}]
-  const tabsR = [{id:'pedidos',ic:'📋',l:'Pedidos'},{id:'perfil',ic:'👤',l:'Perfil'}]
+  // 3.2A: Início · Serviços · FAB · Casa · Pedidos. Perfil migrou para avatar (3.2D).
+  const tabsL = [{id:'inicio',ic:'🏠',l:'Início'},{id:'servicos',ic:'🔧',l:'Serviços'}]
+  const tabsR = [{id:'casa',ic:'🏡',l:'Casa'},{id:'pedidos',ic:'📋',l:'Pedidos'}]
   const renderTab = t => (
     <button key={t.id} onClick={() => set(t.id)} style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', padding:'8px 0 6px', background:'none', border:'none', cursor:'pointer', gap:2 }}>
       <span style={{ fontSize:20 }}>{t.ic}</span>
@@ -10785,6 +10785,28 @@ export default function App() {
             {ecra==='chat_c'      && <Chat titulo='Suporte' msgs={CHAT_C} lado='cliente' onBack={()=>setEcra('home')}/>}
             {ecra==='chat_ordem_c'&& sel && <OrderChat ordem={sel} role='cliente' prest={TECNICOS.find(t=>t.id===sel.tid)} onBack={()=>setEcra('ordem')} onUpdate={o=>{upd(o);setSel(o)}}/>}
             {!cliOver && <>
+              {/* Avatar perfil — fixo top-right para todos os tabs. PerfilSheet em 3.2D. */}
+              <button
+                onClick={()=>alert('Perfil sheet em 3.2D')}
+                aria-label="Perfil"
+                style={{
+                  position:'fixed', top:14, right:14, zIndex:55,
+                  width:36, height:36, borderRadius:'50%',
+                  background:'linear-gradient(135deg,#1B4332,#52B788)',
+                  border:'2px solid #fff',
+                  display:'flex', alignItems:'center', justifyContent:'center',
+                  fontSize:13, fontWeight:800, color:'#fff',
+                  cursor:'pointer', boxShadow:'0 2px 8px rgba(0,0,0,0.18)',
+                }}
+              >{(authUser?.nome||'U')[0].toUpperCase()}</button>
+              {/* Placeholder 3.2B — substituído por ServicosScreen na próxima sessão */}
+              {tab==='servicos' && (
+                <div style={{ minHeight:'100vh', background:'#f8fafc', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:12, paddingBottom:80, color:'#64748b' }}>
+                  <span style={{ fontSize:32 }}>🔧</span>
+                  <span style={{ fontSize:14, fontWeight:600 }}>Serviços</span>
+                  <span style={{ fontSize:12 }}>Em construção · fase 3.2B</span>
+                </div>
+              )}
               {tab==='inicio'   && <CHome    ordens={ordens} onSvc={s=>{setSvcNova(s);setEcra('nova')}} onOrdem={o=>{setSel(o);setEcra('ordem')}} authUser={authUser} onCategoryV2={(id)=>{ setCatCategoryId(id); setCatScreen('list') }} onDrawerOpen={()=>setClienteDrawerOpen(true)} categoriesCache={categoriesCache}/>}
               {tab==='casa' && !casaActiveEq && !casaSub && <CasaScreen
                 localizacoes={casaLocalizacoes}
