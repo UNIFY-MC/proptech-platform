@@ -7432,7 +7432,24 @@ function fromDbServico(row){
   }
 }
 
-function AdminServicos({svcs,setSvcs,authUser}){
+// Mapeia v5_manutencao.catalogo_servicos → formato SVCS usado pela UI admin
+function fromCatalogServico(row){
+  return {
+    id:    row.codigo || String(row.id),
+    cat:   row.categoria || '',
+    n:     row.nome || '',
+    p:     row.preco_base != null ? Number(row.preco_base) : 0,
+    u:     row.unidade || '/visita',
+    d:     row.duracao_tipica || '',
+    ic:    row.icon_emoji || '🔧',
+    tipo:  'fixo',
+    badge: row.badge || '',
+    r:     5.0,
+    rv:    0,
+  }
+}
+
+function AdminServicos({svcs,setSvcs,authUser,loading,error,onRetry}){
   const [q,setQ]=useState(''), [cat,setCat]=useState('all'), [modal,setModal]=useState(null), [form,setForm]=useState({})
   const [syncing,setSyncing]=useState(false)
   const filtered=svcs.filter(s=>(cat==='all'||s.cat===cat)&&(s.n||'').toLowerCase().includes(q.toLowerCase()))
@@ -7441,6 +7458,7 @@ function AdminServicos({svcs,setSvcs,authUser}){
     setSyncing(true)
     const updated=modal==='new'?{...form,r:5.0,rv:0}:{...form}
     const dbRow = toDbServico(updated)
+    // TODO(mario): writes ainda vão para public.servicos — migrar para catalogo_servicos em Tarefa D
     const result = await sbSave('servicos', dbRow, authUser?.token)
     setSyncing(false)
     if(!result){
@@ -7460,9 +7478,14 @@ function AdminServicos({svcs,setSvcs,authUser}){
   }
   return(
     <>
-      <ATopBar title='🔧 Serviços' sub={`${svcs.length} serviços configurados`}>
+      <ATopBar title='🔧 Serviços' sub={loading ? 'A carregar…' : `${svcs.length} serviços do catálogo`}>
         <APrimBtn ch='+ Novo serviço' onClick={openNew}/>
       </ATopBar>
+      {/* Banner discreto — altura fixa 40px para evitar layout jump */}
+      <div style={{height:40,display:'flex',alignItems:'center',padding:'0 24px',background:error?'#fef2f2':loading?'#f0f9ff':'transparent',borderBottom:error||loading?`1px solid ${error?'#fecaca':'#bae6fd'}`:'none',transition:'background 0.15s'}}>
+        {error && <><span style={{fontSize:12,color:'#b91c1c',flex:1}}>{error}</span><button onClick={onRetry} style={{fontSize:11,color:'#1d4ed8',background:'none',border:'1px solid #93c5fd',borderRadius:6,padding:'3px 10px',cursor:'pointer',flexShrink:0}}>Tentar novamente</button></>}
+        {loading && !error && <span style={{fontSize:12,color:'#0369a1'}}>A carregar catálogo da base de dados…</span>}
+      </div>
       <div style={{padding:24}}>
         <div style={{display:'flex',gap:10,marginBottom:16,background:A.white,padding:'12px 16px',borderRadius:11,border:`1px solid ${A.border}`}}>
           <input value={q} onChange={e=>setQ(e.target.value)} placeholder='Pesquisar serviço…' style={{flex:1,border:`1.5px solid ${A.border}`,borderRadius:7,padding:'7px 11px',fontSize:13,outline:'none',color:A.navy}}/>
@@ -7856,7 +7879,7 @@ function AdminConfig(){
 }
 
 // ══ AdminDash — contentor principal ════
-function AdminDash({svcs,setSvcs,prestadores,setPrestadores,niveis,setNiveis,clientes,setClientes,ordens,setOrdens,onLogout,authUser}){
+function AdminDash({svcs,setSvcs,prestadores,setPrestadores,niveis,setNiveis,clientes,setClientes,ordens,setOrdens,onLogout,authUser,svcsLoading,svcsError,onSvcsRetry}){
   const [page,setPage]=useState('dashboard')
   return(
     <div style={{position:'fixed',inset:0,display:'flex',background:A.bg,fontFamily:'system-ui,-apple-system,sans-serif',overflow:'hidden'}}>
@@ -7865,7 +7888,7 @@ function AdminDash({svcs,setSvcs,prestadores,setPrestadores,niveis,setNiveis,cli
       <div style={{marginLeft:240,flex:1,height:'100vh',overflowY:'auto',overflowX:'hidden',background:A.bg}}>
         {page==='dashboard'   &&<AdminDashboard svcs={svcs} prest={prestadores} clientes={clientes}/>}
         {page==='pipeline'    &&<AdminPipeline  ordens={ordens} setOrdens={setOrdens} prest={prestadores}/>}
-        {page==='servicos'    &&<AdminServicos   svcs={svcs} setSvcs={setSvcs} authUser={authUser}/>}
+        {page==='servicos'    &&<AdminServicos   svcs={svcs} setSvcs={setSvcs} authUser={authUser} loading={svcsLoading} error={svcsError} onRetry={onSvcsRetry}/>}
         {page==='clientes'    &&<AdminClientes   clientes={clientes} setClientes={setClientes}/>}
         {page==='prestadores' &&<AdminPrestadores prest={prestadores} setPrest={setPrestadores} niveis={niveis}/>}
         {page==='escaloes'    &&<AdminEscaloes   niveis={niveis} setNiveis={setNiveis}/>}
@@ -10324,28 +10347,50 @@ export default function App() {
   }, [moradasCli])
 
   // ── Estado Admin ──────────────────────────
-  const [adminAuth,     setAdminAuth]    = useState(false)
-  // adminSvcs arranca com o seed SVCS para dev sem Supabase;
-  // quando a auth admin real fica activa, fetchServicos() troca pelo conteúdo da BD.
-  const [adminSvcs,     setAdminSvcs]    = useState([...SVCS])
+  const [adminAuth,        setAdminAuth]        = useState(false)
+  const [adminSvcs,        setAdminSvcs]        = useState([])
+  const [adminSvcsLoading, setAdminSvcsLoading] = useState(false)
+  const [adminSvcsError,   setAdminSvcsError]   = useState(null)
   const [adminPrest,    setAdminPrest]   = useState([...TECNICOS])
   const [adminNiveis,   setAdminNiveis]  = useState({...NIVEIS})
   const [adminClientes, setAdminClientes]= useState([...CLIENTES_INIT])
 
-  // Quando a sessão admin real fica activa, trocamos o SVCS seed pelas rows
-  // reais de public.servicos (ordenadas por categoria + ordem). A policy
-  // servicos_admin_all dá acesso total a quem tem perfis.role='admin'.
+  // Carrega v5_manutencao.catalogo_servicos quando o admin faz login.
+  // Retry manual via botão no banner de erro.
+  const fetchAdminSvcs = () => {
+    if(role !== 'admin' || !adminAuth) return
+    setAdminSvcsLoading(true)
+    setAdminSvcsError(null)
+    sbGetV5('catalogo_servicos', '?select=*&ativo=eq.true&order=categoria.asc,nome.asc', authUser?.token)
+      .then(rows => {
+        setAdminSvcsLoading(false)
+        if(Array.isArray(rows)) setAdminSvcs(rows.map(fromCatalogServico))
+        else setAdminSvcsError('Não foi possível carregar o catálogo. Verifica a ligação à base de dados.')
+      })
+      .catch(() => {
+        setAdminSvcsLoading(false)
+        setAdminSvcsError('Erro de ligação ao carregar o catálogo.')
+      })
+  }
   useEffect(() => {
-    if(role !== 'admin' || !adminAuth || !authUser?.token) return
+    if(role !== 'admin' || !adminAuth) return
     let active = true
-    sbGet('servicos', '?select=*&order=categoria_id.asc,ordem.asc', authUser.token).then(rows => {
-      if(!active) return
-      if(Array.isArray(rows)){
-        setAdminSvcs(rows.map(fromDbServico))
-      }
-    })
+    setAdminSvcsLoading(true)
+    setAdminSvcsError(null)
+    sbGetV5('catalogo_servicos', '?select=*&ativo=eq.true&order=categoria.asc,nome.asc', authUser?.token)
+      .then(rows => {
+        if(!active) return
+        setAdminSvcsLoading(false)
+        if(Array.isArray(rows)) setAdminSvcs(rows.map(fromCatalogServico))
+        else setAdminSvcsError('Não foi possível carregar o catálogo. Verifica a ligação à base de dados.')
+      })
+      .catch(() => {
+        if(!active) return
+        setAdminSvcsLoading(false)
+        setAdminSvcsError('Erro de ligação ao carregar o catálogo.')
+      })
     return () => { active = false }
-  }, [role, adminAuth, authUser?.token])
+  }, [role, adminAuth])
 
   // ── Disponibilidade partilhada (reflecte no calendário) ──
   const [bloqueados, setBloqueados] = useState([])
@@ -10600,6 +10645,9 @@ export default function App() {
         adminAuth
           ? <AdminDash
               svcs={adminSvcs}           setSvcs={setAdminSvcs}
+              svcsLoading={adminSvcsLoading}
+              svcsError={adminSvcsError}
+              onSvcsRetry={fetchAdminSvcs}
               prestadores={adminPrest}   setPrestadores={setAdminPrest}
               niveis={adminNiveis}       setNiveis={setAdminNiveis}
               clientes={adminClientes}   setClientes={setAdminClientes}
