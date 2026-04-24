@@ -3294,9 +3294,15 @@ async function sbGetOrCreateListaAberta(uid, token){
   return row || null
 }
 
-function CWishlist({ authUser, onBack, onCreateNew }){
+function CWishlist({ authUser, onBack, onCreateNew, onSubmitted }){
   const [lista, setLista] = useState(null)     // { id, estado, ... }
   const [items, setItems] = useState(null)     // array | null while loading
+  const [moradas, setMoradas] = useState(null)
+  const [selectedMoradaId, setSelectedMoradaId] = useState(null)
+  const [scheduleMode, setScheduleMode] = useState('imediato')  // 'imediato' | 'agendar'
+  const [dataAgendada, setDataAgendada] = useState('')          // YYYY-MM-DD
+  const [horaAgendada, setHoraAgendada] = useState('')          // HH:MM
+  const [submitting, setSubmitting] = useState(false)
   const uid = authUser?.user?.id
 
   const refetch = async () => {
@@ -3312,6 +3318,23 @@ function CWishlist({ authUser, onBack, onCreateNew }){
   }
   useEffect(() => { refetch() /* eslint-disable-next-line */ }, [uid])
 
+  // Fetch moradas para seleccionar destino do submit
+  useEffect(() => {
+    if(!uid) return
+    let active = true
+    sbGet('cliente_moradas', `?cliente_id=eq.${uid}&order=is_default.desc,created_at.asc`, authUser?.token).then(rows => {
+      if(!active) return
+      const list = rows || []
+      setMoradas(list)
+      if(list.length > 0){
+        const def = list.find(m => m.is_default) || list[0]
+        setSelectedMoradaId(def.id)
+      }
+    })
+    return () => { active = false }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [uid])
+
   const remove = async (item) => {
     const ok = await sbDelete('lista_items', `?id=eq.${item.id}`, authUser?.token)
     if(!ok){ alert('Erro ao remover.'); return }
@@ -3319,6 +3342,71 @@ function CWishlist({ authUser, onBack, onCreateNew }){
   }
 
   const totalEstimado = (items || []).reduce((s,i) => s + Number(i.preco_estimado || 0), 0)
+
+  // Agrupar items por categoria_id (default 'outros' quando null)
+  const byCategoria = (items || []).reduce((acc, it) => {
+    const k = it.categoria_id || 'outros'
+    if(!acc[k]) acc[k] = []
+    acc[k].push(it)
+    return acc
+  }, {})
+  const nCategorias = Object.keys(byCategoria).length
+  const moradaSelected = (moradas || []).find(m => m.id === selectedMoradaId)
+  const canSubmit = (items || []).length > 0 && !!moradaSelected &&
+    (scheduleMode === 'imediato' || (scheduleMode === 'agendar' && dataAgendada && horaAgendada))
+
+  const submeter = async () => {
+    if(!canSubmit || !uid || !lista) return
+    setSubmitting(true)
+    const CATNAMES = { limpeza:'Limpeza', manutencao:'Manutenção', jardim:'Jardim', piscina:'Piscina', pintura:'Pintura', eletrica:'Eléctrica', canalizacao:'Canalização', pos_obra:'Pós-obra', outros:'Outros' }
+    const results = []
+    for(const cat of Object.keys(byCategoria)){
+      const group = byCategoria[cat]
+      const descricao = `Lista de tarefas agrupada (${CATNAMES[cat] || cat}):\n\n` + group.map(it => {
+        if(it.tipo === 'fixo'){
+          return `• ${it.servico_id || 'Serviço'}${it.preco_estimado != null ? ` — ~€${Number(it.preco_estimado).toFixed(2)}` : ''}`
+        }
+        const head = (it.descricao || '').slice(0, 120)
+        return `• ${head}${it.descricao && it.descricao.length > 120 ? '…' : ''}${it.horas_estimadas ? ` (${it.horas_estimadas}h est.)` : ''}`
+      }).join('\n')
+      const servicoId = CATEGORY_PREFIX[cat] ? `personalizado-${CATEGORY_PREFIX[cat]}` : null
+      const payload = {
+        servico_id:       servicoId,
+        cliente_id:       uid,
+        prestador_id:     null,
+        estado:           'pendente_orcamento',
+        morada:           moradaSelected.morada,
+        cod_postal:       moradaSelected.cp || null,
+        cidade:           moradaSelected.cidade || null,
+        data_agendada:    scheduleMode === 'agendar' ? dataAgendada : null,
+        hora_agendada:    scheduleMode === 'agendar' ? horaAgendada : null,
+        schedule_mode:    scheduleMode,
+        valor_cobrado:    null,           // a confirmar pelo prestador
+        is_personalizado: true,
+        descricao_personalizada: descricao,
+        notas:            `Submetido via lista (${group.length} item${group.length===1?'':'s'}).`,
+        categoria_id:     cat,
+      }
+      const r = await sbSave('ordens', payload, authUser?.token)
+      results.push({ cat, ok: !!r })
+    }
+    const successCount = results.filter(r => r.ok).length
+    if(successCount === 0){
+      alert('Erro: nenhum pedido foi criado. Ver consola.')
+      setSubmitting(false)
+      return
+    }
+    // Marca lista como submetida
+    await sbUpdate('listas_cliente', `?id=eq.${lista.id}`, {
+      estado: 'submetida',
+      submetida_at: new Date().toISOString(),
+      morada_id: moradaSelected.id,
+    }, authUser?.token)
+    setSubmitting(false)
+    alert(`✓ ${successCount} pedido(s) criado(s) com orçamento a confirmar pelo prestador.`)
+    if(onSubmitted) onSubmitted()
+    else onBack?.()
+  }
 
   return (
     <div style={{ minHeight:'100vh', background:C.mist, paddingBottom:120 }}>
@@ -3370,12 +3458,57 @@ function CWishlist({ authUser, onBack, onCreateNew }){
         ))}
 
         {items && items.length > 0 && (
-          <div style={{ marginTop:18, padding:14, background:'rgba(245,158,11,0.08)', border:'1px solid rgba(245,158,11,0.3)', borderRadius:12, textAlign:'center' }}>
-            <div style={{ fontSize:11, fontWeight:700, color:'#f59e0b', letterSpacing:0.5, textTransform:'uppercase', marginBottom:6 }}>Em desenvolvimento</div>
-            <div style={{ fontSize:12, color:C.slate, lineHeight:1.5 }}>
-              O submit da lista como ordem agrupada multi-especialidade fica disponível na próxima iteração. Até lá, pode continuar a adicionar items.
+          <>
+            <div style={{ marginTop:18, padding:14, background:C.white, border:`1px solid ${C.border}`, borderRadius:12 }}>
+              <div style={{ fontSize:10, fontWeight:700, color:C.slate, textTransform:'uppercase', letterSpacing:0.5, marginBottom:10 }}>Submeter pedido</div>
+
+              {/* Morada */}
+              <div style={{ marginBottom:12 }}>
+                <div style={{ fontSize:11, color:C.slate, marginBottom:4 }}>Morada do serviço</div>
+                {moradas === null && <div className="sk" style={{ height:36 }}/>}
+                {moradas && moradas.length === 0 && (
+                  <div style={{ fontSize:12, color:C.slate, fontStyle:'italic', padding:8 }}>Adicione uma morada em Perfil → Moradas.</div>
+                )}
+                {moradas && moradas.length > 0 && (
+                  <select value={selectedMoradaId || ''} onChange={e=>setSelectedMoradaId(e.target.value)}
+                    style={{ width:'100%', padding:'9px 12px', borderRadius:8, border:`1px solid ${C.border}`, fontSize:13, color:C.navy, background:C.white, outline:'none' }}>
+                    {moradas.map(m => (
+                      <option key={m.id} value={m.id}>{m.label} — {m.morada}{m.is_default?' (default)':''}</option>
+                    ))}
+                  </select>
+                )}
+              </div>
+
+              {/* Imediato vs Agendar */}
+              <div style={{ marginBottom:12 }}>
+                <div style={{ fontSize:11, color:C.slate, marginBottom:4 }}>Quando</div>
+                <div style={{ display:'flex', gap:8 }}>
+                  <button onClick={()=>setScheduleMode('imediato')} style={{ flex:1, padding:'9px', borderRadius:8, border:`1.5px solid ${scheduleMode==='imediato'?C.g:C.border}`, background:scheduleMode==='imediato'?'rgba(22,163,74,0.08)':C.white, color:C.navy, fontSize:12, fontWeight:600, cursor:'pointer' }}>Imediato</button>
+                  <button onClick={()=>setScheduleMode('agendar')} style={{ flex:1, padding:'9px', borderRadius:8, border:`1.5px solid ${scheduleMode==='agendar'?C.g:C.border}`, background:scheduleMode==='agendar'?'rgba(22,163,74,0.08)':C.white, color:C.navy, fontSize:12, fontWeight:600, cursor:'pointer' }}>Agendar</button>
+                </div>
+                {scheduleMode==='agendar' && (
+                  <div style={{ display:'flex', gap:8, marginTop:8 }}>
+                    <input type="date" value={dataAgendada} onChange={e=>setDataAgendada(e.target.value)} style={{ flex:1, padding:'9px 10px', borderRadius:8, border:`1px solid ${C.border}`, fontSize:12.5, color:C.navy, background:C.white, outline:'none' }}/>
+                    <input type="time" value={horaAgendada} onChange={e=>setHoraAgendada(e.target.value)} style={{ width:100, padding:'9px 10px', borderRadius:8, border:`1px solid ${C.border}`, fontSize:12.5, color:C.navy, background:C.white, outline:'none' }}/>
+                  </div>
+                )}
+              </div>
+
+              <div style={{ fontSize:11, color:C.slate, marginBottom:10, lineHeight:1.5, background:'#f8fafc', padding:'8px 10px', borderRadius:8 }}>
+                <b>{nCategorias}</b> pedido{nCategorias===1?'':'s'} agrupado{nCategorias===1?'':'s'} (um por categoria) — o prestador vai confirmar um orçamento antes de avançar.
+              </div>
+
+              <button onClick={submeter} disabled={!canSubmit || submitting} style={{
+                width:'100%', padding:'12px 14px', borderRadius:10, border:'none',
+                background: !canSubmit || submitting ? C.border : C.g,
+                color: !canSubmit || submitting ? C.slate : '#fff',
+                fontSize:14, fontWeight:700,
+                cursor: !canSubmit || submitting ? 'default' : 'pointer',
+              }}>
+                {submitting ? 'A submeter…' : canSubmit ? `Submeter ${nCategorias} pedido${nCategorias===1?'':'s'}` : 'Complete morada e horário'}
+              </button>
             </div>
-          </div>
+          </>
         )}
       </div>
     </div>
@@ -9050,7 +9183,12 @@ export default function App() {
                 <CMoradas authUser={authUser} onBack={()=>setEcra('home')}/>
               )}
               {tab==='perfil'   && ecra==='wishlist' && (
-                <CWishlist authUser={authUser} onBack={()=>setEcra('home')} onCreateNew={()=>{ setTab('inicio'); setEcra('home') }}/>
+                <CWishlist
+                  authUser={authUser}
+                  onBack={()=>setEcra('home')}
+                  onCreateNew={()=>{ setTab('inicio'); setEcra('home') }}
+                  onSubmitted={()=>{ setTab('pedidos'); setEcra('home') }}
+                />
               )}
               <BNav tab={tab} set={t=>{setTab(t);setEcra('home')}} onFabClick={()=>setFabOpen(true)}/>
               {fabOpen && (
