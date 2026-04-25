@@ -23,6 +23,7 @@ import SobreMimScreen from './screens/SobreMimScreen.jsx'
 import DadosPessoaisScreen from './screens/DadosPessoaisScreen.jsx'
 import LoginSegurancaScreen from './screens/LoginSegurancaScreen.jsx'
 import MoradasScreen from './screens/MoradasScreen.jsx'
+import ImovelDetalheScreen from './screens/ImovelDetalheScreen.jsx'
 import CodigoPromocionalScreen from './screens/CodigoPromocionalScreen.jsx'
 import ReferralScreen from './screens/ReferralScreen.jsx'
 import HistoricoPontosScreen from './screens/HistoricoPontosScreen.jsx'
@@ -10858,7 +10859,7 @@ export default function App() {
           {ecra==='sobre_mim'          && <SobreMimScreen onBack={()=>setEcra('home')} onNavigate={(t)=>setEcra(t)} />}
           {ecra==='dados_pessoais'     && <DadosPessoaisScreen onBack={()=>setEcra('home')} />}
           {ecra==='login_seguranca'    && <LoginSegurancaScreen onBack={()=>setEcra('home')} />}
-          {ecra==='moradas_screen'     && <MoradasScreen onBack={()=>setEcra('home')} />}
+          {ecra==='moradas_screen'     && <MoradasScreen onBack={()=>setEcra('home')} onNavigateDetalhe={(id)=>{ setSelNav(p=>({...p,imovelDetalheId:id})); setEcra('imovel_detalhe') }} />}
           {ecra==='codigo_promocional' && <CodigoPromocionalScreen onBack={()=>setEcra('home')} />}
           {ecra==='referral'           && <ReferralScreen onBack={()=>setEcra('home')} />}
           {ecra==='perfis_fiscais'     && <PerfisFiscaisScreen onBack={()=>setEcra('home')} />}
@@ -10871,7 +10872,8 @@ export default function App() {
           {ecra==='ajuda'              && <AjudaScreen onBack={()=>setEcra('home')} onNavigateChatSuporte={()=>setEcra('chat_suporte')} />}
 
           {/* ── 3.3.7 Discovery screens ── */}
-          {ecra==='imoveis'            && <MoradasScreen onBack={()=>setEcra('home')} />}
+          {ecra==='imoveis'            && <MoradasScreen onBack={()=>setEcra('home')} onNavigateDetalhe={(id)=>{ setSelNav(p=>({...p,imovelDetalheId:id})); setEcra('imovel_detalhe') }} />}
+          {ecra==='imovel_detalhe'     && <ImovelDetalheScreen id={selNav?.imovelDetalheId} onBack={()=>setEcra('home')} onNavigateScore={()=>setEcra('score_detail')} />}
           {ecra==='equipa'             && <EquipaScreen onBack={()=>setEcra('home')} onNavigatePrestador={(p)=>{ setSelNav({prestador:p}); setEcra('prestador_detail') }} />}
           {ecra==='prestador_detail'   && <PrestadorDetailScreen prestador={selNav?.prestador} onBack={()=>setEcra('equipa')} />}
           {ecra==='home_assessment'    && <HomeAssessmentScreen onBack={()=>setEcra('home')} onConcluido={()=>setEcra('home')} />}
@@ -10916,7 +10918,7 @@ export default function App() {
                 authUser={authUser}
               />
               {tab==='servicos' && <ServicosScreen authUser={authUser} onHamburguer={()=>setClienteDrawerOpen(true)} onAvatarClick={()=>setShowPerfilSheet(true)} notifCount={notifsNaoLidas} onNavigateNotificacoes={()=>setEcra('notificacoes')} onNavigateChatSuporte={()=>setEcra('chat_suporte')} />}
-              {tab==='inicio'   && <IniciaScreen authUser={authUser} onNavigateCasa={()=>{ setTab('casa'); setEcra('home') }} onNavigateServicos={()=>setTab('servicos')} onHamburguer={()=>setClienteDrawerOpen(true)} onAvatarClick={()=>setShowPerfilSheet(true)} onNavigateScore={()=>setEcra('score_detail')} onNavigateAlerta={(a)=>{ setSelAlerta(a); setEcra('alerta_detail') }} onNavigateOwnersClub={()=>setEcra('owners_club')} notifCount={notifsNaoLidas} onNavigateNotificacoes={()=>setEcra('notificacoes')} onNavigateChatSuporte={()=>setEcra('chat_suporte')} />}
+              {tab==='inicio'   && <IniciaScreen authUser={authUser} onNavigateCasa={()=>{ setTab('casa'); setEcra('home') }} onNavigateServicos={()=>setTab('servicos')} onHamburguer={()=>setClienteDrawerOpen(true)} onAvatarClick={()=>setShowPerfilSheet(true)} onNavigateScore={()=>setEcra('score_detail')} onNavigateAlerta={(a)=>{ setSelAlerta(a); setEcra('alerta_detail') }} onNavigateOwnersClub={()=>setEcra('owners_club')} notifCount={notifsNaoLidas} onNavigateNotificacoes={()=>setEcra('notificacoes')} onNavigateChatSuporte={()=>setEcra('chat_suporte')} onOpenImovelSelector={()=>setShowImovelSelector(true)} onNavigateImovelDetalhe={(id)=>{ setSelNav(p=>({...p,imovelDetalheId:id})); setEcra('imovel_detalhe') }} />}
               {tab==='casa' && !casaActiveEq && !casaSub && <CasaScreen
                 equipamentos={casaEquipamentos}
                 authUser={authUser}

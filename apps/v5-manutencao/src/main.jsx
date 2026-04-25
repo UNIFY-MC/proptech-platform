@@ -1,5 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
+import 'leaflet/dist/leaflet.css';
 import App from './App.jsx';
 import { ImovelAtivoProvider } from './lib/ImovelAtivoContext.jsx';
 import { PerfisFiscaisProvider } from './lib/PerfisFiscaisContext.jsx';

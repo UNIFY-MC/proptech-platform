@@ -3,6 +3,8 @@ import { supa } from './supa.js'
 import { DEMO_PESSOA_ID } from './lib/demo.js'
 import { calcularCreditoMes } from './lib/subscription.js'
 import HeroHeader from './HeroHeader.jsx'
+import { useImovelAtivo } from './lib/ImovelAtivoContext.jsx'
+import { moradaCurta } from './lib/labels.js'
 
 /* Paleta V5 — cópia local para isolar módulo do App.jsx */
 const V5 = {
@@ -312,6 +314,7 @@ const EMPTY = {
 }
 
 export default function PedidosScreen({ ordens, authUser, onOrdem, onChat, onHamburguer, onAvatarClick, onNavigateNotificacoes, onNavigateChatSuporte, notifCount = 0 }) {
+  const { imovelAtivo } = useImovelAtivo()
   const [tabAtivo, setTabAtivo] = useState('em_curso')
 
   const ordensTab = (ordens || []).filter(o => tabParaOrdem(o.st) === tabAtivo)
@@ -327,7 +330,7 @@ export default function PedidosScreen({ ordens, authUser, onOrdem, onChat, onHam
           <HeroHeader
             onHamburguer={onHamburguer}
             onAvatarClick={onAvatarClick}
-            locationLabel="A MINHA CASA"
+            locationLabel={moradaCurta(imovelAtivo) || 'A MINHA CASA'}
             authUser={authUser}
             notifCount={notifCount}
             onNotifClick={onNavigateNotificacoes}

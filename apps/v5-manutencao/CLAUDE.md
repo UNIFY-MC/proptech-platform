@@ -310,14 +310,23 @@ Colunas novas em `ordens`:
 | 3.3.7 | ✅ fechada | 22 ecrãs visuais + reorg menus + selector de imóvel |
 | **3.3.8** | ✅ fechada | Schema BD (11 tabelas novas, 3 ALTERs) + seed multi-imóveis Maria |
 | **3.3.9** | ✅ fechada | Todas as screens ligadas à BD real; MOCK removido de App.jsx; States.jsx criado |
+| **3.3.10** | ✅ fechada | Hotfix pós 3.3.9 |
+| **3.3.11** | ✅ fechada | Perfis fiscais por imóvel + snapshot fiscal nas ordens |
+| **3.3.12** | ✅ fechada | Imóvel como entidade central: GPS + CRUD completo + ImovelDetalheScreen |
 | **3.4.0** | próxima | Auth real (Fase 2d) + Lista de tarefas (Fase 3a) |
 
-### Notas para 3.3.9
+### Notas para 3.3.12
 
-- `ImovelSelectorSheet` recebe `localizacoes` via props — migrar para Context na 3.3.9 para evitar prop drilling
-- `pontos_historico` usa coluna `pontos` (não `valor`) e não tem `metadata`
+- `localizacoes` tem: `num_quartos`, `num_wcs`, `num_pisos`, `foto_principal_url` (novos) + `coords` (point, já existia)
+- `coords` formato Postgres `point`: `"(lng,lat)"` — usar `pointToCoords()` e `coordsToPoint()` em `src/lib/geocoding.js`
+- Geocoding via Nominatim (gratuito, rate-limited) — TODO(mario): migrar para Google Maps API em volume
+- `react-leaflet@5` + `leaflet@1.9.4` instalados com `--legacy-peer-deps` (conflito de peerDeps)
+- `ModalEditarImovel` exportado de `MoradasScreen.jsx` — usado também em `ImovelDetalheScreen.jsx`
+- `ImovelDetalheScreen` acessível via: header imóvel activo (IniciaScreen), card em MoradasScreen, ecra `imovel_detalhe`
+- `moradaCurta()` e `moradaCompleta()` adicionados a `src/lib/labels.js`
+- `ServicosScreen/MarketplaceView` corrigida: props `notifCount`, `onNavigateNotificacoes`, `onNavigateChatSuporte` passadas correctamente
+- Seed 3 imóveis Maria: tipologia, área, quartos, WCs, pisos, GPS backfilled via migração `v5_3_3_12_imovel_rico`
 - `localizacoes.tipo` CHECK real: `habitacao | condominio | empresa | segunda_habitacao`
-- mensagens_chat pendente: criar ordem em_curso para Maria para ter dados de teste
 
 ## Estilo de comunicação
 

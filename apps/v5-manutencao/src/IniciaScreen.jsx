@@ -5,6 +5,7 @@ import { useImovelAtivo } from './lib/ImovelAtivoContext.jsx'
 import { calcularCreditoMes } from './lib/subscription.js'
 import { calcularNivel } from './lib/gamification.js'
 import HeroHeader from './HeroHeader.jsx'
+import { moradaCurta } from './lib/labels.js'
 
 const NIVEL_ORDEM  = ['bronze', 'silver', 'gold', 'platinum', 'diamond']
 const NIVEL_LABELS = { bronze: 'Bronze', silver: 'Prata', gold: 'Ouro', platinum: 'Platina', diamond: 'Diamante' }
@@ -99,7 +100,7 @@ function casaLabel(score) {
   return 'Casa em Risco 🚨'
 }
 
-export default function IniciaScreen({ authUser, onNavigateCasa, onNavigateServicos, onHamburguer, onAvatarClick, onNavigateScore, onNavigateAlerta, onNavigateOwnersClub, onNavigateNotificacoes, onNavigateChatSuporte, notifCount = 0 }) {
+export default function IniciaScreen({ authUser, onNavigateCasa, onNavigateServicos, onHamburguer, onAvatarClick, onNavigateScore, onNavigateAlerta, onNavigateOwnersClub, onNavigateNotificacoes, onNavigateChatSuporte, notifCount = 0, onOpenImovelSelector, onNavigateImovelDetalhe }) {
   const { imovelAtivo, imoveis } = useImovelAtivo()
   const [subscricao,  setSubscricao]  = useState(null)
   const [creditoMes,  setCreditoMes]  = useState(undefined)
@@ -142,16 +143,11 @@ export default function IniciaScreen({ authUser, onNavigateCasa, onNavigateServi
   const localidade  = loc?.localidade || ''
   const nLocs       = imoveis.length
 
-  // Morada para o header: "Nome da casa · LOCALIDADE" ex: "R. Palmira Bastos, 4 · COIMBRA"
-  const locationLbl = loc
-    ? `${loc.nome}${localidade ? ' · ' + localidade.toUpperCase() : ''}`
-    : 'A MINHA CASA'
+  const locationLbl = loc ? (moradaCurta(loc) || loc.nome) : 'A MINHA CASA'
 
-  // Switcher de morada — só aparece se há mais que uma localização
   function handleLocationClick() {
-    if (nLocs <= 1) return
-    // TODO(mario): dropdown selector multi-casa — Fase 2d
-    alert('Selector de morada disponível na Fase 2d')
+    if (nLocs > 1) { onOpenImovelSelector?.(); return }
+    if (loc) onNavigateImovelDetalhe?.(loc.id)
   }
 
   const preco  = Number(subscricao?.preco_mensal || 0)
@@ -172,7 +168,7 @@ export default function IniciaScreen({ authUser, onNavigateCasa, onNavigateServi
           onHamburguer={onHamburguer}
           onAvatarClick={onAvatarClick}
           locationLabel={locationLbl + (nLocs > 1 ? ' ⌄' : '')}
-          onLocationClick={nLocs > 1 ? handleLocationClick : undefined}
+          onLocationClick={handleLocationClick}
           authUser={authUser}
           hideTemp
           notifCount={notifCount}

@@ -51,3 +51,28 @@ export const nivelLabel = (pontos, nivelKey) => {
   const falta = info.next ? Math.max(0, info.max - pontos) : 0
   return { nivel: info.label, proximo: info.next, falta, max: info.max }
 }
+
+export function moradaCurta(loc) {
+  if (!loc) return 'Sem morada'
+  if (loc.rua) {
+    const local = loc.cidade || loc.localidade || loc.distrito || ''
+    return `${loc.rua}${loc.numero ? ', ' + loc.numero : ''}${local ? ' · ' + local : ''}`
+  }
+  if (loc.morada) {
+    const local = loc.localidade || loc.cidade || ''
+    return `${loc.morada}${local ? ' · ' + local : ''}`
+  }
+  return loc.nome || 'Sem morada'
+}
+
+export function moradaCompleta(loc) {
+  if (!loc) return ''
+  const parts = [
+    loc.rua ? `${loc.rua}${loc.numero ? ', ' + loc.numero : ''}` : loc.morada,
+    loc.andar,
+    `${loc.codigo_postal || ''}${loc.cidade ? ' ' + loc.cidade : ''}`.trim(),
+    loc.distrito,
+    loc.pais === 'PT' ? 'Portugal' : loc.pais,
+  ].filter(Boolean)
+  return parts.join('\n')
+}

@@ -3,6 +3,7 @@ import { supa } from './supa.js'
 import { DEMO_LOCALIZACAO_ID } from './lib/demo.js'
 import HeroHeader from './HeroHeader.jsx'
 import { useImovelAtivo } from './lib/ImovelAtivoContext.jsx'
+import { moradaCurta } from './lib/labels.js'
 
 /* Paleta CASA — duplicada aqui para isolar o módulo do App.jsx */
 const CASA = {
@@ -189,7 +190,7 @@ export default function CasaScreen({ equipamentos, authUser, onNavigate, onHambu
         <HeroHeader
           onHamburguer={onHamburguer}
           onAvatarClick={onAvatarClick}
-          locationLabel={loc ? `${loc.nome} · ${loc.localidade || loc.concelho || ''}` : 'A MINHA CASA'}
+          locationLabel={loc ? (moradaCurta(loc) || loc.nome) : 'A MINHA CASA'}
           authUser={authUser}
           notifCount={notifCount}
           onNotifClick={onNavigateNotificacoes}
@@ -217,7 +218,7 @@ export default function CasaScreen({ equipamentos, authUser, onNavigate, onHambu
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <button onClick={onNavigateScore} style={{ background: 'none', border: 'none', cursor: onNavigateScore ? 'pointer' : 'default', textAlign: 'left', padding: 0 }}>
               <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)' }}>
-                {loc.nome} · {loc.localidade || loc.concelho || ''}
+                {moradaCurta(loc) || loc.nome}
               </div>
               <div style={{ fontSize: 48, fontWeight: 700, lineHeight: 1, marginTop: 4, color: '#fff' }}>
                 {loc.home_score ?? 0}

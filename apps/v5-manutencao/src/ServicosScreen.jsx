@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import { supaPublic } from './supa.js'
 import HeroHeader from './HeroHeader.jsx'
+import { useImovelAtivo } from './lib/ImovelAtivoContext.jsx'
+import { moradaCurta } from './lib/labels.js'
 
 const V5 = {
   green:    '#1B4332',
@@ -154,7 +156,8 @@ function SvcCard({ s }) {
 }
 
 /* ── Vista marketplace (ecrã principal de serviços) ──────────────── */
-function MarketplaceView({ onCatSel, onHamburguer, onAvatarClick, authUser }) {
+function MarketplaceView({ onCatSel, onHamburguer, onAvatarClick, authUser, notifCount, onNavigateNotificacoes, onNavigateChatSuporte }) {
+  const { imovelAtivo } = useImovelAtivo()
   return (
     <div style={{ minHeight: '100vh', background: V5.bg, paddingBottom: 90 }}>
       {/* Hero verde */}
@@ -166,7 +169,7 @@ function MarketplaceView({ onCatSel, onHamburguer, onAvatarClick, authUser }) {
         <HeroHeader
           onHamburguer={onHamburguer}
           onAvatarClick={onAvatarClick}
-          locationLabel="A MINHA CASA"
+          locationLabel={moradaCurta(imovelAtivo) || 'A MINHA CASA'}
           authUser={authUser}
           notifCount={notifCount}
           onNotifClick={onNavigateNotificacoes}
@@ -497,6 +500,9 @@ export default function ServicosScreen({ authUser, onHamburguer, onAvatarClick, 
       onHamburguer={onHamburguer}
       onAvatarClick={onAvatarClick}
       authUser={authUser}
+      notifCount={notifCount}
+      onNavigateNotificacoes={onNavigateNotificacoes}
+      onNavigateChatSuporte={onNavigateChatSuporte}
     />
   )
 }

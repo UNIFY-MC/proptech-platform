@@ -1,6 +1,6 @@
 import React, { useRef } from 'react'
 import { useImovelAtivo } from './lib/ImovelAtivoContext'
-import { tipoImovelEmoji, formatarMorada } from './lib/labels'
+import { tipoImovelEmoji, formatarMorada, moradaCurta } from './lib/labels'
 
 const V = {
   green:   '#1B4332',
@@ -88,7 +88,7 @@ export default function ImovelSelectorSheet({ open, onClose, onGerirImoveis }) {
                 <div style={{ flex:1, minWidth:0 }}>
                   <div style={{ fontSize:14, fontWeight:700, color:V.ink }}>{im.nome}</div>
                   <div style={{ fontSize:11, color:V.stone, marginTop:2, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
-                    {formatarMorada(im)}
+                    {moradaCurta(im)}
                   </div>
                 </div>
                 <div style={{ display:'flex', alignItems:'center', gap:8, flexShrink:0 }}>
