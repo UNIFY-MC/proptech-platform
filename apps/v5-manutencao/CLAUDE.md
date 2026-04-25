@@ -313,6 +313,7 @@ Colunas novas em `ordens`:
 | **3.3.10** | ✅ fechada | Hotfix pós 3.3.9 |
 | **3.3.11** | ✅ fechada | Perfis fiscais por imóvel + snapshot fiscal nas ordens |
 | **3.3.12** | ✅ fechada | Imóvel como entidade central: GPS + CRUD completo + ImovelDetalheScreen |
+| **3.3.13** | ✅ fechada | Orçamentos à medida (flow visual 4 steps) + CategoriaScreen enriquecida + AlertActions Shipshape |
 | **3.4.0** | próxima | Auth real (Fase 2d) + Lista de tarefas (Fase 3a) |
 
 ### Notas para 3.3.12
@@ -330,7 +331,31 @@ Colunas novas em `ordens`:
   Leaflet e react-leaflet desinstalados. `MapaPicker` substituído por inputs lat/lng + GPS actual.
   `ImovelDetalheScreen` mostra coords + link Google Maps em vez de mapa embed.
 
-## Débito 3.3.13 — Mapa visual
+## Notas para 3.3.13
+
+- Screens novos: `OrcamentosLandingScreen`, `OrcamentoWizardScreen` (4 steps), `OrcamentoConfirmadoScreen`
+- Ecras novos no App.jsx: `orcamentos_landing`, `orcamento_wizard`, `orcamento_confirmado`
+- Mock data em `src/data/mock.js`: `MOCK_ORCAMENTOS_AREAS`, `MOCK_ORCAMENTOS_FORMATOS`, `MOCK_ORCAMENTOS_PEDIDOS`, `MOCK_ALERTAS_ENRIQUECIDOS`
+- `AlertaDetailScreen` reescrito: mostra lista completa MOCK_ALERTAS_ENRIQUECIDOS (Shipshape style) + acções 1-toque
+- `CategoriaScreen` enriquecida: hero + badges 2x2 + CTA orçamento + sobre + relacionados + reviews + FAQ
+- `ServicosScreen`: 8ª categoria "À medida" no grid + banner referral + counter "177 DISPONÍVEIS" + routing banner roxo
+- `NotificacoesScreen`: onClick item → AlertaDetailScreen
+- `PedidosScreen`: card mock OrcamentoMockCard (roxo, progress bar) na tab Em curso
+- Novos props: `onNavigateOrcamento` (CategoriaScreen, AlertaDetailScreen), `onNavigateOrcamentos` + `onNavigateReferral` (ServicosScreen), `onNavigateAlerta` (NotificacoesScreen)
+
+## Débito 3.3.14 — Ligações BD + UX pendentes
+
+- Schema BD: `orcamentos_pedidos` + `propostas_orcamento` + RLS
+- Wire wizard → INSERT em `orcamentos_pedidos`
+- ImovelSelectorSheet por tab (aparece ao mudar de tab)
+- Bottom sheet "Para qual imóvel?" no checkout
+- Smart prompts contextuais por categoria no wizard
+- Wire `localizacao_id` nos pedidos de orçamento
+- Acções AlertaDetailScreen: chat IA, tutorial inline, detalhe equipamento
+- Detalhe de pedido de orçamento (screen completo)
+- Completude % por imóvel sem bloquear
+
+## Débito mapa visual — Continua de 3.3.12
 
 `MapaPicker` e `ImovelDetalheScreen` precisam de mapa visual interactivo.
 Opções a avaliar:

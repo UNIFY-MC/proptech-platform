@@ -3,6 +3,7 @@ import { supa } from './supa.js'
 import { DEMO_PESSOA_ID } from './lib/demo.js'
 import { calcularCreditoMes } from './lib/subscription.js'
 import HeroHeader from './HeroHeader.jsx'
+import { MOCK_ORCAMENTOS_PEDIDOS } from './data/mock.js'
 
 /* Paleta V5 — cópia local para isolar módulo do App.jsx */
 const V5 = {
@@ -311,6 +312,37 @@ const EMPTY = {
   historico: { ic:'📋', title:'Sem histórico',          sub:'Os pedidos concluídos e cancelados ficam aqui para consulta.' },
 }
 
+const purple = '#534AB7'
+
+function OrcamentoMockCard({ orc }) {
+  const progresso = Math.round((orc.propostas_recebidas / orc.propostas_alvo) * 100)
+  const emFalta   = orc.propostas_alvo - orc.propostas_recebidas
+  const minAgo    = Math.round((Date.now() - new Date(orc.enviado_em).getTime()) / 60000)
+  const tempoStr  = minAgo < 60 ? `há ${minAgo} min` : `há ${Math.round(minAgo / 60)}h`
+
+  return (
+    <div
+      onClick={() => { /* TODO(mario 3.3.14): navegar para detalhe do pedido orçamento */ }}
+      style={{ background: V5.white, border:`2px solid ${purple}`, borderRadius:14, padding:'13px 14px', marginBottom:10, cursor:'pointer' }}
+    >
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:7 }}>
+        <div style={{ fontSize:9, background:'#EEEDFE', color:purple, padding:'3px 8px', borderRadius:5, fontWeight:700, letterSpacing:.3 }}>
+          📋 ORÇAMENTOS À MEDIDA · AGUARDA
+        </div>
+        <div style={{ fontSize:10, color:V5.slate }}>{tempoStr}</div>
+      </div>
+      <div style={{ fontSize:13, fontWeight:700, color:V5.ink, marginBottom:3 }}>{orc.titulo}</div>
+      <div style={{ fontSize:11, color:V5.slate, marginBottom:8 }}>
+        {tempoStr} · {orc.propostas_recebidas} propost{orc.propostas_recebidas === 1 ? 'a' : 'as'} recebida{orc.propostas_recebidas !== 1 ? 's' : ''} · {emFalta} em falta
+      </div>
+      <div style={{ background:'#eee', borderRadius:4, height:4, overflow:'hidden' }}>
+        <div style={{ width:`${progresso}%`, height:'100%', background:purple, borderRadius:4 }}/>
+      </div>
+      <div style={{ fontSize:9, color:purple, fontWeight:700, marginTop:4 }}>{progresso}% · {orc.propostas_recebidas}/{orc.propostas_alvo} propostas</div>
+    </div>
+  )
+}
+
 export default function PedidosScreen({ ordens, authUser, onOrdem, onChat, onHamburguer, onAvatarClick, onNavigateNotificacoes, onNavigateChatSuporte, notifCount = 0, onOpenImovelSelector }) {
   const [tabAtivo, setTabAtivo] = useState('em_curso')
 
@@ -363,6 +395,11 @@ export default function PedidosScreen({ ordens, authUser, onOrdem, onChat, onHam
       </div>
 
       <div style={{ padding: '14px 14px 28px' }}>
+        {/* Cards mock de orçamentos à medida em curso */}
+        {tabAtivo === 'em_curso' && MOCK_ORCAMENTOS_PEDIDOS.map(orc => (
+          <OrcamentoMockCard key={orc.id} orc={orc} />
+        ))}
+
         {/* Lista ou empty state */}
         {ordensTab.length === 0
           ? <EmptyState {...EMPTY[tabAtivo]} />

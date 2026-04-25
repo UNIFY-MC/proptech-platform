@@ -82,3 +82,77 @@ export function codigoReferral(pessoa) {
   const sufixo   = (pessoa.id   || '').slice(-4).toUpperCase()
   return `${primeiro}-${sufixo}`
 }
+
+// ── Orçamentos à Medida (3.3.13 — visual mock, BD na 3.3.14) ──────────────
+
+export const MOCK_ORCAMENTOS_AREAS = [
+  { id:'canalizacao',    l:'Canalização',  ic:'💧' },
+  { id:'eletrica',       l:'Elétrica',     ic:'⚡' },
+  { id:'pintura',        l:'Pintura',      ic:'🖌️' },
+  { id:'hvac',           l:'AVAC',         ic:'❄️' },
+  { id:'telhado',        l:'Telhado',      ic:'🏠' },
+  { id:'reabilitacao',   l:'Reabilitação', ic:'🔨' },
+  { id:'jardim',         l:'Jardim',       ic:'🌿' },
+  { id:'piscina',        l:'Piscina',      ic:'🏊' },
+  { id:'mudancas',       l:'Mudanças',     ic:'📦' },
+  { id:'pest',           l:'Pest control', ic:'🐜' },
+  { id:'seguranca',      l:'Segurança',    ic:'🔒' },
+  { id:'outro',          l:'Outro',        ic:'❓' },
+]
+
+export const MOCK_ORCAMENTOS_FORMATOS = [
+  { id:'instant',   ic:'⚡', t:'Orçamento instantâneo', s:'Videochamada em 15-30min · útil para urgências e diagnósticos rápidos', max:'Até 5 orçamentos' },
+  { id:'online',    ic:'💻', t:'Orçamento online',      s:'Só com fotos e vídeos · sem visita · resposta em 24h',                  max:'Até 10 orçamentos' },
+  { id:'scheduled', ic:'📅', t:'Vistoria agendada',     s:'Técnico em casa à hora que marcares · mais preciso para obras grandes', max:'Até 3 orçamentos' },
+]
+
+export const MOCK_ORCAMENTOS_PEDIDOS = [
+  {
+    id: 'orc-1', areas: ['reabilitacao'], titulo: 'Reabilitação cozinha',
+    descricao: 'Substituir bancada, mudar placa para indução, novos armários superiores.',
+    formatos: ['instant', 'scheduled'], estado: 'aguarda_propostas',
+    propostas_recebidas: 2, propostas_alvo: 8,
+    enviado_em: '2026-04-25T13:48:00Z', prazo_resposta: '2026-04-26T13:48:00Z',
+    fotos_count: 3, localizacao_id: null, // TODO(mario 3.3.14): ligar a localizacoes
+  },
+]
+
+// ── Alertas Inteligentes (3.3.13 — mock enriquecido estilo Shipshape) ────────
+
+export const MOCK_ALERTAS_ENRIQUECIDOS = [
+  {
+    id: 'a1', cor: '#EF4444', cor_bg: '#FCEBEB', emoji: '🌧️', nivel: 'URGENTE',
+    titulo: 'A tua cobertura vai ter problemas se chover',
+    descricao: 'A IA detectou que a revisão do telhado é de 2021. Com 35mm previstos, há 68% de risco de infiltração na sala. Já aconteceu a 3 vizinhos este mês.',
+    acoes: [
+      { label: 'Agendar técnico', primaria: true,  action: 'pedir_servico', categoria: 'telhado' },
+      { label: 'Já verifiquei',   primaria: false, action: 'marcar_verificado' },
+    ],
+  },
+  {
+    id: 'a2', cor: '#F59E0B', cor_bg: '#FAEEDA', emoji: '🔥', nivel: 'ATENÇÃO',
+    titulo: 'A tua caldeira está a gastar 12% a mais do que devia',
+    descricao: 'Junkers ZWC 24, 9 anos. Consumo subiu de 187 para 213 kWh/mês. Limpeza do queimador recupera 8-10% imediatamente. Custo: 85€. Retorno: 3-4 meses.',
+    acoes: [
+      { label: 'Pedir orçamento', primaria: true,  action: 'pedir_servico', categoria: 'hvac' },
+      { label: 'Perguntar à IA',  primaria: false, action: 'ai_expert' },
+    ],
+  },
+  {
+    id: 'a3', cor: '#185FA5', cor_bg: '#E6F1FB', emoji: '💧', nivel: 'INFO',
+    titulo: 'Filtro do AC: 2 meses de uso intenso',
+    descricao: 'A tua Daikin FTXC25 está em modo verão. Filtros sujos perdem 15% de eficiência. Limpeza: 15 min em casa (tutorial vídeo) ou 25€ com técnico.',
+    acoes: [
+      { label: 'Ver tutorial',  primaria: true,  action: 'tutorial' },
+      { label: 'Pedir técnico', primaria: false, action: 'pedir_servico', categoria: 'hvac' },
+    ],
+  },
+  {
+    id: 'a4', cor: '#52B788', cor_bg: '#D8F3DC', emoji: '✅', nivel: 'BOAS NOTÍCIAS',
+    titulo: 'Esquentador Vulcano em óptimo estado',
+    descricao: 'Score subiu 3 pontos. Consumo abaixo da média. Próxima revisão sugerida em Maio 2027.',
+    acoes: [
+      { label: 'Ver detalhe', primaria: true, action: 'ver_equipamento' },
+    ],
+  },
+]

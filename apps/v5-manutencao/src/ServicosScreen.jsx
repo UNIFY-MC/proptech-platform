@@ -26,6 +26,7 @@ const CATS_GRID = [
   { id: 'pintura',     l: 'Pintura',     ic: '🖌️', bg: '#F7E0F0' },
   { id: 'eletrica',    l: 'Eléctrica',   ic: '⚡', bg: '#FAEEDA' },
   { id: 'canalizacao', l: 'Canalização', ic: '💧', bg: '#E0E8FA' },
+  { id: 'orcamentos',  l: 'À medida',    ic: '📋', bg: '#EEEDFE', nova: true },
 ]
 
 const PROMOS = [
@@ -154,7 +155,7 @@ function SvcCard({ s }) {
 }
 
 /* ── Vista marketplace (ecrã principal de serviços) ──────────────── */
-function MarketplaceView({ onCatSel, onHamburguer, onAvatarClick, authUser, notifCount, onNavigateNotificacoes, onNavigateChatSuporte, onOpenImovelSelector }) {
+function MarketplaceView({ onCatSel, onHamburguer, onAvatarClick, authUser, notifCount, onNavigateNotificacoes, onNavigateChatSuporte, onOpenImovelSelector, onNavigateOrcamentos, onNavigateReferral }) {
   return (
     <div style={{ minHeight: '100vh', background: V5.bg, paddingBottom: 90 }}>
       {/* Hero verde */}
@@ -172,6 +173,7 @@ function MarketplaceView({ onCatSel, onHamburguer, onAvatarClick, authUser, noti
           onNotifClick={onNavigateNotificacoes}
           onChatClick={onNavigateChatSuporte}
         />
+        <div style={{ fontSize: 9, color: 'rgba(255,255,255,.65)', fontWeight: 700, letterSpacing: .6, marginBottom: 2 }}>SERVIÇOS · 177 DISPONÍVEIS</div>
         <div style={{ fontSize: 17, fontWeight: 800, marginBottom: 10 }}>O que precisa hoje?</div>
         {/* Barra de pesquisa */}
         <div style={{
@@ -186,9 +188,22 @@ function MarketplaceView({ onCatSel, onHamburguer, onAvatarClick, authUser, noti
       </div>
 
       <div style={{ padding: '0 0 28px' }}>
+        {/* Banner referral */}
+        <div
+          onClick={onNavigateReferral}
+          style={{ margin:'12px 14px 0', background:'linear-gradient(90deg,#FAEEDA,#FFF4D6)', border:`1px solid #D4A72C`, borderRadius:12, padding:'10px 13px', display:'flex', gap:9, alignItems:'center', cursor:'pointer' }}
+        >
+          <div style={{ fontSize:22 }}>🎁</div>
+          <div style={{ flex:1 }}>
+            <div style={{ fontSize:11, fontWeight:700, color:'#B45309' }}>Convida amigos · ganha 15€ por cada um</div>
+            <div style={{ fontSize:10, color:'#B45309', marginTop:1 }}>Até 300€ em créditos · partilha o teu código</div>
+          </div>
+          <div style={{ background:'#D97706', color:'#fff', padding:'5px 10px', borderRadius:7, fontSize:11, fontWeight:700, flexShrink:0 }}>Partilhar</div>
+        </div>
+
         {/* Banner Home+ */}
         <div style={{
-          margin: '12px 14px 0',
+          margin: '8px 14px 0',
           background: V5.greenXl, border: `1px solid ${V5.greenLt}`,
           borderRadius: 12, padding: '11px 14px',
           display: 'flex', gap: 10, alignItems: 'center',
@@ -253,20 +268,24 @@ function MarketplaceView({ onCatSel, onHamburguer, onAvatarClick, authUser, noti
           display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 8,
         }}>
           {CATS_GRID.map(cat => (
-            <button key={cat.id} onClick={() => onCatSel(cat)} style={{
-              background: V5.white, border: `1px solid ${V5.border}`,
+            <button key={cat.id} onClick={() => cat.id === 'orcamentos' ? onNavigateOrcamentos?.() : onCatSel(cat)} style={{
+              background: V5.white, border: `1px solid ${cat.nova ? V5.purple : V5.border}`,
               borderRadius: 12, padding: '9px 4px',
               cursor: 'pointer', textAlign: 'center',
               boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
               display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+              position: 'relative',
             }}>
+              {cat.nova && (
+                <div style={{ position:'absolute', top:-5, right:-3, background:V5.purple, color:'#fff', fontSize:7, padding:'2px 5px', borderRadius:5, fontWeight:700, letterSpacing:.3 }}>NOVO</div>
+              )}
               <div style={{
                 width: 38, height: 38, borderRadius: 10, background: cat.bg,
                 display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18,
               }}>
                 {cat.ic}
               </div>
-              <span style={{ fontSize: 9, fontWeight: 700, color: V5.slate, lineHeight: 1.2 }}>
+              <span style={{ fontSize: 9, fontWeight: 700, color: cat.nova ? V5.purple : V5.slate, lineHeight: 1.2 }}>
                 {cat.l}
               </span>
             </button>
@@ -276,7 +295,7 @@ function MarketplaceView({ onCatSel, onHamburguer, onAvatarClick, authUser, noti
         {/* Orçamentos à medida — card roxo */}
         <div style={{ padding: '14px 14px 0' }}>
           <button
-            onClick={() => alert('Fluxo Orçamentos à medida em fase 3.6')}
+            onClick={onNavigateOrcamentos}
             style={{
               width: '100%', boxSizing: 'border-box',
               background: 'linear-gradient(135deg,#26215C,#534AB7)',
@@ -479,7 +498,7 @@ function CategoriaView({ cat, onBack }) {
 }
 
 /* ── Ecrã principal ──────────────────────────────────────────────── */
-export default function ServicosScreen({ authUser, onHamburguer, onAvatarClick, onNavigateNotificacoes, onNavigateChatSuporte, notifCount = 0, onOpenImovelSelector }) {
+export default function ServicosScreen({ authUser, onHamburguer, onAvatarClick, onNavigateNotificacoes, onNavigateChatSuporte, notifCount = 0, onOpenImovelSelector, onNavigateOrcamentos, onNavigateReferral }) {
   const [catSel, setCatSel] = useState(null)
 
   if (catSel) {
@@ -501,6 +520,8 @@ export default function ServicosScreen({ authUser, onHamburguer, onAvatarClick, 
       onNavigateNotificacoes={onNavigateNotificacoes}
       onNavigateChatSuporte={onNavigateChatSuporte}
       onOpenImovelSelector={onOpenImovelSelector}
+      onNavigateOrcamentos={onNavigateOrcamentos}
+      onNavigateReferral={onNavigateReferral}
     />
   )
 }

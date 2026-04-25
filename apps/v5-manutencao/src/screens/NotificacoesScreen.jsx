@@ -29,7 +29,7 @@ function tempoRelativo(ts) {
   return `${Math.round(diff / 86400)}d`
 }
 
-export default function NotificacoesScreen({ onBack }) {
+export default function NotificacoesScreen({ onBack, onNavigateAlerta }) {
   const [alertas,  setAlertas]  = useState([])
   const [loading,  setLoading]  = useState(true)
   const [tabAtivo, setTab]      = useState('todas')
@@ -110,7 +110,7 @@ export default function NotificacoesScreen({ onBack }) {
           return (
             <div
               key={n.id}
-              onClick={() => !lido && marcarLida(n.id)}
+              onClick={() => { if (!lido) marcarLida(n.id); onNavigateAlerta?.() }}
               style={{
                 background: lido ? C.white : tc.bg,
                 border:`1px solid ${C.border}`,
