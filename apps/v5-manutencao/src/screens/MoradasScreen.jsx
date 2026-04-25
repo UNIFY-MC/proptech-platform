@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import { supa } from '../supa.js'
 import { DEMO_PESSOA_ID } from '../lib/demo.js'
 import { useImovelAtivo } from '../lib/ImovelAtivoContext.jsx'
@@ -71,7 +71,10 @@ export function ModalEditarImovel({ imovel, onClose, onSaved }) {
   const [saving,    setSaving]    = useState(false)
   const [uploading, setUploading] = useState(false)
   const [geoBtn,    setGeoBtn]    = useState(false)
+  const [showMap,   setShowMap]   = useState(false)
   const fileRef = useRef(null)
+
+  useEffect(() => { setShowMap(true) }, [])
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
 
@@ -236,7 +239,7 @@ export function ModalEditarImovel({ imovel, onClose, onSaved }) {
 
           {/* GPS */}
           <SectionLabel>GPS</SectionLabel>
-          <MapaPicker
+          {showMap && <MapaPicker
             coords={coords}
             onCoordsChange={setCoords}
             onAddressFound={addr => {
@@ -246,7 +249,7 @@ export function ModalEditarImovel({ imovel, onClose, onSaved }) {
               if (addr.cidade && !form.cidade)         set('cidade',        addr.cidade)
               if (addr.distrito && !form.distrito)     set('distrito',      addr.distrito)
             }}
-          />
+          />}
           <button
             type="button"
             onClick={geocodificarForm}

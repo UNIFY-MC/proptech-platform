@@ -6,17 +6,15 @@ const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
 export const supa = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   db: { schema: 'v5_manutencao' },
-  auth: { persistSession: false },
+  auth: { storageKey: 'sb-v5-auth', persistSession: true, autoRefreshToken: true },
 });
 
-// Helper para aceder ao schema core
 export const supaCore = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   db: { schema: 'core' },
-  auth: { persistSession: false },
+  auth: { storageKey: 'sb-core-auth', persistSession: false, autoRefreshToken: false },
 });
 
-// Helper para aceder ao schema public (catálogo de serviços, etc.)
 export const supaPublic = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   db: { schema: 'public' },
-  auth: { persistSession: false },
+  auth: { storageKey: 'sb-public-auth', persistSession: false, autoRefreshToken: false },
 });
