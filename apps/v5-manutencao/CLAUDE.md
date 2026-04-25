@@ -320,13 +320,27 @@ Colunas novas em `ordens`:
 - `localizacoes` tem: `num_quartos`, `num_wcs`, `num_pisos`, `foto_principal_url` (novos) + `coords` (point, já existia)
 - `coords` formato Postgres `point`: `"(lng,lat)"` — usar `pointToCoords()` e `coordsToPoint()` em `src/lib/geocoding.js`
 - Geocoding via Nominatim (gratuito, rate-limited) — TODO(mario): migrar para Google Maps API em volume
-- `react-leaflet@5` + `leaflet@1.9.4` instalados com `--legacy-peer-deps` (conflito de peerDeps)
 - `ModalEditarImovel` exportado de `MoradasScreen.jsx` — usado também em `ImovelDetalheScreen.jsx`
 - `ImovelDetalheScreen` acessível via: header imóvel activo (IniciaScreen), card em MoradasScreen, ecra `imovel_detalhe`
 - `moradaCurta()` e `moradaCompleta()` adicionados a `src/lib/labels.js`
 - `ServicosScreen/MarketplaceView` corrigida: props `notifCount`, `onNavigateNotificacoes`, `onNavigateChatSuporte` passadas correctamente
 - Seed 3 imóveis Maria: tipologia, área, quartos, WCs, pisos, GPS backfilled via migração `v5_3_3_12_imovel_rico`
 - `localizacoes.tipo` CHECK real: `habitacao | condominio | empresa | segunda_habitacao`
+- **Mapa visual removido** (react-leaflet incompatível com ambiente React 18 — erro `render2 is not a function`):
+  Leaflet e react-leaflet desinstalados. `MapaPicker` substituído por inputs lat/lng + GPS actual.
+  `ImovelDetalheScreen` mostra coords + link Google Maps em vez de mapa embed.
+
+## Débito 3.3.13 — Mapa visual
+
+`MapaPicker` e `ImovelDetalheScreen` precisam de mapa visual interactivo.
+Opções a avaliar:
+- **Google Maps iframe embed** (mais simples, zero deps, mas estático)
+- **Mapbox GL JS** (`mapbox-gl` + wrapper próprio, sem react-leaflet)
+- **react-map-gl** (wrapper Mapbox/MapLibre, melhor suporte React 18+)
+- **MapLibre GL JS** (open-source, sem API key, compatível com React 18)
+
+Contexto: `MapaPicker` em `MoradasScreen.jsx` e `ImovelWizard.jsx`;
+mapa estático em `ImovelDetalheScreen.jsx` (só leitura, sem interacção necessária).
 
 ## Estilo de comunicação
 

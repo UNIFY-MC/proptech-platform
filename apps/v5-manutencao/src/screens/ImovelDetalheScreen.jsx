@@ -1,6 +1,4 @@
 import React, { useState, useEffect } from 'react'
-import { MapContainer, TileLayer, Marker } from 'react-leaflet'
-import L from 'leaflet'
 import { supa } from '../supa.js'
 import { useImovelAtivo } from '../lib/ImovelAtivoContext.jsx'
 import { usePerfisFiscais } from '../lib/PerfisFiscaisContext.jsx'
@@ -17,13 +15,6 @@ const C  = {
   line: '#E5E7EB', greenXl: '#D8F3DC', red: '#A32D2D', redSoft: '#FFEAEA',
   amber: '#854F0B', amberLt: '#FEF3C7',
 }
-
-const markerIcon = L.icon({
-  iconUrl:       'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-  shadowUrl:     'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-  iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41],
-})
 
 function scoreColor(s) {
   if (s >= 70) return { bg: '#D8F3DC', c: G }
@@ -302,26 +293,17 @@ export default function ImovelDetalheScreen({ id, onBack, onNavigateScore }) {
         </div>
         {coords ? (
           <>
-            <div style={{ borderRadius: 8, overflow: 'hidden', border: `1px solid ${C.border}`, marginBottom: 8, height: 160 }}>
-              <MapContainer
-                center={[coords.lat, coords.lng]}
-                zoom={15}
-                style={{ height: 160, width: '100%' }}
-                dragging={false}
-                zoomControl={false}
-                scrollWheelZoom={false}
-                doubleClickZoom={false}
-                touchZoom={false}
-                keyboard={false}
-                attributionControl={false}
-              >
-                <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"/>
-                <Marker position={[coords.lat, coords.lng]} icon={markerIcon}/>
-              </MapContainer>
-            </div>
-            <div style={{ fontSize: 11, color: C.slate }}>
+            <div style={{ fontSize: 11, color: C.slate, marginBottom: 8 }}>
               📍 {coords.lat.toFixed(5)}°N, {coords.lng.toFixed(5)}°E
             </div>
+            <a
+              href={`https://www.google.com/maps?q=${coords.lat},${coords.lng}`}
+              target="_blank" rel="noopener noreferrer"
+              style={{ display: 'block', textAlign: 'center', padding: '8px 12px', fontSize: 12,
+                color: '#185FA5', background: '#E6F1FB', borderRadius: 8, textDecoration: 'none',
+                fontWeight: 600, marginBottom: 4 }}>
+              🗺️ Ver no Google Maps →
+            </a>
           </>
         ) : (
           <div style={{ background: C.bg, borderRadius: 8, padding: '10px 12px', fontSize: 12, color: C.slate }}>
