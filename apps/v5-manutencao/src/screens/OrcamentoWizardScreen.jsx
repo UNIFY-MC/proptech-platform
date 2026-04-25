@@ -287,8 +287,8 @@ function Step4({ areas, descricao, fotos, formatos, onBack, onSubmit, enviando, 
 }
 
 // ── Main wizard ───────────────────────────────────────────────────────────────
-export default function OrcamentoWizardScreen({ onBack, onConfirmado, localizacaoId }) {
-  const [step,      setStep]      = useState(1)
+export default function OrcamentoWizardScreen({ onBack, onConfirmado, localizacaoId, categoriaSlug, skipStep1 }) {
+  const [step,      setStep]      = useState(skipStep1 ? 2 : 1)
   const [areas,     setAreas]     = useState([])
   const [descricao, setDescricao] = useState('')
   const [fotos,     setFotos]     = useState([])
@@ -325,7 +325,7 @@ export default function OrcamentoWizardScreen({ onBack, onConfirmado, localizaca
   }
 
   if (step === 1) return <Step1 areas={areas} setAreas={setAreas} onBack={onBack} onNext={() => setStep(2)} />
-  if (step === 2) return <Step2 descricao={descricao} setDescricao={setDescricao} fotos={fotos} setFotos={setFotos} onBack={() => setStep(1)} onNext={() => setStep(3)} />
+  if (step === 2) return <Step2 descricao={descricao} setDescricao={setDescricao} fotos={fotos} setFotos={setFotos} onBack={skipStep1 ? onBack : () => setStep(1)} onNext={() => setStep(3)} />
   if (step === 3) return <Step3 formatos={formatos} setFormatos={setFormatos} onBack={() => setStep(2)} onNext={() => setStep(4)} />
   return <Step4 areas={areas} descricao={descricao} fotos={fotos} formatos={formatos} onBack={() => setStep(3)} onSubmit={handleSubmit} enviando={enviando} setStep={setStep} />
 }
