@@ -303,6 +303,21 @@ Colunas novas em `ordens`:
 3. Commits em inglês, prefixo convencional: `feat:`, `fix:`, `chore:`, `refactor:`, `docs:`.
 4. Não fazer `git push` automático.
 
+## Estado das fases (actualizado 2026-04-25)
+
+| Fase | Estado | Notas |
+|---|---|---|
+| 3.3.7 | ✅ fechada | 22 ecrãs visuais + reorg menus + selector de imóvel |
+| **3.3.8** | ✅ fechada | Schema BD (11 tabelas novas, 3 ALTERs) + seed multi-imóveis Maria |
+| **3.3.9** | próxima | Ligações BD reais aos 22 ecrãs |
+
+### Notas para 3.3.9
+
+- `ImovelSelectorSheet` recebe `localizacoes` via props — migrar para Context na 3.3.9 para evitar prop drilling
+- `pontos_historico` usa coluna `pontos` (não `valor`) e não tem `metadata`
+- `localizacoes.tipo` CHECK real: `habitacao | condominio | empresa | segunda_habitacao`
+- mensagens_chat pendente: criar ordem em_curso para Maria para ter dados de teste
+
 ## Estilo de comunicação
 
 - Responder em português de Portugal
