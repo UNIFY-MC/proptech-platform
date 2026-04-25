@@ -1,7 +1,7 @@
 import React, { useRef, useEffect } from 'react'
-import PerfilMenuContent from './PerfilMenuContent.jsx'
+import PerfilDrawerContent from './PerfilDrawerContent.jsx'
 
-export default function PerfilDrawer({ open, onClose, authUser, onNavigate, onLogout }) {
+export default function PerfilDrawer({ open, onClose, authUser, onNavigate, onSwitchTab, onLogout }) {
   const ref = useRef(null)
 
   useEffect(() => {
@@ -61,11 +61,10 @@ export default function PerfilDrawer({ open, onClose, authUser, onNavigate, onLo
         >✕</button>
 
         <div style={{ paddingTop:16 }}>
-          <PerfilMenuContent
-            open={open}
+          <PerfilDrawerContent
             authUser={authUser}
             onNavigate={(target) => { onClose(); onNavigate?.(target) }}
-            onLogout={() => { onClose(); onLogout?.() }}
+            onSwitchTab={(tab) => { onClose(); onSwitchTab?.(tab) }}
           />
         </div>
       </div>

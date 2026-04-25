@@ -1,5 +1,5 @@
 import React, { useRef } from 'react'
-import PerfilMenuContent from './PerfilMenuContent.jsx'
+import PerfilSheetContent from './PerfilSheetContent.jsx'
 
 export default function PerfilSheet({ open, onClose, authUser, onNavigate, onLogout }) {
   const touchStartY = useRef(null)
@@ -65,8 +65,7 @@ export default function PerfilSheet({ open, onClose, authUser, onNavigate, onLog
           }}
         >✕</button>
 
-        <PerfilMenuContent
-          open={open}
+        <PerfilSheetContent
           authUser={authUser}
           onNavigate={(target) => { onClose(); onNavigate?.(target) }}
           onLogout={() => { onClose(); onLogout?.() }}

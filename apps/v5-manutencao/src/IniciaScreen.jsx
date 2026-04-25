@@ -276,13 +276,13 @@ export default function IniciaScreen({ authUser, localizacoes, localizacaoAtiva,
         <div
           onClick={() => onNavigateAlerta?.({ ic:'🌧️', titulo:'Chuva forte próximas 48h', descricao:'Acumulado esperado: 35–50mm · Vento 40 km/h', local:'COIMBRA' })}
           style={{
-          margin: '10px 14px 0',
+          margin: '10px 12px 0',
           background: 'linear-gradient(90deg,#E6F1FB,#F4F9FE)',
           border: '1px solid #85B7EB', borderRadius: 12,
           padding: '11px 13px', cursor: 'pointer',
           display: 'flex', gap: 11, alignItems: 'center',
         }}>
-          <span style={{ fontSize: 24, flexShrink: 0 }}>🌧️</span>
+          <span style={{ fontSize: 26, flexShrink: 0 }}>🌧️</span>
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 12, fontWeight: 700, color: '#0C447C' }}>
               Chuva forte prevista — próximas 48h

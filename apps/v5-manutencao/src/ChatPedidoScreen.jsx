@@ -289,7 +289,7 @@ export default function ChatPedidoScreen({ ordem, onBack }) {
         alignItems: 'center',
       }}>
         <div style={{ fontSize: 14 }}>🔒</div>
-        <div style={{ fontSize: 9, color: V.amber, lineHeight: 1.4 }}>
+        <div style={{ fontSize: 9.5, color: V.amber, lineHeight: 1.4 }}>
           <b>Nunca pagues fora da app.</b> Todos os pagamentos são garantidos e registados aqui.
         </div>
       </div>

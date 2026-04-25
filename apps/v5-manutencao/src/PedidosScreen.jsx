@@ -135,7 +135,7 @@ function EmptyState({ ic, title, sub }) {
   )
 }
 
-function OrdemCard({ o, onOrdem }) {
+function OrdemCard({ o, onOrdem, onChat }) {
   const nome  = nomeServico(o)
   const ic    = icServico(o)
   const catNome   = o.categoria_id ? CAT_LABELS[o.categoria_id] : null
@@ -185,6 +185,19 @@ function OrdemCard({ o, onOrdem }) {
           {pedidoLabel && <div style={{ fontSize: 10, color: V5.slate, marginTop: 2 }}>{pedidoLabel}</div>}
         </div>
       </div>
+      {isActive && onChat && (
+        <button
+          onClick={e => { e.stopPropagation(); onChat(o) }}
+          style={{
+            marginTop: 10, width: '100%', padding: '8px 12px',
+            background: V5.green, color: '#fff',
+            borderRadius: 9, fontSize: 12, fontWeight: 700,
+            border: 'none', cursor: 'pointer',
+          }}
+        >
+          💬 Chat com técnico
+        </button>
+      )}
     </div>
   )
 }
@@ -298,7 +311,7 @@ const EMPTY = {
   historico: { ic:'📋', title:'Sem histórico',          sub:'Os pedidos concluídos e cancelados ficam aqui para consulta.' },
 }
 
-export default function PedidosScreen({ ordens, authUser, onOrdem, onHamburguer, onAvatarClick }) {
+export default function PedidosScreen({ ordens, authUser, onOrdem, onChat, onHamburguer, onAvatarClick }) {
   const [tabAtivo, setTabAtivo] = useState('em_curso')
 
   const ordensTab = (ordens || []).filter(o => tabParaOrdem(o.st) === tabAtivo)
@@ -350,7 +363,7 @@ export default function PedidosScreen({ ordens, authUser, onOrdem, onHamburguer,
         {/* Lista ou empty state */}
         {ordensTab.length === 0
           ? <EmptyState {...EMPTY[tabAtivo]} />
-          : ordensTab.map(o => <OrdemCard key={o.id} o={o} onOrdem={onOrdem} />)
+          : ordensTab.map(o => <OrdemCard key={o.id} o={o} onOrdem={onOrdem} onChat={onChat} />)
         }
 
         {/* Footer subscrição — visível em qualquer tab */}

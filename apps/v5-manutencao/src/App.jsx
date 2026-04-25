@@ -14,6 +14,29 @@ import ScoreDetailScreen from './ScoreDetailScreen.jsx'
 import AlertaDetailScreen from './AlertaDetailScreen.jsx'
 import OwnersClubScreen from './OwnersClubScreen.jsx'
 import ChatPedidoScreen from './ChatPedidoScreen.jsx'
+import { MOCK } from './data/mock.js'
+import ImovelSelectorSheet from './ImovelSelectorSheet.jsx'
+import SobreMimScreen from './screens/SobreMimScreen.jsx'
+import DadosPessoaisScreen from './screens/DadosPessoaisScreen.jsx'
+import LoginSegurancaScreen from './screens/LoginSegurancaScreen.jsx'
+import MoradasScreen from './screens/MoradasScreen.jsx'
+import CodigoPromocionalScreen from './screens/CodigoPromocionalScreen.jsx'
+import ReferralScreen from './screens/ReferralScreen.jsx'
+import HistoricoPontosScreen from './screens/HistoricoPontosScreen.jsx'
+import AvaliacoesScreen from './screens/AvaliacoesScreen.jsx'
+import PagamentosScreen from './screens/PagamentosScreen.jsx'
+import NotificacoesScreen from './screens/NotificacoesScreen.jsx'
+import DefinicoesScreen from './screens/DefinicoesScreen.jsx'
+import AjudaScreen from './screens/AjudaScreen.jsx'
+import EquipaScreen from './screens/EquipaScreen.jsx'
+import PrestadorDetailScreen from './screens/PrestadorDetailScreen.jsx'
+import HomeAssessmentScreen from './screens/HomeAssessmentScreen.jsx'
+import CategoriaScreen from './screens/CategoriaScreen.jsx'
+import ServicoDetailScreen from './screens/ServicoDetailScreen.jsx'
+import ComboDetailScreen from './screens/ComboDetailScreen.jsx'
+import PromocaoDetailScreen from './screens/PromocaoDetailScreen.jsx'
+import CombosScreen from './screens/CombosScreen.jsx'
+import MaisContratadosScreen from './screens/MaisContratadosScreen.jsx'
 import {
   ArrowLeft, X, Check, Camera, Clock, Plus, MapPin, ChevronRight,
   Shield, Lock, MessageSquare, FileImage, RefreshCw, Wrench,
@@ -10271,6 +10294,11 @@ export default function App() {
   const [selAlerta,setSelAlerta]= useState(null)
   const [svcNova,  setSvcNova]  = useState(null)
 
+  // 3.3.7: imovel activo + selector sheet + selNav (params p/ screens de detalhe)
+  const [imovelAtivoId,     setImovelAtivoId]     = useState(() => MOCK.imoveis.find(i=>i.principal)?.id || 'im-1')
+  const [showImovelSelector,setShowImovelSelector] = useState(false)
+  const [selNav,            setSelNav]             = useState(null) // {prestador, servico, combo, promocao, categoria}
+
   // 3.2D: PerfilSheet + SubscricaoScreen
   const [showPerfilSheet,  setShowPerfilSheet]  = useState(false)
   const [showSubscricao,   setShowSubscricao]   = useState(false)
@@ -10664,7 +10692,12 @@ export default function App() {
   if (!authUser) return <AuthScreen onAuth={onAuth}/>
 
   const hideRole = ecra==='carteira' || role==='admin' || (role==='cliente' && catScreen !== null)
-  const cliOver  = ['nova','ordem','chat_c','chat_ordem_c'].includes(ecra) || (role==='cliente' && catScreen !== null)
+  const cliOver  = ['nova','ordem','chat_c','chat_ordem_c','score_detail','alerta_detail','owners_club','chat_prestador',
+    'sobre_mim','dados_pessoais','login_seguranca','moradas_screen','codigo_promocional','referral',
+    'historico_pontos','avaliacoes_screen','pagamentos','notificacoes','definicoes','ajuda',
+    'imoveis','equipa','prestador_detail','home_assessment','categoria_detail',
+    'servico_detail','combo_detail','promocao_detail','combos','mais_contratados',
+  ].includes(ecra) || (role==='cliente' && catScreen !== null)
 
   return (
     <>
@@ -10806,6 +10839,32 @@ export default function App() {
           {ecra==='owners_club'    && <OwnersClubScreen authUser={authUser} onBack={()=>setEcra('home')} onNavigate={(t)=>{ if(t==='subscricao'){setEcra('home');setShowSubscricao(true)} else setEcra('home') }} />}
           {ecra==='chat_prestador' && <ChatPedidoScreen ordem={sel} onBack={()=>setEcra('home')} />}
 
+          {/* ── 3.3.7 Perfil screens ── */}
+          {ecra==='sobre_mim'          && <SobreMimScreen pessoa={MOCK.pessoa} onBack={()=>setEcra('home')} />}
+          {ecra==='dados_pessoais'     && <DadosPessoaisScreen pessoa={MOCK.pessoa} onBack={()=>setEcra('home')} />}
+          {ecra==='login_seguranca'    && <LoginSegurancaScreen onBack={()=>setEcra('home')} />}
+          {ecra==='moradas_screen'     && <MoradasScreen imoveis={MOCK.imoveis} onBack={()=>setEcra('home')} />}
+          {ecra==='codigo_promocional' && <CodigoPromocionalScreen pessoa={MOCK.pessoa} onBack={()=>setEcra('home')} />}
+          {ecra==='referral'           && <ReferralScreen pessoa={MOCK.pessoa} onBack={()=>setEcra('home')} />}
+          {ecra==='historico_pontos'   && <HistoricoPontosScreen pessoa={MOCK.pessoa} historico={MOCK.pontos_historico} onBack={()=>setEcra('home')} />}
+          {ecra==='avaliacoes_screen'  && <AvaliacoesScreen avaliacoes={MOCK.avaliacoes_dadas} onBack={()=>setEcra('home')} />}
+          {ecra==='pagamentos'         && <PagamentosScreen metodos={MOCK.metodos_pagamento} onBack={()=>setEcra('home')} />}
+          {ecra==='notificacoes'       && <NotificacoesScreen notificacoes={MOCK.notificacoes} onBack={()=>setEcra('home')} />}
+          {ecra==='definicoes'         && <DefinicoesScreen onBack={()=>setEcra('home')} />}
+          {ecra==='ajuda'              && <AjudaScreen faq={MOCK.faq} onBack={()=>setEcra('home')} />}
+
+          {/* ── 3.3.7 Discovery screens ── */}
+          {ecra==='imoveis'            && <MoradasScreen imoveis={MOCK.imoveis} onBack={()=>setEcra('home')} />}
+          {ecra==='equipa'             && <EquipaScreen prestadores={MOCK.prestadores_favoritos} onBack={()=>setEcra('home')} onNavigatePrestador={(p)=>{ setSelNav({prestador:p}); setEcra('prestador_detail') }} />}
+          {ecra==='prestador_detail'   && <PrestadorDetailScreen prestador={selNav?.prestador} onBack={()=>setEcra('equipa')} />}
+          {ecra==='home_assessment'    && <HomeAssessmentScreen imovel={MOCK.imoveis.find(i=>i.id===imovelAtivoId)} onBack={()=>setEcra('home')} />}
+          {ecra==='categoria_detail'   && <CategoriaScreen categoria={selNav?.categoria} onBack={()=>setEcra('home')} onNavigateServico={(s)=>{ setSelNav(p=>({...p,servico:s})); setEcra('servico_detail') }} />}
+          {ecra==='servico_detail'     && <ServicoDetailScreen servico={selNav?.servico} onBack={()=>{ setSelNav(p=>({...p,servico:null})); setEcra(selNav?.categoria ? 'categoria_detail' : 'mais_contratados') }} onPedir={(s)=>alert(`A encaminhar pedido: ${s.nome}`)} onAdicionarLista={(s)=>alert(`"${s.nome}" adicionado à lista!`)} />}
+          {ecra==='combo_detail'       && <ComboDetailScreen combo={selNav?.combo} onBack={()=>setEcra('combos')} onPedir={(cb)=>alert(`Combo "${cb.titulo}" adicionado!`)} />}
+          {ecra==='promocao_detail'    && <PromocaoDetailScreen promo={selNav?.promocao} onBack={()=>setEcra('home')} onNavigateServico={(s)=>{ setSelNav(p=>({...p,servico:s})); setEcra('servico_detail') }} />}
+          {ecra==='combos'             && <CombosScreen onBack={()=>setEcra('home')} onNavigateCombo={(cb)=>{ setSelNav({combo:cb}); setEcra('combo_detail') }} />}
+          {ecra==='mais_contratados'   && <MaisContratadosScreen onBack={()=>setEcra('home')} onNavigateServico={(s)=>{ setSelNav({servico:s}); setEcra('servico_detail') }} />}
+
           {/* Fluxo antigo (activo apenas quando catScreen === null) */}
           {catScreen===null && <>
             {ecra==='nova'        && <CNovaOrdem svcI={svcNova} onBack={()=>setEcra('home')} onOk={add} moradas={moradasCli} setMoradas={setMoradasCli}/>}
@@ -10818,11 +10877,18 @@ export default function App() {
                 onClose={()=>setShowPerfilSheet(false)}
                 authUser={authUser}
                 onNavigate={(target)=>{
-                  if(target==='subscricao'){ setShowPerfilSheet(false); setShowSubscricao(true) }
-                  if(target==='wishlist'){ setShowPerfilSheet(false); setTab('perfil'); setEcra('wishlist') }
-                  if(target==='moradas'){ setShowPerfilSheet(false); setTab('perfil'); setEcra('moradas') }
-                  if(target==='perfil'){ setShowPerfilSheet(false); setTab('perfil'); setEcra('home') }
-                  if(target==='ownersclub'){ setShowPerfilSheet(false); setEcra('owners_club') }
+                  const go=(ecraTarget)=>{ setShowPerfilSheet(false); setEcra(ecraTarget) }
+                  if(target==='subscricao')        { setShowPerfilSheet(false); setShowSubscricao(true) }
+                  else if(target==='wishlist')     { setShowPerfilSheet(false); setTab('perfil'); setEcra('wishlist') }
+                  else if(target==='moradas')      { go('moradas_screen') }
+                  else if(target==='perfil')       { setShowPerfilSheet(false); setTab('perfil'); setEcra('home') }
+                  else if(target==='ownersclub')   { go('owners_club') }
+                  else if(target==='sobre_mim')    { go('sobre_mim') }
+                  else if(target==='dados_pessoais'){ go('dados_pessoais') }
+                  else if(target==='login_seguranca'){ go('login_seguranca') }
+                  else if(target==='moradas_screen'){ go('moradas_screen') }
+                  else if(target==='codigo_promocional'){ go('codigo_promocional') }
+                  else if(target==='referral')     { go('referral') }
                 }}
                 onLogout={()=>{ setShowPerfilSheet(false); onLogout() }}
               />
@@ -10900,7 +10966,7 @@ export default function App() {
                 onRefresh={refetchCasa}
                 onPickActive={(id)=>setCasaActiveLocId(id)}
               />}
-              {tab==='pedidos'  && <PedidosScreen ordens={ordens} authUser={authUser} onOrdem={o=>{setSel(o);setEcra('ordem')}} onHamburguer={()=>setClienteDrawerOpen(true)} onAvatarClick={()=>setShowPerfilSheet(true)} />}
+              {tab==='pedidos'  && <PedidosScreen ordens={ordens} authUser={authUser} onOrdem={o=>{setSel(o);setEcra('ordem')}} onChat={o=>{setSel(o);setEcra('chat_prestador')}} onHamburguer={()=>setClienteDrawerOpen(true)} onAvatarClick={()=>setShowPerfilSheet(true)} />}
               {tab==='perfil'   && ecra!=='moradas' && ecra!=='wishlist' && (
                 <CPerfil
                   authUser={authUser}
@@ -10940,14 +11006,36 @@ export default function App() {
                 open={clienteDrawerOpen}
                 onClose={()=>setClienteDrawerOpen(false)}
                 authUser={authUser}
+                onSwitchTab={(t)=>{ setClienteDrawerOpen(false); setTab(t); setEcra('home') }}
                 onNavigate={(target)=>{
-                  if(target==='subscricao'){ setClienteDrawerOpen(false); setShowSubscricao(true) }
-                  if(target==='wishlist'){ setClienteDrawerOpen(false); setTab('perfil'); setEcra('wishlist') }
-                  if(target==='moradas'){ setClienteDrawerOpen(false); setTab('perfil'); setEcra('moradas') }
-                  if(target==='perfil'){ setClienteDrawerOpen(false); setTab('perfil'); setEcra('home') }
-                  if(target==='ownersclub'){ setClienteDrawerOpen(false); setEcra('owners_club') }
+                  const close=()=>setClienteDrawerOpen(false)
+                  const go=(ecraTarget)=>{ close(); setEcra(ecraTarget) }
+                  if(target==='subscricao')         { close(); setShowSubscricao(true) }
+                  else if(target==='wishlist')      { close(); setTab('perfil'); setEcra('wishlist') }
+                  else if(target==='moradas')       { close(); setTab('perfil'); setEcra('moradas') }
+                  else if(target==='perfil')        { close(); setTab('perfil'); setEcra('home') }
+                  else if(target==='ownersclub')    { go('owners_club') }
+                  else if(target==='historico_pontos'){ go('historico_pontos') }
+                  else if(target==='avaliacoes')    { go('avaliacoes_screen') }
+                  else if(target==='pagamentos')    { go('pagamentos') }
+                  else if(target==='notificacoes')  { go('notificacoes') }
+                  else if(target==='definicoes')    { go('definicoes') }
+                  else if(target==='ajuda')         { go('ajuda') }
+                  else if(target==='imoveis')       { go('imoveis') }
+                  else if(target==='equipa')        { go('equipa') }
+                  else if(target==='home_assessment'){ go('home_assessment') }
+                  else if(target==='mais_contratados'){ go('mais_contratados') }
+                  else if(target==='combos')        { go('combos') }
                 }}
                 onLogout={()=>{ setClienteDrawerOpen(false); onLogout() }}
+              />
+              <ImovelSelectorSheet
+                open={showImovelSelector}
+                imoveis={MOCK.imoveis}
+                imovelAtivoId={imovelAtivoId}
+                onSelect={(id)=>{ setImovelAtivoId(id); setShowImovelSelector(false) }}
+                onClose={()=>setShowImovelSelector(false)}
+                onGerirImoveis={()=>{ setShowImovelSelector(false); setEcra('imoveis') }}
               />
             </>}
           </>}
