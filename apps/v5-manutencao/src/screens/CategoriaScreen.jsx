@@ -89,7 +89,7 @@ export default function CategoriaScreen({ categoria, onBack, onNavigateServico, 
       .order('popular', { ascending: false })
       .order('ordem', { ascending: true })
     if (!data || data.length === 0) {
-      const res = await supa
+      const res = await supaPublic
         .from('servicos')
         .select('id, nome, preco, duracao_tipica, popular, icon, categoria_id, subcategoria_id')
         .eq('activo', true)
