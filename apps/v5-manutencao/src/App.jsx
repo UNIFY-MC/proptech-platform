@@ -22,7 +22,7 @@ import ImovelSelectorSheet from './ImovelSelectorSheet.jsx'
 import SobreMimScreen from './screens/SobreMimScreen.jsx'
 import DadosPessoaisScreen from './screens/DadosPessoaisScreen.jsx'
 import LoginSegurancaScreen from './screens/LoginSegurancaScreen.jsx'
-import MoradasScreen from './screens/MoradasScreen.jsx'
+import MoradasScreen, { ModalEditarImovel } from './screens/MoradasScreen.jsx'
 import ImovelDetalheScreen from './screens/ImovelDetalheScreen.jsx'
 import CodigoPromocionalScreen from './screens/CodigoPromocionalScreen.jsx'
 import ReferralScreen from './screens/ReferralScreen.jsx'
@@ -4796,7 +4796,8 @@ Responde APENAS com um objecto JSON neste formato, sem markdown nem texto extra:
 /* CasaLocais — CRUD das localizações + selecção da activa (Fase 3.5) */
 function CasaLocais({ authUser, onBack }){
   const { imoveis: localizacoes, imovelAtivoId: activeLocId, setImovelAtivoId: onPickActive, refetch: onRefresh } = useImovelAtivo()
-  const [editing, setEditing] = useState(null)   // 'new' | row | null
+  const [editing, setEditing] = useState(null)         // 'new' | null (form inline para novo)
+  const [modalEditar, setModalEditar] = useState(null) // localizacao row | null (modal completo para editar)
   const [form, setForm] = useState({ nome:'', tipo:'habitacao', morada:'', localidade:'', concelho:'', codigo_postal:'', ano_construcao:'', tipologia:'', area_m2:'' })
   const [saving, setSaving] = useState(false)
 
@@ -4894,13 +4895,21 @@ function CasaLocais({ authUser, onBack }){
               </div>
               <div style={{ display:'flex', gap:6, marginTop:10 }}>
                 {!active && <button onClick={()=>onPickActive?.(l.id)} style={{ flex:1, padding:'7px', borderRadius:8, border:`1px solid ${CASA.greenLt}`, background:'#fff', color:CASA.green, fontSize:11, fontWeight:700, cursor:'pointer' }}>✓ Activar</button>}
-                <button onClick={()=>openEdit(l)} style={{ flex:1, padding:'7px', borderRadius:8, border:`1px solid ${CASA.border}`, background:'#fff', color:'#555', fontSize:11, fontWeight:600, cursor:'pointer' }}>✏️ Editar</button>
+                <button onClick={()=>setModalEditar(l)} style={{ flex:1, padding:'7px', borderRadius:8, border:`1px solid ${CASA.border}`, background:'#fff', color:'#555', fontSize:11, fontWeight:600, cursor:'pointer' }}>✏️ Editar</button>
                 <button onClick={()=>remove(l)} style={{ padding:'7px 12px', borderRadius:8, border:'1px solid #fecaca', background:'#fff', color:'#ef4444', fontSize:11, fontWeight:600, cursor:'pointer' }}>🗑</button>
               </div>
             </div>
           )
         })}
       </div>
+
+      {modalEditar && (
+        <ModalEditarImovel
+          imovel={modalEditar}
+          onClose={() => setModalEditar(null)}
+          onSaved={async () => { await onRefresh?.() }}
+        />
+      )}
 
       {editing && (
         <div onClick={()=>!saving && setEditing(null)} style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.55)', zIndex:100, display:'flex', alignItems:'flex-end', justifyContent:'center' }}>

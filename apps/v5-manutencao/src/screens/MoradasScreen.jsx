@@ -101,7 +101,7 @@ export function ModalEditarImovel({ imovel, onClose, onSaved }) {
 
   async function guardar() {
     setSaving(true)
-    await supa.from('localizacoes').update({
+    const { error } = await supa.from('localizacoes').update({
       nome:            form.nome,
       tipo:            form.tipo,
       rua:             form.rua             || null,
@@ -122,6 +122,7 @@ export function ModalEditarImovel({ imovel, onClose, onSaved }) {
       coords:          coordsToPoint(coords?.lat, coords?.lng),
     }).eq('id', imovel.id)
     setSaving(false)
+    if (error) { alert(`Erro ao guardar: ${error.message}`); return }
     onSaved()
     onClose()
   }
