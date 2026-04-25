@@ -7,34 +7,43 @@ const Ctx = createContext(null)
 export function ImovelAtivoProvider({ children }) {
   const [imoveis, setImoveis] = useState([])
   const [imovelAtivoId, setImovelAtivoIdState] = useState(null)
+  const [viewMode, setViewModeState] = useState('individual') // 'individual' | 'global'
   const [loading, setLoading] = useState(true)
 
-  const fetch = useCallback(async () => {
+  const refetch = useCallback(async () => {
     setLoading(true)
     const [pessoaRes, locRes] = await Promise.all([
       supaCore.from('pessoas').select('id, localizacao_ativa_id').eq('id', DEMO_PESSOA_ID).single(),
       supa.from('localizacoes').select('*').eq('pessoa_id', DEMO_PESSOA_ID).eq('ativo', true).order('principal', { ascending: false }),
     ])
-
     const lista = locRes.data || []
     setImoveis(lista)
-
     const ativo = pessoaRes.data?.localizacao_ativa_id || lista[0]?.id || null
     setImovelAtivoIdState(ativo)
     setLoading(false)
   }, [])
 
-  useEffect(() => { fetch() }, [fetch])
+  useEffect(() => { refetch() }, [refetch])
 
   const setImovelAtivoId = useCallback(async (id) => {
     setImovelAtivoIdState(id)
+    setViewModeState('individual')
     await supaCore.from('pessoas').update({ localizacao_ativa_id: id }).eq('id', DEMO_PESSOA_ID)
   }, [])
 
-  const imovelAtivo = imoveis.find(i => i.id === imovelAtivoId) || imoveis[0] || null
+  const setViewModeGlobal = useCallback(() => setViewModeState('global'), [])
+
+  const isGlobal = viewMode === 'global'
+
+  const imovelAtivo = isGlobal
+    ? null
+    : (imoveis.find(i => i.id === imovelAtivoId) || imoveis[0] || null)
 
   return (
-    <Ctx.Provider value={{ imoveis, imovelAtivo, imovelAtivoId, setImovelAtivoId, loading, refetch: fetch }}>
+    <Ctx.Provider value={{
+      imoveis, imovelAtivo, imovelAtivoId, viewMode, isGlobal,
+      setImovelAtivoId, setViewModeGlobal, loading, refetch,
+    }}>
       {children}
     </Ctx.Provider>
   )

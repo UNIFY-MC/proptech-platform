@@ -1,3 +1,5 @@
+import { CATEGORIAS, USOS } from './categorias.js'
+
 export const tipoImovelLabel = (tipo) => ({
   'habitacao':          'Casa',
   'segunda_habitacao':  'Casa secundária',
@@ -75,4 +77,29 @@ export function moradaCompleta(loc) {
     loc.pais === 'PT' ? 'Portugal' : loc.pais,
   ].filter(Boolean)
   return parts.join('\n')
+}
+
+// ─── Helpers de categoria / uso / origem ─────────────────────────────────────
+
+export const categoriaEmoji  = (loc) => CATEGORIAS[loc?.categoria]?.emoji  || tipoImovelEmoji(loc?.tipo)
+export const categoriaLabel  = (loc) => CATEGORIAS[loc?.categoria]?.label  || tipoImovelLabel(loc?.tipo)
+
+export const isReadOnly      = (loc) => loc?.origem === 'v2_sync'
+export const isExternalUse   = (loc) => USOS[loc?.uso]?.external === true
+
+export const externalAppLabel = (loc) => {
+  if (loc?.origem === 'v2_sync') return 'V2'
+  if (USOS[loc?.uso]?.external)  return USOS[loc.uso].externalApp
+  return null
+}
+
+export const usoLabel = (loc) => USOS[loc?.uso]?.label || ''
+export const usoEmoji = (loc) => USOS[loc?.uso]?.emoji || ''
+
+export function nomeImovelCompacto(loc) {
+  if (loc?.nome) {
+    const partes = loc.nome.split(' ')
+    return partes.length === 1 ? loc.nome : partes.slice(0, 2).join(' ')
+  }
+  return loc?.rua?.split(',')[0] || 'Imóvel'
 }

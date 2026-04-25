@@ -3,16 +3,18 @@ import { supa } from '../supa.js'
 import { DEMO_PESSOA_ID } from '../lib/demo.js'
 import { useImovelAtivo } from '../lib/ImovelAtivoContext.jsx'
 import { usePerfisFiscais } from '../lib/PerfisFiscaisContext.jsx'
-import { tipoImovelEmoji, tipoImovelLabel, formatarMorada, moradaCurta } from '../lib/labels.js'
+import { tipoImovelEmoji, tipoImovelLabel, formatarMorada, moradaCurta, categoriaEmoji, isReadOnly, isExternalUse, externalAppLabel, usoLabel } from '../lib/labels.js'
 import PerfilFiscalForm from '../components/PerfilFiscalForm.jsx'
 import MapaPicker from '../components/MapaPicker.jsx'
 import { pointToCoords, coordsToPoint, geocodificarMorada } from '../lib/geocoding.js'
+import ImovelWizard from '../components/ImovelWizard.jsx'
 
 const G = '#1B4332'; const GM = '#2D6A4F'; const GL = '#52B788'
 const C = {
   ink: '#0f172a', slate: '#64748b', border: '#e2e8f0', bg: '#f8fafc', white: '#fff',
   line: '#E5E7EB', stone: '#6B7685', red: '#A32D2D', redSoft: '#FFEAEA',
   greenXl: '#D8F3DC', purpleSoft: '#EDE9FE', purple: '#6B4FA0',
+  amber: '#FAEEDA', amberDk: '#854F0B',
 }
 
 function scoreColor(s) {
@@ -488,6 +490,7 @@ export default function MoradasScreen({ onBack, onNavigateDetalhe }) {
   const [saving,      setSaving]      = useState(false)
   const [modalIm,     setModalIm]     = useState(null) // imóvel a editar faturação
   const [modalEditar, setModalEditar] = useState(null) // imóvel a editar completo
+  const [showWizard,  setShowWizard]  = useState(false)
 
   function getPerfilDoImovel(im) {
     if (!im.perfil_fiscal_id) return perfis.find(p => p.principal) || null
@@ -528,7 +531,7 @@ export default function MoradasScreen({ onBack, onNavigateDetalhe }) {
 
       <div style={{ padding: '14px 16px 0' }}>
         <button
-          onClick={() => alert('Adicionar imóvel — form completo disponível Fase 3.4.')}
+          onClick={() => setShowWizard(true)}
           style={{ width: '100%', padding: 12, borderRadius: 10, background: G, color: '#fff', border: 'none', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}
         >+ Adicionar imóvel</button>
       </div>
@@ -538,91 +541,119 @@ export default function MoradasScreen({ onBack, onNavigateDetalhe }) {
           const isPrincipal = im.id === imovelAtivoId
           const sc          = scoreColor(im.home_score ?? 0)
           const perfilFat   = getPerfilDoImovel(im)
+          const readOnly    = isReadOnly(im)
+          const extUse      = isExternalUse(im)
+          const extApp      = externalAppLabel(im)
           return (
             <div key={im.id} style={{
               background: C.white,
               border: isPrincipal ? `2px solid ${GL}` : `1px solid ${C.border}`,
-              borderRadius: 14, padding: '14px 16px', marginBottom: 10,
+              borderRadius: 14, overflow: 'hidden', marginBottom: 10,
               boxShadow: isPrincipal ? '0 2px 10px rgba(82,183,136,.15)' : '0 1px 3px rgba(0,0,0,.05)',
             }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
-                <div
-                  onClick={() => onNavigateDetalhe?.(im.id)}
-                  style={{ display: 'flex', gap: 10, alignItems: 'center', cursor: onNavigateDetalhe ? 'pointer' : 'default', flex: 1 }}>
-                  <span style={{ fontSize: 28 }}>{tipoImovelEmoji(im.tipo)}</span>
-                  <div>
-                    <div style={{ fontSize: 15, fontWeight: 700, color: C.ink }}>{im.nome} {onNavigateDetalhe && <span style={{ fontSize: 12, color: C.slate }}>›</span>}</div>
-                    {isPrincipal && (
-                      <span style={{ fontSize: 9, background: C.greenXl, color: G, padding: '1px 7px', borderRadius: 4, fontWeight: 700 }}>PRINCIPAL</span>
-                    )}
-                  </div>
+              {/* Banner V2 sync */}
+              {readOnly && (
+                <div style={{ background: C.purpleSoft, padding: '6px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span style={{ fontSize: 11, color: C.purple, fontWeight: 600 }}>🔗 Sincronizado da V2 · gerido lá</span>
+                  <button onClick={() => alert('TODO: link para V2')} style={{ fontSize: 10, color: C.purple, background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}>Abrir na V2 →</button>
                 </div>
-                <span style={{ fontSize: 12, fontWeight: 700, padding: '4px 10px', borderRadius: 8, background: sc.bg, color: sc.c }}>
-                  Score {im.home_score ?? '—'}
-                </span>
-              </div>
-
-              {im.foto_principal_url && (
-                <div style={{ margin: '0 0 10px', borderRadius: 8, overflow: 'hidden', height: 100 }}>
-                  <img src={im.foto_principal_url} alt="foto" style={{ width: '100%', height: 100, objectFit: 'cover' }}/>
+              )}
+              {/* Banner arrendado LT */}
+              {!readOnly && extUse && (
+                <div style={{ background: C.amber, padding: '6px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span style={{ fontSize: 11, color: C.amberDk, fontWeight: 600 }}>🔗 Arrendamento gerido na {extApp}</span>
+                  <button onClick={() => alert(`TODO: link para ${extApp}`)} style={{ fontSize: 10, color: C.amberDk, background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}>Abrir na {extApp} →</button>
                 </div>
               )}
 
-              <div style={{ fontSize: 13, color: C.slate, marginBottom: 10 }}>{moradaCurta(im) || formatarMorada(im)}</div>
+              <div style={{ padding: '14px 16px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
+                  <div
+                    onClick={() => onNavigateDetalhe?.(im.id)}
+                    style={{ display: 'flex', gap: 10, alignItems: 'center', cursor: onNavigateDetalhe ? 'pointer' : 'default', flex: 1 }}>
+                    <span style={{ fontSize: 28 }}>{categoriaEmoji(im)}</span>
+                    <div>
+                      <div style={{ fontSize: 15, fontWeight: 700, color: C.ink }}>{im.nome} {onNavigateDetalhe && <span style={{ fontSize: 12, color: C.slate }}>›</span>}</div>
+                      {isPrincipal && (
+                        <span style={{ fontSize: 9, background: C.greenXl, color: G, padding: '1px 7px', borderRadius: 4, fontWeight: 700 }}>PRINCIPAL</span>
+                      )}
+                    </div>
+                  </div>
+                  <span style={{ fontSize: 12, fontWeight: 700, padding: '4px 10px', borderRadius: 8, background: sc.bg, color: sc.c }}>
+                    Score {im.home_score ?? '—'}
+                  </span>
+                </div>
 
-              {/* Badge faturação */}
-              <FaturacaoBadge
-                perfil={im.perfil_fiscal_id ? perfilFat : null}
-                onClick={() => setModalIm(im)}
-              />
+                {im.foto_principal_url && (
+                  <div style={{ margin: '0 0 10px', borderRadius: 8, overflow: 'hidden', height: 100 }}>
+                    <img src={im.foto_principal_url} alt="foto" style={{ width: '100%', height: 100, objectFit: 'cover' }}/>
+                  </div>
+                )}
 
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
-                <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 5, background: C.bg, color: C.slate, border: `1px solid ${C.border}` }}>
-                  {tipoImovelLabel(im.tipo)}
-                </span>
-                {im.tipologia && (
-                  <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 5, background: C.bg, color: C.slate, border: `1px solid ${C.border}` }}>
-                    {im.tipologia}
-                  </span>
-                )}
-                {im.area_m2 && (
-                  <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 5, background: C.bg, color: C.slate, border: `1px solid ${C.border}` }}>
-                    {im.area_m2} m²
-                  </span>
-                )}
-                {im.num_quartos != null && (
-                  <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 5, background: C.bg, color: C.slate, border: `1px solid ${C.border}` }}>
-                    🛏 {im.num_quartos}
-                  </span>
-                )}
-                {im.created_at && (
-                  <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 5, background: C.bg, color: C.slate, border: `1px solid ${C.border}` }}>
-                    Desde {new Date(im.created_at).getFullYear()}
-                  </span>
-                )}
-              </div>
+                <div style={{ fontSize: 13, color: C.slate, marginBottom: 10 }}>{moradaCurta(im) || formatarMorada(im)}</div>
 
-              <div style={{ display: 'flex', gap: 8 }}>
-                <button onClick={() => setModalEditar(im)} style={{
-                  flex: 1, padding: '8px', borderRadius: 8, background: G,
-                  border: 'none', fontSize: 12, fontWeight: 600, color: '#fff', cursor: 'pointer',
-                }}>Editar imóvel</button>
-                <button onClick={() => setModalIm(im)} style={{
-                  flex: 1, padding: '8px', borderRadius: 8, background: C.bg,
-                  border: `1px solid ${C.border}`, fontSize: 12, fontWeight: 600, color: C.slate, cursor: 'pointer',
-                }}>Faturação</button>
-                {!isPrincipal && (
-                  <>
-                    <button onClick={() => tornarPrincipal(im.id)} disabled={saving} style={{
-                      flex: 1, padding: '8px', borderRadius: 8, background: C.greenXl,
-                      border: `1px solid ${GL}`, fontSize: 12, fontWeight: 600, color: G, cursor: 'pointer',
-                    }}>Tornar principal</button>
-                    <button onClick={() => apagarImovel(im.id)} disabled={saving} style={{
-                      padding: '8px 12px', borderRadius: 8, background: C.redSoft,
-                      border: 'none', fontSize: 12, fontWeight: 600, color: C.red, cursor: 'pointer',
-                    }}>🗑</button>
-                  </>
+                {/* Badge faturação — só se não read-only */}
+                {!readOnly && (
+                  <FaturacaoBadge
+                    perfil={im.perfil_fiscal_id ? perfilFat : null}
+                    onClick={() => setModalIm(im)}
+                  />
                 )}
+
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
+                  {im.tipologia && (
+                    <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 5, background: C.bg, color: C.slate, border: `1px solid ${C.border}` }}>
+                      {im.tipologia}
+                    </span>
+                  )}
+                  {im.uso && (
+                    <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 5, background: C.bg, color: C.slate, border: `1px solid ${C.border}` }}>
+                      {usoLabel(im)}
+                    </span>
+                  )}
+                  {im.area_m2 && (
+                    <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 5, background: C.bg, color: C.slate, border: `1px solid ${C.border}` }}>
+                      {im.area_m2} m²
+                    </span>
+                  )}
+                  {im.num_quartos != null && (
+                    <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 5, background: C.bg, color: C.slate, border: `1px solid ${C.border}` }}>
+                      🛏 {im.num_quartos}
+                    </span>
+                  )}
+                  {readOnly && (
+                    <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 5, background: C.purpleSoft, color: C.purple, border: `1px solid #c4b5fd` }}>
+                      READ-ONLY
+                    </span>
+                  )}
+                </div>
+
+                <div style={{ display: 'flex', gap: 8 }}>
+                  {!readOnly && (
+                    <button onClick={() => setModalEditar(im)} style={{
+                      flex: 1, padding: '8px', borderRadius: 8, background: G,
+                      border: 'none', fontSize: 12, fontWeight: 600, color: '#fff', cursor: 'pointer',
+                    }}>Editar imóvel</button>
+                  )}
+                  {!readOnly && (
+                    <button onClick={() => setModalIm(im)} style={{
+                      flex: 1, padding: '8px', borderRadius: 8, background: C.bg,
+                      border: `1px solid ${C.border}`, fontSize: 12, fontWeight: 600, color: C.slate, cursor: 'pointer',
+                    }}>Faturação</button>
+                  )}
+                  {!isPrincipal && !readOnly && (
+                    <>
+                      <button onClick={() => tornarPrincipal(im.id)} disabled={saving} style={{
+                        flex: 1, padding: '8px', borderRadius: 8, background: C.greenXl,
+                        border: `1px solid ${GL}`, fontSize: 12, fontWeight: 600, color: G, cursor: 'pointer',
+                      }}>Tornar principal</button>
+                      <button onClick={() => apagarImovel(im.id)} disabled={saving} style={{
+                        padding: '8px 12px', borderRadius: 8, background: C.redSoft,
+                        border: 'none', fontSize: 12, fontWeight: 600, color: C.red, cursor: 'pointer',
+                      }}>🗑</button>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
           )
@@ -645,6 +676,14 @@ export default function MoradasScreen({ onBack, onNavigateDetalhe }) {
           imovel={modalEditar}
           onClose={() => setModalEditar(null)}
           onSaved={async () => { await refetch() }}
+        />
+      )}
+
+      {/* Wizard criação imóvel */}
+      {showWizard && (
+        <ImovelWizard
+          onClose={() => setShowWizard(false)}
+          onSaved={() => setShowWizard(false)}
         />
       )}
     </div>

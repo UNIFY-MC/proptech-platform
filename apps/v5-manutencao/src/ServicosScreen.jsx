@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { supaPublic } from './supa.js'
 import HeroHeader from './HeroHeader.jsx'
-import { useImovelAtivo } from './lib/ImovelAtivoContext.jsx'
-import { moradaCurta } from './lib/labels.js'
 
 const V5 = {
   green:    '#1B4332',
@@ -156,8 +154,7 @@ function SvcCard({ s }) {
 }
 
 /* ── Vista marketplace (ecrã principal de serviços) ──────────────── */
-function MarketplaceView({ onCatSel, onHamburguer, onAvatarClick, authUser, notifCount, onNavigateNotificacoes, onNavigateChatSuporte }) {
-  const { imovelAtivo } = useImovelAtivo()
+function MarketplaceView({ onCatSel, onHamburguer, onAvatarClick, authUser, notifCount, onNavigateNotificacoes, onNavigateChatSuporte, onOpenImovelSelector }) {
   return (
     <div style={{ minHeight: '100vh', background: V5.bg, paddingBottom: 90 }}>
       {/* Hero verde */}
@@ -169,7 +166,7 @@ function MarketplaceView({ onCatSel, onHamburguer, onAvatarClick, authUser, noti
         <HeroHeader
           onHamburguer={onHamburguer}
           onAvatarClick={onAvatarClick}
-          locationLabel={moradaCurta(imovelAtivo) || 'A MINHA CASA'}
+          onImovelClick={onOpenImovelSelector}
           authUser={authUser}
           notifCount={notifCount}
           onNotifClick={onNavigateNotificacoes}
@@ -482,7 +479,7 @@ function CategoriaView({ cat, onBack }) {
 }
 
 /* ── Ecrã principal ──────────────────────────────────────────────── */
-export default function ServicosScreen({ authUser, onHamburguer, onAvatarClick, onNavigateNotificacoes, onNavigateChatSuporte, notifCount = 0 }) {
+export default function ServicosScreen({ authUser, onHamburguer, onAvatarClick, onNavigateNotificacoes, onNavigateChatSuporte, notifCount = 0, onOpenImovelSelector }) {
   const [catSel, setCatSel] = useState(null)
 
   if (catSel) {
@@ -503,6 +500,7 @@ export default function ServicosScreen({ authUser, onHamburguer, onAvatarClick, 
       notifCount={notifCount}
       onNavigateNotificacoes={onNavigateNotificacoes}
       onNavigateChatSuporte={onNavigateChatSuporte}
+      onOpenImovelSelector={onOpenImovelSelector}
     />
   )
 }

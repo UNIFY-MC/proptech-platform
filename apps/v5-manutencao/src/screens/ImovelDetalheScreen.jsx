@@ -4,7 +4,8 @@ import L from 'leaflet'
 import { supa } from '../supa.js'
 import { useImovelAtivo } from '../lib/ImovelAtivoContext.jsx'
 import { usePerfisFiscais } from '../lib/PerfisFiscaisContext.jsx'
-import { moradaCurta, moradaCompleta, tipoImovelEmoji, tipoImovelLabel } from '../lib/labels.js'
+import { moradaCurta, moradaCompleta, tipoImovelEmoji, tipoImovelLabel, categoriaEmoji, categoriaLabel, isReadOnly, isExternalUse, externalAppLabel, usoLabel } from '../lib/labels.js'
+import { SISTEMAS_LABELS, AMENITIES_LABELS } from '../lib/categorias.js'
 import { pointToCoords } from '../lib/geocoding.js'
 import { ModalEditarImovel } from './MoradasScreen.jsx'
 
@@ -149,15 +150,17 @@ export default function ImovelDetalheScreen({ id, onBack, onNavigateScore }) {
           <button onClick={onBack} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,.7)', fontSize: 12, fontWeight: 600, cursor: 'pointer', padding: 0 }}>
             ← Voltar
           </button>
-          <button onClick={() => setModalEdit(true)} style={{ background: 'rgba(255,255,255,.15)', border: 'none', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', padding: '5px 12px', borderRadius: 8 }}>
-            Editar →
-          </button>
+          {!isReadOnly(imovel) && (
+            <button onClick={() => setModalEdit(true)} style={{ background: 'rgba(255,255,255,.15)', border: 'none', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', padding: '5px 12px', borderRadius: 8 }}>
+              Editar →
+            </button>
+          )}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ fontSize: 28 }}>{tipoImovelEmoji(imovel.tipo)}</span>
+          <span style={{ fontSize: 28 }}>{categoriaEmoji(imovel)}</span>
           <div>
             <div style={{ fontSize: 10, color: 'rgba(255,255,255,.6)', fontWeight: 700, letterSpacing: 0.5 }}>
-              {tipoImovelLabel(imovel.tipo).toUpperCase()}
+              {categoriaLabel(imovel).toUpperCase()}
               {isPrincipal && <span style={{ marginLeft: 8, background: GL, color: '#fff', padding: '1px 6px', borderRadius: 4, fontSize: 9 }}>PRINCIPAL</span>}
             </div>
             <div style={{ fontSize: 18, fontWeight: 700, lineHeight: 1.2 }}>{imovel.nome}</div>
@@ -165,6 +168,21 @@ export default function ImovelDetalheScreen({ id, onBack, onNavigateScore }) {
           </div>
         </div>
       </div>
+
+      {/* BANNER V2 SYNC */}
+      {isReadOnly(imovel) && (
+        <div style={{ background: '#EDE9FE', padding: '8px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span style={{ fontSize: 12, color: '#534AB7', fontWeight: 600 }}>🔗 Sincronizado da V2 · estrutura gerida lá</span>
+          <button onClick={() => alert('TODO: link para V2')} style={{ fontSize: 11, color: '#534AB7', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 700 }}>Abrir na V2 →</button>
+        </div>
+      )}
+      {/* BANNER ARRENDADO LT */}
+      {!isReadOnly(imovel) && isExternalUse(imovel) && (
+        <div style={{ background: '#FAEEDA', padding: '8px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span style={{ fontSize: 12, color: '#854F0B', fontWeight: 600 }}>🔗 Arrendamento gerido na {externalAppLabel(imovel)}</span>
+          <button onClick={() => alert(`TODO: link para ${externalAppLabel(imovel)}`)} style={{ fontSize: 11, color: '#854F0B', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 700 }}>Abrir →</button>
+        </div>
+      )}
 
       {/* FOTO */}
       {imovel.foto_principal_url && (
@@ -238,6 +256,43 @@ export default function ImovelDetalheScreen({ id, onBack, onNavigateScore }) {
         <InfoChip label="WCs" value={imovel.num_wcs}/>
         <InfoChip label="Pisos" value={imovel.num_pisos}/>
       </div>
+      {usoLabel(imovel) && (
+        <div style={{ margin: '8px 16px 0', display: 'flex', gap: 6 }}>
+          <span style={{ fontSize: 11, padding: '3px 10px', borderRadius: 20, background: C.bg, border: `1px solid ${C.border}`, color: C.slate, fontWeight: 600 }}>
+            {usoLabel(imovel)}
+          </span>
+        </div>
+      )}
+
+      {/* SISTEMAS GERIDOS */}
+      {Array.isArray(imovel.sistemas_geridos) && imovel.sistemas_geridos.length > 0 && (
+        <>
+          <SectionTitle>Sistemas geridos</SectionTitle>
+          <div style={{ margin: '0 16px', display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            {imovel.sistemas_geridos.map(s => (
+              <span key={s} style={{ fontSize: 10, padding: '3px 10px', borderRadius: 20, background: C.greenXl, color: G, border: `1px solid #95D5B2`, fontWeight: 600 }}>
+                {SISTEMAS_LABELS[s] || s}
+              </span>
+            ))}
+          </div>
+        </>
+      )}
+
+      {/* AMENITIES */}
+      {imovel.amenities && Object.entries(imovel.amenities).some(([k, v]) => v && AMENITIES_LABELS[k]) && (
+        <>
+          <SectionTitle>Características</SectionTitle>
+          <div style={{ margin: '0 16px', display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            {Object.entries(imovel.amenities)
+              .filter(([k, v]) => v && AMENITIES_LABELS[k])
+              .map(([k]) => (
+                <span key={k} style={{ fontSize: 10, padding: '3px 10px', borderRadius: 20, background: C.bg, color: C.slate, border: `1px solid ${C.border}`, fontWeight: 600 }}>
+                  {AMENITIES_LABELS[k]}
+                </span>
+              ))}
+          </div>
+        </>
+      )}
 
       {/* MORADA & GPS */}
       <SectionTitle>Morada & GPS</SectionTitle>
@@ -361,20 +416,24 @@ export default function ImovelDetalheScreen({ id, onBack, onNavigateScore }) {
         </>
       )}
 
-      {/* ZONA PERIGOSA */}
-      <SectionTitle>Zona Perigosa</SectionTitle>
-      <div style={{ margin: '0 16px', display: 'flex', flexDirection: 'column', gap: 8, opacity: saving ? 0.5 : 1 }}>
-        {!isPrincipal && (
-          <button onClick={tornarPrincipal} disabled={saving} style={{
-            width: '100%', padding: 12, borderRadius: 10, background: C.greenXl,
-            border: `1px solid ${GL}`, fontSize: 13, fontWeight: 700, color: G, cursor: 'pointer',
-          }}>Tornar imóvel principal</button>
-        )}
-        <button onClick={apagarImovel} disabled={saving} style={{
-          width: '100%', padding: 12, borderRadius: 10, background: C.redSoft,
-          border: 'none', fontSize: 13, fontWeight: 700, color: C.red, cursor: 'pointer',
-        }}>🗑 Apagar este imóvel</button>
-      </div>
+      {/* ZONA PERIGOSA — só para imóveis criados aqui (não v2_sync) */}
+      {!isReadOnly(imovel) && (
+        <>
+          <SectionTitle>Zona Perigosa</SectionTitle>
+          <div style={{ margin: '0 16px', display: 'flex', flexDirection: 'column', gap: 8, opacity: saving ? 0.5 : 1 }}>
+            {!isPrincipal && (
+              <button onClick={tornarPrincipal} disabled={saving} style={{
+                width: '100%', padding: 12, borderRadius: 10, background: C.greenXl,
+                border: `1px solid ${GL}`, fontSize: 13, fontWeight: 700, color: G, cursor: 'pointer',
+              }}>Tornar imóvel principal</button>
+            )}
+            <button onClick={apagarImovel} disabled={saving} style={{
+              width: '100%', padding: 12, borderRadius: 10, background: C.redSoft,
+              border: 'none', fontSize: 13, fontWeight: 700, color: C.red, cursor: 'pointer',
+            }}>🗑 Apagar este imóvel</button>
+          </div>
+        </>
+      )}
 
       {/* Modal editar */}
       {modalEdit && (

@@ -3,7 +3,7 @@ import { supa } from './supa.js'
 import { DEMO_LOCALIZACAO_ID } from './lib/demo.js'
 import HeroHeader from './HeroHeader.jsx'
 import { useImovelAtivo } from './lib/ImovelAtivoContext.jsx'
-import { moradaCurta } from './lib/labels.js'
+import { moradaCurta, categoriaEmoji } from './lib/labels.js'
 
 /* Paleta CASA — duplicada aqui para isolar o módulo do App.jsx */
 const CASA = {
@@ -121,8 +121,8 @@ function nextLabel(eq) {
    Props mantidos da versão inline em App.jsx.
    Fases 3.3–3.5 substituirão os alerts placeholder por ecrãs reais.
 ══════════════════════════════════ */
-export default function CasaScreen({ equipamentos, authUser, onNavigate, onHamburguer, onAvatarClick, onNavigateScore, onNavigateNotificacoes, onNavigateChatSuporte, notifCount = 0 }) {
-  const { imovelAtivo, imoveis, loading: ctxLoading } = useImovelAtivo()
+export default function CasaScreen({ equipamentos, authUser, onNavigate, onHamburguer, onAvatarClick, onNavigateScore, onNavigateNotificacoes, onNavigateChatSuporte, notifCount = 0, onOpenImovelSelector }) {
+  const { imovelAtivo, imoveis, isGlobal, setImovelAtivoId, loading: ctxLoading } = useImovelAtivo()
   const loc   = imovelAtivo
   const nLocs = imoveis.length
   const eqs   = Array.isArray(equipamentos)
@@ -190,7 +190,7 @@ export default function CasaScreen({ equipamentos, authUser, onNavigate, onHambu
         <HeroHeader
           onHamburguer={onHamburguer}
           onAvatarClick={onAvatarClick}
-          locationLabel={loc ? (moradaCurta(loc) || loc.nome) : 'A MINHA CASA'}
+          onImovelClick={onOpenImovelSelector}
           authUser={authUser}
           notifCount={notifCount}
           onNotifClick={onNavigateNotificacoes}
@@ -209,6 +209,15 @@ export default function CasaScreen({ equipamentos, authUser, onNavigate, onHambu
 
         {loading ? (
           <div style={{ height: 110, background: 'rgba(255,255,255,0.1)', borderRadius: 12 }} />
+        ) : isGlobal ? (
+          <div style={{ paddingTop: 4 }}>
+            <div style={{ fontSize: 48, fontWeight: 700, lineHeight: 1, color: '#fff' }}>
+              {Math.round(imoveis.reduce((s, i) => s + (i.home_score ?? 0), 0) / Math.max(imoveis.length, 1))}
+            </div>
+            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)', marginTop: 4 }}>
+              Score médio · {imoveis.length} imóvel{imoveis.length !== 1 ? 's' : ''} · toca para entrar num imóvel
+            </div>
+          </div>
         ) : !loc ? (
           <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)', padding: '20px 0' }}>
             Nenhuma localização registada. Adicione a primeira para começar.
@@ -250,6 +259,56 @@ export default function CasaScreen({ equipamentos, authUser, onNavigate, onHambu
           </div>
         )}
       </div>
+
+      {/* MODO GLOBAL — grid mini-cards de todos os imóveis */}
+      {isGlobal && (
+        <div style={{ padding: '10px 12px 0' }}>
+          {imoveis.map(im => {
+            const sc = im.home_score ?? 0
+            const scColor = sc >= 70 ? '#1B4332' : sc >= 50 ? '#854F0B' : '#A32D2D'
+            const scBg    = sc >= 70 ? '#D8F3DC'  : sc >= 50 ? '#FEF9C3' : '#FFEAEA'
+            return (
+              <div
+                key={im.id}
+                onClick={() => setImovelAtivoId(im.id)}
+                style={{
+                  background: '#fff', borderRadius: 14, border: '1px solid #e2e8f0',
+                  marginBottom: 8, overflow: 'hidden', cursor: 'pointer',
+                  display: 'flex', alignItems: 'stretch',
+                  boxShadow: '0 1px 3px rgba(0,0,0,.05)',
+                }}
+              >
+                {im.foto_principal_url ? (
+                  <img src={im.foto_principal_url} alt={im.nome}
+                    style={{ width: 80, height: 80, objectFit: 'cover', flexShrink: 0 }}/>
+                ) : (
+                  <div style={{ width: 80, height: 80, flexShrink: 0, background: '#D8F3DC',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 30 }}>
+                    {categoriaEmoji(im)}
+                  </div>
+                )}
+                <div style={{ flex: 1, padding: '10px 12px', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 3 }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: '#0f172a' }}>{im.nome}</div>
+                  <div style={{ fontSize: 11, color: '#6B7685', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {moradaCurta(im)}
+                  </div>
+                  {im.tipologia && (
+                    <span style={{ fontSize: 10, fontWeight: 600, color: '#6B7685' }}>{im.tipologia}</span>
+                  )}
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', padding: '0 12px', flexShrink: 0 }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 8, background: scBg, color: scColor }}>
+                    {sc}
+                  </span>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {/* MODO INDIVIDUAL — conteúdo detalhado do imóvel activo */}
+      {!isGlobal && <>
 
       {/* QUICK ACTIONS */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 7, padding: '10px 12px 0' }}>
@@ -501,6 +560,8 @@ export default function CasaScreen({ equipamentos, authUser, onNavigate, onHambu
           </div>
         </div>
       )}
+
+      </>} {/* fim modo individual */}
 
     </div>
   )

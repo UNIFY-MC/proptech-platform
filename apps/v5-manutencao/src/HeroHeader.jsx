@@ -1,14 +1,30 @@
 import React from 'react'
+import { useImovelAtivo } from './lib/ImovelAtivoContext.jsx'
+import { categoriaEmoji, moradaCurta } from './lib/labels.js'
 
-/* Componente de header partilhado para todos os ecrãs principais no hero verde.
-   Linha 1 do hero: ≡ · morada · [temp(opcional) · 💬 · 🔔 · avatar]
-   hideTemp=true: remove o bloco de temperatura (ex: IniciaScreen tem temp na linha do "Bom dia") */
-export default function HeroHeader({ onHamburguer, onAvatarClick, locationLabel, onLocationClick, authUser, notifCount = 0, hideTemp = false, onNotifClick, onChatClick }) {
+/* HeroHeader — barra de topo partilhada por todos os ecrãs principais.
+   Lê imovelAtivo / isGlobal / imoveis directamente do context.
+   onImovelClick: abre ImovelSelectorSheet.
+   hideTemp: IniciaScreen gere a temperatura na sua própria linha 2. */
+export default function HeroHeader({
+  onHamburguer, onAvatarClick, authUser, notifCount = 0,
+  hideTemp = false, onNotifClick, onChatClick, onImovelClick,
+}) {
+  const { imovelAtivo, imoveis, isGlobal } = useImovelAtivo()
+
   const nome    = authUser?.nome || ''
   const iniciais = nome.split(' ').filter(Boolean).map(w => w[0]).slice(0, 2).join('').toUpperCase() || 'MC'
 
+  const emoji     = isGlobal ? '🌐' : categoriaEmoji(imovelAtivo)
+  const nomeLabel = isGlobal ? 'Todos os imóveis' : (imovelAtivo?.nome || 'A MINHA CASA')
+  const subLabel  = isGlobal
+    ? `${imoveis.length} imóvel${imoveis.length !== 1 ? 's' : ''}`
+    : moradaCurta(imovelAtivo)
+  const showChevron = imoveis.length > 1
+
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+
       {/* Hambúrguer */}
       <button
         onClick={onHamburguer}
@@ -22,22 +38,38 @@ export default function HeroHeader({ onHamburguer, onAvatarClick, locationLabel,
         }}
       >≡</button>
 
-      {/* Morada / label — clicável se onLocationClick definido (switcher multi-casa) */}
+      {/* Centro — nome destacado + morada sub */}
       <div
-        onClick={onLocationClick}
-        style={{
-          flex: 1, fontSize: 9, color: 'rgba(255,255,255,0.6)',
-          fontWeight: 700, letterSpacing: 0.8,
-          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-          cursor: onLocationClick ? 'pointer' : 'default',
-        }}
+        onClick={onImovelClick}
+        style={{ flex: 1, overflow: 'hidden', cursor: onImovelClick ? 'pointer' : 'default' }}
       >
-        📍 {locationLabel || 'A MINHA CASA'}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+          <span style={{ fontSize: 14, flexShrink: 0 }}>{emoji}</span>
+          <span style={{
+            fontSize: 14, fontWeight: 700, fontFamily: 'Georgia, serif',
+            color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          }}>
+            {nomeLabel}
+          </span>
+        </div>
+        {subLabel && (
+          <div style={{
+            fontSize: 10.5, color: 'rgba(255,255,255,0.7)', marginTop: 1,
+            display: 'flex', alignItems: 'center', gap: 3,
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          }}>
+            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {subLabel}
+            </span>
+            {showChevron && <span style={{ flexShrink: 0, fontSize: 9 }}>▾</span>}
+          </div>
+        )}
       </div>
 
       {/* Cluster direito */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-        {/* Temperatura — ocultável via hideTemp (IniciaScreen move temp para linha do "Bom dia") */}
+
+        {/* Temperatura — ocultável via hideTemp */}
         {!hideTemp && (
           <div style={{ textAlign: 'right' }}>
             <div style={{ fontSize: 13, fontWeight: 700, color: '#fff', lineHeight: 1.2 }}>🌤️ 21°</div>
@@ -77,7 +109,7 @@ export default function HeroHeader({ onHamburguer, onAvatarClick, locationLabel,
           )}
         </button>
 
-        {/* Avatar — abre PerfilSheet */}
+        {/* Avatar */}
         <button
           onClick={onAvatarClick}
           style={{

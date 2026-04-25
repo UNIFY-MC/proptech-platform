@@ -1,11 +1,12 @@
 import React, { useRef } from 'react'
 import { useImovelAtivo } from './lib/ImovelAtivoContext'
-import { tipoImovelEmoji, formatarMorada, moradaCurta } from './lib/labels'
+import { categoriaEmoji, moradaCurta } from './lib/labels'
 
 const V = {
   green:   '#1B4332',
   greenLt: '#52B788',
   greenXl: '#D8F3DC',
+  greenMd: '#95D5B2',
   ink:     '#0f172a',
   stone:   '#6B7685',
   border:  '#e2e8f0',
@@ -15,13 +16,13 @@ const V = {
 }
 
 function scoreColor(s) {
-  if (s >= 70) return { bg:'#D8F3DC', c:'#1B4332' }
-  if (s >= 50) return { bg:'#FEF9C3', c:'#854F0B' }
-  return { bg:'#FDE4DC', c:'#C0392B' }
+  if (s >= 70) return { bg: '#D8F3DC', c: V.green }
+  if (s >= 50) return { bg: '#FEF9C3', c: '#854F0B' }
+  return { bg: '#FDE4DC', c: '#C0392B' }
 }
 
 export default function ImovelSelectorSheet({ open, onClose, onGerirImoveis }) {
-  const { imoveis, imovelAtivoId, setImovelAtivoId } = useImovelAtivo()
+  const { imoveis, imovelAtivoId, isGlobal, setImovelAtivoId, setViewModeGlobal } = useImovelAtivo()
   const touchStartY = useRef(null)
 
   function onTouchStart(e) { touchStartY.current = e.touches[0].clientY }
@@ -37,66 +38,108 @@ export default function ImovelSelectorSheet({ open, onClose, onGerirImoveis }) {
     <>
       <style>{`@keyframes slideUpSel{from{transform:translateY(100%)}to{transform:translateY(0)}}`}</style>
       <div onClick={onClose} style={{
-        position:'fixed', inset:0, zIndex:300,
-        background:'rgba(0,0,0,0.45)', backdropFilter:'blur(3px)',
+        position: 'fixed', inset: 0, zIndex: 300,
+        background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(3px)',
       }}/>
       <div
         onTouchStart={onTouchStart}
         onTouchEnd={onTouchEnd}
         style={{
-          position:'fixed', bottom:0, left:0, right:0, zIndex:301,
-          maxWidth:600, margin:'0 auto',
-          background:V.white, borderRadius:'20px 20px 0 0',
-          boxShadow:'0 -4px 32px rgba(0,0,0,0.18)',
-          animation:'slideUpSel 300ms ease-out',
-          paddingBottom:28,
+          position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 301,
+          maxWidth: 600, margin: '0 auto',
+          background: V.white, borderRadius: '20px 20px 0 0',
+          boxShadow: '0 -4px 32px rgba(0,0,0,0.18)',
+          animation: 'slideUpSel 300ms ease-out',
+          paddingBottom: 28,
         }}
       >
         {/* Drag handle */}
-        <div style={{ display:'flex', justifyContent:'center', paddingTop:12, marginBottom:4 }}>
-          <div style={{ width:40, height:4, borderRadius:2, background:'#E5E7EB' }}/>
+        <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 12, marginBottom: 4 }}>
+          <div style={{ width: 40, height: 4, borderRadius: 2, background: '#E5E7EB' }}/>
         </div>
 
         {/* Título */}
         <div style={{
-          padding:'4px 20px 14px', borderBottom:`1px solid ${V.line}`,
-          fontSize:16, fontWeight:700, fontFamily:'Georgia,serif', color:V.ink,
+          padding: '4px 20px 14px', borderBottom: `1px solid ${V.line}`,
+          fontSize: 16, fontWeight: 700, fontFamily: 'Georgia,serif', color: V.ink,
         }}>
-          Mudar imóvel activo
+          Onde queres focar?
         </div>
 
-        {/* Lista imóveis */}
-        <div style={{ padding:'8px 0' }}>
+        {/* Card — Vista Global */}
+        <div style={{ padding: '12px 16px 4px' }}>
+          <div
+            onClick={() => { setViewModeGlobal(); onClose() }}
+            style={{
+              background: isGlobal
+                ? 'linear-gradient(135deg, #B7E4C7, #95D5B2)'
+                : 'linear-gradient(135deg, #D8F3DC, #B7E4C7)',
+              borderRadius: 12,
+              border: isGlobal ? `2px solid ${V.greenLt}` : `1px solid ${V.greenMd}`,
+              padding: '12px 14px',
+              cursor: 'pointer',
+              display: 'flex', alignItems: 'center', gap: 12,
+            }}
+          >
+            <span style={{ fontSize: 24 }}>🌐</span>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: V.green }}>Todos os imóveis</div>
+              <div style={{ fontSize: 11, color: '#2D6A4F', marginTop: 2 }}>
+                Vista agregada · {imoveis.length} imóvel{imoveis.length !== 1 ? 's' : ''}
+              </div>
+            </div>
+            {isGlobal && <span style={{ fontSize: 16, color: V.greenLt, fontWeight: 700 }}>✓</span>}
+          </div>
+        </div>
+
+        {/* Separador */}
+        <div style={{ margin: '10px 16px 0', borderTop: `1px solid ${V.line}` }}/>
+
+        {/* Lista imóveis individuais */}
+        <div style={{ padding: '4px 0' }}>
           {(imoveis || []).map(im => {
-            const ativo = im.id === imovelAtivoId
+            const ativo = !isGlobal && im.id === imovelAtivoId
             const sc    = scoreColor(im.home_score)
+            const isV2  = im.origem === 'v2_sync'
             return (
               <button
                 key={im.id}
                 onClick={() => { setImovelAtivoId(im.id); onClose() }}
                 style={{
-                  width:'100%', padding:'13px 20px',
-                  display:'flex', alignItems:'center', gap:14,
+                  width: '100%', padding: '12px 20px',
+                  display: 'flex', alignItems: 'center', gap: 14,
                   background: ativo ? V.greenXl : 'none',
-                  border:'none', cursor:'pointer', textAlign:'left',
+                  border: 'none', cursor: 'pointer', textAlign: 'left',
                   borderLeft: ativo ? `3px solid ${V.greenLt}` : '3px solid transparent',
                 }}
               >
-                <span style={{ fontSize:26, flexShrink:0 }}>
-                  {tipoImovelEmoji(im.tipo)}
+                <span style={{ fontSize: 24, flexShrink: 0 }}>
+                  {categoriaEmoji(im)}
                 </span>
-                <div style={{ flex:1, minWidth:0 }}>
-                  <div style={{ fontSize:14, fontWeight:700, color:V.ink }}>{im.nome}</div>
-                  <div style={{ fontSize:11, color:V.stone, marginTop:2, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: V.ink }}>{im.nome}</div>
+                  <div style={{ fontSize: 11, color: V.stone, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {moradaCurta(im)}
                   </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4, flexWrap: 'wrap' }}>
+                    {im.tipologia && (
+                      <span style={{ fontSize: 10, fontWeight: 600, padding: '1px 6px', borderRadius: 6, background: V.bg, color: V.stone, border: `1px solid ${V.border}` }}>
+                        {im.tipologia}
+                      </span>
+                    )}
+                    {isV2 && (
+                      <span style={{ fontSize: 10, fontWeight: 600, padding: '1px 6px', borderRadius: 6, background: '#EDE9FE', color: '#534AB7' }}>
+                        V2
+                      </span>
+                    )}
+                  </div>
                 </div>
-                <div style={{ display:'flex', alignItems:'center', gap:8, flexShrink:0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
                   <span style={{
-                    fontSize:10, fontWeight:700, padding:'2px 8px', borderRadius:8,
-                    background:sc.bg, color:sc.c,
+                    fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 8,
+                    background: sc.bg, color: sc.c,
                   }}>{im.home_score}</span>
-                  {ativo && <span style={{ fontSize:16, color:V.greenLt }}>✓</span>}
+                  {ativo && <span style={{ fontSize: 16, color: V.greenLt }}>✓</span>}
                 </div>
               </button>
             )
@@ -104,13 +147,13 @@ export default function ImovelSelectorSheet({ open, onClose, onGerirImoveis }) {
         </div>
 
         {/* Footer */}
-        <div style={{ padding:'8px 20px 0', borderTop:`1px solid ${V.line}` }}>
+        <div style={{ padding: '8px 20px 0', borderTop: `1px solid ${V.line}` }}>
           <button
             onClick={() => { onClose(); onGerirImoveis?.() }}
             style={{
-              width:'100%', padding:'11px', borderRadius:10,
-              background:V.bg, border:`1px solid ${V.border}`,
-              fontSize:13, fontWeight:600, color:V.stone, cursor:'pointer',
+              width: '100%', padding: '11px', borderRadius: 10,
+              background: V.bg, border: `1px solid ${V.border}`,
+              fontSize: 13, fontWeight: 600, color: V.stone, cursor: 'pointer',
             }}
           >
             Gerir imóveis →

@@ -167,8 +167,7 @@ export default function IniciaScreen({ authUser, onNavigateCasa, onNavigateServi
         <HeroHeader
           onHamburguer={onHamburguer}
           onAvatarClick={onAvatarClick}
-          locationLabel={locationLbl + (nLocs > 1 ? ' ⌄' : '')}
-          onLocationClick={handleLocationClick}
+          onImovelClick={handleLocationClick}
           authUser={authUser}
           hideTemp
           notifCount={notifCount}
