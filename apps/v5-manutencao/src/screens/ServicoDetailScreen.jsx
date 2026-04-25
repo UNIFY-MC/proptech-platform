@@ -1,5 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { supa } from '../supa.js'
+import { useImovelAtivo } from '../lib/ImovelAtivoContext.jsx'
+import { useEscolherImovel } from '../lib/useEscolherImovel.jsx'
+import SmartPromptsSheet from '../components/SmartPromptsSheet.jsx'
 
 const G = '#1B4332'; const GM = '#2D6A4F'; const GL = '#52B788'
 const C = { ink:'#0f172a', slate:'#64748b', border:'#e2e8f0', bg:'#f8fafc', white:'#fff',
@@ -21,9 +24,12 @@ function precoFmt(v) {
   return `${Number(v).toFixed(0)}€`
 }
 
-export default function ServicoDetailScreen({ servico, onBack, onPedir, onAdicionarLista }) {
-  const [detalhe,    setDetalhe]    = useState(null)
-  const [avaliacoes, setAvaliacoes] = useState([])
+export default function ServicoDetailScreen({ servico, onBack, onPedir, onAdicionarLista, onNavigateMoradas }) {
+  const [detalhe,       setDetalhe]       = useState(null)
+  const [avaliacoes,    setAvaliacoes]    = useState([])
+  const [smartConfig,   setSmartConfig]   = useState(null)
+  const { imovelAtivo, isGlobal, imoveis } = useImovelAtivo()
+  const { escolher, sheet } = useEscolherImovel()
 
   // If servico comes from BD (has numeric preco), fetch full detail with inclui/faq
   const servId = servico?.id
@@ -57,7 +63,41 @@ export default function ServicoDetailScreen({ servico, onBack, onPedir, onAdicio
     inclui = Array.isArray(src.inclui) ? src.inclui : []
   }
 
+  async function handlePedirAgora() {
+    let imovelDestino = imovelAtivo
+    if (isGlobal || imoveis.length > 1) {
+      imovelDestino = await escolher({
+        titulo: 'Para qual imóvel?',
+        motivo: `Onde queres ${(src.nome || 'este serviço').toLowerCase()}?`,
+        onAdicionarImovel: onNavigateMoradas,
+      })
+      if (!imovelDestino) return
+    }
+    const categoriaSlug = src.categoria_id || src.categoria || null
+    if (categoriaSlug && imovelDestino?.id) {
+      setSmartConfig({ localizacaoId: imovelDestino.id, categoriaSlug, imovelDestino })
+    } else {
+      onPedir?.({ ...src, localizacao_id: imovelDestino?.id })
+    }
+  }
+
   return (
+    <>
+    {sheet}
+    {smartConfig && (
+      <SmartPromptsSheet
+        open={true}
+        onClose={() => setSmartConfig(null)}
+        onConfirmar={() => {
+          const cfg = smartConfig
+          setSmartConfig(null)
+          onPedir?.({ ...src, localizacao_id: cfg.imovelDestino?.id })
+        }}
+        localizacaoId={smartConfig.localizacaoId}
+        categoriaSlug={smartConfig.categoriaSlug}
+        categoriaNome={cat}
+      />
+    )}
     <div style={{ minHeight:'100vh', background:C.bg, paddingBottom:110 }}>
       <div style={{ background:`linear-gradient(145deg,${G},${GM})`, padding:'14px 16px 28px', color:'#fff', textAlign:'center' }}>
         <div style={{ fontSize:10, color:'rgba(255,255,255,.7)', cursor:'pointer', marginBottom:16, textAlign:'left' }} onClick={onBack}>← Voltar</div>
@@ -124,12 +164,13 @@ export default function ServicoDetailScreen({ servico, onBack, onPedir, onAdicio
             flex:1, padding:12, borderRadius:10, background:C.bg,
             border:`1px solid ${C.border}`, fontSize:13, fontWeight:600, color:C.slate, cursor:'pointer',
           }}>Adicionar à lista</button>
-          <button onClick={() => { onPedir?.(src) || alert('A redirigir para o pedido...') }} style={{
+          <button onClick={handlePedirAgora} style={{
             flex:2, padding:12, borderRadius:10, background:G,
             border:'none', fontSize:13, fontWeight:700, color:'#fff', cursor:'pointer',
           }}>Pedir agora →</button>
         </div>
       </div>
     </div>
+    </>
   )
 }

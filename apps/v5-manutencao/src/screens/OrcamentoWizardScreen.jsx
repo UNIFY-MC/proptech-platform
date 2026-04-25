@@ -1,5 +1,7 @@
 import React, { useState } from 'react'
 import { MOCK_ORCAMENTOS_AREAS, MOCK_ORCAMENTOS_FORMATOS } from '../data/mock.js'
+import { supa } from '../supa.js'
+import { DEMO_PESSOA_ID, DEMO_ORGANIZATION_ID } from '../lib/demo.js'
 
 const P = '#534AB7'; const PD = '#3D35A0'
 const C = {
@@ -218,7 +220,7 @@ function Step3({ formatos, setFormatos, onBack, onNext }) {
 }
 
 // ── Step 4 — Confirmar ────────────────────────────────────────────────────────
-function Step4({ areas, descricao, fotos, formatos, onBack, onSubmit, setStep }) {
+function Step4({ areas, descricao, fotos, formatos, onBack, onSubmit, enviando, setStep }) {
   const areasLabel = areas.map(id => MOCK_ORCAMENTOS_AREAS.find(a => a.id === id)?.l).filter(Boolean).join(', ')
   const formatosLabel = formatos.map(id => MOCK_ORCAMENTOS_FORMATOS.find(f => f.id === id)?.t).filter(Boolean).join(' + ')
 
@@ -274,8 +276,9 @@ function Step4({ areas, descricao, fotos, formatos, onBack, onSubmit, setStep })
       <div style={{ padding: '0 12px 14px' }}>
         <button
           onClick={onSubmit}
-          style={{ width: '100%', padding: 14, borderRadius: 12, background: P, color: '#fff', fontSize: 14, fontWeight: 700, border: 'none', cursor: 'pointer', boxShadow: '0 4px 12px rgba(83,74,183,.3)' }}>
-          Enviar pedido ✨
+          disabled={enviando}
+          style={{ width: '100%', padding: 14, borderRadius: 12, background: enviando ? '#9B95D4' : P, color: '#fff', fontSize: 14, fontWeight: 700, border: 'none', cursor: enviando ? 'not-allowed' : 'pointer', boxShadow: '0 4px 12px rgba(83,74,183,.3)' }}>
+          {enviando ? 'A enviar…' : 'Enviar pedido ✨'}
         </button>
         <div style={{ fontSize: 10, color: C.slate, textAlign: 'center', marginTop: 7 }}>Sem compromisso · Compara · Decide</div>
       </div>
@@ -284,21 +287,45 @@ function Step4({ areas, descricao, fotos, formatos, onBack, onSubmit, setStep })
 }
 
 // ── Main wizard ───────────────────────────────────────────────────────────────
-export default function OrcamentoWizardScreen({ onBack, onConfirmado }) {
+export default function OrcamentoWizardScreen({ onBack, onConfirmado, localizacaoId }) {
   const [step,      setStep]      = useState(1)
   const [areas,     setAreas]     = useState([])
   const [descricao, setDescricao] = useState('')
   const [fotos,     setFotos]     = useState([])
   const [formatos,  setFormatos]  = useState([])
+  const [enviando,  setEnviando]  = useState(false)
 
-  const handleSubmit = () => {
-    // TODO(mario 3.3.14): INSERT em orcamentos_pedidos
-    console.log('[OrcamentoWizard] submit', { areas, descricao, fotos: fotos.length, formatos })
-    onConfirmado()
+  const handleSubmit = async () => {
+    if (enviando) return
+    setEnviando(true)
+    try {
+      const { data, error } = await supa
+        .from('pedidos_orcamento')
+        .insert({
+          pessoa_id:              DEMO_PESSOA_ID,
+          organization_id:        DEMO_ORGANIZATION_ID,
+          localizacao_id:         localizacaoId || null,
+          areas,
+          descricao,
+          fotos_urls:             [],
+          formatos,
+          estado:                 'aberto',
+          n_orcamentos_esperados: formatos.length * 5,
+        })
+        .select('id')
+        .single()
+      if (error) throw error
+      onConfirmado(data?.id || null)
+    } catch (err) {
+      console.error('[OrcamentoWizard] insert error', err)
+      onConfirmado(null)
+    } finally {
+      setEnviando(false)
+    }
   }
 
   if (step === 1) return <Step1 areas={areas} setAreas={setAreas} onBack={onBack} onNext={() => setStep(2)} />
   if (step === 2) return <Step2 descricao={descricao} setDescricao={setDescricao} fotos={fotos} setFotos={setFotos} onBack={() => setStep(1)} onNext={() => setStep(3)} />
   if (step === 3) return <Step3 formatos={formatos} setFormatos={setFormatos} onBack={() => setStep(2)} onNext={() => setStep(4)} />
-  return <Step4 areas={areas} descricao={descricao} fotos={fotos} formatos={formatos} onBack={() => setStep(3)} onSubmit={handleSubmit} setStep={setStep} />
+  return <Step4 areas={areas} descricao={descricao} fotos={fotos} formatos={formatos} onBack={() => setStep(3)} onSubmit={handleSubmit} enviando={enviando} setStep={setStep} />
 }

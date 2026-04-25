@@ -1,4 +1,6 @@
 import React from 'react'
+import { useImovelAtivo } from '../lib/ImovelAtivoContext.jsx'
+import { useEscolherImovel } from '../lib/useEscolherImovel.jsx'
 
 const G = '#1B4332'; const GM = '#2D6A4F'
 const C = { ink:'#0f172a', slate:'#64748b', border:'#e2e8f0', bg:'#f8fafc', white:'#fff',
@@ -20,10 +22,27 @@ const COMBO_FALLBACK = {
   poupanca:44,
 }
 
-export default function ComboDetailScreen({ combo, onBack, onPedir }) {
+export default function ComboDetailScreen({ combo, onBack, onPedir, onNavigateMoradas }) {
   const cb = combo || COMBO_FALLBACK
+  const { imovelAtivo, isGlobal, imoveis } = useImovelAtivo()
+  const { escolher, sheet } = useEscolherImovel()
+
+  async function handlePedirCombo() {
+    let imovelDestino = imovelAtivo
+    if (isGlobal || imoveis.length > 1) {
+      imovelDestino = await escolher({
+        titulo: 'Para qual imóvel?',
+        motivo: `Onde queres "${cb.titulo}"?`,
+        onAdicionarImovel: onNavigateMoradas,
+      })
+      if (!imovelDestino) return
+    }
+    onPedir?.({ ...cb, localizacao_id: imovelDestino?.id })
+  }
 
   return (
+    <>
+    {sheet}
     <div style={{ minHeight:'100vh', background:C.bg, paddingBottom:110 }}>
       {/* Hero */}
       <div style={{ background: cb.bg || 'linear-gradient(145deg,#1B4332,#2D6A4F)', padding:'14px 16px 28px', color:'#fff' }}>
@@ -89,11 +108,12 @@ export default function ComboDetailScreen({ combo, onBack, onPedir }) {
           </div>
           <span style={{ fontSize:11, background:C.goldLt, color:C.gold, padding:'3px 10px', borderRadius:5, fontWeight:700 }}>-{cb.desconto}%</span>
         </div>
-        <button onClick={() => onPedir?.(cb) || alert('Combo adicionado! Vai a Serviços para confirmar.')} style={{
+        <button onClick={handlePedirCombo} style={{
           width:'100%', padding:13, borderRadius:10, background:G,
           border:'none', fontSize:14, fontWeight:700, color:'#fff', cursor:'pointer',
         }}>Pedir combo →</button>
       </div>
     </div>
+    </>
   )
 }

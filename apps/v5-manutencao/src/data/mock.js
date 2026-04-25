@@ -106,16 +106,7 @@ export const MOCK_ORCAMENTOS_FORMATOS = [
   { id:'scheduled', ic:'📅', t:'Vistoria agendada',     s:'Técnico em casa à hora que marcares · mais preciso para obras grandes', max:'Até 3 orçamentos' },
 ]
 
-export const MOCK_ORCAMENTOS_PEDIDOS = [
-  {
-    id: 'orc-1', areas: ['reabilitacao'], titulo: 'Reabilitação cozinha',
-    descricao: 'Substituir bancada, mudar placa para indução, novos armários superiores.',
-    formatos: ['instant', 'scheduled'], estado: 'aguarda_propostas',
-    propostas_recebidas: 2, propostas_alvo: 8,
-    enviado_em: '2026-04-25T13:48:00Z', prazo_resposta: '2026-04-26T13:48:00Z',
-    fotos_count: 3, localizacao_id: null, // TODO(mario 3.3.14): ligar a localizacoes
-  },
-]
+// MOCK_ORCAMENTOS_PEDIDOS removido em 3.3.14 — BD real em pedidos_orcamento
 
 // ── Alertas Inteligentes (3.3.13 — mock enriquecido estilo Shipshape) ────────
 
@@ -157,19 +148,4 @@ export const MOCK_ALERTAS_ENRIQUECIDOS = [
   },
 ]
 
-// ── Propostas de Orçamento (3.3.13 — visual mock, BD na 3.3.14) ──────────────
-
-export const MOCK_PROPOSTAS_ORCAMENTO = [
-  {
-    id: 'prop-1', orcamento_id: 'orc-1',
-    prestador_iniciais: 'JF', prestador_nome: 'João Ferreira',
-    rating: 4.9, verificado: true, preco: 3850, tempo_dias: 8, garantia_meses: 12,
-    descricao_curta: 'Cozinha completa em 8 dias úteis · bancada granito · iluminação LED',
-  },
-  {
-    id: 'prop-2', orcamento_id: 'orc-1',
-    prestador_iniciais: 'SM', prestador_nome: 'Sandra Matos',
-    rating: 5.0, verificado: true, preco: 4200, tempo_dias: 6, garantia_meses: 24,
-    descricao_curta: 'Premium · garantia 24 meses · bancada quartzo · acessórios top',
-  },
-]
+// MOCK_PROPOSTAS_ORCAMENTO removido em 3.3.14 — BD real em orcamentos_recebidos

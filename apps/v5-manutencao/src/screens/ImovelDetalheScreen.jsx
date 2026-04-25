@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { supa } from '../supa.js'
 import { useImovelAtivo } from '../lib/ImovelAtivoContext.jsx'
+import { calcularCompletude, corCompletude } from '../lib/completude.js'
 import { usePerfisFiscais } from '../lib/PerfisFiscaisContext.jsx'
 import { moradaCurta, moradaCompleta, tipoImovelEmoji, tipoImovelLabel, categoriaEmoji, categoriaLabel, isReadOnly, isExternalUse, externalAppLabel, usoLabel } from '../lib/labels.js'
 import { SISTEMAS_LABELS, AMENITIES_LABELS } from '../lib/categorias.js'
@@ -236,6 +237,28 @@ export default function ImovelDetalheScreen({ id, onBack, onNavigateScore }) {
           })}
         </div>
       </Card>
+
+      {/* COMPLETUDE */}
+      {(() => {
+        const { pct, faltam } = calcularCompletude({ ...imovel, perfil_fiscal_id: imovel.perfil_fiscal_id })
+        const cor = corCompletude(pct)
+        return (
+          <Card>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: C.ink }}>Completude do perfil</div>
+              <span style={{ fontSize: 14, fontWeight: 800, color: cor }}>{pct}%</span>
+            </div>
+            <div style={{ height: 6, borderRadius: 3, background: C.bg, border: `1px solid ${C.border}`, overflow: 'hidden', marginBottom: faltam.length > 0 ? 8 : 0 }}>
+              <div style={{ width: `${pct}%`, height: '100%', background: cor, borderRadius: 3, transition: 'width .4s ease' }} />
+            </div>
+            {faltam.length > 0 && (
+              <div style={{ fontSize: 10, color: C.slate, lineHeight: 1.5 }}>
+                A preencher: {faltam.slice(0, 3).map(f => f.label).join(', ')}{faltam.length > 3 ? ` +${faltam.length - 3}` : ''}
+              </div>
+            )}
+          </Card>
+        )
+      })()}
 
       {/* INFORMAÇÃO */}
       <SectionTitle>Informação</SectionTitle>

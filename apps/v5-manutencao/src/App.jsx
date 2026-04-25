@@ -10341,7 +10341,7 @@ export default function App() {
   }, [])
 
   // 3.3.9: imovelAtivoId e imovelAtivo vêm do ImovelAtivoContext (fonte única canónica)
-  const { imovelAtivoId, imovelAtivo } = useImovelAtivo()
+  const { imovelAtivoId, imovelAtivo, onTabChange } = useImovelAtivo()
   const { perfis: perfisFiscais }       = usePerfisFiscais()
   const [showImovelSelector,setShowImovelSelector] = useState(false)
   const [selNav,            setSelNav]             = useState(null) // {prestador, servico, combo, promocao, categoria}
@@ -10893,13 +10893,13 @@ export default function App() {
           {ecra==='prestador_detail'   && <PrestadorDetailScreen prestador={selNav?.prestador} onBack={()=>setEcra('equipa')} />}
           {ecra==='home_assessment'    && <HomeAssessmentScreen onBack={()=>setEcra('home')} onConcluido={()=>setEcra('home')} />}
           {ecra==='categoria_detail'   && <CategoriaScreen categoria={selNav?.categoria} onBack={()=>setEcra('home')} onNavigateServico={(s)=>{ setSelNav(p=>({...p,servico:s})); setEcra('servico_detail') }} onNavigateOrcamento={()=>setEcra('orcamento_wizard')} />}
-          {ecra==='servico_detail'     && <ServicoDetailScreen servico={selNav?.servico} onBack={()=>{ setSelNav(p=>({...p,servico:null})); setEcra(selNav?.categoria ? 'categoria_detail' : 'mais_contratados') }} onPedir={(s)=>alert(`A encaminhar pedido: ${s.nome}`)} onAdicionarLista={(s)=>alert(`"${s.nome}" adicionado à lista!`)} />}
-          {ecra==='combo_detail'       && <ComboDetailScreen combo={selNav?.combo} onBack={()=>setEcra('combos')} onPedir={(cb)=>alert(`Combo "${cb.titulo}" adicionado!`)} />}
+          {ecra==='servico_detail'     && <ServicoDetailScreen servico={selNav?.servico} onBack={()=>{ setSelNav(p=>({...p,servico:null})); setEcra(selNav?.categoria ? 'categoria_detail' : 'mais_contratados') }} onPedir={(s)=>alert(`A encaminhar pedido: ${s.nome}`)} onAdicionarLista={(s)=>alert(`"${s.nome}" adicionado à lista!`)} onNavigateMoradas={()=>setEcra('moradas_screen')} />}
+          {ecra==='combo_detail'       && <ComboDetailScreen combo={selNav?.combo} onBack={()=>setEcra('combos')} onPedir={(cb)=>alert(`Combo "${cb.titulo}" adicionado!`)} onNavigateMoradas={()=>setEcra('moradas_screen')} />}
           {ecra==='promocao_detail'    && <PromocaoDetailScreen promo={selNav?.promocao} onBack={()=>setEcra('home')} onNavigateServico={(s)=>{ setSelNav(p=>({...p,servico:s})); setEcra('servico_detail') }} />}
           {ecra==='combos'             && <CombosScreen onBack={()=>setEcra('home')} onNavigateCombo={(cb)=>{ setSelNav({combo:cb}); setEcra('combo_detail') }} />}
           {ecra==='mais_contratados'   && <MaisContratadosScreen onBack={()=>setEcra('home')} onNavigateServico={(s)=>{ setSelNav({servico:s}); setEcra('servico_detail') }} />}
           {ecra==='orcamentos_landing'  && <OrcamentosLandingScreen onBack={()=>setEcra('home')} onIniciar={()=>setEcra('orcamento_wizard')} />}
-          {ecra==='orcamento_wizard'    && <OrcamentoWizardScreen onBack={()=>setEcra('orcamentos_landing')} onConfirmado={()=>setEcra('orcamento_confirmado')} />}
+          {ecra==='orcamento_wizard'    && <OrcamentoWizardScreen onBack={()=>setEcra('orcamentos_landing')} onConfirmado={(newId)=>{ if(newId) setSelNav(p=>({...p,orcamentoId:newId})); setEcra('orcamento_confirmado') }} localizacaoId={imovelAtivo?.id} />}
           {ecra==='orcamento_confirmado'&& <OrcamentoConfirmadoScreen onVerPedidos={()=>{ setEcra('home'); setTab('pedidos') }} onVoltarInicio={()=>setEcra('home')} />}
           {ecra==='orcamento_detalhe'  && <OrcamentoDetalheScreen orcamentoId={selNav?.orcamentoId} onBack={()=>{ setEcra('home'); setTab('pedidos') }} />}
 
@@ -11021,7 +11021,7 @@ export default function App() {
                   ScheduleModal={CCScheduleModal}
                 />
               )}
-              <BNav tab={tab} set={t=>{setTab(t);setEcra('home')}} onFabClick={()=>setFabOpen(true)}/>
+              <BNav tab={tab} set={t=>{setTab(t);setEcra('home');onTabChange(t)}} onFabClick={()=>setFabOpen(true)}/>
               {fabOpen && (
                 <FabPickerModal
                   onClose={()=>setFabOpen(false)}
@@ -11039,7 +11039,7 @@ export default function App() {
                 open={clienteDrawerOpen}
                 onClose={()=>setClienteDrawerOpen(false)}
                 authUser={authUser}
-                onSwitchTab={(t)=>{ setClienteDrawerOpen(false); setTab(t); setEcra('home') }}
+                onSwitchTab={(t)=>{ setClienteDrawerOpen(false); setTab(t); setEcra('home'); onTabChange(t) }}
                 onNavigate={(target)=>{
                   const close=()=>setClienteDrawerOpen(false)
                   const go=(ecraTarget)=>{ close(); setEcra(ecraTarget) }

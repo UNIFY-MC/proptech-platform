@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { supa } from '../supa.js'
 import { DEMO_PESSOA_ID } from '../lib/demo.js'
+import { calcularCompletude, corCompletude } from '../lib/completude.js'
 import { useImovelAtivo } from '../lib/ImovelAtivoContext.jsx'
 import { usePerfisFiscais } from '../lib/PerfisFiscaisContext.jsx'
 import { tipoImovelEmoji, tipoImovelLabel, formatarMorada, moradaCurta, categoriaEmoji, isReadOnly, isExternalUse, externalAppLabel, usoLabel } from '../lib/labels.js'
@@ -631,6 +632,23 @@ export default function MoradasScreen({ onBack, onNavigateDetalhe }) {
                     </span>
                   )}
                 </div>
+
+                {/* Barra de completude */}
+                {!readOnly && (() => {
+                  const { pct } = calcularCompletude({ ...im, perfil_fiscal_id: im.perfil_fiscal_id })
+                  const cor = corCompletude(pct)
+                  return (
+                    <div style={{ marginBottom: 10 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                        <span style={{ fontSize: 10, color: C.slate }}>Completude do perfil</span>
+                        <span style={{ fontSize: 10, fontWeight: 700, color: cor }}>{pct}%</span>
+                      </div>
+                      <div style={{ height: 4, borderRadius: 2, background: C.border, overflow: 'hidden' }}>
+                        <div style={{ width: `${pct}%`, height: '100%', background: cor, borderRadius: 2, transition: 'width .4s ease' }} />
+                      </div>
+                    </div>
+                  )
+                })()}
 
                 <div style={{ display: 'flex', gap: 8 }}>
                   {!readOnly && (

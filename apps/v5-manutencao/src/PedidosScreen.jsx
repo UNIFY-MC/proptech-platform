@@ -3,7 +3,7 @@ import { supa } from './supa.js'
 import { DEMO_PESSOA_ID } from './lib/demo.js'
 import { calcularCreditoMes } from './lib/subscription.js'
 import HeroHeader from './HeroHeader.jsx'
-import { MOCK_ORCAMENTOS_PEDIDOS } from './data/mock.js'
+import { useImovelAtivo } from './lib/ImovelAtivoContext.jsx'
 
 /* Paleta V5 — cópia local para isolar módulo do App.jsx */
 const V5 = {
@@ -315,9 +315,11 @@ const EMPTY = {
 const purple = '#534AB7'
 
 function OrcamentoMockCard({ orc, onNavigate }) {
-  const progresso = Math.round((orc.propostas_recebidas / orc.propostas_alvo) * 100)
-  const emFalta   = orc.propostas_alvo - orc.propostas_recebidas
-  const minAgo    = Math.round((Date.now() - new Date(orc.enviado_em).getTime()) / 60000)
+  const alvo      = orc.n_orcamentos_esperados || orc.propostas_alvo || 3
+  const recebidas = orc.propostas_recebidas || 0
+  const progresso = Math.round((recebidas / alvo) * 100)
+  const emFalta   = alvo - recebidas
+  const minAgo    = Math.round((Date.now() - new Date(orc.created_at || orc.enviado_em).getTime()) / 60000)
   const tempoStr  = minAgo < 60 ? `há ${minAgo} min` : `há ${Math.round(minAgo / 60)}h`
 
   return (
@@ -331,20 +333,41 @@ function OrcamentoMockCard({ orc, onNavigate }) {
         </div>
         <div style={{ fontSize:10, color:V5.slate }}>{tempoStr}</div>
       </div>
-      <div style={{ fontSize:13, fontWeight:700, color:V5.ink, marginBottom:3 }}>{orc.titulo}</div>
+      <div style={{ fontSize:13, fontWeight:700, color:V5.ink, marginBottom:3 }}>{orc.titulo || orc.areas?.join(', ') || 'Orçamento à medida'}</div>
       <div style={{ fontSize:11, color:V5.slate, marginBottom:8 }}>
-        {tempoStr} · {orc.propostas_recebidas} propost{orc.propostas_recebidas === 1 ? 'a' : 'as'} recebida{orc.propostas_recebidas !== 1 ? 's' : ''} · {emFalta} em falta
+        {tempoStr} · {recebidas} propost{recebidas === 1 ? 'a' : 'as'} recebida{recebidas !== 1 ? 's' : ''} · {emFalta} em falta
       </div>
       <div style={{ background:'#eee', borderRadius:4, height:4, overflow:'hidden' }}>
         <div style={{ width:`${progresso}%`, height:'100%', background:purple, borderRadius:4 }}/>
       </div>
-      <div style={{ fontSize:9, color:purple, fontWeight:700, marginTop:4 }}>{progresso}% · {orc.propostas_recebidas}/{orc.propostas_alvo} propostas</div>
+      <div style={{ fontSize:9, color:purple, fontWeight:700, marginTop:4 }}>{progresso}% · {recebidas}/{alvo} propostas</div>
     </div>
   )
 }
 
 export default function PedidosScreen({ ordens, authUser, onOrdem, onChat, onHamburguer, onAvatarClick, onNavigateNotificacoes, onNavigateChatSuporte, notifCount = 0, onOpenImovelSelector, onNavigateOrcamentoDetalhe }) {
   const [tabAtivo, setTabAtivo] = useState('em_curso')
+  const [pedidosOrc, setPedidosOrc] = useState([])
+  const { setImovelAtivoForTab } = useImovelAtivo()
+
+  // Tab Pedidos: sempre modo global (mostra todos os imóveis)
+  useEffect(() => { setImovelAtivoForTab('pedidos', 'global') }, [])
+
+  // Carregar pedidos de orçamento à medida
+  useEffect(() => {
+    let active = true
+    async function load() {
+      const { data } = await supa
+        .from('pedidos_orcamento')
+        .select('id, titulo, areas, estado, n_orcamentos_esperados, propostas_recebidas, created_at, data_limite')
+        .eq('pessoa_id', DEMO_PESSOA_ID)
+        .not('estado', 'in', '(cancelado,expirado)')
+        .order('created_at', { ascending: false })
+      if (active) setPedidosOrc(data || [])
+    }
+    load()
+    return () => { active = false }
+  }, [])
 
   const ordensTab = (ordens || []).filter(o => tabParaOrdem(o.st) === tabAtivo)
 
@@ -395,8 +418,8 @@ export default function PedidosScreen({ ordens, authUser, onOrdem, onChat, onHam
       </div>
 
       <div style={{ padding: '14px 14px 28px' }}>
-        {/* Cards mock de orçamentos à medida em curso */}
-        {tabAtivo === 'em_curso' && MOCK_ORCAMENTOS_PEDIDOS.map(orc => (
+        {/* Cards de orçamentos à medida em curso */}
+        {tabAtivo === 'em_curso' && pedidosOrc.map(orc => (
           <OrcamentoMockCard key={orc.id} orc={orc} onNavigate={onNavigateOrcamentoDetalhe} />
         ))}
 
