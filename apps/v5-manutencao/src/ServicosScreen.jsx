@@ -1,5 +1,6 @@
-import React from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import HeroHeader from './HeroHeader.jsx'
+import { supa, supaPublic } from './supa.js'
 
 const V5 = {
   green:    '#1B4332',
@@ -26,6 +27,7 @@ const CATS_GRID = [
   { id: 'eletrica',    l: 'Eléctrica',   ic: '⚡', bg: '#FAEEDA' },
   { id: 'canalizacao', l: 'Canalização', ic: '💧', bg: '#E0E8FA' },
   { id: 'orcamentos',  l: 'À medida',    ic: '📋', bg: '#EEEDFE', nova: true },
+  { id: 'packs',       l: 'Packs',       ic: '🎁', bg: '#FEF3C7' },
 ]
 
 const PROMOS = [
@@ -52,30 +54,53 @@ const PROMOS = [
   },
 ]
 
-const COMBOS = [
-  { t:'Pack Inverno',       s:'Caldeira + caleiras + cobertura', p:185, o:229, bg:'#E6F1FB' },
-  { t:'Reset Primavera',    s:'Limpeza profunda + jardim',       p:129, o:175, bg:'#FCEBEB' },
-  { t:'Pré-venda casa',     s:'Tudo em 48h',                    p:399, o:520, bg:V5.greenXl },
+// Fallback enquanto BD carrega
+const COMBOS_FALLBACK = [
+  { id:'fb1', nome:'Pack Inverno',    sub:'Caldeira + caleiras + cobertura', preco_combo:'185', preco_normal:'229', desconto_pct:19, cor_hex:'#E6F1FB', emoji:'❄️', servicos_ids:[] },
+  { id:'fb2', nome:'Reset Primavera', sub:'Limpeza profunda + jardim',       preco_combo:'129', preco_normal:'175', desconto_pct:26, cor_hex:'#FCEBEB', emoji:'🌸', servicos_ids:[] },
+  { id:'fb3', nome:'Pré-venda casa',  sub:'Tudo em 48h',                    preco_combo:'399', preco_normal:'520', desconto_pct:23, cor_hex:'#D8F3DC', emoji:'🏡', servicos_ids:[] },
+]
+const MAIS_FALLBACK = [
+  { id:'fb1', nome:'Limpeza doméstica',     categoria_id:'limpeza',     sub_grupo:'Limpeza regular', preco:'42', duracao_tipica:'2h' },
+  { id:'fb2', nome:'Desentupimento urgente',categoria_id:'canalizacao', sub_grupo:'Fugas e diagnósticos', preco:'65', duracao_tipica:null },
+  { id:'fb3', nome:'Manutenção ar condicionado',categoria_id:'manutencao',sub_grupo:'Climatização', preco:'79', duracao_tipica:'90min' },
 ]
 
-const MAIS_CONTRATADOS = [
-  { ic:'🧹', t:'Limpeza manutenção apartamento', cat:'Limpeza · 2h',           p:'42€', de:'48€' },
-  { ic:'💧', t:'Desentupimento canalização',     cat:'Canalização · urgência', p:'65€', de:null  },
-  { ic:'🔧', t:'Revisão anual caldeira',          cat:'Manutenção · 90min',    p:'75€', de:null  },
-]
+// Adapters BD → componente
+function adaptCombo(c) {
+  return {
+    id:    c.id,
+    t:     c.nome,
+    s:     c.sub,
+    p:     parseFloat(c.preco_combo),
+    o:     parseFloat(c.preco_normal),
+    bg:    c.cor_hex || '#E6F1FB',
+    emoji: c.emoji || '🏠',
+    desc:  c.desconto_pct || Math.round((1 - parseFloat(c.preco_combo) / parseFloat(c.preco_normal)) * 100),
+    _raw:  c,
+  }
+}
+
+function adaptComboForDetail(c) {
+  const poupanca = (parseFloat(c.preco_normal) - parseFloat(c.preco_combo)).toFixed(0)
+  return {
+    id:            c.id,
+    titulo:        c.nome,
+    sub:           c.sub,
+    emoji:         c.emoji || '🏠',
+    preco:         parseFloat(c.preco_combo),
+    precoOriginal: parseFloat(c.preco_normal),
+    desconto:      c.desconto_pct || Math.round((1 - parseFloat(c.preco_combo) / parseFloat(c.preco_normal)) * 100),
+    bg:            c.cor_hex || '#E6F1FB',
+    servicos:      c.servicos_ids || [],
+    poupanca:      `${poupanca}€`,
+    descricao:     c.descricao_longa,
+  }
+}
+
+const CAT_EMOJI = { limpeza:'✨', manutencao:'🔧', jardim:'🌿', piscina:'🌊', pintura:'🖌️', eletrica:'⚡', canalizacao:'💧', pos_obra:'🏗️' }
 
 /* ── Helpers ─────────────────────────────────────────────────────── */
-
-function Skel({ h = 72 }) {
-  return (
-    <div style={{
-      height: h, borderRadius: 14, marginBottom: 8,
-      background: 'linear-gradient(90deg,rgba(27,67,50,0.06) 25%,rgba(27,67,50,0.12) 50%,rgba(27,67,50,0.06) 75%)',
-      backgroundSize: '200% 100%',
-      animation: 'skel-sweep 1.4s ease-in-out infinite',
-    }} />
-  )
-}
 
 function BadgePill({ text, green }) {
   return (
@@ -88,76 +113,67 @@ function BadgePill({ text, green }) {
   )
 }
 
-function SvcCard({ s }) {
-  const badgeLabel = s.popular ? 'Popular' : s.urgent ? 'Urgente' : s.eco ? 'Eco' : null
-  const isGreenBadge = s.popular || s.eco
-  const precoBaixou = s.preco_original && Number(s.preco_original) > Number(s.preco)
-
-  return (
-    <div
-      onClick={() => alert(`"${s.nome}" — detalhe e checkout disponível numa fase seguinte.`)}
-      style={{
-        display: 'flex', gap: 12, alignItems: 'flex-start',
-        background: V5.white, borderRadius: 14,
-        border: `1px solid ${V5.border}`,
-        padding: '12px 14px', marginBottom: 8,
-        cursor: 'pointer', boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-      }}
-    >
-      <div style={{
-        width: 46, height: 46, borderRadius: 12, flexShrink: 0,
-        background: '#f0fdf4',
-        display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22,
-      }}>
-        {s.icon || '🔧'}
-      </div>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6, marginBottom: 2 }}>
-          <span style={{
-            flex: 1, fontSize: 13, fontWeight: 700, color: V5.ink,
-            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-          }}>{s.nome}</span>
-          {badgeLabel && <BadgePill text={badgeLabel} green={isGreenBadge} />}
-        </div>
-        {s.tagline && (
-          <div style={{
-            fontSize: 11, color: V5.slate, marginBottom: 4,
-            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-          }}>
-            {s.tagline}
-          </div>
-        )}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          {s.duracao_tipica
-            ? <span style={{ fontSize: 11, color: V5.slate }}>⏱ {s.duracao_tipica}</span>
-            : <span />
-          }
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
-            {precoBaixou && (
-              <span style={{ fontSize: 11, color: V5.slate, textDecoration: 'line-through' }}>
-                €{Number(s.preco_original).toFixed(0)}
-              </span>
-            )}
-            {s.preco != null && (
-              <span style={{ fontSize: 15, fontWeight: 800, color: V5.green }}>
-                €{Number(s.preco).toFixed(2)}
-                {s.unidade && (
-                  <span style={{ fontSize: 10, fontWeight: 500, color: V5.slate }}> {s.unidade}</span>
-                )}
-              </span>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
-
 /* ── Vista marketplace (ecrã principal de serviços) ──────────────── */
-function MarketplaceView({ onNavigateCategoria, onHamburguer, onAvatarClick, authUser, notifCount, onNavigateNotificacoes, onNavigateChatSuporte, onOpenImovelSelector, onNavigateOrcamentos, onNavigateReferral }) {
+function MarketplaceView({
+  onNavigateCategoria, onHamburguer, onAvatarClick, authUser,
+  notifCount, onNavigateNotificacoes, onNavigateChatSuporte,
+  onOpenImovelSelector, onNavigateOrcamentos, onNavigateReferral,
+  onNavigateCombo, onNavigateServico, onNavigatePacksLista,
+  onNavigateMaisContratados, onNavigateOrcamentoPersonalizado,
+}) {
+  const [combos,         setCombos]         = useState(COMBOS_FALLBACK)
+  const [maisContratados,setMaisContratados] = useState(MAIS_FALLBACK)
+  const [searchQuery,    setSearchQuery]    = useState('')
+  const [searchResults,  setSearchResults]  = useState([])
+  const [searchLoading,  setSearchLoading]  = useState(false)
+  const [showDropdown,   setShowDropdown]   = useState(false)
+  const debounceRef = useRef(null)
+
+  // Carregar combos da BD
+  useEffect(() => {
+    supa.from('combos').select('*').eq('ativo', true).order('ordem')
+      .then(({ data }) => { if (data && data.length) setCombos(data) })
+  }, [])
+
+  // Carregar mais contratados da BD
+  useEffect(() => {
+    supaPublic.from('servicos')
+      .select('id,nome,preco,preco_original,categoria_id,sub_grupo,tagline,duracao_tipica')
+      .eq('activo', true).eq('popular', true).limit(8)
+      .then(({ data }) => { if (data && data.length) setMaisContratados(data) })
+  }, [])
+
+  // Pesquisa com debounce 300ms
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    if (!searchQuery.trim()) {
+      setSearchResults([])
+      setShowDropdown(false)
+      return
+    }
+    debounceRef.current = setTimeout(async () => {
+      setSearchLoading(true)
+      const { data } = await supaPublic.from('servicos')
+        .select('id,nome,preco,categoria_id,sub_grupo,tagline,duracao_tipica')
+        .eq('activo', true)
+        .ilike('nome', `%${searchQuery}%`)
+        .limit(6)
+      setSearchResults(data || [])
+      setShowDropdown(true)
+      setSearchLoading(false)
+    }, 300)
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current) }
+  }, [searchQuery])
+
+  const displayCombos = combos.map(adaptCombo)
+  const queryTrunc = searchQuery.length > 25 ? searchQuery.substring(0, 25) + '…' : searchQuery
+
   return (
     <div style={{ minHeight: '100vh', background: V5.bg, paddingBottom: 90 }}>
-      {/* Hero verde */}
+      {/* Placeholder CSS para input search */}
+      <style>{'.v5-srch::placeholder{color:rgba(255,255,255,0.5)}'}</style>
+
+      {/* Hero verde — sticky */}
       <div style={{
         background: `linear-gradient(145deg,${V5.green},${V5.greenMid})`,
         padding: '14px 14px 16px', color: '#fff',
@@ -172,17 +188,94 @@ function MarketplaceView({ onNavigateCategoria, onHamburguer, onAvatarClick, aut
           onNotifClick={onNavigateNotificacoes}
           onChatClick={onNavigateChatSuporte}
         />
-        <div style={{ fontSize: 9, color: 'rgba(255,255,255,.65)', fontWeight: 700, letterSpacing: .6, marginBottom: 2 }}>SERVIÇOS · 177 DISPONÍVEIS</div>
+        <div style={{ fontSize: 9, color: 'rgba(255,255,255,.65)', fontWeight: 700, letterSpacing: .6, marginBottom: 2 }}>SERVIÇOS · 199 DISPONÍVEIS</div>
         <div style={{ fontSize: 17, fontWeight: 800, marginBottom: 10 }}>O que precisa hoje?</div>
+
         {/* Barra de pesquisa */}
-        <div style={{
-          background: 'rgba(0,0,0,0.2)', borderRadius: 10,
-          padding: '9px 13px', display: 'flex', alignItems: 'center', gap: 9,
-        }}>
-          <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: 15 }}>🔍</span>
-          <span style={{ flex: 1, fontSize: 13, color: 'rgba(255,255,255,0.55)' }}>
-            Procurar serviço...
-          </span>
+        <div style={{ position: 'relative' }}>
+          <div style={{
+            background: 'rgba(0,0,0,0.2)',
+            borderRadius: showDropdown && searchQuery ? '10px 10px 0 0' : 10,
+            padding: '9px 13px', display: 'flex', alignItems: 'center', gap: 9,
+          }}>
+            <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: 15 }}>🔍</span>
+            <input
+              className="v5-srch"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              onFocus={() => searchQuery.trim() && setShowDropdown(true)}
+              onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
+              placeholder="Procurar serviço..."
+              style={{
+                flex: 1, background: 'transparent', border: 'none', outline: 'none',
+                fontSize: 13, color: '#fff',
+              }}
+            />
+            {searchQuery && (
+              <button
+                onMouseDown={e => e.preventDefault()}
+                onClick={() => { setSearchQuery(''); setShowDropdown(false) }}
+                style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.7)', fontSize: 18, cursor: 'pointer', padding: '0 2px', lineHeight: 1 }}>
+                ×
+              </button>
+            )}
+          </div>
+
+          {/* Dropdown de resultados */}
+          {showDropdown && searchQuery.trim() && (
+            <div style={{
+              position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50,
+              background: '#fff', borderRadius: '0 0 12px 12px',
+              boxShadow: '0 8px 24px rgba(0,0,0,0.18)',
+              maxHeight: 310, overflowY: 'auto',
+            }}>
+              {searchLoading && (
+                <div style={{ padding: '12px 14px', fontSize: 12, color: V5.slate }}>A procurar...</div>
+              )}
+              {!searchLoading && searchResults.map((s, i) => (
+                <div
+                  key={s.id}
+                  onMouseDown={e => e.preventDefault()}
+                  onClick={() => { onNavigateServico?.(s); setSearchQuery(''); setShowDropdown(false) }}
+                  style={{
+                    padding: '10px 14px', display: 'flex', gap: 10, alignItems: 'center',
+                    cursor: 'pointer',
+                    borderBottom: i < searchResults.length - 1 ? `1px solid ${V5.border}` : 'none',
+                  }}
+                >
+                  <span style={{ fontSize: 18, flexShrink: 0 }}>{CAT_EMOJI[s.categoria_id] || '🔧'}</span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: V5.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.nome}</div>
+                    <div style={{ fontSize: 11, color: V5.slate }}>{s.sub_grupo || ''}</div>
+                  </div>
+                  {s.preco != null && (
+                    <div style={{ fontSize: 14, fontWeight: 700, color: V5.green, flexShrink: 0 }}>€{Number(s.preco).toFixed(0)}</div>
+                  )}
+                </div>
+              ))}
+              {!searchLoading && searchResults.length === 0 && (
+                <div style={{ padding: '10px 14px', fontSize: 12, color: V5.slate }}>Sem resultados exactos para "{queryTrunc}"</div>
+              )}
+              {/* Cartão orçamento personalizado — sempre visível */}
+              <div
+                onMouseDown={e => e.preventDefault()}
+                onClick={() => { onNavigateOrcamentoPersonalizado?.(searchQuery); setSearchQuery(''); setShowDropdown(false) }}
+                style={{
+                  margin: '6px 10px 10px', background: '#FCEBEB',
+                  borderRadius: 10, padding: '10px 12px', cursor: 'pointer',
+                  display: 'flex', gap: 10, alignItems: 'center',
+                }}
+              >
+                <span style={{ fontSize: 20, flexShrink: 0 }}>📋</span>
+                <div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: '#8B2E2E' }}>Orçamento personalizado</div>
+                  <div style={{ fontSize: 11, color: '#B45309', marginTop: 1 }}>
+                    Descrever "{queryTrunc}" e receber propostas
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -209,79 +302,54 @@ function MarketplaceView({ onNavigateCategoria, onHamburguer, onAvatarClick, aut
         }}>
           <span style={{ fontSize: 22, flexShrink: 0 }}>🎁</span>
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: V5.green }}>
-              Plano Home+ · 5% off em tudo
-            </div>
-            <div style={{ fontSize: 10, color: V5.greenMid, marginTop: 1 }}>
-              Aplicado automaticamente no checkout
-            </div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: V5.green }}>Plano Home+ · 5% off em tudo</div>
+            <div style={{ fontSize: 10, color: V5.greenMid, marginTop: 1 }}>Aplicado automaticamente no checkout</div>
           </div>
         </div>
 
         {/* Carrossel de promos */}
-        <div style={{
-          padding: '12px 12px 0',
-          display: 'flex', gap: 9,
-          overflowX: 'auto',
-          WebkitOverflowScrolling: 'touch',
-          scrollbarWidth: 'none',
-        }}>
+        <div style={{ padding: '12px 12px 0', display: 'flex', gap: 9, overflowX: 'auto', WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none' }}>
           {PROMOS.map((promo, i) => (
             <div key={i} style={{
-              minWidth: '85%', borderRadius: 13,
-              padding: '12px 14px', background: promo.bg,
-              cursor: 'pointer', flexShrink: 0,
+              minWidth: '85%', borderRadius: 13, padding: '12px 14px',
+              background: promo.bg, cursor: 'pointer', flexShrink: 0,
               position: 'relative', overflow: 'hidden',
             }}>
-              <div style={{
-                fontSize: 9, fontWeight: 700, letterSpacing: 0.5,
-                color: promo.tagColor, marginBottom: 4,
-              }}>{promo.tag}</div>
+              <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: 0.5, color: promo.tagColor, marginBottom: 4 }}>{promo.tag}</div>
               <div style={{ fontSize: 15, fontWeight: 700, color: V5.ink, lineHeight: 1.15, fontFamily: 'Georgia,serif', marginBottom: 3 }}>
                 {promo.titleBefore}
                 <span style={{ color: promo.highlightColor }}>{promo.titleHighlight}</span>
                 {promo.titleAfter}
               </div>
               <div style={{ fontSize: 10, color: V5.slate, marginTop: 3 }}>{promo.sub}</div>
-              <button style={{
-                background: promo.btnBg, color: '#fff',
-                padding: '6px 12px', borderRadius: 8,
-                fontSize: 11, fontWeight: 700, border: 'none', cursor: 'pointer',
-                marginTop: 9,
-              }}>
+              <button style={{ background: promo.btnBg, color: '#fff', padding: '6px 12px', borderRadius: 8, fontSize: 11, fontWeight: 700, border: 'none', cursor: 'pointer', marginTop: 9 }}>
                 Explorar →
               </button>
             </div>
           ))}
         </div>
 
-        {/* Categorias — 4×2 grid */}
-        <div style={{
-          padding: '16px 14px 6px',
-          fontSize: 14, fontWeight: 700, color: V5.ink,
-        }}>
-          Categorias
-        </div>
-        <div style={{
-          padding: '0 14px',
-          display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 8,
-        }}>
+        {/* Categorias — grid */}
+        <div style={{ padding: '16px 14px 6px', fontSize: 14, fontWeight: 700, color: V5.ink }}>Categorias</div>
+        <div style={{ padding: '0 14px', display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 8 }}>
           {CATS_GRID.map(cat => (
-            <button key={cat.id} onClick={() => cat.id === 'orcamentos' ? onNavigateOrcamentos?.() : onNavigateCategoria?.({ id: cat.id, nome: cat.l, emoji: cat.ic })} style={{
-              background: V5.white, border: `1px solid ${cat.nova ? V5.purple : V5.border}`,
-              borderRadius: 12, padding: '9px 4px',
-              cursor: 'pointer', textAlign: 'center',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
-              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
-              position: 'relative',
-            }}>
+            <button key={cat.id}
+              onClick={() => {
+                if (cat.id === 'orcamentos') onNavigateOrcamentos?.()
+                else if (cat.id === 'packs') onNavigatePacksLista?.()
+                else onNavigateCategoria?.({ id: cat.id, nome: cat.l, emoji: cat.ic })
+              }}
+              style={{
+                background: V5.white, border: `1px solid ${cat.nova ? V5.purple : V5.border}`,
+                borderRadius: 12, padding: '9px 4px', cursor: 'pointer', textAlign: 'center',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+                position: 'relative',
+              }}>
               {cat.nova && (
                 <div style={{ position:'absolute', top:-5, right:-3, background:V5.purple, color:'#fff', fontSize:7, padding:'2px 5px', borderRadius:5, fontWeight:700, letterSpacing:.3 }}>NOVO</div>
               )}
-              <div style={{
-                width: 38, height: 38, borderRadius: 10, background: cat.bg,
-                display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18,
-              }}>
+              <div style={{ width: 38, height: 38, borderRadius: 10, background: cat.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>
                 {cat.ic}
               </div>
               <span style={{ fontSize: 9, fontWeight: 700, color: cat.nova ? V5.purple : V5.slate, lineHeight: 1.2 }}>
@@ -304,11 +372,7 @@ function MarketplaceView({ onNavigateCategoria, onHamburguer, onAvatarClick, aut
               display: 'flex', alignItems: 'center', gap: 12,
             }}
           >
-            <div style={{
-              width: 44, height: 44, borderRadius: 11, flexShrink: 0,
-              background: 'rgba(255,255,255,0.15)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22,
-            }}>📋</div>
+            <div style={{ width: 44, height: 44, borderRadius: 11, flexShrink: 0, background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 }}>📋</div>
             <div style={{ flex: 1, textAlign: 'left' }}>
               <div style={{ fontSize: 13, fontWeight: 800, color: '#fff' }}>Orçamentos à medida</div>
               <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)', marginTop: 2, lineHeight: 1.4 }}>
@@ -320,75 +384,57 @@ function MarketplaceView({ onNavigateCategoria, onHamburguer, onAvatarClick, aut
         </div>
 
         {/* Combos populares */}
-        <div style={{
-          padding: '16px 14px 8px',
-          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        }}>
+        <div style={{ padding: '16px 14px 8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ fontSize: 14, fontWeight: 700, color: V5.ink }}>🔥 Combos populares</div>
-          <div style={{ fontSize: 10, color: V5.greenLt, fontWeight: 700 }}>Ver →</div>
+          <div style={{ fontSize: 10, color: V5.greenLt, fontWeight: 700, cursor: 'pointer' }} onClick={onNavigatePacksLista}>Ver todos →</div>
         </div>
-        <div style={{
-          padding: '0 0 0 14px',
-          display: 'flex', gap: 10,
-          overflowX: 'auto',
-          WebkitOverflowScrolling: 'touch',
-          scrollbarWidth: 'none',
-          paddingRight: 14,
-        }}>
-          {COMBOS.map((b, i) => {
-            const desc = Math.round((1 - b.p / b.o) * 100)
-            return (
-              <div key={i} style={{
-                minWidth: 155, background: b.bg,
-                borderRadius: 12, padding: '11px 12px',
-                cursor: 'pointer', flexShrink: 0,
-              }}>
-                <div style={{ fontSize: 9, color: V5.coral, fontWeight: 700, marginBottom: 4 }}>
-                  -{desc}%
-                </div>
-                <div style={{ fontSize: 12, fontWeight: 700, color: V5.ink }}>{b.t}</div>
-                <div style={{ fontSize: 10, color: V5.slate, marginTop: 3, minHeight: 28, lineHeight: 1.35 }}>
-                  {b.s}
-                </div>
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: 5, marginTop: 6 }}>
-                  <span style={{ fontSize: 15, fontWeight: 800, color: V5.green }}>
-                    {b.p}€
-                  </span>
-                  <span style={{ fontSize: 9, color: V5.slate, textDecoration: 'line-through' }}>
-                    {b.o}€
-                  </span>
-                </div>
+        <div style={{ padding: '0 0 0 14px', display: 'flex', gap: 10, overflowX: 'auto', WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none', paddingRight: 14 }}>
+          {displayCombos.map((b, i) => (
+            <div
+              key={b.id || i}
+              onClick={() => b._raw ? onNavigateCombo?.(adaptComboForDetail(b._raw)) : onNavigatePacksLista?.()}
+              style={{ minWidth: 155, background: b.bg, borderRadius: 12, padding: '11px 12px', cursor: 'pointer', flexShrink: 0 }}
+            >
+              <div style={{ fontSize: 9, color: V5.coral, fontWeight: 700, marginBottom: 4 }}>-{b.desc}%</div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: V5.ink }}>{b.t}</div>
+              <div style={{ fontSize: 10, color: V5.slate, marginTop: 3, minHeight: 28, lineHeight: 1.35 }}>{b.s}</div>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 5, marginTop: 6 }}>
+                <span style={{ fontSize: 15, fontWeight: 800, color: V5.green }}>{b.p}€</span>
+                <span style={{ fontSize: 9, color: V5.slate, textDecoration: 'line-through' }}>{b.o}€</span>
               </div>
-            )
-          })}
+            </div>
+          ))}
         </div>
 
         {/* Mais contratados */}
-        <div style={{
-          padding: '16px 14px 8px',
-          fontSize: 14, fontWeight: 700, color: V5.ink,
-        }}>
-          ⭐ Mais contratados
+        <div style={{ padding: '16px 14px 8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: V5.ink }}>⭐ Mais contratados</div>
+          <div style={{ fontSize: 10, color: V5.greenLt, fontWeight: 700, cursor: 'pointer' }} onClick={onNavigateMaisContratados}>Ver todos →</div>
         </div>
         <div style={{ padding: '0 14px' }}>
-          {MAIS_CONTRATADOS.map((s, i) => (
-            <div key={i} onClick={() => alert(`"${s.t}" — detalhe e checkout disponível numa fase seguinte.`)} style={{
-              background: V5.white, border: `1px solid ${V5.border}`,
-              borderRadius: 12, padding: '11px 13px', marginBottom: 8,
-              display: 'flex', gap: 12, alignItems: 'center',
-              cursor: 'pointer', boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
-            }}>
-              <span style={{ fontSize: 24, flexShrink: 0 }}>{s.ic}</span>
+          {maisContratados.map((s, i) => (
+            <div
+              key={s.id || i}
+              onClick={() => onNavigateServico?.(s)}
+              style={{
+                background: V5.white, border: `1px solid ${V5.border}`,
+                borderRadius: 12, padding: '11px 13px', marginBottom: 8,
+                display: 'flex', gap: 12, alignItems: 'center',
+                cursor: 'pointer', boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+              }}
+            >
+              <span style={{ fontSize: 24, flexShrink: 0 }}>{CAT_EMOJI[s.categoria_id] || '🔧'}</span>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{
-                  fontSize: 13, fontWeight: 700, color: V5.ink,
-                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                }}>{s.t}</div>
-                <div style={{ fontSize: 10, color: V5.slate, marginTop: 2 }}>{s.cat}</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: V5.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.nome}</div>
+                <div style={{ fontSize: 10, color: V5.slate, marginTop: 2 }}>{s.sub_grupo}{s.duracao_tipica ? ` · ${s.duracao_tipica}` : ''}</div>
               </div>
               <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                {s.de && <div style={{ fontSize: 9, color: V5.slate, textDecoration: 'line-through' }}>{s.de}</div>}
-                <div style={{ fontSize: 14, fontWeight: 800, color: V5.green }}>{s.p}</div>
+                {s.preco_original && Number(s.preco_original) > Number(s.preco) && (
+                  <div style={{ fontSize: 9, color: V5.slate, textDecoration: 'line-through' }}>€{Number(s.preco_original).toFixed(0)}</div>
+                )}
+                {s.preco != null && (
+                  <div style={{ fontSize: 14, fontWeight: 800, color: V5.green }}>€{Number(s.preco).toFixed(0)}</div>
+                )}
               </div>
             </div>
           ))}
@@ -400,7 +446,13 @@ function MarketplaceView({ onNavigateCategoria, onHamburguer, onAvatarClick, aut
 }
 
 /* ── Ecrã principal ──────────────────────────────────────────────── */
-export default function ServicosScreen({ authUser, onHamburguer, onAvatarClick, onNavigateNotificacoes, onNavigateChatSuporte, notifCount = 0, onOpenImovelSelector, onNavigateOrcamentos, onNavigateReferral, onNavigateCategoria }) {
+export default function ServicosScreen({
+  authUser, onHamburguer, onAvatarClick,
+  onNavigateNotificacoes, onNavigateChatSuporte, notifCount = 0,
+  onOpenImovelSelector, onNavigateOrcamentos, onNavigateReferral,
+  onNavigateCategoria, onNavigateCombo, onNavigateServico,
+  onNavigatePacksLista, onNavigateMaisContratados, onNavigateOrcamentoPersonalizado,
+}) {
   return (
     <MarketplaceView
       onNavigateCategoria={onNavigateCategoria}
@@ -413,6 +465,11 @@ export default function ServicosScreen({ authUser, onHamburguer, onAvatarClick, 
       onOpenImovelSelector={onOpenImovelSelector}
       onNavigateOrcamentos={onNavigateOrcamentos}
       onNavigateReferral={onNavigateReferral}
+      onNavigateCombo={onNavigateCombo}
+      onNavigateServico={onNavigateServico}
+      onNavigatePacksLista={onNavigatePacksLista}
+      onNavigateMaisContratados={onNavigateMaisContratados}
+      onNavigateOrcamentoPersonalizado={onNavigateOrcamentoPersonalizado}
     />
   )
 }

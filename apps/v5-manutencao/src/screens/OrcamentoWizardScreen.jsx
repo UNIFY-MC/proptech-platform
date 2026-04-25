@@ -287,10 +287,10 @@ function Step4({ areas, descricao, fotos, formatos, onBack, onSubmit, enviando, 
 }
 
 // ── Main wizard ───────────────────────────────────────────────────────────────
-export default function OrcamentoWizardScreen({ onBack, onConfirmado, localizacaoId, categoriaSlug, skipStep1 }) {
+export default function OrcamentoWizardScreen({ onBack, onConfirmado, localizacaoId, categoriaSlug, skipStep1, descricaoInicial }) {
   const [step,      setStep]      = useState(skipStep1 ? 2 : 1)
   const [areas,     setAreas]     = useState([])
-  const [descricao, setDescricao] = useState('')
+  const [descricao, setDescricao] = useState(descricaoInicial || '')
   const [fotos,     setFotos]     = useState([])
   const [formatos,  setFormatos]  = useState([])
   const [enviando,  setEnviando]  = useState(false)
