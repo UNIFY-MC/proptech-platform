@@ -65,7 +65,7 @@ const COMO_FUNCIONA = [
 ]
 
 function precoFmt(v) {
-  if (!v) return '—'
+  if (!v && v !== 0) return '—'
   if (typeof v === 'string') return v.includes('€') ? v : `€${v}`
   return `€${Number(v).toFixed(0)}`
 }
@@ -89,6 +89,10 @@ export default function ServicoDetailScreen({ servico, onBack, onPedir, onAdicio
   const [faq,           setFaq]          = useState([])
   const [stats,         setStats]        = useState([])
   const [relacionados,  setRelacionados] = useState([])
+  const [variacoes,     setVariacoes]    = useState([])
+  const [variacaoSel,   setVariacaoSel]  = useState(null)
+  const [freqOptions,   setFreqOptions]  = useState([])
+  const [freqSel,       setFreqSel]      = useState('pontual')
   const [descExpanded,  setDescExpanded] = useState(false)
   const [faqOpen,       setFaqOpen]      = useState({})
   const [smartConfig,   setSmartConfig]  = useState(null)
@@ -102,7 +106,7 @@ export default function ServicoDetailScreen({ servico, onBack, onPedir, onAdicio
     if (!servId) return
     const { data } = await supaPublic
       .from('servicos')
-      .select('id, nome, preco, preco_original, duracao_tipica, garantia_dias, inclui, nao_inclui, descricao_curta, descricao_longa, tagline, icon, categoria_id, imagem_url, imagem_alt, popular, sub_grupo')
+      .select('id, nome, preco, preco_original, duracao_tipica, garantia_dias, inclui, nao_inclui, descricao_curta, descricao_longa, tagline, icon, categoria_id, imagem_url, imagem_alt, popular, sub_grupo, frequency_template')
       .eq('id', servId)
       .single()
     if (data) setDetalhe(data)
@@ -154,17 +158,50 @@ export default function ServicoDetailScreen({ servico, onBack, onPedir, onAdicio
     if (data && data.length) setRelacionados(data)
   }, [servId])
 
+  const fetchVariacoes = useCallback(async () => {
+    if (!servId) return
+    const { data } = await supaPublic
+      .from('servicos')
+      .select('id, nome, preco, duracao_tipica, popular, ordem')
+      .eq('servico_pai_id', servId)
+      .eq('activo', true)
+      .order('ordem')
+    if (data && data.length) {
+      setVariacoes(data)
+      setVariacaoSel(data[0].id)
+    }
+  }, [servId])
+
+  const fetchFrequencia = useCallback(async (templateId) => {
+    if (!templateId) return
+    const { data } = await supaPublic
+      .from('frequency_templates')
+      .select('options')
+      .eq('id', templateId)
+      .single()
+    if (data?.options?.length) {
+      setFreqOptions(data.options)
+      setFreqSel(data.options[0]?.id || 'pontual')
+    }
+  }, [])
+
   useEffect(() => {
     fetchDetalhe()
     fetchInclui()
     fetchFaq()
     fetchStats()
-  }, [fetchDetalhe, fetchInclui, fetchFaq, fetchStats])
+    fetchVariacoes()
+  }, [fetchDetalhe, fetchInclui, fetchFaq, fetchStats, fetchVariacoes])
 
   useEffect(() => {
     const catId = detalhe?.categoria_id || servico?.categoria_id
     if (catId) fetchRelacionados(catId)
   }, [detalhe, servico, fetchRelacionados])
+
+  useEffect(() => {
+    const tmpl = detalhe?.frequency_template
+    if (tmpl) fetchFrequencia(tmpl)
+  }, [detalhe?.frequency_template, fetchFrequencia])
 
   // Merge: preferir BD, fallback ao prop servico
   const src     = detalhe || servico || {}
@@ -173,13 +210,21 @@ export default function ServicoDetailScreen({ servico, onBack, onPedir, onAdicio
   const catBg   = CAT_BG[catId] || '#f0f0f0'
   const catClr  = CAT_COLOR[catId] || '#333'
   const nome    = src.nome || 'Serviço'
-  const duracao = src.duracao_tipica || '—'
   const garantia= src.garantia_dias ? `${src.garantia_dias} dias` : '30 dias'
-  const preco   = precoFmt(src.preco)
 
   const descricao  = src.descricao_longa || src.descricao_curta || src.tagline || ''
   const descLonga  = descricao.length > 180
   const descTexto  = descLonga && !descExpanded ? descricao.substring(0, 180) + '…' : descricao
+
+  // Preço efectivo: variação seleccionada + desconto de frequência
+  const variacaoAtual = variacoes.find(v => v.id === variacaoSel) || null
+  const precoBase     = variacaoAtual ? parseFloat(variacaoAtual.preco) : (parseFloat(src.preco) || 0)
+  const duracaoAtual  = variacaoAtual?.duracao_tipica || src.duracao_tipica || '—'
+  const freqOpcao     = freqOptions.find(o => o.id === freqSel) || null
+  const freqDiscount  = freqOpcao?.discount || 0
+  const precoEfetivo  = precoBase > 0 ? precoBase * (1 - freqDiscount) : 0
+  const precoFinal    = precoBase > 0 ? precoFmt(precoEfetivo) : precoFmt(src.preco)
+  const precoSufixo   = freqOpcao?.suffix || ''
 
   // Inclui: BD prioritário, fallback JSONB da coluna legacy
   const incluiDisplay   = inclui.length   > 0 ? inclui   : (Array.isArray(src.inclui)     ? src.inclui.map(t => ({ texto:t, tipo:'inclui'    })) : [])
@@ -202,7 +247,12 @@ export default function ServicoDetailScreen({ servico, onBack, onPedir, onAdicio
     if (categoriaSlug && imovelDestino?.id) {
       setSmartConfig({ localizacaoId: imovelDestino.id, categoriaSlug, imovelDestino })
     } else {
-      onPedir?.({ ...src, localizacao_id: imovelDestino?.id })
+      onPedir?.({
+        ...src,
+        localizacao_id: imovelDestino?.id,
+        variacao_id: variacaoSel || null,
+        frequency_id: freqSel !== 'pontual' ? freqSel : null,
+      })
     }
   }
 
@@ -216,7 +266,12 @@ export default function ServicoDetailScreen({ servico, onBack, onPedir, onAdicio
           onConfirmar={() => {
             const cfg = smartConfig
             setSmartConfig(null)
-            onPedir?.({ ...src, localizacao_id: cfg.imovelDestino?.id })
+            onPedir?.({
+              ...src,
+              localizacao_id: cfg.imovelDestino?.id,
+              variacao_id: variacaoSel || null,
+              frequency_id: freqSel !== 'pontual' ? freqSel : null,
+            })
           }}
           localizacaoId={smartConfig.localizacaoId}
           categoriaSlug={smartConfig.categoriaSlug}
@@ -238,7 +293,7 @@ export default function ServicoDetailScreen({ servico, onBack, onPedir, onAdicio
             <span
               style={{ fontSize:18, cursor:'pointer' }}
               onClick={() => {
-                if (navigator.share) navigator.share({ title: nome, text: `${nome} — a partir de ${preco}`, url: window.location.href })
+                if (navigator.share) navigator.share({ title: nome, text: `${nome} — a partir de ${precoFinal}`, url: window.location.href })
               }}
               title="Partilhar"
             >🔗</span>
@@ -276,7 +331,7 @@ export default function ServicoDetailScreen({ servico, onBack, onPedir, onAdicio
         {/* C5 — CHIPS META */}
         <div style={{ padding:'0 14px 14px', display:'flex', gap:7, overflowX:'auto', WebkitOverflowScrolling:'touch', scrollbarWidth:'none', msOverflowStyle:'none' }}>
           {[
-            duracao !== '—' ? `🕐 ${duracao}` : null,
+            duracaoAtual !== '—' ? `🕐 ${duracaoAtual}` : null,
             `🛡️ ${garantia} garantia`,
             '✓ Profissional verificado',
             '💰 Preço fixo',
@@ -288,15 +343,83 @@ export default function ServicoDetailScreen({ servico, onBack, onPedir, onAdicio
         {/* C6 — PREÇO BLOCO */}
         <div style={{ margin:'0 14px 14px', background:C.greenXl, borderRadius:14, padding:'16px 18px' }}>
           <div style={{ display:'flex', alignItems:'baseline', gap:8, marginBottom:4 }}>
-            <span style={{ fontSize:32, fontWeight:800, color:G, lineHeight:1 }}>{preco}</span>
-            {src.preco_original && Number(src.preco_original) > Number(src.preco) && (
+            <span style={{ fontSize:32, fontWeight:800, color:G, lineHeight:1 }}>{precoFinal}</span>
+            <span style={{ fontSize:13, color:GM, fontWeight:500 }}>{precoSufixo}</span>
+            {freqDiscount > 0 && (
+              <span style={{ fontSize:13, color:C.slate, textDecoration:'line-through' }}>€{precoBase.toFixed(0)}</span>
+            )}
+            {src.preco_original && !variacaoAtual && !freqDiscount && Number(src.preco_original) > Number(src.preco) && (
               <span style={{ fontSize:14, color:C.slate, textDecoration:'line-through' }}>€{Number(src.preco_original).toFixed(0)}</span>
             )}
           </div>
           <div style={{ fontSize:12, color:GM, fontWeight:600 }}>Preço final · sem surpresas</div>
-          {/* TODO(mario 3.3.14-fix-ux5): configurador dinâmico com cálculo de opções */}
-          <div style={{ fontSize:11, color:C.stone, marginTop:5 }}>Algumas opções podem variar o preço · escolhes na próxima fase</div>
+          {freqDiscount > 0 && freqOpcao && (
+            <div style={{ fontSize:11, color:G, fontWeight:700, marginTop:4 }}>
+              Poupas {Math.round(freqDiscount * 100)}% · {freqOpcao.hint}
+            </div>
+          )}
+          {!freqDiscount && (
+            <div style={{ fontSize:11, color:C.stone, marginTop:5 }}>Algumas opções podem variar o preço · escolhes na próxima fase</div>
+          )}
         </div>
+
+        {/* C6b — VARIAÇÕES (grupos-pai com filhos) */}
+        {variacoes.length > 0 && (
+          <div style={{ margin:'0 14px 14px', background:C.white, border:`1px solid ${C.border}`, borderRadius:14, padding:'14px 16px' }}>
+            <div style={{ fontSize:9, fontWeight:800, letterSpacing:.7, color:C.stone, textTransform:'uppercase', marginBottom:10 }}>Escolhe a opção</div>
+            <div style={{ display:'flex', gap:7, flexWrap:'wrap' }}>
+              {variacoes.map(v => {
+                const sel = v.id === variacaoSel
+                return (
+                  <button
+                    key={v.id}
+                    onClick={() => setVariacaoSel(v.id)}
+                    style={{
+                      padding:'9px 14px', borderRadius:20, border:`1.5px solid ${sel ? G : C.border}`,
+                      background: sel ? C.greenXl : C.bg, color: sel ? G : C.stone,
+                      fontSize:12, fontWeight:700, cursor:'pointer', lineHeight:1.3, textAlign:'left',
+                    }}
+                  >
+                    <div>{v.nome}</div>
+                    <div style={{ fontSize:11, fontWeight:600, marginTop:1 }}>€{Number(v.preco).toFixed(0)}</div>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* C6c — PLANOS DE FREQUÊNCIA */}
+        {freqOptions.length > 1 && (
+          <div style={{ margin:'0 14px 14px', background:C.white, border:`1px solid ${C.border}`, borderRadius:14, padding:'14px 16px' }}>
+            <div style={{ fontSize:9, fontWeight:800, letterSpacing:.7, color:C.stone, textTransform:'uppercase', marginBottom:10 }}>Frequência</div>
+            <div style={{ display:'flex', gap:7, flexWrap:'wrap' }}>
+              {freqOptions.map(o => {
+                const sel = o.id === freqSel
+                const disc = o.discount > 0 ? Math.round(o.discount * 100) : 0
+                return (
+                  <button
+                    key={o.id}
+                    onClick={() => setFreqSel(o.id)}
+                    style={{
+                      padding:'9px 14px', borderRadius:20, border:`1.5px solid ${sel ? G : C.border}`,
+                      background: sel ? C.greenXl : C.bg, color: sel ? G : C.stone,
+                      fontSize:12, fontWeight:700, cursor:'pointer', lineHeight:1.3, textAlign:'left',
+                    }}
+                  >
+                    <div>{o.label}</div>
+                    {disc > 0 && (
+                      <div style={{ fontSize:10, color: sel ? G : '#16a34a', fontWeight:600, marginTop:1 }}>−{disc}%</div>
+                    )}
+                  </button>
+                )
+              })}
+            </div>
+            {freqOpcao && freqSel !== 'pontual' && (
+              <div style={{ marginTop:10, fontSize:11, color:C.stone, lineHeight:1.5 }}>{freqOpcao.hint}</div>
+            )}
+          </div>
+        )}
 
         <div style={{ padding:'0 14px' }}>
 
@@ -440,9 +563,12 @@ export default function ServicoDetailScreen({ servico, onBack, onPedir, onAdicio
       {/* C15 — CTA BOTTOM FIXED */}
       <div style={{ position:'fixed', bottom:0, left:0, right:0, maxWidth:600, margin:'0 auto', padding:'12px 16px 20px', background:C.white, borderTop:`1px solid ${C.border}`, boxShadow:'0 -4px 20px rgba(0,0,0,0.09)' }}>
         <div style={{ display:'flex', gap:10, alignItems:'center' }}>
-          <div style={{ minWidth:80 }}>
-            <div style={{ fontSize:26, fontWeight:800, color:G, lineHeight:1 }}>{preco}</div>
-            {duracao !== '—' && <div style={{ fontSize:10, color:C.slate, marginTop:2 }}>⏱ {duracao}</div>}
+          <div style={{ minWidth:90 }}>
+            <div style={{ display:'flex', alignItems:'baseline', gap:4 }}>
+              <span style={{ fontSize:26, fontWeight:800, color:G, lineHeight:1 }}>{precoFinal}</span>
+              {precoSufixo && <span style={{ fontSize:11, color:GM, fontWeight:500 }}>{precoSufixo}</span>}
+            </div>
+            {duracaoAtual !== '—' && <div style={{ fontSize:10, color:C.slate, marginTop:2 }}>⏱ {duracaoAtual}</div>}
           </div>
           <div style={{ flex:1, display:'flex', gap:8 }}>
             <button

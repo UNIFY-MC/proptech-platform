@@ -86,7 +86,7 @@ export default function CategoriaScreen({ categoria, onBack, onNavigateServico, 
     setLoading(true)
     let { data } = await supaPublic
       .from('servicos')
-      .select('id, nome, preco, duracao_tipica, popular, icon, categoria_id, subcategoria_id, sub_grupo')
+      .select('id, nome, preco, duracao_tipica, popular, icon, categoria_id, subcategoria_id, sub_grupo, imagem_url')
       .eq('activo', true)
       .is('servico_pai_id', null)
       .neq('tipo', 'personalizado')
@@ -96,7 +96,7 @@ export default function CategoriaScreen({ categoria, onBack, onNavigateServico, 
     if (!data || data.length === 0) {
       const res = await supaPublic
         .from('servicos')
-        .select('id, nome, preco, duracao_tipica, popular, icon, categoria_id, subcategoria_id, sub_grupo')
+        .select('id, nome, preco, duracao_tipica, popular, icon, categoria_id, subcategoria_id, sub_grupo, imagem_url')
         .eq('activo', true)
         .is('servico_pai_id', null)
         .neq('tipo', 'personalizado')
@@ -233,19 +233,26 @@ export default function CategoriaScreen({ categoria, onBack, onNavigateServico, 
             <div
               key={s.id}
               onClick={() => onNavigateServico?.(s)}
-              style={{ background:C.white, border:`1px solid ${C.border}`, borderRadius:14, padding:'14px 16px', marginBottom:10, cursor:'pointer', display:'flex', gap:12 }}
+              style={{ background:C.white, border:`1px solid ${C.border}`, borderRadius:14, padding:'12px 14px', marginBottom:10, cursor:'pointer', display:'flex', gap:12, alignItems:'center' }}
             >
-              <span style={{ fontSize:28, flexShrink:0 }}>{ic}</span>
-              <div style={{ flex:1 }}>
+              {s.imagem_url ? (
+                <img
+                  src={s.imagem_url}
+                  alt={s.nome}
+                  style={{ width:52, height:52, borderRadius:10, objectFit:'cover', flexShrink:0, background:'#e5e5e3' }}
+                  onError={e => { e.target.style.display='none'; e.target.nextSibling.style.display='flex' }}
+                />
+              ) : null}
+              <span style={{ fontSize:28, flexShrink:0, display: s.imagem_url ? 'none' : 'inline' }}>{ic}</span>
+              <div style={{ flex:1, minWidth:0 }}>
                 <div style={{ fontSize:13, fontWeight:700, color:C.ink, marginBottom:4 }}>{s.nome}</div>
                 <div style={{ display:'flex', gap:10, fontSize:11, color:C.slate }}>
                   {s.duracao_tipica && <span>⏱ {s.duracao_tipica}</span>}
-                  {s.popular && <span style={{ color:G, fontWeight:700 }}>⭐</span>}
+                  {s.popular && <span style={{ color:G, fontWeight:700 }}>⭐ Popular</span>}
                 </div>
               </div>
               <div style={{ textAlign:'right', flexShrink:0 }}>
                 <div style={{ fontSize:16, fontWeight:700, color:G }}>{precoFmt(s.preco)}</div>
-                {/* TODO(mario): mostrar "+ IVA" condicionalmente para clientes B2B com NIF empresa (Fase 6+) */}
               </div>
             </div>
           )

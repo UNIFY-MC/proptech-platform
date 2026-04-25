@@ -322,7 +322,7 @@ Colunas novas em `ordens`:
 | **3.3.14-fix-ux2** | ✅ fechada | IniciaScreen hero redesign + smart shortcuts |
 | **3.3.14-fix-ux3** | ✅ fechada | Combos BD real + search bar debounce + 9ª cat Packs + 22 serviços novos (199 total) |
 | **3.3.14-fix-ux4** | ✅ fechada | ServicoDetailScreen redesign 15 secções + inclui/exclui BD + stats + imagens Unsplash + FAQ |
-| **3.3.14-fix-ux5** | próxima | Configurador dinâmico + planos subscrição + CategoriaScreen BD real |
+| **3.3.14-fix-ux5** | ✅ fechada | Configurador variações + planos frequência + thumbnails CategoriaScreen |
 | **3.4.0** | futura | Auth real (Fase 2d) + Lista de tarefas (Fase 3a) |
 
 ### Notas para 3.3.12
@@ -391,12 +391,21 @@ Colunas novas em `ordens`:
 - `TODO(mario 3.5)`: rating real, configurador dinâmico (anotados inline no JSX)
 - SQL: `sql/10_v5_3_3_14_ux4_servico_detalhe.sql`
 
-## Débito 3.5 — Pendentes pós 3.3.14-fix-ux4
+## Notas para 3.3.14-fix-ux5
+
+- `ServicoDetailScreen`: novos states `variacoes`, `variacaoSel`, `freqOptions`, `freqSel`
+- `fetchVariacoes`: `supaPublic.from('servicos').eq('servico_pai_id', servId)` — carrega filhos do grupo
+- `fetchFrequencia`: `supaPublic.from('frequency_templates').select('options').eq('id', tmpl)` — depois do detalhe carregar
+- `precoEfetivo = precoBase × (1 - freqDiscount)` — actualiza C6 e CTA em tempo real
+- Secção C6b (variações) só aparece quando `variacoes.length > 0`
+- Secção C6c (frequência) só aparece quando `freqOptions.length > 1`
+- `CategoriaScreen`: `imagem_url` adicionado ao select; card mostra thumbnail 52×48 quando disponível, emoji como fallback via `onError`
+- Sem nova SQL — `servico_variacoes`, `frequency_templates`, `imagem_url` já existiam
+
+## Débito 3.5 — Pendentes pós 3.3.14-fix-ux5
 
 - **RLS** em `pedidos_orcamento`, `orcamentos_recebidos`, `contexto_servico`, `servicos_inclui_exclui`, `servicos_faq`, `platform_stats` (sem policies — só funciona em demo)
-- **Configurador dinâmico** em ServicoDetailScreen: opções com cálculo de preço (fix-ux5)
-- **Planos subscrição** mensal/quinzenal/semanal no detalhe (fix-ux5)
-- **CategoriaScreen BD real**: substituir mock data por queries reais
+- **CategoriaScreen reviews reais**: query `avaliacoes` por categoria (actualmente mock)
 - **Reviews reais**: query `avaliacoes WHERE servico_id` (actualmente mock)
 - **FAQ seedado completo**: actualmente só 7 serviços; expandir para os 199
 - **Imagens próprias**: actualmente Unsplash; migrar para Supabase Storage + AI geradas
