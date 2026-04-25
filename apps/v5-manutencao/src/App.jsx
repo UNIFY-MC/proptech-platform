@@ -45,6 +45,7 @@ import MaisContratadosScreen from './screens/MaisContratadosScreen.jsx'
 import OrcamentosLandingScreen from './screens/OrcamentosLandingScreen.jsx'
 import OrcamentoWizardScreen from './screens/OrcamentoWizardScreen.jsx'
 import OrcamentoConfirmadoScreen from './screens/OrcamentoConfirmadoScreen.jsx'
+import OrcamentoDetalheScreen from './screens/OrcamentoDetalheScreen.jsx'
 import {
   ArrowLeft, X, Check, Camera, Clock, Plus, MapPin, ChevronRight,
   Shield, Lock, MessageSquare, FileImage, RefreshCw, Wrench,
@@ -10725,6 +10726,8 @@ export default function App() {
     'historico_pontos','avaliacoes_screen','pagamentos','notificacoes','definicoes','ajuda',
     'imoveis','equipa','prestador_detail','home_assessment','categoria_detail',
     'servico_detail','combo_detail','promocao_detail','combos','mais_contratados','chat_suporte',
+    'orcamentos_landing','orcamento_wizard','orcamento_confirmado','imovel_detalhe',
+    'orcamento_detalhe',
   ].includes(ecra) || (role==='cliente' && catScreen !== null)
 
   return (
@@ -10898,6 +10901,7 @@ export default function App() {
           {ecra==='orcamentos_landing'  && <OrcamentosLandingScreen onBack={()=>setEcra('home')} onIniciar={()=>setEcra('orcamento_wizard')} />}
           {ecra==='orcamento_wizard'    && <OrcamentoWizardScreen onBack={()=>setEcra('orcamentos_landing')} onConfirmado={()=>setEcra('orcamento_confirmado')} />}
           {ecra==='orcamento_confirmado'&& <OrcamentoConfirmadoScreen onVerPedidos={()=>{ setEcra('home'); setTab('pedidos') }} onVoltarInicio={()=>setEcra('home')} />}
+          {ecra==='orcamento_detalhe'  && <OrcamentoDetalheScreen orcamentoId={selNav?.orcamentoId} onBack={()=>{ setEcra('home'); setTab('pedidos') }} />}
 
           {/* Fluxo antigo (activo apenas quando catScreen === null) */}
           {catScreen===null && <>
@@ -10932,7 +10936,7 @@ export default function App() {
                 onClose={()=>{ setShowSubscricao(false); setShowPerfilSheet(true) }}
                 authUser={authUser}
               />
-              {tab==='servicos' && <ServicosScreen authUser={authUser} onHamburguer={()=>setClienteDrawerOpen(true)} onAvatarClick={()=>setShowPerfilSheet(true)} notifCount={notifsNaoLidas} onNavigateNotificacoes={()=>setEcra('notificacoes')} onNavigateChatSuporte={()=>setEcra('chat_suporte')} onOpenImovelSelector={()=>setShowImovelSelector(true)} onNavigateOrcamentos={()=>setEcra('orcamentos_landing')} onNavigateReferral={()=>setEcra('referral')} />}
+              {tab==='servicos' && <ServicosScreen authUser={authUser} onHamburguer={()=>setClienteDrawerOpen(true)} onAvatarClick={()=>setShowPerfilSheet(true)} notifCount={notifsNaoLidas} onNavigateNotificacoes={()=>setEcra('notificacoes')} onNavigateChatSuporte={()=>setEcra('chat_suporte')} onOpenImovelSelector={()=>setShowImovelSelector(true)} onNavigateOrcamentos={()=>setEcra('orcamentos_landing')} onNavigateReferral={()=>setEcra('referral')} onNavigateCategoria={(cat)=>{ setSelNav(p=>({...p,categoria:cat})); setEcra('categoria_detail') }} />}
               {tab==='inicio'   && <IniciaScreen authUser={authUser} onNavigateCasa={()=>{ setTab('casa'); setEcra('home') }} onNavigateServicos={()=>setTab('servicos')} onHamburguer={()=>setClienteDrawerOpen(true)} onAvatarClick={()=>setShowPerfilSheet(true)} onNavigateScore={()=>setEcra('score_detail')} onNavigateAlerta={(a)=>{ setSelAlerta(a); setEcra('alerta_detail') }} onNavigateOwnersClub={()=>setEcra('owners_club')} notifCount={notifsNaoLidas} onNavigateNotificacoes={()=>setEcra('notificacoes')} onNavigateChatSuporte={()=>setEcra('chat_suporte')} onOpenImovelSelector={()=>setShowImovelSelector(true)} onNavigateImovelDetalhe={(id)=>{ setSelNav(p=>({...p,imovelDetalheId:id})); setEcra('imovel_detalhe') }} />}
               {tab==='casa' && !casaActiveEq && !casaSub && <CasaScreen
                 equipamentos={casaEquipamentos}
@@ -10995,7 +10999,7 @@ export default function App() {
                 authUser={authUser}
                 onBack={()=>setCasaSub(null)}
               />}
-              {tab==='pedidos'  && <PedidosScreen ordens={ordens} authUser={authUser} onOrdem={o=>{setSel(o);setEcra('ordem')}} onChat={o=>{setSel(o);setEcra('chat_prestador')}} onHamburguer={()=>setClienteDrawerOpen(true)} onAvatarClick={()=>setShowPerfilSheet(true)} notifCount={notifsNaoLidas} onNavigateNotificacoes={()=>setEcra('notificacoes')} onNavigateChatSuporte={()=>setEcra('chat_suporte')} onOpenImovelSelector={()=>setShowImovelSelector(true)} />}
+              {tab==='pedidos'  && <PedidosScreen ordens={ordens} authUser={authUser} onOrdem={o=>{setSel(o);setEcra('ordem')}} onChat={o=>{setSel(o);setEcra('chat_prestador')}} onHamburguer={()=>setClienteDrawerOpen(true)} onAvatarClick={()=>setShowPerfilSheet(true)} notifCount={notifsNaoLidas} onNavigateNotificacoes={()=>setEcra('notificacoes')} onNavigateChatSuporte={()=>setEcra('chat_suporte')} onOpenImovelSelector={()=>setShowImovelSelector(true)} onNavigateOrcamentoDetalhe={(id)=>{ setSelNav(p=>({...p,orcamentoId:id})); setEcra('orcamento_detalhe') }} />}
               {tab==='perfil'   && ecra!=='moradas' && ecra!=='wishlist' && (
                 <CPerfil
                   authUser={authUser}

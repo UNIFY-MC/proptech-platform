@@ -13,8 +13,7 @@ export default function AlertaDetailScreen({ alerta, onBack, onPedirTecnico, onN
   function handleAcao(a, acao) {
     switch (acao.action) {
       case 'pedir_servico':
-        if (onNavigateOrcamento) onNavigateOrcamento()
-        else onPedirTecnico?.()
+        onNavigateOrcamento ? onNavigateOrcamento() : onPedirTecnico?.()
         break
       case 'marcar_verificado':
         setAlertas(prev => prev.filter(x => x.id !== a.id))
@@ -39,11 +38,11 @@ export default function AlertaDetailScreen({ alerta, onBack, onPedirTecnico, onN
   return (
     <div style={{ minHeight:'100vh', background:C.bg, paddingBottom:32 }}>
 
-      {/* ── Header gradient verde ── */}
+      {/* ── Header gradiente verde ── */}
       <div style={{ background:`linear-gradient(135deg,${G},${GM})`, padding:'12px 14px 18px', color:'#fff' }}>
         <div style={{ fontSize:10, opacity:.7, cursor:'pointer', marginBottom:10 }} onClick={onBack}>← Casa</div>
         <div style={{ fontSize:10, color:C.greenLt, fontWeight:700, letterSpacing:.6, marginBottom:4 }}>
-          🔔 ALERTAS INTELIGENTES · {alertas.length} ATIVOS
+          🔔 ALERTAS INTELIGENTES · {alertas.length} ACTIVOS
         </div>
         <div style={{ fontSize:19, fontWeight:700, fontFamily:'Georgia,serif', lineHeight:1.2 }}>
           A tua casa tem coisas a dizer-te
@@ -62,12 +61,12 @@ export default function AlertaDetailScreen({ alerta, onBack, onPedirTecnico, onN
             <div style={{ fontSize:12, color:C.slate, marginTop:4 }}>Sem alertas activos neste momento.</div>
           </div>
         ) : alertas.map(a => (
-          <div key={a.id} style={{ background:C.white, border:`1px solid ${C.border}`, borderRadius:12, padding:'13px 14px', marginBottom:9, borderLeft:`4px solid ${a.cor}` }}>
+          <div key={a.id} style={{ background:C.white, border:`1px solid ${C.border}`, borderLeft:`4px solid ${a.cor}`, borderRadius:12, padding:'13px 14px', marginBottom:9 }}>
             <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:8 }}>
               <div style={{ fontSize:20 }}>{a.emoji}</div>
               <div style={{ fontSize:9, padding:'3px 8px', borderRadius:5, background:a.cor_bg, color:a.cor, fontWeight:700, letterSpacing:.3 }}>{a.nivel}</div>
             </div>
-            <div style={{ fontSize:13, fontWeight:700, marginBottom:5, lineHeight:1.3 }}>{a.titulo}</div>
+            <div style={{ fontSize:13, fontWeight:700, color:C.ink, marginBottom:5, lineHeight:1.3 }}>{a.titulo}</div>
             <div style={{ fontSize:11, color:C.slate, lineHeight:1.6, marginBottom:10 }}>{a.descricao}</div>
             <div style={{ display:'flex', gap:7 }}>
               {a.acoes.map((acao, j) => (

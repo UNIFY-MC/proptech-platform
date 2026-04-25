@@ -314,7 +314,7 @@ const EMPTY = {
 
 const purple = '#534AB7'
 
-function OrcamentoMockCard({ orc }) {
+function OrcamentoMockCard({ orc, onNavigate }) {
   const progresso = Math.round((orc.propostas_recebidas / orc.propostas_alvo) * 100)
   const emFalta   = orc.propostas_alvo - orc.propostas_recebidas
   const minAgo    = Math.round((Date.now() - new Date(orc.enviado_em).getTime()) / 60000)
@@ -322,7 +322,7 @@ function OrcamentoMockCard({ orc }) {
 
   return (
     <div
-      onClick={() => { /* TODO(mario 3.3.14): navegar para detalhe do pedido orçamento */ }}
+      onClick={() => onNavigate?.(orc.id)}
       style={{ background: V5.white, border:`2px solid ${purple}`, borderRadius:14, padding:'13px 14px', marginBottom:10, cursor:'pointer' }}
     >
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:7 }}>
@@ -343,7 +343,7 @@ function OrcamentoMockCard({ orc }) {
   )
 }
 
-export default function PedidosScreen({ ordens, authUser, onOrdem, onChat, onHamburguer, onAvatarClick, onNavigateNotificacoes, onNavigateChatSuporte, notifCount = 0, onOpenImovelSelector }) {
+export default function PedidosScreen({ ordens, authUser, onOrdem, onChat, onHamburguer, onAvatarClick, onNavigateNotificacoes, onNavigateChatSuporte, notifCount = 0, onOpenImovelSelector, onNavigateOrcamentoDetalhe }) {
   const [tabAtivo, setTabAtivo] = useState('em_curso')
 
   const ordensTab = (ordens || []).filter(o => tabParaOrdem(o.st) === tabAtivo)
@@ -397,7 +397,7 @@ export default function PedidosScreen({ ordens, authUser, onOrdem, onChat, onHam
       <div style={{ padding: '14px 14px 28px' }}>
         {/* Cards mock de orçamentos à medida em curso */}
         {tabAtivo === 'em_curso' && MOCK_ORCAMENTOS_PEDIDOS.map(orc => (
-          <OrcamentoMockCard key={orc.id} orc={orc} />
+          <OrcamentoMockCard key={orc.id} orc={orc} onNavigate={onNavigateOrcamentoDetalhe} />
         ))}
 
         {/* Lista ou empty state */}

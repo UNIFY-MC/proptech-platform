@@ -1,5 +1,4 @@
-import React, { useState, useEffect } from 'react'
-import { supaPublic } from './supa.js'
+import React from 'react'
 import HeroHeader from './HeroHeader.jsx'
 
 const V5 = {
@@ -155,7 +154,7 @@ function SvcCard({ s }) {
 }
 
 /* ── Vista marketplace (ecrã principal de serviços) ──────────────── */
-function MarketplaceView({ onCatSel, onHamburguer, onAvatarClick, authUser, notifCount, onNavigateNotificacoes, onNavigateChatSuporte, onOpenImovelSelector, onNavigateOrcamentos, onNavigateReferral }) {
+function MarketplaceView({ onNavigateCategoria, onHamburguer, onAvatarClick, authUser, notifCount, onNavigateNotificacoes, onNavigateChatSuporte, onOpenImovelSelector, onNavigateOrcamentos, onNavigateReferral }) {
   return (
     <div style={{ minHeight: '100vh', background: V5.bg, paddingBottom: 90 }}>
       {/* Hero verde */}
@@ -268,7 +267,7 @@ function MarketplaceView({ onCatSel, onHamburguer, onAvatarClick, authUser, noti
           display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 8,
         }}>
           {CATS_GRID.map(cat => (
-            <button key={cat.id} onClick={() => cat.id === 'orcamentos' ? onNavigateOrcamentos?.() : onCatSel(cat)} style={{
+            <button key={cat.id} onClick={() => cat.id === 'orcamentos' ? onNavigateOrcamentos?.() : onNavigateCategoria?.({ id: cat.id, nome: cat.l, emoji: cat.ic })} style={{
               background: V5.white, border: `1px solid ${cat.nova ? V5.purple : V5.border}`,
               borderRadius: 12, padding: '9px 4px',
               cursor: 'pointer', textAlign: 'center',
@@ -400,119 +399,11 @@ function MarketplaceView({ onCatSel, onHamburguer, onAvatarClick, authUser, noti
   )
 }
 
-/* ── Vista: lista de serviços da categoria ───────────────────────── */
-function CategoriaView({ cat, onBack }) {
-  const [servicos, setServicos] = useState(null)
-  const [loadErr, setLoadErr]   = useState(false)
-
-  useEffect(() => {
-    let active = true
-    setServicos(null)
-    setLoadErr(false)
-
-    async function load() {
-      const { data, error } = await supaPublic
-        .from('servicos')
-        .select('id,nome,tagline,icon,preco,preco_original,unidade,duracao_tipica,popular,eco,urgent,ordem')
-        .eq('categoria_id', cat.id)
-        .eq('activo', true)
-        .is('servico_pai_id', null)
-        .neq('tipo', 'personalizado')
-        .order('ordem', { ascending: true })
-
-      if (!active) return
-      if (error) { console.warn('[ServicosScreen]', error); setLoadErr(true); return }
-      setServicos(data || [])
-    }
-    load()
-    return () => { active = false }
-  }, [cat.id])
-
-  return (
-    <div style={{ minHeight: '100vh', background: V5.bg, paddingBottom: 90 }}>
-      <div style={{
-        background: V5.white, padding: '14px 16px',
-        borderBottom: `1px solid ${V5.border}`,
-        position: 'sticky', top: 0, zIndex: 10,
-        display: 'flex', alignItems: 'center', gap: 10,
-      }}>
-        <button
-          onClick={onBack}
-          style={{ background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: V5.ink, padding: 0, flexShrink: 0 }}
-        >←</button>
-        <span style={{ fontSize: 22, flexShrink: 0 }}>{cat.ic}</span>
-        <h1 style={{ fontSize: 17, fontWeight: 800, color: V5.ink, margin: 0, flex: 1 }}>
-          {cat.l}
-        </h1>
-      </div>
-
-      <div style={{ padding: '14px 14px 28px' }}>
-        {servicos === null && !loadErr && (
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-            {[...Array(5)].map((_, i) => <Skel key={i} />)}
-          </div>
-        )}
-
-        {loadErr && (
-          <div style={{
-            padding: '32px 24px', textAlign: 'center',
-            background: V5.white, borderRadius: 14, border: `1px dashed ${V5.border}`,
-          }}>
-            <div style={{ fontSize: 32, marginBottom: 10 }}>⚠️</div>
-            <div style={{ fontSize: 14, fontWeight: 700, color: V5.ink, marginBottom: 8 }}>
-              Não foi possível carregar os serviços
-            </div>
-            <button
-              onClick={() => { setLoadErr(false); setServicos(null) }}
-              style={{
-                background: V5.green, color: '#fff', border: 'none', borderRadius: 10,
-                padding: '8px 18px', fontSize: 12, fontWeight: 700, cursor: 'pointer',
-              }}
-            >
-              Tentar de novo
-            </button>
-          </div>
-        )}
-
-        {servicos !== null && servicos.length === 0 && (
-          <div style={{
-            padding: '40px 24px', textAlign: 'center',
-            background: V5.white, borderRadius: 14, border: `1px dashed ${V5.border}`,
-          }}>
-            <div style={{ fontSize: 32, marginBottom: 10 }}>{cat.ic}</div>
-            <div style={{ fontSize: 15, fontWeight: 700, color: V5.ink, marginBottom: 6 }}>
-              Sem serviços disponíveis
-            </div>
-            <div style={{ fontSize: 12, color: V5.slate }}>
-              Nenhum serviço nesta categoria de momento.
-            </div>
-          </div>
-        )}
-
-        {servicos !== null && servicos.length > 0 &&
-          servicos.map(s => <SvcCard key={s.id} s={s} />)
-        }
-      </div>
-    </div>
-  )
-}
-
 /* ── Ecrã principal ──────────────────────────────────────────────── */
-export default function ServicosScreen({ authUser, onHamburguer, onAvatarClick, onNavigateNotificacoes, onNavigateChatSuporte, notifCount = 0, onOpenImovelSelector, onNavigateOrcamentos, onNavigateReferral }) {
-  const [catSel, setCatSel] = useState(null)
-
-  if (catSel) {
-    return (
-      <CategoriaView
-        cat={catSel}
-        onBack={() => setCatSel(null)}
-      />
-    )
-  }
-
+export default function ServicosScreen({ authUser, onHamburguer, onAvatarClick, onNavigateNotificacoes, onNavigateChatSuporte, notifCount = 0, onOpenImovelSelector, onNavigateOrcamentos, onNavigateReferral, onNavigateCategoria }) {
   return (
     <MarketplaceView
-      onCatSel={setCatSel}
+      onNavigateCategoria={onNavigateCategoria}
       onHamburguer={onHamburguer}
       onAvatarClick={onAvatarClick}
       authUser={authUser}
