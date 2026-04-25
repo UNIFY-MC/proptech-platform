@@ -37,7 +37,7 @@ const C = {
 
 ## Estado do catálogo
 
-- **177 serviços** em 8 categorias (limpeza, manutenção, jardim, piscina, pintura, elétrica, canalização, pós-obra)
+- **199 serviços** em 8 categorias (limpeza, manutenção, jardim, piscina, pintura, elétrica, canalização, pós-obra)
 - **11 grupos-pai** com variantes (tipologia/tamanho) — ex: `cln-home` tem t1/t2/t3/t4, `cln-move` tem t1/t2/t3/t4, `mnt-xmas-lights` tem interior/exterior/full
 - **36 serviços variantes** ligados a grupos-pai via `servico_pai_id`
 - **8 templates de frequência** configuráveis via admin (tabela `frequency_templates`)
@@ -288,9 +288,12 @@ Tabelas principais:
 - `profiles` (users), `prestadores`
 - `ordens` (com pipeline de 10 estados), `ordem_mensagens` (chat)
 - `categorias`, `subcategorias`
-- `servicos` (com `servico_pai_id` para grupos e `frequency_template` para recorrência)
+- `servicos` (com `servico_pai_id` para grupos e `frequency_template` para recorrência) — colunas novas: `imagem_url`, `imagem_alt`, `popular`, `sub_grupo`
 - `servico_variacoes`, `servico_extras`
 - `frequency_templates` (nova — 8 templates configuráveis)
+- `v5_manutencao.servicos_inclui_exclui` — inclui/exclui por serviço (228 rows para 7 serviços top)
+- `v5_manutencao.servicos_faq` — FAQ por serviço
+- `v5_manutencao.platform_stats` — KPIs da plataforma (5 stats)
 
 Colunas novas em `ordens`:
 - `metadata` JSONB — guarda opções dinâmicas escolhidas pelo cliente (produtos, frequência, preço efectivo)
@@ -315,7 +318,12 @@ Colunas novas em `ordens`:
 | **3.3.12** | ✅ fechada | Imóvel como entidade central: GPS + CRUD completo + ImovelDetalheScreen |
 | **3.3.13** | ✅ fechada | Orçamentos à medida (flow visual 4 steps) + CategoriaScreen enriquecida + AlertActions Shipshape |
 | **3.3.14** | ✅ fechada | Tab memory + EscolherImovelSheet + orcamentos BD real + SmartPromptsSheet + completude |
-| **3.4.0** | próxima | Auth real (Fase 2d) + Lista de tarefas (Fase 3a) |
+| **3.3.14-fix-ux1** | ✅ fechada | Combos UI + HeroHeader + layout ServicosScreen |
+| **3.3.14-fix-ux2** | ✅ fechada | IniciaScreen hero redesign + smart shortcuts |
+| **3.3.14-fix-ux3** | ✅ fechada | Combos BD real + search bar debounce + 9ª cat Packs + 22 serviços novos (199 total) |
+| **3.3.14-fix-ux4** | ✅ fechada | ServicoDetailScreen redesign 15 secções + inclui/exclui BD + stats + imagens Unsplash + FAQ |
+| **3.3.14-fix-ux5** | próxima | Configurador dinâmico + planos subscrição + CategoriaScreen BD real |
+| **3.4.0** | futura | Auth real (Fase 2d) + Lista de tarefas (Fase 3a) |
 
 ### Notas para 3.3.12
 
@@ -355,9 +363,43 @@ Colunas novas em `ordens`:
 - `MOCK_ORCAMENTOS_PEDIDOS` e `MOCK_PROPOSTAS_ORCAMENTO` removidos — BD real
 - `ImovelAtivoContext` agora tem: `imovelAtivoPorTab`, `setImovelAtivoForTab`, `onTabChange`, `resetParaPrincipal`
 
-## Débito 3.5 — Pendentes pós 3.3.14
+## Notas para 3.3.14-fix-ux3
 
-- **RLS** em `pedidos_orcamento`, `orcamentos_recebidos`, `contexto_servico` (actualmente sem policies — só funciona em demo)
+- `v5_manutencao.combos` carregados da BD (não mock): `preco_combo`, `preco_normal`, `cor_hex`, `emoji`, `sub`, `desconto_pct`, `servicos_ids`, `descricao_longa`
+- `adaptCombo(bdRow)` → formato card; `adaptComboForDetail(bdRow)` → ComboDetailScreen
+- Search bar com debounce 300ms, dropdown com resultado + card rosa "Orçamento personalizado"
+- 9ª categoria "Packs" 🎁 no grid → navega para ecra `combos`
+- `OrcamentoWizardScreen` aceita `descricaoInicial` prop (pré-preenche descrição a partir da search)
+- `wizardBackTarget` em `selNav` para routing correcto do back no wizard (search vs categoria)
+- 199 serviços activos (22 novos inseridos, 7 já existiam dos 29 do SQL)
+- Fallback COMBOS_FALLBACK / MAIS_FALLBACK como estado inicial (evita flash)
+- `ServicosScreen.jsx` migrado para ficheiro separado (~290 linhas)
+
+## Notas para 3.3.14-fix-ux4
+
+- `ServicoDetailScreen.jsx` completamente redesenhado — 15 secções (C1–C15)
+- Novos imports: `ImagemServico` component + `supa` para tabelas v5_manutencao
+- `supaPublic.from('servicos')` para dados do catálogo; `supa.from(...)` para inclui/exclui/faq/stats
+- `incluiDisplay`: BD prioritário, fallback JSONB legacy `src.inclui`
+- `faqDisplay`: BD prioritário, fallback `FAQ_GENERICO[catId]` (categorias: 8 entradas)
+- `fetchRelacionados`: popular=true da mesma categoria, excluindo o serviço actual
+- `platform_stats`: 5 KPIs, carregados via `supa.from('platform_stats')`
+- `ImagemServico` component: `src/components/ImagemServico.jsx` + `src/lib/imagens.js`
+- `imagens.js`: FALLBACK_POR_CATEGORIA (8 URLs Unsplash) + FALLBACK_GENERICO
+- CTA fixo no bottom: preço sem `+ IVA` · botão "+ Lista" + "Pedir agora →"
+- `handlePedirAgora` e SmartPromptsSheet preservados inalterados
+- `TODO(mario 3.5)`: rating real, configurador dinâmico (anotados inline no JSX)
+- SQL: `sql/10_v5_3_3_14_ux4_servico_detalhe.sql`
+
+## Débito 3.5 — Pendentes pós 3.3.14-fix-ux4
+
+- **RLS** em `pedidos_orcamento`, `orcamentos_recebidos`, `contexto_servico`, `servicos_inclui_exclui`, `servicos_faq`, `platform_stats` (sem policies — só funciona em demo)
+- **Configurador dinâmico** em ServicoDetailScreen: opções com cálculo de preço (fix-ux5)
+- **Planos subscrição** mensal/quinzenal/semanal no detalhe (fix-ux5)
+- **CategoriaScreen BD real**: substituir mock data por queries reais
+- **Reviews reais**: query `avaliacoes WHERE servico_id` (actualmente mock)
+- **FAQ seedado completo**: actualmente só 7 serviços; expandir para os 199
+- **Imagens próprias**: actualmente Unsplash; migrar para Supabase Storage + AI geradas
 - **Acções AlertaDetailScreen**: chat IA, tutorial inline, detalhe equipamento (ainda alerts)
 - **Aceitar proposta** no OrcamentoDetalheScreen: UPDATE `pedidos_orcamento.estado='aceite'` + `proposta_aceite_id`
 - **Cancelar pedido** no OrcamentoDetalheScreen: UPDATE `estado='cancelado'`
