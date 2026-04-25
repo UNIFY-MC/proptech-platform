@@ -311,7 +311,7 @@ const EMPTY = {
   historico: { ic:'📋', title:'Sem histórico',          sub:'Os pedidos concluídos e cancelados ficam aqui para consulta.' },
 }
 
-export default function PedidosScreen({ ordens, authUser, onOrdem, onChat, onHamburguer, onAvatarClick }) {
+export default function PedidosScreen({ ordens, authUser, onOrdem, onChat, onHamburguer, onAvatarClick, onNavigateNotificacoes, onNavigateChatSuporte, notifCount = 0 }) {
   const [tabAtivo, setTabAtivo] = useState('em_curso')
 
   const ordensTab = (ordens || []).filter(o => tabParaOrdem(o.st) === tabAtivo)
@@ -329,6 +329,9 @@ export default function PedidosScreen({ ordens, authUser, onOrdem, onChat, onHam
             onAvatarClick={onAvatarClick}
             locationLabel="A MINHA CASA"
             authUser={authUser}
+            notifCount={notifCount}
+            onNotifClick={onNavigateNotificacoes}
+            onChatClick={onNavigateChatSuporte}
           />
           <div style={{ fontSize: 15, fontWeight: 800, color: '#fff', marginTop: 4 }}>
             Os meus pedidos

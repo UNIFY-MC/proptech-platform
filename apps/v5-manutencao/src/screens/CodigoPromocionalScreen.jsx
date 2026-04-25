@@ -86,7 +86,7 @@ export default function CodigoPromocionalScreen({ onBack }) {
             style={{ padding:'9px 18px', borderRadius:9, background:G, color:'#fff', border:'none', fontSize:13, fontWeight:700, cursor:'pointer' }}
           >📋 Copiar</button>
           <button
-            onClick={() => { if (navigator.share) navigator.share({ title:'Código OSCAR', text:code }); else alert('Copia o link: ' + code) }}
+            onClick={() => { if (navigator.share) navigator.share({ title:'Código de convite', text:code }); else alert('Copia o link: ' + code) }}
             style={{ padding:'9px 18px', borderRadius:9, background:C.white, color:G, border:`1px solid ${C.gold}`, fontSize:13, fontWeight:700, cursor:'pointer' }}
           >📤 Partilhar</button>
         </div>

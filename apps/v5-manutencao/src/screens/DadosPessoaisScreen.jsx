@@ -48,14 +48,14 @@ export default function DadosPessoaisScreen({ onBack }) {
     async function fetch() {
       try {
         const [pessoaRes, fiscalRes] = await Promise.all([
-          supaCore.from('pessoas').select('nome, telefone, data_nascimento, idioma, foto_url').eq('id', DEMO_PESSOA_ID).single(),
+          supaCore.from('pessoas').select('nome, telemovel, data_nascimento, idioma, foto_url').eq('id', DEMO_PESSOA_ID).single(),
           supa.from('perfis_fiscais').select('nif').eq('pessoa_id', DEMO_PESSOA_ID).maybeSingle(),
         ])
         if (!active) return
         if (pessoaRes.error) throw pessoaRes.error
         const p = pessoaRes.data
         setNome(p.nome || '')
-        setTel(p.telefone || '')
+        setTel(p.telemovel || '')
         setNasc(p.data_nascimento?.slice(0, 10) || '')
         setIdioma(p.idioma || 'pt-PT')
         setFotoUrl(p.foto_url || null)
@@ -74,7 +74,7 @@ export default function DadosPessoaisScreen({ onBack }) {
     setSaving(true)
     try {
       const [pessoaRes] = await Promise.all([
-        supaCore.from('pessoas').update({ nome, telefone: tel, data_nascimento: nasc || null, idioma }).eq('id', DEMO_PESSOA_ID),
+        supaCore.from('pessoas').update({ nome, telemovel: tel, data_nascimento: nasc || null, idioma }).eq('id', DEMO_PESSOA_ID),
         nif
           ? supa.from('perfis_fiscais').upsert({ pessoa_id: DEMO_PESSOA_ID, nif, principal: true }, { onConflict: 'pessoa_id' })
           : Promise.resolve(),

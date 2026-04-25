@@ -50,7 +50,7 @@ export default function LoginSegurancaScreen({ onBack }) {
 
   useEffect(() => {
     let active = true
-    supaCore.from('pessoas').select('email, telefone, metadata').eq('id', DEMO_PESSOA_ID).single()
+    supaCore.from('pessoas').select('email, telemovel, metadata').eq('id', DEMO_PESSOA_ID).single()
       .then(({ data, error }) => {
         if (!active) return
         if (!error && data) {
@@ -69,7 +69,7 @@ export default function LoginSegurancaScreen({ onBack }) {
   }
 
   const emailDisplay  = loading ? '...' : (pessoa?.email  || '—')
-  const telDisplay    = loading ? '...' : (pessoa?.telefone || '—')
+  const telDisplay    = loading ? '...' : (pessoa?.telemovel || '—')
 
   return (
     <div style={{ minHeight:'100vh', background:C.bg, paddingBottom:32 }}>
@@ -119,7 +119,7 @@ export default function LoginSegurancaScreen({ onBack }) {
 
       <Section label="Zona perigosa">
         <div style={{ padding:'4px 0 4px' }}>
-          <Row label="Eliminar conta permanentemente" danger onAction={() => alert('Para eliminar a tua conta contacta suporte@oscar.app.\n// TODO(mario): Fase 4')} actionLabel="Eliminar" />
+          <Row label="Eliminar conta permanentemente" danger onAction={() => alert('Para eliminar a tua conta contacta suporte@exemplo.pt.\n// TODO(mario): email real Fase 4')} actionLabel="Eliminar" />
         </div>
       </Section>
     </div>

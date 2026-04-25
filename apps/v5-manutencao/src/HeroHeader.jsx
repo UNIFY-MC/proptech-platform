@@ -3,7 +3,7 @@ import React from 'react'
 /* Componente de header partilhado para todos os ecrãs principais no hero verde.
    Linha 1 do hero: ≡ · morada · [temp(opcional) · 💬 · 🔔 · avatar]
    hideTemp=true: remove o bloco de temperatura (ex: IniciaScreen tem temp na linha do "Bom dia") */
-export default function HeroHeader({ onHamburguer, onAvatarClick, locationLabel, onLocationClick, authUser, notifCount = 1, hideTemp = false }) {
+export default function HeroHeader({ onHamburguer, onAvatarClick, locationLabel, onLocationClick, authUser, notifCount = 0, hideTemp = false, onNotifClick, onChatClick }) {
   const nome    = authUser?.nome || ''
   const iniciais = nome.split(' ').filter(Boolean).map(w => w[0]).slice(0, 2).join('').toUpperCase() || 'MC'
 
@@ -47,6 +47,7 @@ export default function HeroHeader({ onHamburguer, onAvatarClick, locationLabel,
 
         {/* Chat */}
         <button
+          onClick={onChatClick}
           style={{
             width: 32, height: 32, borderRadius: '50%',
             background: 'rgba(255,255,255,0.1)',
@@ -58,6 +59,7 @@ export default function HeroHeader({ onHamburguer, onAvatarClick, locationLabel,
 
         {/* Sino */}
         <button
+          onClick={onNotifClick}
           style={{
             width: 32, height: 32, borderRadius: '50%',
             background: 'rgba(255,255,255,0.1)',

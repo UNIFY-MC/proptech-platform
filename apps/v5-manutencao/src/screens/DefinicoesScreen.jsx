@@ -135,7 +135,7 @@ export default function DefinicoesScreen({ onBack }) {
       </Section>
 
       <Section label="Conta">
-        <ActionRow label="Eliminar conta permanentemente" danger onClick={() => alert('Para eliminar a tua conta contacta suporte@oscar.app.')} />
+        <ActionRow label="Eliminar conta permanentemente" danger onClick={() => alert('Para eliminar a tua conta contacta suporte@exemplo.pt.\n// TODO(mario): email real Fase 4')} />
       </Section>
 
       <div style={{ textAlign:'center', padding:'8px 0', fontSize:11, color:C.slate }}>v0.5.3 · build dev</div>

@@ -168,6 +168,9 @@ function MarketplaceView({ onCatSel, onHamburguer, onAvatarClick, authUser }) {
           onAvatarClick={onAvatarClick}
           locationLabel="A MINHA CASA"
           authUser={authUser}
+          notifCount={notifCount}
+          onNotifClick={onNavigateNotificacoes}
+          onChatClick={onNavigateChatSuporte}
         />
         <div style={{ fontSize: 17, fontWeight: 800, marginBottom: 10 }}>O que precisa hoje?</div>
         {/* Barra de pesquisa */}
@@ -476,7 +479,7 @@ function CategoriaView({ cat, onBack }) {
 }
 
 /* ── Ecrã principal ──────────────────────────────────────────────── */
-export default function ServicosScreen({ authUser, onHamburguer, onAvatarClick }) {
+export default function ServicosScreen({ authUser, onHamburguer, onAvatarClick, onNavigateNotificacoes, onNavigateChatSuporte, notifCount = 0 }) {
   const [catSel, setCatSel] = useState(null)
 
   if (catSel) {

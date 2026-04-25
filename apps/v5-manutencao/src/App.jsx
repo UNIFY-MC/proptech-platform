@@ -26,6 +26,7 @@ import HistoricoPontosScreen from './screens/HistoricoPontosScreen.jsx'
 import AvaliacoesScreen from './screens/AvaliacoesScreen.jsx'
 import PagamentosScreen from './screens/PagamentosScreen.jsx'
 import NotificacoesScreen from './screens/NotificacoesScreen.jsx'
+import ChatSuporteScreen from './ChatSuporteScreen.jsx'
 import DefinicoesScreen from './screens/DefinicoesScreen.jsx'
 import AjudaScreen from './screens/AjudaScreen.jsx'
 import EquipaScreen from './screens/EquipaScreen.jsx'
@@ -10292,12 +10293,21 @@ export default function App() {
   const [authUser,  setAuthUser]  = useState(null) // {user, token, role, nome, perfil}
   const [role,      setRole]      = useState('prestador')
 
-  const [tab,    setTab]    = useState('inicio')
-  const [ecra,   setEcra]   = useState('home')
+  const [tab,     setTab]    = useState('inicio')
+  const [prevTab, setPrevTab] = useState('inicio')
+  const [ecra,    setEcra]   = useState('home')
   const [ordens, setOrdens] = useState(ORDENS_INIT)
   const [sel,      setSel]      = useState(null)
   const [selAlerta,setSelAlerta]= useState(null)
   const [svcNova,  setSvcNova]  = useState(null)
+  const [notifsNaoLidas, setNotifsNaoLidas] = useState(0)
+
+  useEffect(() => {
+    let active = true
+    sbGetV5('alertas_inteligentes', `?pessoa_id=eq.${DEMO_PESSOA_ID}&estado=eq.nao_lido&select=id`)
+      .then(rows => { if (active) setNotifsNaoLidas(Array.isArray(rows) ? rows.length : 0) })
+    return () => { active = false }
+  }, [])
 
   // 3.3.9: imovelAtivoId e imovelAtivo vêm do ImovelAtivoContext (fonte única canónica)
   const { imovelAtivoId, imovelAtivo } = useImovelAtivo()
@@ -10682,7 +10692,7 @@ export default function App() {
     'sobre_mim','dados_pessoais','login_seguranca','moradas_screen','codigo_promocional','referral',
     'historico_pontos','avaliacoes_screen','pagamentos','notificacoes','definicoes','ajuda',
     'imoveis','equipa','prestador_detail','home_assessment','categoria_detail',
-    'servico_detail','combo_detail','promocao_detail','combos','mais_contratados',
+    'servico_detail','combo_detail','promocao_detail','combos','mais_contratados','chat_suporte',
   ].includes(ecra) || (role==='cliente' && catScreen !== null)
 
   return (
@@ -10836,8 +10846,9 @@ export default function App() {
           {ecra==='avaliacoes_screen'  && <AvaliacoesScreen onBack={()=>setEcra('home')} />}
           {ecra==='pagamentos'         && <PagamentosScreen onBack={()=>setEcra('home')} />}
           {ecra==='notificacoes'       && <NotificacoesScreen onBack={()=>setEcra('home')} />}
+          {ecra==='chat_suporte'       && <ChatSuporteScreen onBack={()=>setEcra('home')} />}
           {ecra==='definicoes'         && <DefinicoesScreen onBack={()=>setEcra('home')} />}
-          {ecra==='ajuda'              && <AjudaScreen onBack={()=>setEcra('home')} />}
+          {ecra==='ajuda'              && <AjudaScreen onBack={()=>setEcra('home')} onNavigateChatSuporte={()=>setEcra('chat_suporte')} />}
 
           {/* ── 3.3.7 Discovery screens ── */}
           {ecra==='imoveis'            && <MoradasScreen onBack={()=>setEcra('home')} />}
@@ -10865,7 +10876,7 @@ export default function App() {
                 onNavigate={(target)=>{
                   const go=(ecraTarget)=>{ setShowPerfilSheet(false); setEcra(ecraTarget) }
                   if(target==='subscricao')        { setShowPerfilSheet(false); setShowSubscricao(true) }
-                  else if(target==='wishlist')     { setShowPerfilSheet(false); setTab('perfil'); setEcra('wishlist') }
+                  else if(target==='wishlist')     { setShowPerfilSheet(false); setPrevTab(tab); setTab('perfil'); setEcra('wishlist') }
                   else if(target==='moradas')      { go('moradas_screen') }
                   else if(target==='perfil')       { setShowPerfilSheet(false); setTab('perfil'); setEcra('home') }
                   else if(target==='ownersclub')   { go('owners_club') }
@@ -10883,14 +10894,17 @@ export default function App() {
                 onClose={()=>{ setShowSubscricao(false); setShowPerfilSheet(true) }}
                 authUser={authUser}
               />
-              {tab==='servicos' && <ServicosScreen authUser={authUser} onHamburguer={()=>setClienteDrawerOpen(true)} onAvatarClick={()=>setShowPerfilSheet(true)} />}
-              {tab==='inicio'   && <IniciaScreen authUser={authUser} onNavigateCasa={()=>{ setTab('casa'); setEcra('home') }} onNavigateServicos={()=>setTab('servicos')} onHamburguer={()=>setClienteDrawerOpen(true)} onAvatarClick={()=>setShowPerfilSheet(true)} onNavigateScore={()=>setEcra('score_detail')} onNavigateAlerta={(a)=>{ setSelAlerta(a); setEcra('alerta_detail') }} onNavigateOwnersClub={()=>setEcra('owners_club')} />}
+              {tab==='servicos' && <ServicosScreen authUser={authUser} onHamburguer={()=>setClienteDrawerOpen(true)} onAvatarClick={()=>setShowPerfilSheet(true)} notifCount={notifsNaoLidas} onNavigateNotificacoes={()=>setEcra('notificacoes')} onNavigateChatSuporte={()=>setEcra('chat_suporte')} />}
+              {tab==='inicio'   && <IniciaScreen authUser={authUser} onNavigateCasa={()=>{ setTab('casa'); setEcra('home') }} onNavigateServicos={()=>setTab('servicos')} onHamburguer={()=>setClienteDrawerOpen(true)} onAvatarClick={()=>setShowPerfilSheet(true)} onNavigateScore={()=>setEcra('score_detail')} onNavigateAlerta={(a)=>{ setSelAlerta(a); setEcra('alerta_detail') }} onNavigateOwnersClub={()=>setEcra('owners_club')} notifCount={notifsNaoLidas} onNavigateNotificacoes={()=>setEcra('notificacoes')} onNavigateChatSuporte={()=>setEcra('chat_suporte')} />}
               {tab==='casa' && !casaActiveEq && !casaSub && <CasaScreen
                 equipamentos={casaEquipamentos}
                 authUser={authUser}
                 onHamburguer={()=>setClienteDrawerOpen(true)}
                 onAvatarClick={()=>setShowPerfilSheet(true)}
                 onNavigateScore={()=>setEcra('score_detail')}
+                notifCount={notifsNaoLidas}
+                onNavigateNotificacoes={()=>setEcra('notificacoes')}
+                onNavigateChatSuporte={()=>setEcra('chat_suporte')}
                 onNavigate={(target, payload)=>{
                   if(target==='ficha' && payload){ setCasaActiveEq(payload); return }
                   if(target==='docs')    { setCasaSub('docs');    setCasaSubPayload(null); return }
@@ -10942,7 +10956,7 @@ export default function App() {
                 authUser={authUser}
                 onBack={()=>setCasaSub(null)}
               />}
-              {tab==='pedidos'  && <PedidosScreen ordens={ordens} authUser={authUser} onOrdem={o=>{setSel(o);setEcra('ordem')}} onChat={o=>{setSel(o);setEcra('chat_prestador')}} onHamburguer={()=>setClienteDrawerOpen(true)} onAvatarClick={()=>setShowPerfilSheet(true)} />}
+              {tab==='pedidos'  && <PedidosScreen ordens={ordens} authUser={authUser} onOrdem={o=>{setSel(o);setEcra('ordem')}} onChat={o=>{setSel(o);setEcra('chat_prestador')}} onHamburguer={()=>setClienteDrawerOpen(true)} onAvatarClick={()=>setShowPerfilSheet(true)} notifCount={notifsNaoLidas} onNavigateNotificacoes={()=>setEcra('notificacoes')} onNavigateChatSuporte={()=>setEcra('chat_suporte')} />}
               {tab==='perfil'   && ecra!=='moradas' && ecra!=='wishlist' && (
                 <CPerfil
                   authUser={authUser}
@@ -10957,7 +10971,7 @@ export default function App() {
               {tab==='perfil'   && ecra==='wishlist' && (
                 <CWishlist
                   authUser={authUser}
-                  onBack={()=>setEcra('home')}
+                  onBack={()=>{ setTab(prevTab || 'inicio'); setEcra('home') }}
                   onCreateNew={()=>{ setTab('inicio'); setEcra('home') }}
                   onSubmitted={()=>{ setTab('pedidos'); setEcra('home') }}
                   setOrdens={setOrdens}
@@ -10987,7 +11001,7 @@ export default function App() {
                   const close=()=>setClienteDrawerOpen(false)
                   const go=(ecraTarget)=>{ close(); setEcra(ecraTarget) }
                   if(target==='subscricao')         { close(); setShowSubscricao(true) }
-                  else if(target==='wishlist')      { close(); setTab('perfil'); setEcra('wishlist') }
+                  else if(target==='wishlist')      { close(); setPrevTab(tab); setTab('perfil'); setEcra('wishlist') }
                   else if(target==='moradas')       { close(); setTab('perfil'); setEcra('moradas') }
                   else if(target==='perfil')        { close(); setTab('perfil'); setEcra('home') }
                   else if(target==='ownersclub')    { go('owners_club') }

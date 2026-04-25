@@ -42,7 +42,7 @@ export default function ReferralScreen({ onBack }) {
   }, [])
 
   const code         = codigo?.codigo || '—'
-  const link         = `https://oscar.app/r/${code}`
+  const link         = `https://app.exemplo.pt/r/${code}` // TODO(mario): definir domínio final Fase 8
   const completados  = referidos.filter(r => r.estado === 'completou')
   const creditoTotal = completados.reduce((a, r) => a + (r.credito_ganho ?? r.credito ?? 0), 0)
 
@@ -74,9 +74,9 @@ export default function ReferralScreen({ onBack }) {
         <div style={{ fontSize:12, color:'rgba(255,255,255,.85)', marginBottom:14, fontFamily:'monospace', wordBreak:'break-all' }}>{link}</div>
         <div style={{ display:'flex', gap:8 }}>
           {[
-            { label:'🟢 WhatsApp', bg:'#25D366', action:() => window.open(`https://wa.me/?text=Usa+o+meu+código+OSCAR+${code}`) },
-            { label:'✉️ Email',    bg:'#3B82F6', action:() => window.open(`mailto:?subject=OSCAR&body=Usa+o+meu+código+${code}`) },
-            { label:'⊕ Mais',      bg:'rgba(255,255,255,.2)', action:() => { if (navigator.share) navigator.share({ title:'OSCAR', url:link }); else alert('Copia o link: ' + link) } },
+            { label:'🟢 WhatsApp', bg:'#25D366', action:() => window.open(`https://wa.me/?text=Usa+o+meu+código+${code}`) },
+            { label:'✉️ Email',    bg:'#3B82F6', action:() => window.open(`mailto:?subject=Convite&body=Usa+o+meu+código+${code}`) },
+            { label:'⊕ Mais',      bg:'rgba(255,255,255,.2)', action:() => { if (navigator.share) navigator.share({ title:'Convite', url:link }); else alert('Copia o link: ' + link) } },
           ].map(b => (
             <button key={b.label} onClick={b.action} style={{ flex:1, padding:'9px 6px', borderRadius:9, background:b.bg, color:'#fff', border:'none', fontSize:11, fontWeight:700, cursor:'pointer' }}>{b.label}</button>
           ))}

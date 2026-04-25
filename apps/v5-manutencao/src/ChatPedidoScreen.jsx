@@ -108,7 +108,7 @@ export default function ChatPedidoScreen({ ordem, onBack }) {
           }}>
             <div style={{ fontSize: 18 }}>✅</div>
             <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: V.green }}>Técnico verificado OSCAR</div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: V.green }}>Técnico verificado</div>
               <div style={{ fontSize: 10, color: V.greenMid, marginTop: 1 }}>
                 NIF validado · Seguro RC · 87 visitas · 4.9★
               </div>

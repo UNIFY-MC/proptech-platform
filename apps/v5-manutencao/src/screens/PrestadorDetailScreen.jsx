@@ -59,7 +59,7 @@ export default function PrestadorDetailScreen({ prestador, onBack }) {
         <div style={{ background:C.greenXl, border:`1px solid ${GL}`, borderRadius:12, padding:'12px 14px', marginBottom:14, display:'flex', gap:10, alignItems:'center' }}>
           <span style={{ fontSize:18 }}>✅</span>
           <div>
-            <div style={{ fontSize:12, fontWeight:700, color:G }}>Técnico verificado OSCAR</div>
+            <div style={{ fontSize:12, fontWeight:700, color:G }}>Técnico verificado</div>
             <div style={{ fontSize:11, color:GM, marginTop:2 }}>NIF validado · Seguro RC · Antecedentes limpos</div>
           </div>
         </div>
@@ -67,7 +67,7 @@ export default function PrestadorDetailScreen({ prestador, onBack }) {
         <div style={{ background:C.white, border:`1px solid ${C.border}`, borderRadius:14, padding:'14px 16px', marginBottom:12 }}>
           <div style={{ fontSize:10, fontWeight:700, letterSpacing:.6, color:C.stone, textTransform:'uppercase', marginBottom:8 }}>Sobre</div>
           <div style={{ fontSize:13, color:C.ink, lineHeight:1.6 }}>
-            Técnico certificado com {p.total_visitas} visitas realizadas na plataforma OSCAR.
+            Técnico certificado com {p.total_visitas} visitas realizadas na plataforma.
             {(p.categorias || []).length > 0 && ` Especializado em ${p.categorias.join(' e ')} residencial e comercial.`}
           </div>
         </div>

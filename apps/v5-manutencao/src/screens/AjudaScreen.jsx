@@ -41,7 +41,7 @@ function FaqItem({ p, r }) {
   )
 }
 
-export default function AjudaScreen({ onBack }) {
+export default function AjudaScreen({ onBack, onNavigateChatSuporte }) {
   const [query, setQuery] = useState('')
   const faqFiltrado = FAQ.filter(f =>
     !query || f.p.toLowerCase().includes(query.toLowerCase()) || f.r.toLowerCase().includes(query.toLowerCase())
@@ -95,8 +95,8 @@ export default function AjudaScreen({ onBack }) {
         <div style={{ fontSize:10, fontWeight:700, letterSpacing:.6, color:C.stone, textTransform:'uppercase', marginBottom:8 }}>Contacto directo</div>
         <div style={{ display:'flex', gap:8 }}>
           {[
-            { label:'📧 Email',    action:() => window.open('mailto:suporte@oscar.app') },
-            { label:'💬 Chat',     action:() => alert('Chat ao vivo — disponível Fase 3.5') },
+            { label:'📧 Email',    action:() => window.open('mailto:suporte@exemplo.pt') }, // TODO(mario): email real
+            { label:'💬 Chat',     action:() => onNavigateChatSuporte?.() },
             { label:'📞 Telefone', action:() => window.open('tel:+351220000000') },
           ].map(b => (
             <button key={b.label} onClick={b.action} style={{

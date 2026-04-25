@@ -120,7 +120,7 @@ function nextLabel(eq) {
    Props mantidos da versão inline em App.jsx.
    Fases 3.3–3.5 substituirão os alerts placeholder por ecrãs reais.
 ══════════════════════════════════ */
-export default function CasaScreen({ equipamentos, authUser, onNavigate, onHamburguer, onAvatarClick, onNavigateScore }) {
+export default function CasaScreen({ equipamentos, authUser, onNavigate, onHamburguer, onAvatarClick, onNavigateScore, onNavigateNotificacoes, onNavigateChatSuporte, notifCount = 0 }) {
   const { imovelAtivo, imoveis, loading: ctxLoading } = useImovelAtivo()
   const loc   = imovelAtivo
   const nLocs = imoveis.length
@@ -191,6 +191,9 @@ export default function CasaScreen({ equipamentos, authUser, onNavigate, onHambu
           onAvatarClick={onAvatarClick}
           locationLabel={loc ? `${loc.nome} · ${loc.localidade || loc.concelho || ''}` : 'A MINHA CASA'}
           authUser={authUser}
+          notifCount={notifCount}
+          onNotifClick={onNavigateNotificacoes}
+          onChatClick={onNavigateChatSuporte}
         />
         {nLocs > 1 && (
           <div style={{ marginBottom: 10 }}>

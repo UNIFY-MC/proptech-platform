@@ -99,7 +99,7 @@ function casaLabel(score) {
   return 'Casa em Risco 🚨'
 }
 
-export default function IniciaScreen({ authUser, onNavigateCasa, onNavigateServicos, onHamburguer, onAvatarClick, onNavigateScore, onNavigateAlerta, onNavigateOwnersClub }) {
+export default function IniciaScreen({ authUser, onNavigateCasa, onNavigateServicos, onHamburguer, onAvatarClick, onNavigateScore, onNavigateAlerta, onNavigateOwnersClub, onNavigateNotificacoes, onNavigateChatSuporte, notifCount = 0 }) {
   const { imovelAtivo, imoveis } = useImovelAtivo()
   const [subscricao,  setSubscricao]  = useState(null)
   const [creditoMes,  setCreditoMes]  = useState(undefined)
@@ -175,6 +175,9 @@ export default function IniciaScreen({ authUser, onNavigateCasa, onNavigateServi
           onLocationClick={nLocs > 1 ? handleLocationClick : undefined}
           authUser={authUser}
           hideTemp
+          notifCount={notifCount}
+          onNotifClick={onNavigateNotificacoes}
+          onChatClick={onNavigateChatSuporte}
         />
 
         {/* Linha 2: saudação + nome | temperatura à direita (ref. linha 84-96) */}
