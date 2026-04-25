@@ -28,6 +28,7 @@ const GRUPOS = [
       { id:'dados_pessoais',     emoji:'📝', label:'Dados pessoais & NIF' },
       { id:'login_seguranca',    emoji:'🔒', label:'Login & segurança' },
       { id:'moradas',            emoji:'📍', label:'Moradas / endereços' },
+      { id:'perfis_fiscais',     emoji:'🧾', label:'Perfis fiscais' },
     ],
   },
   {

@@ -4,6 +4,9 @@ import React, { useState, useMemo, useEffect, useRef } from 'react'
 import CWishlist from './CWishlist'
 import { DEMO_PESSOA_ID, DEMO_ORGANIZATION_ID } from './lib/demo.js'
 import { useImovelAtivo } from './lib/ImovelAtivoContext.jsx'
+import { usePerfisFiscais } from './lib/PerfisFiscaisContext.jsx'
+import { getPerfilFiscalAplicavel, snapshotPerfil } from './lib/faturacao.js'
+import PerfisFiscaisScreen from './screens/PerfisFiscaisScreen.jsx'
 import IniciaScreen from './IniciaScreen.jsx'
 import CasaScreen from './CasaScreen.jsx'
 import ServicosScreen from './ServicosScreen.jsx'
@@ -5275,6 +5278,20 @@ function COrdem({ o, onBack, onChat }) {
             <div key={l} style={{ display:'flex', justifyContent:'space-between', padding:'7px 0', borderBottom:'1px solid #f1f5f9' }}><span style={{ fontSize:11, color:C.slate }}>{l}</span><span style={{ fontSize:11, fontWeight:700, color:C.navy, maxWidth:200, textAlign:'right' }}>{v}</span></div>
           ))}
         </Card>
+        {/* Secção faturação — usa snapshot se existir, senão não mostra nada */}
+        {o.perfil_fiscal_snapshot && <Card style={{ padding:15, marginBottom:10 }}>
+          <div style={{ fontSize:10, fontWeight:700, color:C.slate, textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:9 }}>Faturação</div>
+          {[
+            o.perfil_fiscal_snapshot.nome_facturacao && ['Nome', o.perfil_fiscal_snapshot.nome_facturacao],
+            o.perfil_fiscal_snapshot.nif             && ['NIF',  o.perfil_fiscal_snapshot.nif],
+            o.perfil_fiscal_snapshot.morada_facturacao && ['Morada fiscal', o.perfil_fiscal_snapshot.morada_facturacao],
+          ].filter(Boolean).map(([l,v]) => (
+            <div key={l} style={{ display:'flex', justifyContent:'space-between', padding:'7px 0', borderBottom:'1px solid #f1f5f9' }}>
+              <span style={{ fontSize:11, color:C.slate }}>{l}</span>
+              <span style={{ fontSize:11, fontWeight:700, color:C.navy, maxWidth:200, textAlign:'right' }}>{v}</span>
+            </div>
+          ))}
+        </Card>}
         {o.fotos.length>0 && <Card style={{ padding:15, marginBottom:10 }}>
           <div style={{ fontSize:10, fontWeight:700, color:C.slate, textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:9 }}>Relatório fotográfico</div>
           <div style={{ display:'flex', gap:7, marginBottom:8, flexWrap:'wrap' }}>{o.fotos.map((f,i) => <FotoThumb key={i} src={f} size={68} radius={10}/>)}</div>
@@ -10311,6 +10328,7 @@ export default function App() {
 
   // 3.3.9: imovelAtivoId e imovelAtivo vêm do ImovelAtivoContext (fonte única canónica)
   const { imovelAtivoId, imovelAtivo } = useImovelAtivo()
+  const { perfis: perfisFiscais }       = usePerfisFiscais()
   const [showImovelSelector,setShowImovelSelector] = useState(false)
   const [selNav,            setSelNav]             = useState(null) // {prestador, servico, combo, promocao, categoria}
 
@@ -10624,6 +10642,7 @@ export default function App() {
         faturacao_morada:    state.billing?.morada || null,
         faturacao_cp:        state.billing?.cp || null,
         faturacao_localidade:state.billing?.localidade || null,
+        perfil_fiscal_snapshot: snapshotPerfil(getPerfilFiscalAplicavel({ localizacao: imovelAtivo, perfisFiscais })),
       }
       try {
         const r = await sbSave('ordens', payload, authUser?.token)
@@ -10842,6 +10861,7 @@ export default function App() {
           {ecra==='moradas_screen'     && <MoradasScreen onBack={()=>setEcra('home')} />}
           {ecra==='codigo_promocional' && <CodigoPromocionalScreen onBack={()=>setEcra('home')} />}
           {ecra==='referral'           && <ReferralScreen onBack={()=>setEcra('home')} />}
+          {ecra==='perfis_fiscais'     && <PerfisFiscaisScreen onBack={()=>setEcra('home')} />}
           {ecra==='historico_pontos'   && <HistoricoPontosScreen onBack={()=>setEcra('home')} />}
           {ecra==='avaliacoes_screen'  && <AvaliacoesScreen onBack={()=>setEcra('home')} />}
           {ecra==='pagamentos'         && <PagamentosScreen onBack={()=>setEcra('home')} />}
@@ -10885,7 +10905,8 @@ export default function App() {
                   else if(target==='login_seguranca'){ go('login_seguranca') }
                   else if(target==='moradas_screen'){ go('moradas_screen') }
                   else if(target==='codigo_promocional'){ go('codigo_promocional') }
-                  else if(target==='referral')     { go('referral') }
+                  else if(target==='referral')         { go('referral') }
+                  else if(target==='perfis_fiscais')  { go('perfis_fiscais') }
                 }}
                 onLogout={()=>{ setShowPerfilSheet(false); onLogout() }}
               />
