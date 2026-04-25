@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { supa } from './supa.js'
 import { DEMO_LOCALIZACAO_ID } from './lib/demo.js'
+import HeroHeader from './HeroHeader.jsx'
 
 /* Paleta CASA — duplicada aqui para isolar o módulo do App.jsx */
 const CASA = {
@@ -118,7 +119,7 @@ function nextLabel(eq) {
    Props mantidos da versão inline em App.jsx.
    Fases 3.3–3.5 substituirão os alerts placeholder por ecrãs reais.
 ══════════════════════════════════ */
-export default function CasaScreen({ localizacoes, localizacao, equipamentos, authUser, onNavigate, onHamburguer }) {
+export default function CasaScreen({ localizacoes, localizacao, equipamentos, authUser, onNavigate, onHamburguer, onAvatarClick, onNavigateScore }) {
   const loc   = localizacao || (Array.isArray(localizacoes) ? localizacoes[0] : null)
   const nLocs = (localizacoes || []).length
   const eqs   = Array.isArray(equipamentos)
@@ -183,126 +184,109 @@ export default function CasaScreen({ localizacoes, localizacao, equipamentos, au
 
       {/* HEADER + HERO */}
       <div style={{ background: CASA.green, padding: '14px 16px 22px' }}>
-        {/* Linha de controlo: hambúrguer ≡ esquerda, avatar direita (via App.jsx) */}
-        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10 }}>
-          <button
-            onClick={onHamburguer}
-            aria-label="Abrir menu"
-            style={{
-              width:32, height:32, borderRadius:'50%',
-              background:'rgba(255,255,255,0.1)',
-              border:'none', cursor:'pointer',
-              display:'flex', alignItems:'center', justifyContent:'center',
-              fontSize:16, color:'#fff',
-            }}
-          >≡</button>
-          <div style={{ width:32 }} />
-        </div>
-        {/* Localização + switcher */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-          <div>
-            <div style={{ fontSize: 10, color: CASA.greenLt, fontWeight: 700, letterSpacing: 1 }}>A MINHA CASA</div>
-            <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)', marginTop: 2 }}>
-              {loc ? `${loc.nome} · ${loc.localidade || loc.concelho || ''}` : '—'}
-              {nLocs > 1 && (
-                <button
-                  onClick={() => onNavigate?.('locais')}
-                  style={{ background: 'none', border: 'none', color: CASA.greenLt, fontSize: 11, cursor: 'pointer', marginLeft: 6, fontWeight: 600 }}
-                >
-                  +{nLocs - 1} ⌄
-                </button>
-              )}
-            </div>
+        <HeroHeader
+          onHamburguer={onHamburguer}
+          onAvatarClick={onAvatarClick}
+          locationLabel={loc ? `${loc.nome} · ${loc.localidade || loc.concelho || ''}` : 'A MINHA CASA'}
+          authUser={authUser}
+        />
+        {nLocs > 1 && (
+          <div style={{ marginBottom: 10 }}>
+            <button
+              onClick={() => onNavigate?.('locais')}
+              style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.6)', fontSize: 11, cursor: 'pointer', fontWeight: 600, padding: 0 }}
+            >
+              +{nLocs - 1} outra{nLocs - 1 > 1 ? 's' : ''} ⌄
+            </button>
           </div>
-        </div>
+        )}
 
         {loading ? (
-          <div style={{ height: 180, background: 'rgba(255,255,255,0.1)', borderRadius: 12 }} />
+          <div style={{ height: 110, background: 'rgba(255,255,255,0.1)', borderRadius: 12 }} />
         ) : !loc ? (
           <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)', padding: '20px 0' }}>
             Nenhuma localização registada. Adicione a primeira para começar.
           </div>
         ) : (
-          <>
-            {/* HERO — círculo grande com score (novo em 3.2B) */}
-            {/* TODO(mario): adicionar animação de fill radial ao montar em 3.3 */}
-            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 18 }}>
-              <div style={{
-                width: 130, height: 130, borderRadius: '50%',
-                background: heroColor,
-                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                boxShadow: `0 8px 28px ${heroColor}66, 0 0 0 8px rgba(255,255,255,0.1)`,
-              }}>
-                <div style={{ fontSize: 48, fontWeight: 800, color: '#fff', lineHeight: 1 }}>
-                  {loc.home_score ?? 0}
-                </div>
-                <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.75)', marginTop: 3, letterSpacing: 1 }}>
-                  HOME SCORE
-                </div>
+          /* HERO compact — número esquerda, mini-barras direita */
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <button onClick={onNavigateScore} style={{ background: 'none', border: 'none', cursor: onNavigateScore ? 'pointer' : 'default', textAlign: 'left', padding: 0 }}>
+              <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)' }}>
+                {loc.nome} · {loc.localidade || loc.concelho || ''}
               </div>
-            </div>
-
-            {/* 5 MINI-BARRAS por categoria */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-              {scores.map(([emoji, label, val]) => (
-                <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ fontSize: 12, width: 18, textAlign: 'center', flexShrink: 0 }}>{emoji}</span>
-                  <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.6)', width: 54, flexShrink: 0 }}>{label}</span>
-                  <div style={{ flex: 1, height: 5, background: 'rgba(255,255,255,0.18)', borderRadius: 3, overflow: 'hidden' }}>
+              <div style={{ fontSize: 48, fontWeight: 700, lineHeight: 1, marginTop: 4, color: '#fff' }}>
+                {loc.home_score ?? 0}
+              </div>
+              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)', marginTop: 4 }}>
+                Home Score · {
+                  (loc.home_score ?? 0) >= 80 ? '🌟 Excelente' :
+                  (loc.home_score ?? 0) >= 60 ? '🌱 Saudável'  :
+                  (loc.home_score ?? 0) >= 40 ? '⚠️ A Cuidar'  : '🔧 A Melhorar'
+                }
+              </div>
+            </button>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 5, paddingTop: 10 }}>
+              {scores.map(([, label, val]) => (
+                <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.6)', width: 52, textAlign: 'right' }}>
+                    {label}
+                  </span>
+                  <div style={{ width: 44, height: 4, background: 'rgba(255,255,255,0.2)', borderRadius: 2, overflow: 'hidden' }}>
                     <div style={{
-                      width: `${val}%`, height: 5, borderRadius: 3,
+                      width: `${val}%`, height: 4,
                       background: val >= 85 ? CASA.greenLt : val >= 70 ? '#FAC775' : '#F9BABA',
                     }} />
                   </div>
-                  <span style={{ fontSize: 10, color: '#fff', fontWeight: 700, width: 22, textAlign: 'right', flexShrink: 0 }}>
-                    {val}
-                  </span>
+                  <span style={{ fontSize: 9, fontWeight: 700, color: '#fff', width: 18 }}>{val}</span>
                 </div>
               ))}
             </div>
-          </>
+          </div>
         )}
       </div>
 
-      {/* QUICK ACTIONS — grid 2×2 (🤖 AI Expert substituiu Locais) */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 8, padding: '12px 12px 0' }}>
+      {/* QUICK ACTIONS */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 7, padding: '10px 12px 0' }}>
         {[
-          ['📷', 'Registar equip', 'camera'],
-          ['📄', 'Docs',           'docs'],
-          ['⚡', 'Energia',         'energia'],
-          ['🤖', 'AI Expert',       'aiexpert'],
+          ['📷', 'Câmara',  'camera'],
+          ['🏠', 'Locais',  'locais'],
+          ['📄', 'Docs',    'docs'],
+          ['⚡', 'Energia', 'energia'],
         ].map(([ic, l, target]) => (
           <button key={l} onClick={() => onNavigate?.(target)} style={{
-            background: '#fff', border: `1px solid ${CASA.border}`, borderRadius: 11,
-            padding: '10px 4px', textAlign: 'center', cursor: 'pointer',
+            background: '#fff', border: `1px solid ${CASA.border}`, borderRadius: 10,
+            padding: '9px 4px', textAlign: 'center', cursor: 'pointer',
           }}>
-            <div style={{ fontSize: 20, marginBottom: 4 }}>{ic}</div>
+            <div style={{ fontSize: 19, marginBottom: 3 }}>{ic}</div>
             <div style={{ fontSize: 9, fontWeight: 600, color: '#555' }}>{l}</div>
           </button>
         ))}
       </div>
 
-      {/* AI EXPERT CARD — placeholder Fase 3.5 */}
-      <div style={{ padding: '10px 12px 0' }}>
+      {/* AI EXPERT CARD */}
+      <div style={{ margin: '10px 12px 0' }}>
         <button
-          onClick={() => alert('AI Expert em 3.5')}
+          onClick={() => onNavigate?.('aiexpert')}
           style={{
-            width: '100%', background: `linear-gradient(135deg,${CASA.green},${CASA.greenMid})`,
-            border: 'none', borderRadius: 12, padding: '14px 16px',
+            width: '100%', background: 'linear-gradient(135deg,#26215C,#534AB7)',
+            border: 'none', borderRadius: 12, padding: '12px 14px',
             cursor: 'pointer', textAlign: 'left',
-            display: 'flex', alignItems: 'center', gap: 12,
+            display: 'flex', alignItems: 'center', gap: 11,
           }}
         >
-          <span style={{ fontSize: 28 }}>🤖</span>
+          <span style={{ fontSize: 26, flexShrink: 0 }}>🤖</span>
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: '#fff', marginBottom: 2 }}>
-              Pergunta-me sobre a tua casa
+            <div style={{ fontSize: 12, fontWeight: 700, color: '#fff', marginBottom: 2 }}>
+              AI Expert
             </div>
-            <div style={{ fontSize: 11, color: CASA.greenLt }}>
-              AI Expert · diagnóstico e recomendações personalizadas
+            <div style={{ fontSize: 10.5, color: 'rgba(255,255,255,0.75)' }}>
+              Conhece a tua casa · pergunta tudo
             </div>
           </div>
-          <span style={{ fontSize: 11, color: CASA.greenLt, fontWeight: 600 }}>em 3.5 →</span>
+          <div style={{
+            background: 'rgba(255,255,255,0.2)', borderRadius: 7,
+            padding: '4px 9px', fontSize: 10, fontWeight: 700, color: '#fff', flexShrink: 0,
+          }}>Chat →</div>
         </button>
       </div>
 

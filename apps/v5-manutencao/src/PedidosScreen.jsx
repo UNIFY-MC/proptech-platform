@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { supa } from './supa.js'
 import { DEMO_PESSOA_ID } from './lib/demo.js'
 import { calcularCreditoMes } from './lib/subscription.js'
+import HeroHeader from './HeroHeader.jsx'
 
 /* Paleta V5 — cópia local para isolar módulo do App.jsx */
 const V5 = {
@@ -137,18 +138,26 @@ function EmptyState({ ic, title, sub }) {
 function OrdemCard({ o, onOrdem }) {
   const nome  = nomeServico(o)
   const ic    = icServico(o)
-  const catNome = o.categoria_id ? CAT_LABELS[o.categoria_id] : null
-  const valor   = eurFmt(o.valor_cobrado ?? o.val)
-  const quando  = quandoLabel(o)
+  const catNome   = o.categoria_id ? CAT_LABELS[o.categoria_id] : null
+  const valor     = eurFmt(o.valor_cobrado ?? o.val)
+  const quando    = quandoLabel(o)
   const pedidoLabel = haMin(o.dt_pedido_iso || o.created_at)
+  const isActive  = o.st === 'em_curso'
 
   return (
     <div onClick={() => onOrdem(o)} style={{
       background: V5.white, borderRadius: 14,
-      border: `1px solid ${V5.border}`,
-      padding: '13px 14px', marginBottom: 8,
-      cursor: 'pointer', boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+      border: isActive ? `2px solid ${V5.greenLt}` : `1px solid ${V5.border}`,
+      padding: isActive ? '12px 13px' : '13px 14px', marginBottom: 8,
+      cursor: 'pointer', boxShadow: isActive ? '0 2px 8px rgba(82,183,136,0.15)' : '0 1px 3px rgba(0,0,0,0.05)',
     }}>
+      {isActive && (
+        <div style={{
+          display: 'inline-block', marginBottom: 7,
+          fontSize: 9, background: '#D8F3DC', color: V5.green,
+          padding: '2px 7px', borderRadius: 5, fontWeight: 700, letterSpacing: 0.3,
+        }}>🚐 A CAMINHO</div>
+      )}
       <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
         <span style={{ fontSize: 26, lineHeight: 1, flexShrink: 0 }}>{ic}</span>
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -289,51 +298,51 @@ const EMPTY = {
   historico: { ic:'📋', title:'Sem histórico',          sub:'Os pedidos concluídos e cancelados ficam aqui para consulta.' },
 }
 
-export default function PedidosScreen({ ordens, authUser, onOrdem, onHamburguer }) {
+export default function PedidosScreen({ ordens, authUser, onOrdem, onHamburguer, onAvatarClick }) {
   const [tabAtivo, setTabAtivo] = useState('em_curso')
 
   const ordensTab = (ordens || []).filter(o => tabParaOrdem(o.st) === tabAtivo)
 
   return (
     <div style={{ minHeight: '100vh', background: V5.bg, paddingBottom: 90 }}>
-      {/* Header fixo com tabs */}
-      <div style={{
-        background: V5.white, padding: '14px 16px 0',
-        borderBottom: `1px solid ${V5.border}`,
-        position: 'sticky', top: 0, zIndex: 10,
-      }}>
-        <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:12 }}>
-          <button
-            onClick={onHamburguer}
-            aria-label="Abrir menu"
-            style={{
-              width:32, height:32, borderRadius:'50%',
-              background:'rgba(27,67,50,0.08)',
-              border:'none', cursor:'pointer',
-              display:'flex', alignItems:'center', justifyContent:'center',
-              fontSize:16, color:'#1B4332', flexShrink:0,
-            }}
-          >≡</button>
-          <h1 style={{ fontSize: 19, fontWeight: 800, color: V5.ink, margin: 0, flex:1 }}>
+      {/* Header verde + tabs */}
+      <div style={{ position: 'sticky', top: 0, zIndex: 10 }}>
+        <div style={{
+          background: `linear-gradient(145deg,${V5.green},${V5.greenMid})`,
+          padding: '14px 14px 10px', color: '#fff',
+        }}>
+          <HeroHeader
+            onHamburguer={onHamburguer}
+            onAvatarClick={onAvatarClick}
+            locationLabel="A MINHA CASA"
+            authUser={authUser}
+          />
+          <div style={{ fontSize: 15, fontWeight: 800, color: '#fff', marginTop: 4 }}>
             Os meus pedidos
-          </h1>
+          </div>
         </div>
-        <div style={{ display: 'flex' }}>
-          {TABS.map(t => {
-            const active = tabAtivo === t.id
-            return (
-              <button key={t.id} onClick={() => setTabAtivo(t.id)} style={{
-                flex: 1, padding: '9px 4px', background: 'none', border: 'none',
-                cursor: 'pointer', fontSize: 13,
-                fontWeight: active ? 700 : 500,
-                color: active ? V5.green : V5.slate,
-                borderBottom: active ? `2.5px solid ${V5.green}` : '2.5px solid transparent',
-                transition: 'color 0.15s, border-color 0.15s',
-              }}>
-                {t.l}
-              </button>
-            )
-          })}
+        <div style={{
+          background: V5.white,
+          borderBottom: `1px solid ${V5.border}`,
+          padding: '0 16px',
+        }}>
+          <div style={{ display: 'flex' }}>
+            {TABS.map(t => {
+              const active = tabAtivo === t.id
+              return (
+                <button key={t.id} onClick={() => setTabAtivo(t.id)} style={{
+                  flex: 1, padding: '9px 4px', background: 'none', border: 'none',
+                  cursor: 'pointer', fontSize: 13,
+                  fontWeight: active ? 700 : 500,
+                  color: active ? V5.green : V5.slate,
+                  borderBottom: active ? `2.5px solid ${V5.green}` : '2.5px solid transparent',
+                  transition: 'color 0.15s, border-color 0.15s',
+                }}>
+                  {t.l}
+                </button>
+              )
+            })}
+          </div>
         </div>
       </div>
 

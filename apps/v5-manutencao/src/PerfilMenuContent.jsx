@@ -52,6 +52,7 @@ const GRUPOS = [
   {
     label: 'CONTA',
     items: [
+      { id:'perfil',   emoji:'👤', label:'Os meus dados',  chevron:true },
       { id:'notif',    emoji:'🔔', label:'Notificações',   chevron:true },
       { id:'settings', emoji:'⚙️', label:'Definições',     chevron:true },
       { id:'ajuda',    emoji:'❓', label:'Ajuda & Suporte', chevron:true },
@@ -104,6 +105,8 @@ export default function PerfilMenuContent({ open, authUser, onNavigate, onLogout
     if (item.id === 'subscricao')  { onNavigate?.('subscricao'); return }
     if (item.id === 'wishlist')    { onNavigate?.('wishlist');   return }
     if (item.id === 'moradas')     { onNavigate?.('moradas');    return }
+    if (item.id === 'perfil')      { onNavigate?.('perfil');     return }
+    if (item.id === 'ownersclub')  { onNavigate?.('ownersclub'); return }
     alert(`"${item.label}" disponível numa fase futura.`)
   }
 
