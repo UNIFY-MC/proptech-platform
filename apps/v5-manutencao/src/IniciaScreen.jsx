@@ -29,7 +29,7 @@ function scoreCircleColor(s) {
   return '#1B4332'
 }
 
-export default function IniciaScreen({ authUser, onNavigateCasa }) {
+export default function IniciaScreen({ authUser, onNavigateCasa, onHamburguer }) {
   const [subscricao, setSubscricao]   = useState(null)
   const [creditoMes, setCreditoMes]   = useState(undefined) // undefined = a carregar
   const [localizacao, setLocalizacao] = useState(null)
@@ -109,7 +109,22 @@ export default function IniciaScreen({ authUser, onNavigateCasa }) {
     <div style={{ minHeight: '100vh', background: '#D8F3DC', paddingBottom: 100 }}>
 
       {/* HEADER */}
-      <div style={{ background: '#1B4332', padding: '52px 16px 20px' }}>
+      <div style={{ background: '#1B4332', padding: '14px 16px 20px' }}>
+        {/* Linha de controlo: hambúrguer ≡ esquerda, avatar direita (via App.jsx) */}
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10 }}>
+          <button
+            onClick={onHamburguer}
+            aria-label="Abrir menu"
+            style={{
+              width:32, height:32, borderRadius:'50%',
+              background:'rgba(255,255,255,0.1)',
+              border:'none', cursor:'pointer',
+              display:'flex', alignItems:'center', justifyContent:'center',
+              fontSize:16, color:'#fff',
+            }}
+          >≡</button>
+          <div style={{ width:32 }} />{/* espaço para o avatar fixo do App.jsx */}
+        </div>
         <div style={{ fontSize: 22, fontWeight: 800, color: '#fff', marginBottom: 4 }}>
           {saudacao}, {primeiroNome} 👋
         </div>

@@ -8,6 +8,7 @@ import CasaScreen from './CasaScreen.jsx'
 import ServicosScreen from './ServicosScreen.jsx'
 import PedidosScreen from './PedidosScreen.jsx'
 import PerfilSheet from './PerfilSheet.jsx'
+import PerfilDrawer from './PerfilDrawer.jsx'
 import SubscricaoScreen from './SubscricaoScreen.jsx'
 import {
   ArrowLeft, X, Check, Camera, Clock, Plus, MapPin, ChevronRight,
@@ -2583,15 +2584,16 @@ function BNav({ tab, set, onFabClick }) {
       {/* FAB central — assistente de pedido (Fase 2e) */}
       <div style={{ flex:1, display:'flex', justifyContent:'center', alignItems:'flex-start', position:'relative' }}>
         <button onClick={onFabClick} aria-label="Novo pedido" style={{
-          position:'absolute', top:-22,
-          width:56, height:56, borderRadius:'50%',
-          background:`linear-gradient(135deg,${C.g},#16a34a)`,
-          border:'3px solid #fff', cursor:'pointer',
-          display:'grid', placeItems:'center',
-          boxShadow:'0 8px 24px -6px rgba(22,163,74,0.55)',
+          marginTop:-22,
+          width:52, height:52, borderRadius:'50%',
+          background:'linear-gradient(135deg,#52B788,#2D6A4F)',
+          border:'none', cursor:'pointer',
+          display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
+          boxShadow:'0 6px 18px rgba(82,183,136,0.5)',
           color:'#fff',
         }}>
-          <Sparkles size={24} strokeWidth={2.2}/>
+          <span style={{ fontSize:18, lineHeight:1 }}>✨</span>
+          <span style={{ fontSize:7, marginTop:1, letterSpacing:.3, fontWeight:700 }}>PEDIR</span>
         </button>
       </div>
       {tabsR.map(renderTab)}
@@ -10695,24 +10697,7 @@ export default function App() {
       {/* ── APP MOBILE (container 430px) ── */}
       {role!=='admin' && <div style={{ maxWidth:430, margin:'0 auto', minHeight:'100vh', background:'#f8fafc', position:'relative', boxShadow:'0 0 80px rgba(0,0,0,0.5)' }}>
 
-        {/* RoleBar — mostra utilizador + botão sair */}
-        {!hideRole && (
-          <div style={{ background:'#0f172a', padding:'7px 12px', display:'flex', gap:6, position:'sticky', top:0, zIndex:60, alignItems:'center' }}>
-            {/* Avatar + nome */}
-            <div style={{ display:'flex', alignItems:'center', gap:7, flex:1, minWidth:0 }}>
-              <div style={{ width:26,height:26,borderRadius:'50%',background:'linear-gradient(135deg,#16a34a,#22c55e)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:10,color:'#fff',fontWeight:800,flexShrink:0 }}>
-                {(authUser?.nome||'U')[0].toUpperCase()}
-              </div>
-              <span style={{ fontSize:11, color:'#94a3b8', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', maxWidth:120 }}>{authUser?.nome||'Utilizador'}</span>
-              <span style={{ fontSize:9, color:'#475569', background:'rgba(255,255,255,0.07)', padding:'2px 7px', borderRadius:8, fontWeight:700, flexShrink:0 }}>{role==='cliente'?'👤':'👷'} {role}</span>
-            </div>
-            {/* Sair */}
-            <button onClick={onLogout} title="Terminar sessão" style={{ flexShrink:0, padding:'6px 10px', borderRadius:8, border:'none', cursor:'pointer', background:'rgba(255,255,255,0.04)', color:'#64748b', fontSize:11, fontWeight:600 }}>Sair</button>
-            <button onClick={() => mudar('admin')} title="Admin" style={{ flexShrink:0, padding:'6px 9px', borderRadius:8, border:'none', cursor:'pointer', background:'rgba(255,255,255,0.04)', color:'#334155', fontSize:13 }}
-              onMouseEnter={e=>e.currentTarget.style.color='#f59e0b'}
-              onMouseLeave={e=>e.currentTarget.style.color='#334155'}>⚙️</button>
-          </div>
-        )}
+        {/* RoleBar removido — Sair e configurações em PerfilSheet/PerfilDrawer */}
 
         {/* ── CLIENTE ── */}
         {role==='cliente' && <>
@@ -10837,20 +10822,24 @@ export default function App() {
                 authUser={authUser}
                 onNavigate={(target)=>{
                   if(target==='subscricao'){ setShowPerfilSheet(false); setShowSubscricao(true) }
+                  if(target==='wishlist'){ setShowPerfilSheet(false); setTab('perfil'); setEcra('wishlist') }
+                  if(target==='moradas'){ setShowPerfilSheet(false); setTab('perfil'); setEcra('moradas') }
                 }}
+                onLogout={()=>{ setShowPerfilSheet(false); onLogout() }}
               />
               <SubscricaoScreen
                 open={showSubscricao}
                 onClose={()=>{ setShowSubscricao(false); setShowPerfilSheet(true) }}
                 authUser={authUser}
               />
-              {tab==='servicos' && <ServicosScreen authUser={authUser} />}
-              {tab==='inicio'   && <IniciaScreen authUser={authUser} onNavigateCasa={()=>{ setTab('casa'); setEcra('home') }} />}
+              {tab==='servicos' && <ServicosScreen authUser={authUser} onHamburguer={()=>setClienteDrawerOpen(true)} />}
+              {tab==='inicio'   && <IniciaScreen authUser={authUser} onNavigateCasa={()=>{ setTab('casa'); setEcra('home') }} onHamburguer={()=>setClienteDrawerOpen(true)} />}
               {tab==='casa' && !casaActiveEq && !casaSub && <CasaScreen
                 localizacoes={casaLocalizacoes}
                 localizacao={casaActiveLoc}
                 equipamentos={casaEquipamentos}
                 authUser={authUser}
+                onHamburguer={()=>setClienteDrawerOpen(true)}
                 onNavigate={(target, payload)=>{
                   if(target==='ficha' && payload){ setCasaActiveEq(payload); return }
                   if(target==='docs')    { setCasaSub('docs');    setCasaSubPayload(null); return }
@@ -10910,7 +10899,7 @@ export default function App() {
                 onRefresh={refetchCasa}
                 onPickActive={(id)=>setCasaActiveLocId(id)}
               />}
-              {tab==='pedidos'  && <PedidosScreen ordens={ordens} authUser={authUser} onOrdem={o=>{setSel(o);setEcra('ordem')}} />}
+              {tab==='pedidos'  && <PedidosScreen ordens={ordens} authUser={authUser} onOrdem={o=>{setSel(o);setEcra('ordem')}} onHamburguer={()=>setClienteDrawerOpen(true)} />}
               {tab==='perfil'   && ecra!=='moradas' && ecra!=='wishlist' && (
                 <CPerfil
                   authUser={authUser}
@@ -10946,21 +10935,16 @@ export default function App() {
                   }}
                 />
               )}
-              <DrawerMenu
+              <PerfilDrawer
                 open={clienteDrawerOpen}
                 onClose={()=>setClienteDrawerOpen(false)}
-                menuItems={CLIENTE_MENU_ITEMS}
-                user={{ n:authUser?.nome||'Cliente', ini:(authUser?.nome||'C').charAt(0).toUpperCase(), id_num:authUser?.user?.email||'—' }}
-                activeItem={tab==='perfil' ? 'perfil' : null}
-                onNavigate={(id)=>{
-                  setClienteDrawerOpen(false)
-                  if(id==='sair'){ onLogout(); return }
-                  if(id==='perfil'){ setTab('perfil'); setEcra('home'); return }
-                  if(id==='moradas'){ setTab('perfil'); setEcra('moradas'); return }
-                  if(id==='wishlist'){ setTab('perfil'); setEcra('wishlist'); return }
-                  // Restantes items ainda não têm página própria
-                  alert(`"${CLIENTE_MENU_ITEMS.find(i=>i.id===id)?.l}" fica disponível numa fase seguinte.`)
+                authUser={authUser}
+                onNavigate={(target)=>{
+                  if(target==='subscricao'){ setClienteDrawerOpen(false); setShowSubscricao(true) }
+                  if(target==='wishlist'){ setClienteDrawerOpen(false); setTab('perfil'); setEcra('wishlist') }
+                  if(target==='moradas'){ setClienteDrawerOpen(false); setTab('perfil'); setEcra('moradas') }
                 }}
+                onLogout={()=>{ setClienteDrawerOpen(false); onLogout() }}
               />
             </>}
           </>}

@@ -289,7 +289,7 @@ const EMPTY = {
   historico: { ic:'📋', title:'Sem histórico',          sub:'Os pedidos concluídos e cancelados ficam aqui para consulta.' },
 }
 
-export default function PedidosScreen({ ordens, authUser, onOrdem }) {
+export default function PedidosScreen({ ordens, authUser, onOrdem, onHamburguer }) {
   const [tabAtivo, setTabAtivo] = useState('em_curso')
 
   const ordensTab = (ordens || []).filter(o => tabParaOrdem(o.st) === tabAtivo)
@@ -298,13 +298,26 @@ export default function PedidosScreen({ ordens, authUser, onOrdem }) {
     <div style={{ minHeight: '100vh', background: V5.bg, paddingBottom: 90 }}>
       {/* Header fixo com tabs */}
       <div style={{
-        background: V5.white, padding: '18px 16px 0',
+        background: V5.white, padding: '14px 16px 0',
         borderBottom: `1px solid ${V5.border}`,
         position: 'sticky', top: 0, zIndex: 10,
       }}>
-        <h1 style={{ fontSize: 19, fontWeight: 800, color: V5.ink, margin: '0 0 12px' }}>
-          Os meus pedidos
-        </h1>
+        <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:12 }}>
+          <button
+            onClick={onHamburguer}
+            aria-label="Abrir menu"
+            style={{
+              width:32, height:32, borderRadius:'50%',
+              background:'rgba(27,67,50,0.08)',
+              border:'none', cursor:'pointer',
+              display:'flex', alignItems:'center', justifyContent:'center',
+              fontSize:16, color:'#1B4332', flexShrink:0,
+            }}
+          >≡</button>
+          <h1 style={{ fontSize: 19, fontWeight: 800, color: V5.ink, margin: 0, flex:1 }}>
+            Os meus pedidos
+          </h1>
+        </div>
         <div style={{ display: 'flex' }}>
           {TABS.map(t => {
             const active = tabAtivo === t.id

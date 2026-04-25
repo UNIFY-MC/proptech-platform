@@ -114,7 +114,7 @@ function SvcCard({ s }) {
   )
 }
 
-export default function ServicosScreen({ authUser }) {
+export default function ServicosScreen({ authUser, onHamburguer }) {
   const [catSel, setCatSel] = useState(null)   // null → grid, cat obj → lista
   const [servicos, setServicos] = useState(null) // null = a carregar
   const [loadErr, setLoadErr]   = useState(false)
@@ -148,12 +148,25 @@ export default function ServicosScreen({ authUser }) {
     return (
       <div style={{ minHeight: '100vh', background: V5.bg, paddingBottom: 90 }}>
         <div style={{
-          background: V5.white, padding: '18px 16px 14px',
+          background: V5.white, padding: '14px 16px 14px',
           borderBottom: `1px solid ${V5.border}`,
           position: 'sticky', top: 0, zIndex: 10,
         }}>
-          <h1 style={{ fontSize: 19, fontWeight: 800, color: V5.ink, margin: 0 }}>Serviços</h1>
-          <p style={{ margin: '3px 0 0', fontSize: 12, color: V5.slate }}>O que precisas hoje?</p>
+          <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:4 }}>
+            <button
+              onClick={onHamburguer}
+              aria-label="Abrir menu"
+              style={{
+                width:32, height:32, borderRadius:'50%',
+                background:'rgba(27,67,50,0.08)',
+                border:'none', cursor:'pointer',
+                display:'flex', alignItems:'center', justifyContent:'center',
+                fontSize:16, color:'#1B4332', flexShrink:0,
+              }}
+            >≡</button>
+            <h1 style={{ fontSize: 19, fontWeight: 800, color: V5.ink, margin: 0, flex:1 }}>Serviços</h1>
+          </div>
+          <p style={{ margin: '0', fontSize: 12, color: V5.slate }}>O que precisas hoje?</p>
         </div>
 
         <div style={{ padding: '16px 14px 28px' }}>

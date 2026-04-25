@@ -118,7 +118,7 @@ function nextLabel(eq) {
    Props mantidos da versão inline em App.jsx.
    Fases 3.3–3.5 substituirão os alerts placeholder por ecrãs reais.
 ══════════════════════════════════ */
-export default function CasaScreen({ localizacoes, localizacao, equipamentos, authUser, onNavigate }) {
+export default function CasaScreen({ localizacoes, localizacao, equipamentos, authUser, onNavigate, onHamburguer }) {
   const loc   = localizacao || (Array.isArray(localizacoes) ? localizacoes[0] : null)
   const nLocs = (localizacoes || []).length
   const eqs   = Array.isArray(equipamentos)
@@ -181,8 +181,23 @@ export default function CasaScreen({ localizacoes, localizacao, equipamentos, au
   return (
     <div style={{ minHeight: '100vh', background: CASA.bg, paddingBottom: 88 }}>
 
-      {/* HEADER + HERO CÍRCULO */}
-      <div style={{ background: CASA.green, padding: '52px 16px 22px' }}>
+      {/* HEADER + HERO */}
+      <div style={{ background: CASA.green, padding: '14px 16px 22px' }}>
+        {/* Linha de controlo: hambúrguer ≡ esquerda, avatar direita (via App.jsx) */}
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10 }}>
+          <button
+            onClick={onHamburguer}
+            aria-label="Abrir menu"
+            style={{
+              width:32, height:32, borderRadius:'50%',
+              background:'rgba(255,255,255,0.1)',
+              border:'none', cursor:'pointer',
+              display:'flex', alignItems:'center', justifyContent:'center',
+              fontSize:16, color:'#fff',
+            }}
+          >≡</button>
+          <div style={{ width:32 }} />
+        </div>
         {/* Localização + switcher */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
           <div>
