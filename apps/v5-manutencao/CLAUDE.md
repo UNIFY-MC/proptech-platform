@@ -314,6 +314,7 @@ Colunas novas em `ordens`:
 | **3.3.11** | ✅ fechada | Perfis fiscais por imóvel + snapshot fiscal nas ordens |
 | **3.3.12** | ✅ fechada | Imóvel como entidade central: GPS + CRUD completo + ImovelDetalheScreen |
 | **3.3.13** | ✅ fechada | Orçamentos à medida (flow visual 4 steps) + CategoriaScreen enriquecida + AlertActions Shipshape |
+| **3.3.14** | ✅ fechada | Tab memory + EscolherImovelSheet + orcamentos BD real + SmartPromptsSheet + completude |
 | **3.4.0** | próxima | Auth real (Fase 2d) + Lista de tarefas (Fase 3a) |
 
 ### Notas para 3.3.12
@@ -343,17 +344,24 @@ Colunas novas em `ordens`:
 - `PedidosScreen`: card mock OrcamentoMockCard (roxo, progress bar) na tab Em curso
 - Novos props: `onNavigateOrcamento` (CategoriaScreen, AlertaDetailScreen), `onNavigateOrcamentos` + `onNavigateReferral` (ServicosScreen), `onNavigateAlerta` (NotificacoesScreen)
 
-## Débito 3.3.14 — Ligações BD + UX pendentes
+## Notas para 3.3.14
 
-- Schema BD: `orcamentos_pedidos` + `propostas_orcamento` + RLS
-- Wire wizard → INSERT em `orcamentos_pedidos`
-- ImovelSelectorSheet por tab (aparece ao mudar de tab)
-- Bottom sheet "Para qual imóvel?" no checkout
-- Smart prompts contextuais por categoria no wizard
-- Wire `localizacao_id` nos pedidos de orçamento
-- Acções AlertaDetailScreen: chat IA, tutorial inline, detalhe equipamento
-- Detalhe de pedido de orçamento (screen completo)
-- Completude % por imóvel sem bloquear
+- `pedidos_orcamento.estado` CHECK: `aberto | em_cotacao | cotado | aceite | cancelado | expirado`
+- `pedidos_orcamento.organization_id` NOT NULL — usar `DEMO_ORGANIZATION_ID` nos seeds
+- `orcamentos_recebidos.prestador_id` NOT NULL — join com `prestadores(nome, iniciais, rating_medio, aprovado)`
+- `EscolherImovelSheet` + `useEscolherImovel` hook em `src/components/` e `src/lib/`
+- `SmartPromptsSheet` persiste respostas em `contexto_servico` (UNIQUE por localizacao+categoria)
+- `completude.js` calcula score 0-100% baseado em 10 campos com pesos; cor: verde ≥80%, âmbar ≥50%, vermelho <50%
+- `MOCK_ORCAMENTOS_PEDIDOS` e `MOCK_PROPOSTAS_ORCAMENTO` removidos — BD real
+- `ImovelAtivoContext` agora tem: `imovelAtivoPorTab`, `setImovelAtivoForTab`, `onTabChange`, `resetParaPrincipal`
+
+## Débito 3.5 — Pendentes pós 3.3.14
+
+- **RLS** em `pedidos_orcamento`, `orcamentos_recebidos`, `contexto_servico` (actualmente sem policies — só funciona em demo)
+- **Acções AlertaDetailScreen**: chat IA, tutorial inline, detalhe equipamento (ainda alerts)
+- **Aceitar proposta** no OrcamentoDetalheScreen: UPDATE `pedidos_orcamento.estado='aceite'` + `proposta_aceite_id`
+- **Cancelar pedido** no OrcamentoDetalheScreen: UPDATE `estado='cancelado'`
+- **SmartPromptsSheet no wizard** de orçamento (actualmente só em ServicoDetailScreen)
 
 ## Débito mapa visual — Continua de 3.3.12
 
