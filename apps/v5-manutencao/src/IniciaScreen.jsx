@@ -98,7 +98,7 @@ function casaLabel(score) {
   return 'Casa em Risco 🚨'
 }
 
-export default function IniciaScreen({ authUser, onNavigateCasa, onNavigateServicos, onHamburguer, onAvatarClick, onNavigateScore, onNavigateAlerta, onNavigateOwnersClub }) {
+export default function IniciaScreen({ authUser, localizacoes, localizacaoAtiva, onNavigateCasa, onNavigateServicos, onHamburguer, onAvatarClick, onNavigateScore, onNavigateAlerta, onNavigateOwnersClub }) {
   const [subscricao,  setSubscricao]  = useState(null)
   const [creditoMes,  setCreditoMes]  = useState(undefined)
   const [localizacao, setLocalizacao] = useState(null)
@@ -137,9 +137,24 @@ export default function IniciaScreen({ authUser, onNavigateCasa, onNavigateServi
   const nextNivel   = nivelIdx >= 0 && nivelIdx < 4 ? NIVEL_ORDEM[nivelIdx + 1] : null
   const pontosProx  = nextNivel ? Math.max(0, NIVEL_THRESH[nextNivel] - pontosTotal) : 0
   const streak      = subscricao?.streak_atual ?? subscricao?.streak_dias ?? 0
-  const homeScore   = localizacao?.home_score ?? 0
-  const localidade  = localizacao?.localidade || ''
-  const locationLbl = localidade ? localidade.toUpperCase() : 'A MINHA CASA'
+
+  // Localização activa: preferir prop do App (casaActiveLoc) sobre query própria
+  const loc         = localizacaoAtiva || localizacao
+  const homeScore   = loc?.home_score ?? 0
+  const localidade  = loc?.localidade || ''
+  const nLocs       = (localizacoes || []).length
+
+  // Morada para o header: "Nome da casa · LOCALIDADE" ex: "R. Palmira Bastos, 4 · COIMBRA"
+  const locationLbl = loc
+    ? `${loc.nome}${localidade ? ' · ' + localidade.toUpperCase() : ''}`
+    : 'A MINHA CASA'
+
+  // Switcher de morada — só aparece se há mais que uma localização
+  function handleLocationClick() {
+    if (nLocs <= 1) return
+    // TODO(mario): dropdown selector multi-casa — Fase 2d
+    alert('Selector de morada disponível na Fase 2d')
+  }
 
   const preco  = Number(subscricao?.preco_mensal || 0)
   const ganho  = creditoMes?.credito ?? 0
@@ -154,19 +169,31 @@ export default function IniciaScreen({ authUser, onNavigateCasa, onNavigateServi
         background: `linear-gradient(145deg,${V.green} 0%,${V.greenMid} 100%)`,
         padding: '14px 16px 20px', color: '#fff',
       }}>
-        {/* Linha 1: header completo */}
+        {/* Linha 1: ≡ | 📍 morada · localidade (clicável se multi-casa) | 💬 🔔 avatar */}
         <HeroHeader
           onHamburguer={onHamburguer}
           onAvatarClick={onAvatarClick}
-          locationLabel={locationLbl}
+          locationLabel={locationLbl + (nLocs > 1 ? ' ⌄' : '')}
+          onLocationClick={nLocs > 1 ? handleLocationClick : undefined}
           authUser={authUser}
+          hideTemp
         />
 
-        {/* Linha 2: saudação + nome + temperatura */}
+        {/* Linha 2: saudação + nome | temperatura à direita (ref. linha 84-96) */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 }}>
           <div>
             <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.75)', marginBottom: 2 }}>{saudacao}</div>
-            <div style={{ fontSize: 26, fontWeight: 700, lineHeight: 1.1 }}>{primeiroNome} 👋</div>
+            <div style={{ fontSize: 26, fontWeight: 700, lineHeight: 1.1, fontFamily: 'Georgia,serif' }}>{primeiroNome} 👋</div>
+          </div>
+          {/* Temperatura — TODO(mario): IPMA real na Fase 3.5 */}
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4, justifyContent: 'flex-end' }}>
+              <span style={{ fontSize: 18 }}>🌤️</span>
+              <span style={{ fontSize: 22, fontWeight: 700, color: '#fff' }}>21°</span>
+            </div>
+            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.65)' }}>
+              céu limpo{localidade ? ' · ' + localidade : ''}
+            </div>
           </div>
         </div>
 

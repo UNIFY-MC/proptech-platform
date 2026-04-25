@@ -1,8 +1,9 @@
 import React from 'react'
 
 /* Componente de header partilhado para todos os ecrãs principais no hero verde.
-   Linha 1 do hero: ≡ · morada · [temp · 💬 · 🔔 · avatar] */
-export default function HeroHeader({ onHamburguer, onAvatarClick, locationLabel, authUser, notifCount = 1 }) {
+   Linha 1 do hero: ≡ · morada · [temp(opcional) · 💬 · 🔔 · avatar]
+   hideTemp=true: remove o bloco de temperatura (ex: IniciaScreen tem temp na linha do "Bom dia") */
+export default function HeroHeader({ onHamburguer, onAvatarClick, locationLabel, onLocationClick, authUser, notifCount = 1, hideTemp = false }) {
   const nome    = authUser?.nome || ''
   const iniciais = nome.split(' ').filter(Boolean).map(w => w[0]).slice(0, 2).join('').toUpperCase() || 'MC'
 
@@ -21,22 +22,28 @@ export default function HeroHeader({ onHamburguer, onAvatarClick, locationLabel,
         }}
       >≡</button>
 
-      {/* Morada / label */}
-      <div style={{
-        flex: 1, fontSize: 9, color: 'rgba(255,255,255,0.6)',
-        fontWeight: 700, letterSpacing: 0.8,
-        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-      }}>
+      {/* Morada / label — clicável se onLocationClick definido (switcher multi-casa) */}
+      <div
+        onClick={onLocationClick}
+        style={{
+          flex: 1, fontSize: 9, color: 'rgba(255,255,255,0.6)',
+          fontWeight: 700, letterSpacing: 0.8,
+          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          cursor: onLocationClick ? 'pointer' : 'default',
+        }}
+      >
         📍 {locationLabel || 'A MINHA CASA'}
       </div>
 
       {/* Cluster direito */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-        {/* Temperatura — TODO(mario): IPMA em 3.5 */}
-        <div style={{ textAlign: 'right' }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: '#fff', lineHeight: 1.2 }}>🌤️ 21°</div>
-          <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.6)' }}>céu limpo</div>
-        </div>
+        {/* Temperatura — ocultável via hideTemp (IniciaScreen move temp para linha do "Bom dia") */}
+        {!hideTemp && (
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: '#fff', lineHeight: 1.2 }}>🌤️ 21°</div>
+            <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.6)' }}>céu limpo</div>
+          </div>
+        )}
 
         {/* Chat */}
         <button
