@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import { supa } from '../supa.js'
+import { supaPublic } from '../supa.js'
 
 const G = '#1B4332'; const GM = '#2D6A4F'
 const C = { ink:'#0f172a', slate:'#64748b', border:'#e2e8f0', bg:'#f8fafc', white:'#fff',
@@ -80,7 +80,7 @@ export default function CategoriaScreen({ categoria, onBack, onNavigateServico, 
   const fetchData = useCallback(async () => {
     if (!cat.id) { setLoading(false); return }
     setLoading(true)
-    let { data } = await supa
+    let { data } = await supaPublic
       .from('servicos')
       .select('id, nome, preco, duracao_tipica, popular, icon, categoria_id, subcategoria_id')
       .eq('activo', true)

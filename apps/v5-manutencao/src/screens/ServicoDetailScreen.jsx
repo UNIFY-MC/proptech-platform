@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import { supa } from '../supa.js'
+import { supa, supaPublic } from '../supa.js'
 import { useImovelAtivo } from '../lib/ImovelAtivoContext.jsx'
 import { useEscolherImovel } from '../lib/useEscolherImovel.jsx'
 import SmartPromptsSheet from '../components/SmartPromptsSheet.jsx'
@@ -36,7 +36,7 @@ export default function ServicoDetailScreen({ servico, onBack, onPedir, onAdicio
 
   const fetchDetalhe = useCallback(async () => {
     if (!servId) return
-    const { data } = await supa
+    const { data } = await supaPublic
       .from('servicos')
       .select('id, nome, preco, preco_original, duracao_tipica, garantia_dias, inclui, nao_inclui, descricao_curta, tagline, icon, categoria_id')
       .eq('id', servId)
