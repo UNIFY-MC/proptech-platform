@@ -323,7 +323,8 @@ Colunas novas em `ordens`:
 | **3.3.14-fix-ux3** | ✅ fechada | Combos BD real + search bar debounce + 9ª cat Packs + 22 serviços novos (199 total) |
 | **3.3.14-fix-ux4** | ✅ fechada | ServicoDetailScreen redesign 15 secções + inclui/exclui BD + stats + imagens Unsplash + FAQ |
 | **3.3.14-fix-ux5** | ✅ fechada | Configurador variações + planos frequência + thumbnails CategoriaScreen |
-| **3.4.0** | futura | Auth real (Fase 2d) + Lista de tarefas (Fase 3a) |
+| **3.3.14-fix-ux6** | ✅ fechada | Packs banner dourado + combos ligados BD + urgência clickável + Plano Home+ MVP + MaisContratados fix |
+| **3.4.0** | **próxima** | Auth real (Fase 2d) + Lista de tarefas (Fase 3a) |
 
 ### Notas para 3.3.12
 
@@ -402,6 +403,17 @@ Colunas novas em `ordens`:
 - `CategoriaScreen`: `imagem_url` adicionado ao select; card mostra thumbnail 52×48 quando disponível, emoji como fallback via `onError`
 - Sem nova SQL — `servico_variacoes`, `frequency_templates`, `imagem_url` já existiam
 
+## Notas para 3.3.14-fix-ux6
+
+- **BD**: criada `v5_manutencao.combo_servicos` (combo_id UUID FK combos, servico_id UUID FK catalogo_servicos, ordem INT); `combos` ganhou `cor_texto TEXT DEFAULT '#1B4332'`
+- **BD**: seed 8 serviços em `catalogo_servicos` (S009–S016); seed Pack Verão em `combos`; todas as 4 combos ligadas via `combo_servicos`
+- **ServicosScreen**: CATS_GRID voltou a 8 itens (Packs removido). Banner dourado Packs entre referral e "Combos populares". Banner Home+ clickável → `onNavigatePlanoHome`
+- **ComboDetailScreen**: hero usa `cor_texto` da BD (contraste correcto em fundos claros); serviços carregados de `combo_servicos JOIN catalogo_servicos`; cards clickáveis → `onNavigateServico`
+- **PROMOS carousel**: i=0 → limpeza, i=1 → PacksLista, i=2 → canalizacao
+- **`src/lib/descontos.js`**: `getDescontoAplicavel(pessoaId, valorBase)` — lê `subscricoes`, devolve `{ tipo, label, pct, credito_eur }`
+- **`src/screens/PlanoHomeDetalheScreen.jsx`**: ecrã full-screen Plano Home+; lê subscrição demo; mostra benefícios, preço, FAQ; CTA desactivado (Stripe futuro)
+- **`MaisContratadosScreen`**: corrigido — usa `supaPublic.from('servicos')` em vez de `supa`; select limpo (`preco_base`, sem joins problemáticos)
+
 ## Débito 3.5 — Pendentes pós 3.3.14-fix-ux5
 
 - **RLS** em `pedidos_orcamento`, `orcamentos_recebidos`, `contexto_servico`, `servicos_inclui_exclui`, `servicos_faq`, `platform_stats` (sem policies — só funciona em demo)
@@ -413,6 +425,8 @@ Colunas novas em `ordens`:
 - **Aceitar proposta** no OrcamentoDetalheScreen: UPDATE `pedidos_orcamento.estado='aceite'` + `proposta_aceite_id`
 - **Cancelar pedido** no OrcamentoDetalheScreen: UPDATE `estado='cancelado'`
 - **SmartPromptsSheet no wizard** de orçamento (actualmente só em ServicoDetailScreen)
+- **Desconto Home+ no ServicoDetailScreen**: mostrar crédito `getDescontoAplicavel` abaixo do preço CTA (Tarefa E3 — não implementado em fix-ux6)
+- **Stripe checkout** no PlanoHomeDetalheScreen: CTA "Subscrever" actualmente desactivado
 
 ## Débito mapa visual — Continua de 3.3.12
 

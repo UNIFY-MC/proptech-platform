@@ -27,7 +27,6 @@ const CATS_GRID = [
   { id: 'eletrica',    l: 'Eléctrica',   ic: '⚡', bg: '#FAEEDA' },
   { id: 'canalizacao', l: 'Canalização', ic: '💧', bg: '#E0E8FA' },
   { id: 'orcamentos',  l: 'À medida',    ic: '📋', bg: '#EEEDFE', nova: true },
-  { id: 'packs',       l: 'Packs',       ic: '🎁', bg: '#FEF3C7' },
 ]
 
 const PROMOS = [
@@ -88,10 +87,11 @@ function adaptComboForDetail(c) {
     titulo:        c.nome,
     sub:           c.sub,
     emoji:         c.emoji || '🏠',
-    preco:         parseFloat(c.preco_combo),
-    precoOriginal: parseFloat(c.preco_normal),
+    preco:         `€${parseFloat(c.preco_combo).toFixed(0)}`,
+    precoOriginal: `€${parseFloat(c.preco_normal).toFixed(0)}`,
     desconto:      c.desconto_pct || Math.round((1 - parseFloat(c.preco_combo) / parseFloat(c.preco_normal)) * 100),
     bg:            c.cor_hex || '#E6F1FB',
+    cor_texto:     c.cor_texto || '#1B4332',
     servicos:      c.servicos_ids || [],
     poupanca:      `${poupanca}€`,
     descricao:     c.descricao_longa,
@@ -120,6 +120,7 @@ function MarketplaceView({
   onOpenImovelSelector, onNavigateOrcamentos, onNavigateReferral,
   onNavigateCombo, onNavigateServico, onNavigatePacksLista,
   onNavigateMaisContratados, onNavigateOrcamentoPersonalizado,
+  onNavigatePlanoHome,
 }) {
   const [combos,         setCombos]         = useState(COMBOS_FALLBACK)
   const [maisContratados,setMaisContratados] = useState(MAIS_FALLBACK)
@@ -294,39 +295,51 @@ function MarketplaceView({
         </div>
 
         {/* Banner Home+ */}
-        <div style={{
-          margin: '8px 14px 0',
-          background: V5.greenXl, border: `1px solid ${V5.greenLt}`,
-          borderRadius: 12, padding: '11px 14px',
-          display: 'flex', gap: 10, alignItems: 'center',
-        }}>
-          <span style={{ fontSize: 22, flexShrink: 0 }}>🎁</span>
+        <div
+          onClick={onNavigatePlanoHome}
+          style={{
+            margin: '8px 14px 0',
+            background: V5.greenXl, border: `1px solid ${V5.greenLt}`,
+            borderRadius: 12, padding: '11px 14px',
+            display: 'flex', gap: 10, alignItems: 'center',
+            cursor: onNavigatePlanoHome ? 'pointer' : 'default',
+          }}
+        >
+          <span style={{ fontSize: 22, flexShrink: 0 }}>🏠</span>
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: V5.green }}>Plano Home+ · 5% off em tudo</div>
-            <div style={{ fontSize: 10, color: V5.greenMid, marginTop: 1 }}>Aplicado automaticamente no checkout</div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: V5.green }}>Plano Home+ · 10% crédito em tudo</div>
+            <div style={{ fontSize: 10, color: V5.greenMid, marginTop: 1 }}>6,90€/mês · crédito automático por serviço</div>
           </div>
+          {onNavigatePlanoHome && <span style={{ fontSize: 14, color: V5.greenLt }}>›</span>}
         </div>
 
         {/* Carrossel de promos */}
         <div style={{ padding: '12px 12px 0', display: 'flex', gap: 9, overflowX: 'auto', WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none' }}>
-          {PROMOS.map((promo, i) => (
-            <div key={i} style={{
-              minWidth: '85%', borderRadius: 13, padding: '12px 14px',
-              background: promo.bg, cursor: 'pointer', flexShrink: 0,
-              position: 'relative', overflow: 'hidden',
-            }}>
-              <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: 0.5, color: promo.tagColor, marginBottom: 4 }}>{promo.tag}</div>
-              <div style={{ fontSize: 15, fontWeight: 700, color: V5.ink, lineHeight: 1.15, fontFamily: 'Georgia,serif', marginBottom: 3 }}>
-                {promo.titleBefore}
-                <span style={{ color: promo.highlightColor }}>{promo.titleHighlight}</span>
-                {promo.titleAfter}
+          {PROMOS.map((promo, i) => {
+            const handlePromo = () => {
+              if (i === 0) onNavigateCategoria?.({ id:'limpeza',     nome:'Limpeza',     emoji:'✨' })
+              else if (i === 1) onNavigatePacksLista?.()
+              else if (i === 2) onNavigateCategoria?.({ id:'canalizacao', nome:'Canalização', emoji:'💧' })
+            }
+            return (
+              <div key={i} onClick={handlePromo} style={{
+                minWidth: '85%', borderRadius: 13, padding: '12px 14px',
+                background: promo.bg, cursor: 'pointer', flexShrink: 0,
+                position: 'relative', overflow: 'hidden',
+              }}>
+                <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: 0.5, color: promo.tagColor, marginBottom: 4 }}>{promo.tag}</div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: V5.ink, lineHeight: 1.15, fontFamily: 'Georgia,serif', marginBottom: 3 }}>
+                  {promo.titleBefore}
+                  <span style={{ color: promo.highlightColor }}>{promo.titleHighlight}</span>
+                  {promo.titleAfter}
+                </div>
+                <div style={{ fontSize: 10, color: V5.slate, marginTop: 3 }}>{promo.sub}</div>
+                <button onClick={e => { e.stopPropagation(); handlePromo() }} style={{ background: promo.btnBg, color: '#fff', padding: '6px 12px', borderRadius: 8, fontSize: 11, fontWeight: 700, border: 'none', cursor: 'pointer', marginTop: 9 }}>
+                  Explorar →
+                </button>
               </div>
-              <div style={{ fontSize: 10, color: V5.slate, marginTop: 3 }}>{promo.sub}</div>
-              <button style={{ background: promo.btnBg, color: '#fff', padding: '6px 12px', borderRadius: 8, fontSize: 11, fontWeight: 700, border: 'none', cursor: 'pointer', marginTop: 9 }}>
-                Explorar →
-              </button>
-            </div>
-          ))}
+            )
+          })}
         </div>
 
         {/* Categorias — grid */}
@@ -381,6 +394,33 @@ function MarketplaceView({
             </div>
             <span style={{ fontSize: 18, color: 'rgba(255,255,255,0.7)', flexShrink: 0 }}>›</span>
           </button>
+        </div>
+
+        {/* Banner Packs */}
+        <div
+          onClick={onNavigatePacksLista}
+          style={{
+            margin: '12px 14px 0',
+            background: 'linear-gradient(90deg, #FFF4D6, #FAEEDA)',
+            border: '1px solid #D4A72C',
+            borderRadius: 12,
+            padding: '12px 14px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 11,
+            cursor: 'pointer',
+          }}
+        >
+          <div style={{ fontSize: 24 }}>🎁</div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: '#854F0B', fontFamily: 'Georgia,serif' }}>
+              Packs · poupa até 25%
+            </div>
+            <div style={{ fontSize: 10.5, color: '#854F0B', marginTop: 2 }}>
+              Combos sazonais com desconto · 1 visita · 1 fatura
+            </div>
+          </div>
+          <div style={{ fontSize: 18, color: '#854F0B' }}>›</div>
         </div>
 
         {/* Combos populares */}
@@ -452,6 +492,7 @@ export default function ServicosScreen({
   onOpenImovelSelector, onNavigateOrcamentos, onNavigateReferral,
   onNavigateCategoria, onNavigateCombo, onNavigateServico,
   onNavigatePacksLista, onNavigateMaisContratados, onNavigateOrcamentoPersonalizado,
+  onNavigatePlanoHome,
 }) {
   return (
     <MarketplaceView
@@ -470,6 +511,7 @@ export default function ServicosScreen({
       onNavigatePacksLista={onNavigatePacksLista}
       onNavigateMaisContratados={onNavigateMaisContratados}
       onNavigateOrcamentoPersonalizado={onNavigateOrcamentoPersonalizado}
+      onNavigatePlanoHome={onNavigatePlanoHome}
     />
   )
 }

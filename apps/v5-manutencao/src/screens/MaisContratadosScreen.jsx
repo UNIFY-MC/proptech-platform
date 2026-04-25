@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import { supa } from '../supa.js'
+import { supaPublic } from '../supa.js'
 
 const G = '#1B4332'; const GM = '#2D6A4F'
 const C = { ink:'#0f172a', slate:'#64748b', border:'#e2e8f0', bg:'#f8fafc', white:'#fff',
@@ -23,9 +23,9 @@ export default function MaisContratadosScreen({ onBack, onNavigateServico }) {
 
   const fetchData = useCallback(async () => {
     setLoading(true)
-    const { data } = await supa
+    const { data } = await supaPublic
       .from('servicos')
-      .select('id, nome, preco, duracao_tipica, popular, urgent, icon, categoria_id, subcategorias(nome, icon)')
+      .select('id, nome, preco_base, duracao_tipica, popular, categoria_id')
       .eq('activo', true)
       .is('servico_pai_id', null)
       .order('popular', { ascending: false })
@@ -59,7 +59,7 @@ export default function MaisContratadosScreen({ onBack, onNavigateServico }) {
           </div>
         ) : servicos.map((s, idx) => {
           const rank  = idx + 1
-          const emoji = s.icon || s.subcategorias?.icon || CAT_EMOJI[s.categoria_id] || '🔧'
+          const emoji = CAT_EMOJI[s.categoria_id] || '🔧'
           return (
             <div
               key={s.id}
@@ -85,7 +85,7 @@ export default function MaisContratadosScreen({ onBack, onNavigateServico }) {
                   {s.urgent  && <span style={{ color:'#E76F51', fontWeight:700 }}>⚡ Urgente</span>}
                 </div>
               </div>
-              <div style={{ fontSize:15, fontWeight:700, color:G, flexShrink:0 }}>{precoFmt(s.preco)}</div>
+              <div style={{ fontSize:15, fontWeight:700, color:G, flexShrink:0 }}>{precoFmt(s.preco_base)}</div>
             </div>
           )
         })}
