@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import { supaPublic } from '../supa.js'
 
 const G = '#1B4332'; const GM = '#2D6A4F'
@@ -46,10 +46,10 @@ const CAT_RELACIONADAS = {
 }
 
 const BADGES = [
-  { ic:'✅', t:'Verificados', s:'NIF + seguro RC' },
-  { ic:'💰', t:'Preço à cabeça', s:'Sem surpresas' },
-  { ic:'⚡', t:'Urgência 2h', s:'Mesmo dia' },
-  { ic:'🛡️', t:'Garantia', s:'Reparação grátis' },
+  { ic:'✅', t:'Verificados', s:'NIF + RC' },
+  { ic:'💰', t:'Preço fixo', s:'Sem surpresas' },
+  { ic:'⚡', t:'2h urgência', s:'Mesmo dia' },
+  { ic:'🛡️', t:'Garantia', s:'30 dias' },
 ]
 
 const REVIEWS = [
@@ -74,6 +74,7 @@ export default function CategoriaScreen({ categoria, onBack, onNavigateServico, 
   const [loading,  setLoading]  = useState(true)
   const [filtro,   setFiltro]   = useState('Tudo')
   const [faqOpen,  setFaqOpen]  = useState(null)
+  const [subGrupo, setSubGrupo] = useState(null)
 
   const cat = categoria || { id:'', nome:'Serviços', emoji:'🔧' }
 
@@ -82,18 +83,20 @@ export default function CategoriaScreen({ categoria, onBack, onNavigateServico, 
     setLoading(true)
     let { data } = await supaPublic
       .from('servicos')
-      .select('id, nome, preco, duracao_tipica, popular, icon, categoria_id, subcategoria_id')
+      .select('id, nome, preco, duracao_tipica, popular, icon, categoria_id, subcategoria_id, sub_grupo')
       .eq('activo', true)
       .is('servico_pai_id', null)
+      .neq('tipo', 'personalizado')
       .eq('subcategoria_id', cat.id)
       .order('popular', { ascending: false })
       .order('ordem', { ascending: true })
     if (!data || data.length === 0) {
       const res = await supaPublic
         .from('servicos')
-        .select('id, nome, preco, duracao_tipica, popular, icon, categoria_id, subcategoria_id')
+        .select('id, nome, preco, duracao_tipica, popular, icon, categoria_id, subcategoria_id, sub_grupo')
         .eq('activo', true)
         .is('servico_pai_id', null)
+        .neq('tipo', 'personalizado')
         .eq('categoria_id', cat.id)
         .order('popular', { ascending: false })
         .order('ordem', { ascending: true })
@@ -105,12 +108,23 @@ export default function CategoriaScreen({ categoria, onBack, onNavigateServico, 
 
   useEffect(() => { fetchData() }, [fetchData])
 
-  const sorted = [...servicos].sort((a, b) => {
-    if (filtro === 'Mais populares') return (b.popular ? 1 : 0) - (a.popular ? 1 : 0)
-    if (filtro === 'Preço ↓') return (a.preco || 0) - (b.preco || 0)
-    if (filtro === 'Preço ↑') return (b.preco || 0) - (a.preco || 0)
-    return 0
-  })
+  const subGrupos = useMemo(() => {
+    const seen = new Set()
+    const result = []
+    servicos.forEach(s => {
+      if (s.sub_grupo && !seen.has(s.sub_grupo)) { seen.add(s.sub_grupo); result.push(s.sub_grupo) }
+    })
+    return result
+  }, [servicos])
+
+  const sorted = [...servicos]
+    .filter(s => !subGrupo || s.sub_grupo === subGrupo)
+    .sort((a, b) => {
+      if (filtro === 'Mais populares') return (b.popular ? 1 : 0) - (a.popular ? 1 : 0)
+      if (filtro === 'Preço ↓') return (a.preco || 0) - (b.preco || 0)
+      if (filtro === 'Preço ↑') return (b.preco || 0) - (a.preco || 0)
+      return 0
+    })
 
   const emoji     = cat.emoji || CAT_EMOJI[cat.id] || '🔧'
   const tagline   = CAT_TAGLINE[cat.id]   || 'Técnicos certificados em minutos'
@@ -131,13 +145,13 @@ export default function CategoriaScreen({ categoria, onBack, onNavigateServico, 
         <div style={{ position:'absolute', right:-20, bottom:-20, fontSize:120, opacity:.12 }}>{emoji}</div>
       </div>
 
-      {/* ── Badges de confiança 2x2 ── */}
-      <div style={{ padding:'12px 12px 0', display:'grid', gridTemplateColumns:'1fr 1fr', gap:7 }}>
+      {/* ── Badges de confiança 4 colunas ── */}
+      <div style={{ padding:'10px 12px 0', display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1fr', gap:5 }}>
         {BADGES.map(b => (
-          <div key={b.t} style={{ background:C.white, border:`1px solid ${C.border}`, borderRadius:10, padding:'9px 11px' }}>
-            <div style={{ fontSize:16, marginBottom:2 }}>{b.ic}</div>
-            <div style={{ fontSize:11, fontWeight:700 }}>{b.t}</div>
-            <div style={{ fontSize:10, color:C.slate, marginTop:1 }}>{b.s}</div>
+          <div key={b.t} style={{ background:C.white, border:`1px solid ${C.border}`, borderRadius:9, padding:'7px 8px', textAlign:'center' }}>
+            <div style={{ fontSize:14, marginBottom:2 }}>{b.ic}</div>
+            <div style={{ fontSize:9.5, fontWeight:700, lineHeight:1.2 }}>{b.t}</div>
+            <div style={{ fontSize:8.5, color:C.slate, marginTop:1, lineHeight:1.2 }}>{b.s}</div>
           </div>
         ))}
       </div>
@@ -156,6 +170,19 @@ export default function CategoriaScreen({ categoria, onBack, onNavigateServico, 
         </div>
       </div>
 
+      {/* ── Serviço personalizado ── */}
+      <div
+        onClick={onNavigateOrcamento}
+        style={{ margin:'10px 12px 0', border:`1.5px dashed ${GM}`, borderRadius:12, padding:'11px 14px', cursor: onNavigateOrcamento ? 'pointer' : 'default', display:'flex', alignItems:'center', gap:12, background:C.white }}
+      >
+        <span style={{ fontSize:22 }}>🎯</span>
+        <div style={{ flex:1 }}>
+          <div style={{ fontSize:12, fontWeight:700, color:C.ink }}>Serviço personalizado</div>
+          <div style={{ fontSize:10.5, color:C.slate, marginTop:1 }}>Descreve o que precisas · recebe orçamentos</div>
+        </div>
+        <span style={{ color:GM, fontSize:13, fontWeight:700 }}>→</span>
+      </div>
+
       {/* ── Filtros ── */}
       <div style={{ padding:'12px 16px 0', display:'flex', gap:7, overflowX:'auto', scrollbarWidth:'none' }}>
         {FILTROS.map(f => (
@@ -166,6 +193,24 @@ export default function CategoriaScreen({ categoria, onBack, onNavigateServico, 
           }}>{f}</button>
         ))}
       </div>
+
+      {/* ── Sub-grupos ── */}
+      {subGrupos.length > 1 && (
+        <div style={{ padding:'6px 16px 0', display:'flex', gap:6, overflowX:'auto', scrollbarWidth:'none' }}>
+          <button onClick={() => setSubGrupo(null)} style={{
+            flexShrink:0, padding:'4px 11px', borderRadius:16, fontSize:11, fontWeight:600, cursor:'pointer',
+            background: !subGrupo ? G : C.bg, color: !subGrupo ? '#fff' : C.slate,
+            border:`1px solid ${!subGrupo ? G : C.border}`,
+          }}>Todos</button>
+          {subGrupos.map(sg => (
+            <button key={sg} onClick={() => setSubGrupo(sg === subGrupo ? null : sg)} style={{
+              flexShrink:0, padding:'4px 11px', borderRadius:16, fontSize:11, fontWeight:600, cursor:'pointer',
+              background: subGrupo === sg ? G : C.bg, color: subGrupo === sg ? '#fff' : C.slate,
+              border:`1px solid ${subGrupo === sg ? G : C.border}`,
+            }}>{sg}</button>
+          ))}
+        </div>
+      )}
 
       {/* ── Lista de serviços ── */}
       <div style={{ padding:'12px 16px 0' }}>

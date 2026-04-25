@@ -15,6 +15,11 @@ export default function HeroHeader({
   const nome    = authUser?.nome || ''
   const iniciais = nome.split(' ').filter(Boolean).map(w => w[0]).slice(0, 2).join('').toUpperCase() || 'MC'
 
+  const semImoveis  = imoveis.length === 0
+  const hora        = new Date().getHours()
+  const saudacao    = hora < 12 ? 'Bom dia' : hora < 20 ? 'Boa tarde' : 'Boa noite'
+  const primeiroNome = nome.split(' ')[0] || 'por aqui'
+
   const emoji     = isGlobal ? '🌐' : categoriaEmoji(imovelAtivo)
   const nomeLabel = isGlobal ? 'Todos os imóveis' : (imovelAtivo?.nome || 'A MINHA CASA')
   const subLabel  = isGlobal
@@ -38,31 +43,47 @@ export default function HeroHeader({
         }}
       >≡</button>
 
-      {/* Centro — nome destacado + morada sub */}
+      {/* Centro — sem imóveis: saudação · com imóvel: selector */}
       <div
-        onClick={onImovelClick}
-        style={{ flex: 1, overflow: 'hidden', cursor: onImovelClick ? 'pointer' : 'default' }}
+        onClick={semImoveis ? undefined : onImovelClick}
+        style={{ flex: 1, overflow: 'hidden', cursor: (!semImoveis && onImovelClick) ? 'pointer' : 'default' }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-          <span style={{ fontSize: 14, flexShrink: 0 }}>{emoji}</span>
-          <span style={{
-            fontSize: 14, fontWeight: 700, fontFamily: 'Georgia, serif',
-            color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-          }}>
-            {nomeLabel}
-          </span>
-        </div>
-        {subLabel && (
-          <div style={{
-            fontSize: 10.5, color: 'rgba(255,255,255,0.7)', marginTop: 1,
-            display: 'flex', alignItems: 'center', gap: 3,
-            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-          }}>
-            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {subLabel}
-            </span>
-            {showChevron && <span style={{ flexShrink: 0, fontSize: 9 }}>▾</span>}
-          </div>
+        {semImoveis ? (
+          <>
+            <div style={{
+              fontSize: 14, fontWeight: 700, fontFamily: 'Georgia, serif',
+              color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+            }}>
+              Olá, {primeiroNome} 👋
+            </div>
+            <div style={{ fontSize: 10.5, color: 'rgba(255,255,255,0.7)', marginTop: 1 }}>
+              {saudacao}
+            </div>
+          </>
+        ) : (
+          <>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+              <span style={{ fontSize: 14, flexShrink: 0 }}>{emoji}</span>
+              <span style={{
+                fontSize: 14, fontWeight: 700, fontFamily: 'Georgia, serif',
+                color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+              }}>
+                {nomeLabel}
+              </span>
+            </div>
+            {subLabel && (
+              <div style={{
+                fontSize: 10.5, color: 'rgba(255,255,255,0.7)', marginTop: 1,
+                display: 'flex', alignItems: 'center', gap: 3,
+                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+              }}>
+                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {subLabel}
+                </span>
+                {showChevron && <span style={{ flexShrink: 0, fontSize: 13, color: 'rgba(255,255,255,0.85)' }}>▾</span>}
+              </div>
+            )}
+          </>
         )}
       </div>
 
