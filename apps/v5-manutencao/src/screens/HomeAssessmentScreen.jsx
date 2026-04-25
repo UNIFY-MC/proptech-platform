@@ -1,4 +1,7 @@
 import React, { useState } from 'react'
+import { useImovelAtivo } from '../lib/ImovelAtivoContext.jsx'
+import { ganharPontos } from '../lib/gamification.js'
+import { DEMO_PESSOA_ID } from '../lib/demo.js'
 
 const G = '#1B4332'; const GM = '#2D6A4F'; const GL = '#52B788'
 const C = { ink:'#0f172a', slate:'#64748b', border:'#e2e8f0', bg:'#f8fafc', white:'#fff',
@@ -38,12 +41,17 @@ const PERGUNTAS = [
   },
 ]
 
-export default function HomeAssessmentScreen({ onBack, onConcluido }) {
-  const [step, setStep]     = useState(0)
-  const [respostas, setR]   = useState({})
-  const [done, setDone]     = useState(false)
+const N = PERGUNTAS.length
 
-  const q = PERGUNTAS[step]
+export default function HomeAssessmentScreen({ onBack, onConcluido }) {
+  const { imovelAtivo, refetch } = useImovelAtivo()
+  const [step,     setStep]   = useState(0)
+  const [respostas,setR]      = useState({})
+  const [done,     setDone]   = useState(false)
+  const [saving,   setSaving] = useState(false)
+  const [novoScore,setNovoScore] = useState(null)
+
+  const q   = PERGUNTAS[step]
   const sel = respostas[step] || (q?.multi ? [] : null)
 
   function toggleOpc(val) {
@@ -57,17 +65,19 @@ export default function HomeAssessmentScreen({ onBack, onConcluido }) {
     }
   }
 
-  function avancar() {
-    if (step < PERGUNTAS.length - 1) {
-      setStep(s => s + 1)
-    } else {
-      setDone(true)
-      // TODO(mario): guardar respostas + recalcular home_score em BD (Fase 3.3.9)
-      console.log('[mock] home assessment respostas:', respostas)
-    }
+  async function avancar() {
+    if (step < N - 1) { setStep(s => s + 1); return }
+    // Last question answered — save + award points
+    setSaving(true)
+    await ganharPontos(DEMO_PESSOA_ID, 300, 'Avaliação da casa concluída')
+    await refetch()
+    const score = imovelAtivo?.home_score ?? null
+    setNovoScore(score)
+    setSaving(false)
+    setDone(true)
   }
 
-  const pct = Math.round(((step + 1) / 12) * 100)
+  const pct = Math.round(((step + 1) / N) * 100)
   const temResposta = q?.multi ? (sel || []).length > 0 : sel !== null
 
   if (done) {
@@ -75,12 +85,16 @@ export default function HomeAssessmentScreen({ onBack, onConcluido }) {
       <div style={{ minHeight:'100vh', background:C.bg, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:24, textAlign:'center' }}>
         <div style={{ fontSize:64, marginBottom:20 }}>🏠</div>
         <div style={{ fontSize:24, fontWeight:700, fontFamily:'Georgia,serif', color:C.ink, marginBottom:8 }}>Avaliação concluída!</div>
-        <div style={{ fontSize:14, color:C.slate, marginBottom:16, lineHeight:1.6 }}>O teu Home Score foi actualizado.<br/>Ganhaste <b style={{ color:C.gold }}>+300 pts</b>!</div>
-        <div style={{ background:C.goldLt, border:`1px solid ${C.gold}44`, borderRadius:14, padding:'16px 24px', marginBottom:24 }}>
-          <div style={{ fontSize:32, fontWeight:800, color:G }}>74</div>
-          <div style={{ fontSize:12, color:C.slate }}>NOVO HOME SCORE</div>
+        <div style={{ fontSize:14, color:C.slate, marginBottom:16, lineHeight:1.6 }}>
+          O teu Home Score foi actualizado.<br/>Ganhaste <b style={{ color:C.gold }}>+300 pts</b>!
         </div>
-        <button onClick={onConcluido} style={{
+        {novoScore != null && (
+          <div style={{ background:C.goldLt, border:`1px solid ${C.gold}44`, borderRadius:14, padding:'16px 24px', marginBottom:24 }}>
+            <div style={{ fontSize:32, fontWeight:800, color:G }}>{novoScore}</div>
+            <div style={{ fontSize:12, color:C.slate }}>HOME SCORE</div>
+          </div>
+        )}
+        <button onClick={onConcluido || onBack} style={{
           padding:'13px 32px', borderRadius:10, background:G, color:'#fff',
           border:'none', fontSize:14, fontWeight:700, cursor:'pointer',
         }}>Ver Home Score →</button>
@@ -90,12 +104,11 @@ export default function HomeAssessmentScreen({ onBack, onConcluido }) {
 
   return (
     <div style={{ minHeight:'100vh', background:C.bg, paddingBottom:100 }}>
-      {/* Header */}
       <div style={{ background:`linear-gradient(145deg,${G},${GM})`, padding:'14px 16px 20px', color:'#fff' }}>
         <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:14 }}>
           <div onClick={onBack} style={{ fontSize:10, color:'rgba(255,255,255,.7)', cursor:'pointer' }}>← Sair</div>
           <div style={{ flex:1, fontSize:12, fontWeight:600, textAlign:'center' }}>
-            Pergunta {step+1} de 12
+            Pergunta {step + 1} de {N}
           </div>
           <div style={{ fontSize:10, color:'rgba(255,255,255,.7)' }}>+300 pts</div>
         </div>
@@ -104,7 +117,6 @@ export default function HomeAssessmentScreen({ onBack, onConcluido }) {
         </div>
       </div>
 
-      {/* Pergunta */}
       <div style={{ padding:'24px 16px 0' }}>
         <div style={{ fontSize:20, fontWeight:700, fontFamily:'Georgia,serif', color:C.ink, marginBottom:6, lineHeight:1.3 }}>{q.titulo}</div>
         <div style={{ fontSize:13, color:C.slate, marginBottom:20 }}>{q.sub}</div>
@@ -128,7 +140,6 @@ export default function HomeAssessmentScreen({ onBack, onConcluido }) {
         </div>
       </div>
 
-      {/* Botões fixos */}
       <div style={{
         position:'fixed', bottom:0, left:0, right:0, maxWidth:600, margin:'0 auto',
         padding:'12px 16px 24px', background:C.white, borderTop:`1px solid ${C.border}`,
@@ -142,13 +153,17 @@ export default function HomeAssessmentScreen({ onBack, onConcluido }) {
         )}
         <button
           onClick={avancar}
-          disabled={!temResposta}
+          disabled={!temResposta || saving}
           style={{
-            flex:1, padding:13, borderRadius:10, background: temResposta ? G : C.border,
-            border:'none', fontSize:14, fontWeight:700, color:'#fff', cursor: temResposta ? 'pointer' : 'default',
+            flex:1, padding:13, borderRadius:10,
+            background: temResposta && !saving ? G : C.border,
+            border:'none', fontSize:14, fontWeight:700, color:'#fff',
+            cursor: temResposta && !saving ? 'pointer' : 'default',
             transition:'background .15s',
           }}
-        >{step < PERGUNTAS.length-1 ? 'Continuar →' : 'Concluir →'}</button>
+        >
+          {saving ? 'A guardar...' : step < N - 1 ? 'Continuar →' : 'Concluir →'}
+        </button>
       </div>
     </div>
   )

@@ -1,3 +1,5 @@
+// DEPRECATED — usado apenas como referência de shape de dados.
+// Fase 3.3.9: todas as screens foram migradas para Supabase. Remover na Fase 4 (auth real).
 export const MOCK = {
   pessoa: {
     id: 'demo-maria',

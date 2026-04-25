@@ -1,5 +1,8 @@
 import React, { useState } from 'react'
-import { MOCK } from '../data/mock.js'
+import { supa } from '../supa.js'
+import { DEMO_PESSOA_ID } from '../lib/demo.js'
+import { useImovelAtivo } from '../lib/ImovelAtivoContext.jsx'
+import { tipoImovelEmoji, tipoImovelLabel, formatarMorada } from '../lib/labels.js'
 
 const G = '#1B4332'; const GM = '#2D6A4F'; const GL = '#52B788'
 const C = { ink:'#0f172a', slate:'#64748b', border:'#e2e8f0', bg:'#f8fafc', white:'#fff',
@@ -11,23 +14,33 @@ function scoreColor(s) {
   return { bg:'#FDE4DC', c:'#C0392B' }
 }
 
-export default function MoradasScreen({ onBack, imovelAtivoId: extAtivoId, onSelect }) {
-  const [imoveis, setImoveis] = useState(MOCK.imoveis)
-  const [ativoId, setAtivoId] = useState(extAtivoId || MOCK.imoveis.find(i=>i.principal)?.id)
-  const principal = imoveis.find(i=>i.id === ativoId) || imoveis[0]
+export default function MoradasScreen({ onBack }) {
+  const { imoveis, imovelAtivoId, setImovelAtivoId, refetch } = useImovelAtivo()
+  const [saving, setSaving] = useState(false)
 
-  function tornarPrincipal(id) {
-    setAtivoId(id)
-    onSelect?.(id)
-    // TODO(mario): actualizar em BD (Fase 3.3.9)
-    console.log('[mock] tornar principal:', id)
+  const principal = imoveis.find(i => i.id === imovelAtivoId) || imoveis[0]
+
+  async function tornarPrincipal(id) {
+    setSaving(true)
+    // Marca principal na localizacoes + persiste como activo
+    await supa.from('localizacoes').update({ principal: false }).eq('pessoa_id', DEMO_PESSOA_ID)
+    await supa.from('localizacoes').update({ principal: true  }).eq('id', id)
+    await setImovelAtivoId(id)
+    await refetch()
+    setSaving(false)
   }
 
-  function apagarImovel(id) {
-    if (!confirm('Apagar este imóvel?')) return
-    setImoveis(prev => prev.filter(i => i.id !== id))
-    // TODO(mario): DELETE em BD (Fase 3.3.9)
-    console.log('[mock] apagar imóvel:', id)
+  async function apagarImovel(id) {
+    if (!confirm('Apagar este imóvel permanentemente?')) return
+    setSaving(true)
+    await supa.from('localizacoes').update({ ativo: false }).eq('id', id)
+    // Se era o activo, muda para o primeiro disponível
+    if (id === imovelAtivoId) {
+      const proximo = imoveis.find(i => i.id !== id)
+      if (proximo) await setImovelAtivoId(proximo.id)
+    }
+    await refetch()
+    setSaving(false)
   }
 
   return (
@@ -37,14 +50,14 @@ export default function MoradasScreen({ onBack, imovelAtivoId: extAtivoId, onSel
         <div style={{ fontSize:10, fontWeight:700, letterSpacing:.8, color:'rgba(255,255,255,.65)', marginBottom:4 }}>IMÓVEIS</div>
         <div style={{ fontSize:22, fontWeight:700, fontFamily:'Georgia,serif' }}>Os meus imóveis</div>
         <div style={{ fontSize:12, color:'rgba(255,255,255,.65)', marginTop:4 }}>
-          {imoveis.length} imóveis · 1 principal
+          {imoveis.length} imóvel{imoveis.length !== 1 ? 'is' : ''} · 1 principal
         </div>
       </div>
 
       {/* Botão adicionar */}
       <div style={{ padding:'14px 16px 0' }}>
         <button
-          onClick={() => alert('Adicionar imóvel — disponível Fase 3.3.9 com form completo.')}
+          onClick={() => alert('Adicionar imóvel — form completo disponível Fase 3.4.')}
           style={{
             width:'100%', padding:12, borderRadius:10,
             background:G, color:'#fff', border:'none',
@@ -54,10 +67,10 @@ export default function MoradasScreen({ onBack, imovelAtivoId: extAtivoId, onSel
       </div>
 
       {/* Lista */}
-      <div style={{ padding:'14px 16px 0' }}>
+      <div style={{ padding:'14px 16px 0', opacity: saving ? 0.6 : 1 }}>
         {imoveis.map(im => {
-          const isPrincipal = im.id === ativoId
-          const sc = scoreColor(im.home_score)
+          const isPrincipal = im.id === imovelAtivoId
+          const sc = scoreColor(im.home_score ?? 0)
           return (
             <div key={im.id} style={{
               background:C.white, border: isPrincipal ? `2px solid ${GL}` : `1px solid ${C.border}`,
@@ -67,7 +80,7 @@ export default function MoradasScreen({ onBack, imovelAtivoId: extAtivoId, onSel
               {/* Header card */}
               <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:10 }}>
                 <div style={{ display:'flex', gap:10, alignItems:'center' }}>
-                  <span style={{ fontSize:28 }}>{im.tipo === 'apartamento' ? '🏢' : '🏠'}</span>
+                  <span style={{ fontSize:28 }}>{tipoImovelEmoji(im.tipo)}</span>
                   <div>
                     <div style={{ fontSize:15, fontWeight:700, color:C.ink }}>{im.nome}</div>
                     {isPrincipal && (
@@ -76,37 +89,43 @@ export default function MoradasScreen({ onBack, imovelAtivoId: extAtivoId, onSel
                   </div>
                 </div>
                 <span style={{ fontSize:12, fontWeight:700, padding:'4px 10px', borderRadius:8, background:sc.bg, color:sc.c }}>
-                  Score {im.home_score}
+                  Score {im.home_score ?? '—'}
                 </span>
               </div>
 
               {/* Morada */}
-              <div style={{ fontSize:13, color:C.slate, marginBottom:4 }}>{im.morada}</div>
-              <div style={{ fontSize:12, color:C.slate, marginBottom:12 }}>{im.cp} {im.cidade}</div>
+              <div style={{ fontSize:13, color:C.slate, marginBottom:12 }}>{formatarMorada(im)}</div>
 
               {/* Info */}
               <div style={{ display:'flex', gap:8, marginBottom:12 }}>
                 <span style={{ fontSize:10, padding:'2px 8px', borderRadius:5, background:C.bg, color:C.slate, border:`1px solid ${C.border}` }}>
-                  {im.tipo === 'apartamento' ? 'Apartamento' : 'Moradia'}
+                  {tipoImovelLabel(im.tipo)}
                 </span>
-                <span style={{ fontSize:10, padding:'2px 8px', borderRadius:5, background:C.bg, color:C.slate, border:`1px solid ${C.border}` }}>
-                  Desde {new Date(im.criado).getFullYear()}
-                </span>
+                {im.tipologia && (
+                  <span style={{ fontSize:10, padding:'2px 8px', borderRadius:5, background:C.bg, color:C.slate, border:`1px solid ${C.border}` }}>
+                    {im.tipologia}
+                  </span>
+                )}
+                {im.created_at && (
+                  <span style={{ fontSize:10, padding:'2px 8px', borderRadius:5, background:C.bg, color:C.slate, border:`1px solid ${C.border}` }}>
+                    Desde {new Date(im.created_at).getFullYear()}
+                  </span>
+                )}
               </div>
 
               {/* Botões */}
               <div style={{ display:'flex', gap:8 }}>
-                <button onClick={() => alert('Editar imóvel — disponível Fase 3.3.9.')} style={{
+                <button onClick={() => alert('Editar imóvel — form disponível Fase 3.4.')} style={{
                   flex:1, padding:'8px', borderRadius:8, background:C.bg,
                   border:`1px solid ${C.border}`, fontSize:12, fontWeight:600, color:C.slate, cursor:'pointer',
                 }}>Editar</button>
                 {!isPrincipal && (
                   <>
-                    <button onClick={() => tornarPrincipal(im.id)} style={{
+                    <button onClick={() => tornarPrincipal(im.id)} disabled={saving} style={{
                       flex:1, padding:'8px', borderRadius:8, background:C.greenXl,
                       border:`1px solid ${GL}`, fontSize:12, fontWeight:600, color:G, cursor:'pointer',
                     }}>Tornar principal</button>
-                    <button onClick={() => apagarImovel(im.id)} style={{
+                    <button onClick={() => apagarImovel(im.id)} disabled={saving} style={{
                       padding:'8px 12px', borderRadius:8, background:C.redSoft,
                       border:'none', fontSize:12, fontWeight:600, color:C.red, cursor:'pointer',
                     }}>🗑</button>

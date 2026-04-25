@@ -1,5 +1,7 @@
-import React from 'react'
-import { MOCK } from './data/mock.js'
+import React, { useState, useEffect } from 'react'
+import { supaCore, supa } from './supa.js'
+import { DEMO_PESSOA_ID } from './lib/demo.js'
+import { nivelLabel } from './lib/labels.js'
 
 const V = {
   green:    '#1B4332',
@@ -13,7 +15,10 @@ const V = {
   redSoft:  '#FFEAEA',
 }
 
-const NIVEL_EMOJI = { Bronze:'🥉', Prata:'🥈', Ouro:'🥇', Platina:'💎', Diamante:'💠' }
+const NIVEL_EMOJI = {
+  bronze:'🥉', silver:'🥈', gold:'🥇', platinum:'💎', diamond:'💠',
+  Bronze:'🥉', Prata:'🥈', Ouro:'🥇', Platina:'💎', Diamante:'💠',
+}
 
 const GRUPOS = [
   {
@@ -35,9 +40,23 @@ const GRUPOS = [
 ]
 
 export default function PerfilSheetContent({ authUser, onNavigate, onLogout }) {
-  const p       = MOCK.pessoa
-  const iniciais = p.nome.split(' ').filter(Boolean).map(w => w[0]).slice(0, 2).join('').toUpperCase()
-  const emoji    = NIVEL_EMOJI[p.nivel] || '🥉'
+  const [pessoa, setPessoa] = useState(null)
+  const [sub,    setSub]    = useState(null)
+
+  useEffect(() => {
+    supaCore.from('pessoas').select('nome, email').eq('id', DEMO_PESSOA_ID).single()
+      .then(({ data }) => { if (data) setPessoa(data) })
+    supa.from('subscricoes').select('nivel, pontos_total').eq('pessoa_id', DEMO_PESSOA_ID).single()
+      .then(({ data }) => { if (data) setSub(data) })
+  }, [])
+
+  const nome     = pessoa?.nome || '—'
+  const email    = pessoa?.email || '—'
+  const iniciais = nome.split(' ').filter(Boolean).map(w => w[0]).slice(0, 2).join('').toUpperCase()
+  const nivel    = sub?.nivel || 'bronze'
+  const pontos   = sub?.pontos_total || 0
+  const { nivel: nivelPT } = nivelLabel(pontos, nivel)
+  const emoji    = NIVEL_EMOJI[nivel] || '🥉'
 
   return (
     <div>
@@ -52,13 +71,13 @@ export default function PerfilSheetContent({ authUser, onNavigate, onLogout }) {
             boxShadow:'0 2px 10px rgba(27,67,50,0.25)',
           }}>{iniciais}</div>
           <div style={{ minWidth:0 }}>
-            <div style={{ fontWeight:700, fontSize:16, color:V.ink, marginBottom:3 }}>{p.nome}</div>
-            <div style={{ fontSize:12, color:V.stone, marginBottom:8, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{p.email}</div>
+            <div style={{ fontWeight:700, fontSize:16, color:V.ink, marginBottom:3 }}>{nome}</div>
+            <div style={{ fontSize:12, color:V.stone, marginBottom:8, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{email}</div>
             <span style={{
               background:V.goldSoft, color:V.gold, fontWeight:800,
               fontSize:11, padding:'2px 10px', borderRadius:20,
               border:`1px solid ${V.gold}44`,
-            }}>{emoji} {p.nivel} · {p.pontos_total.toLocaleString('pt-PT')} pts</span>
+            }}>{emoji} {nivelPT} · {pontos.toLocaleString('pt-PT')} pts</span>
           </div>
         </div>
       </div>

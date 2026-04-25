@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { supa } from './supa.js'
 import { DEMO_LOCALIZACAO_ID } from './lib/demo.js'
 import HeroHeader from './HeroHeader.jsx'
+import { useImovelAtivo } from './lib/ImovelAtivoContext.jsx'
 
 /* Paleta CASA — duplicada aqui para isolar o módulo do App.jsx */
 const CASA = {
@@ -119,13 +120,14 @@ function nextLabel(eq) {
    Props mantidos da versão inline em App.jsx.
    Fases 3.3–3.5 substituirão os alerts placeholder por ecrãs reais.
 ══════════════════════════════════ */
-export default function CasaScreen({ localizacoes, localizacao, equipamentos, authUser, onNavigate, onHamburguer, onAvatarClick, onNavigateScore }) {
-  const loc   = localizacao || (Array.isArray(localizacoes) ? localizacoes[0] : null)
-  const nLocs = (localizacoes || []).length
+export default function CasaScreen({ equipamentos, authUser, onNavigate, onHamburguer, onAvatarClick, onNavigateScore }) {
+  const { imovelAtivo, imoveis, loading: ctxLoading } = useImovelAtivo()
+  const loc   = imovelAtivo
+  const nLocs = imoveis.length
   const eqs   = Array.isArray(equipamentos)
     ? equipamentos.filter(e => !loc || e.localizacao_id === loc.id)
     : []
-  const loading = localizacoes === null || equipamentos === null
+  const loading = ctxLoading || equipamentos === null
 
   const [alertasMeteo, setAlertasMeteo] = useState([])
   const [faturas, setFaturas]           = useState(null)

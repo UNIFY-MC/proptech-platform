@@ -1,4 +1,6 @@
 import React, { useRef } from 'react'
+import { useImovelAtivo } from './lib/ImovelAtivoContext'
+import { tipoImovelEmoji, formatarMorada } from './lib/labels'
 
 const V = {
   green:   '#1B4332',
@@ -18,7 +20,8 @@ function scoreColor(s) {
   return { bg:'#FDE4DC', c:'#C0392B' }
 }
 
-export default function ImovelSelectorSheet({ open, imoveis, imovelAtivoId, onSelect, onClose, onGerirImoveis }) {
+export default function ImovelSelectorSheet({ open, onClose, onGerirImoveis }) {
+  const { imoveis, imovelAtivoId, setImovelAtivoId } = useImovelAtivo()
   const touchStartY = useRef(null)
 
   function onTouchStart(e) { touchStartY.current = e.touches[0].clientY }
@@ -70,7 +73,7 @@ export default function ImovelSelectorSheet({ open, imoveis, imovelAtivoId, onSe
             return (
               <button
                 key={im.id}
-                onClick={() => { onSelect(im.id); onClose() }}
+                onClick={() => { setImovelAtivoId(im.id); onClose() }}
                 style={{
                   width:'100%', padding:'13px 20px',
                   display:'flex', alignItems:'center', gap:14,
@@ -80,12 +83,12 @@ export default function ImovelSelectorSheet({ open, imoveis, imovelAtivoId, onSe
                 }}
               >
                 <span style={{ fontSize:26, flexShrink:0 }}>
-                  {im.tipo === 'apartamento' ? '🏢' : '🏠'}
+                  {tipoImovelEmoji(im.tipo)}
                 </span>
                 <div style={{ flex:1, minWidth:0 }}>
                   <div style={{ fontSize:14, fontWeight:700, color:V.ink }}>{im.nome}</div>
                   <div style={{ fontSize:11, color:V.stone, marginTop:2, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
-                    {im.morada} · {im.cidade}
+                    {formatarMorada(im)}
                   </div>
                 </div>
                 <div style={{ display:'flex', alignItems:'center', gap:8, flexShrink:0 }}>

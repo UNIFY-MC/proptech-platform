@@ -1,4 +1,6 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
+import { supaCore } from '../supa.js'
+import { DEMO_PESSOA_ID } from '../lib/demo.js'
 
 const G = '#1B4332'; const GM = '#2D6A4F'
 const C = { ink:'#0f172a', slate:'#64748b', border:'#e2e8f0', bg:'#f8fafc', white:'#fff',
@@ -61,10 +63,49 @@ function ActionRow({ label, danger, onClick }) {
 }
 
 export default function DefinicoesScreen({ onBack }) {
-  const [tema,    setTema]    = useState('auto')
-  const [idioma,  setIdioma]  = useState('pt-PT')
-  const [analytics,setAna]   = useState(true)
-  const [aiPers,  setAiPers]  = useState(true)
+  const [loading,  setLoading]  = useState(true)
+  const [tema,     setTemaS]    = useState('auto')
+  const [idioma,   setIdiomaS]  = useState('pt-PT')
+  const [analytics,setAnaS]    = useState(true)
+  const [aiPers,   setAiPersS] = useState(true)
+  const [meta,     setMeta]     = useState({})
+
+  const fetchData = useCallback(async () => {
+    setLoading(true)
+    const { data } = await supaCore.from('pessoas').select('idioma, metadata').eq('id', DEMO_PESSOA_ID).single()
+    if (data) {
+      setIdiomaS(data.idioma || 'pt-PT')
+      const m = data.metadata || {}
+      setMeta(m)
+      setTemaS(m.tema || 'auto')
+      setAnaS(m.analytics !== false)
+      setAiPersS(m.personalizacao_ia !== false)
+    }
+    setLoading(false)
+  }, [])
+
+  useEffect(() => { fetchData() }, [fetchData])
+
+  async function saveIdioma(val) {
+    setIdiomaS(val)
+    await supaCore.from('pessoas').update({ idioma: val }).eq('id', DEMO_PESSOA_ID)
+  }
+
+  async function saveMeta(patch) {
+    const novoMeta = { ...meta, ...patch }
+    setMeta(novoMeta)
+    await supaCore.from('pessoas').update({ metadata: novoMeta }).eq('id', DEMO_PESSOA_ID)
+  }
+
+  function setTema(val)    { setTemaS(val);    saveMeta({ tema: val }) }
+  function setAna(val)     { setAnaS(val);     saveMeta({ analytics: val }) }
+  function setAiPers(val)  { setAiPersS(val);  saveMeta({ personalizacao_ia: val }) }
+
+  if (loading) return (
+    <div style={{ minHeight:'100vh', background:C.bg, display:'flex', alignItems:'center', justifyContent:'center' }}>
+      <div style={{ color:C.slate, fontSize:13 }}>A carregar...</div>
+    </div>
+  )
 
   return (
     <div style={{ minHeight:'100vh', background:C.bg, paddingBottom:32 }}>
@@ -78,7 +119,7 @@ export default function DefinicoesScreen({ onBack }) {
       <Section label="Aparência">
         <SelectRow label="Tema" value={tema} onChange={setTema}
           options={[{v:'auto',l:'Automático'},{v:'claro',l:'Claro'},{v:'escuro',l:'Escuro'}]} />
-        <SelectRow label="Idioma" value={idioma} onChange={setIdioma}
+        <SelectRow label="Idioma" value={idioma} onChange={saveIdioma}
           options={[{v:'pt-PT',l:'Português (PT)'},{v:'en-EN',l:'English'},{v:'es-ES',l:'Español'}]} />
       </Section>
 
@@ -89,8 +130,8 @@ export default function DefinicoesScreen({ onBack }) {
       </Section>
 
       <Section label="Dados">
-        <ActionRow label="Exportar os meus dados" onClick={() => alert('Download dos teus dados — disponível Fase 3.3.9')} />
-        <ActionRow label="Apagar histórico" onClick={() => alert('Apagar histórico — disponível Fase 3.3.9')} />
+        <ActionRow label="Exportar os meus dados" onClick={() => alert('Download dos teus dados — disponível Fase 4')} />
+        <ActionRow label="Apagar histórico" onClick={() => alert('Apagar histórico — disponível Fase 4')} />
       </Section>
 
       <Section label="Conta">

@@ -309,7 +309,8 @@ Colunas novas em `ordens`:
 |---|---|---|
 | 3.3.7 | ✅ fechada | 22 ecrãs visuais + reorg menus + selector de imóvel |
 | **3.3.8** | ✅ fechada | Schema BD (11 tabelas novas, 3 ALTERs) + seed multi-imóveis Maria |
-| **3.3.9** | próxima | Ligações BD reais aos 22 ecrãs |
+| **3.3.9** | ✅ fechada | Todas as screens ligadas à BD real; MOCK removido de App.jsx; States.jsx criado |
+| **3.4.0** | próxima | Auth real (Fase 2d) + Lista de tarefas (Fase 3a) |
 
 ### Notas para 3.3.9
 

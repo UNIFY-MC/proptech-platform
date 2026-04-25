@@ -3,6 +3,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react'
 import CWishlist from './CWishlist'
 import { DEMO_PESSOA_ID, DEMO_ORGANIZATION_ID } from './lib/demo.js'
+import { useImovelAtivo } from './lib/ImovelAtivoContext.jsx'
 import IniciaScreen from './IniciaScreen.jsx'
 import CasaScreen from './CasaScreen.jsx'
 import ServicosScreen from './ServicosScreen.jsx'
@@ -14,7 +15,6 @@ import ScoreDetailScreen from './ScoreDetailScreen.jsx'
 import AlertaDetailScreen from './AlertaDetailScreen.jsx'
 import OwnersClubScreen from './OwnersClubScreen.jsx'
 import ChatPedidoScreen from './ChatPedidoScreen.jsx'
-import { MOCK } from './data/mock.js'
 import ImovelSelectorSheet from './ImovelSelectorSheet.jsx'
 import SobreMimScreen from './screens/SobreMimScreen.jsx'
 import DadosPessoaisScreen from './screens/DadosPessoaisScreen.jsx'
@@ -4134,7 +4134,8 @@ const DOC_TIPOS = [
 const DOC_TIPO_META = DOC_TIPOS.reduce((a,t)=>{ a[t.id]=t; return a }, {})
 
 /* DocsScreen — cofre de documentos por localização (Fase 3.4) */
-function DocsScreen({ localizacao, authUser, onBack }){
+function DocsScreen({ authUser, onBack }){
+  const { imovelAtivo: localizacao } = useImovelAtivo()
   const [docs, setDocs] = useState(null)
   const [filtro, setFiltro] = useState('todos')
   const [search, setSearch] = useState('')
@@ -4308,7 +4309,8 @@ function DocsScreen({ localizacao, authUser, onBack }){
 }
 
 /* EnergiaScreen — consumo mensal + poupança estimada + fatura OCR (Fase 3.4/3.5) */
-function EnergiaScreen({ localizacao, equipamentos, authUser, onBack }){
+function EnergiaScreen({ equipamentos, authUser, onBack }){
+  const { imovelAtivo: localizacao } = useImovelAtivo()
   const eqs = (equipamentos || []).filter(e => !localizacao || e.localizacao_id === localizacao.id)
   const [consumos, setConsumos] = useState(null)
   const [fatura, setFatura] = useState(null)           // última fatura com dados_ocr
@@ -4594,7 +4596,8 @@ Responde APENAS com o JSON (sem markdown, sem comentários):
 }
 
 /* CameraScreen — captura foto + Claude API identifica equipamento (Fase 3.5) */
-function CameraScreen({ localizacao, authUser, onBack, onCreated }){
+function CameraScreen({ authUser, onBack, onCreated }){
+  const { imovelAtivo: localizacao } = useImovelAtivo()
   const [stream, setStream] = useState(null)
   const [useFileFallback, setUseFileFallback] = useState(false)
   const [captureB64, setCaptureB64] = useState(null) // { mime, data }
@@ -4786,7 +4789,8 @@ Responde APENAS com um objecto JSON neste formato, sem markdown nem texto extra:
 
 /* AIExpertScreen — chat com contexto completo da casa (Fase 3.5) */
 /* CasaLocais — CRUD das localizações + selecção da activa (Fase 3.5) */
-function CasaLocais({ localizacoes, activeLocId, authUser, onBack, onRefresh, onPickActive }){
+function CasaLocais({ authUser, onBack }){
+  const { imoveis: localizacoes, imovelAtivoId: activeLocId, setImovelAtivoId: onPickActive, refetch: onRefresh } = useImovelAtivo()
   const [editing, setEditing] = useState(null)   // 'new' | row | null
   const [form, setForm] = useState({ nome:'', tipo:'habitacao', morada:'', localidade:'', concelho:'', codigo_postal:'', ano_construcao:'', tipologia:'', area_m2:'' })
   const [saving, setSaving] = useState(false)
@@ -4945,7 +4949,8 @@ function LocLine({ label, value, onChange, placeholder, type='text' }){
   )
 }
 
-function AIExpertScreen({ localizacao, equipamentos, authUser, onBack, initialContext }){
+function AIExpertScreen({ equipamentos, authUser, onBack, initialContext }){
+  const { imovelAtivo: localizacao } = useImovelAtivo()
   const [msgs, setMsgs] = useState([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
@@ -10294,8 +10299,8 @@ export default function App() {
   const [selAlerta,setSelAlerta]= useState(null)
   const [svcNova,  setSvcNova]  = useState(null)
 
-  // 3.3.7: imovel activo + selector sheet + selNav (params p/ screens de detalhe)
-  const [imovelAtivoId,     setImovelAtivoId]     = useState(() => MOCK.imoveis.find(i=>i.principal)?.id || 'im-1')
+  // 3.3.9: imovelAtivoId e imovelAtivo vêm do ImovelAtivoContext (fonte única canónica)
+  const { imovelAtivoId, imovelAtivo } = useImovelAtivo()
   const [showImovelSelector,setShowImovelSelector] = useState(false)
   const [selNav,            setSelNav]             = useState(null) // {prestador, servico, combo, promocao, categoria}
 
@@ -10343,38 +10348,19 @@ export default function App() {
   // Drawer do cliente — menu lateral invocado pelo hamburger da CHome
   const [clienteDrawerOpen, setClienteDrawerOpen] = useState(false)
 
-  // ── Módulo Casa (Fase 3) ──
-  const [casaLocalizacoes, setCasaLocalizacoes] = useState(null)
+  // ── Módulo Casa (Fase 3) — localizações vêm do ImovelAtivoContext ──
   const [casaEquipamentos, setCasaEquipamentos] = useState(null)
   const [casaActiveEq,     setCasaActiveEq]     = useState(null)
   const [casaSub,          setCasaSub]          = useState(null) // 'docs' | 'energia' | 'camera' | 'aiexpert' | 'locais'
   const [casaSubPayload,   setCasaSubPayload]   = useState(null) // contexto inicial p/ sub-ecrã (ex: alerta IPMA)
-  const [casaActiveLocId,  setCasaActiveLocId]  = useState(() => {
-    try { return localStorage.getItem('v5_casa_active_loc') || null } catch { return null }
-  })
-  useEffect(() => {
-    try {
-      if(casaActiveLocId) localStorage.setItem('v5_casa_active_loc', casaActiveLocId)
-      else localStorage.removeItem('v5_casa_active_loc')
-    } catch {}
-  }, [casaActiveLocId])
 
-  const refetchCasa = async () => {
+  const refetchEquipamentos = async () => {
+    // TODO(mario): migrar para supa client com auth real (Fase 4)
     if(!authUser) return
-    const [locs, eqs] = await Promise.all([
-      sbGetV5('localizacoes', '?select=*&ativo=eq.true&order=created_at.asc', authUser?.token),
-      sbGetV5('equipamentos', '?select=*&estado=eq.ativo&order=categoria.asc', authUser?.token),
-    ])
-    setCasaLocalizacoes(locs || [])
+    const eqs = await sbGetV5('equipamentos', '?select=*&estado=eq.ativo&order=categoria.asc', authUser?.token)
     setCasaEquipamentos(eqs || [])
-    // Auto-selecciona primeira se a activa não existe
-    if((locs || []).length > 0 && !(locs || []).some(l => l.id === casaActiveLocId)){
-      setCasaActiveLocId(locs[0].id)
-    }
   }
-  useEffect(() => { refetchCasa() /* eslint-disable-next-line */ }, [authUser?.token])
-
-  const casaActiveLoc = (casaLocalizacoes || []).find(l => l.id === casaActiveLocId) || (casaLocalizacoes || [])[0] || null
+  useEffect(() => { refetchEquipamentos() /* eslint-disable-next-line */ }, [authUser?.token])
   // Meta da categoria activa, combinada a partir de BD (categoriesCache) + design tokens (CATEGORY_META).
   // null enquanto categoriesCache carrega ou categoria não resolvida.
   const catCategoryMeta = (() => {
@@ -10840,24 +10826,24 @@ export default function App() {
           {ecra==='chat_prestador' && <ChatPedidoScreen ordem={sel} onBack={()=>setEcra('home')} />}
 
           {/* ── 3.3.7 Perfil screens ── */}
-          {ecra==='sobre_mim'          && <SobreMimScreen pessoa={MOCK.pessoa} onBack={()=>setEcra('home')} />}
-          {ecra==='dados_pessoais'     && <DadosPessoaisScreen pessoa={MOCK.pessoa} onBack={()=>setEcra('home')} />}
+          {ecra==='sobre_mim'          && <SobreMimScreen onBack={()=>setEcra('home')} onNavigate={(t)=>setEcra(t)} />}
+          {ecra==='dados_pessoais'     && <DadosPessoaisScreen onBack={()=>setEcra('home')} />}
           {ecra==='login_seguranca'    && <LoginSegurancaScreen onBack={()=>setEcra('home')} />}
-          {ecra==='moradas_screen'     && <MoradasScreen imoveis={MOCK.imoveis} onBack={()=>setEcra('home')} />}
-          {ecra==='codigo_promocional' && <CodigoPromocionalScreen pessoa={MOCK.pessoa} onBack={()=>setEcra('home')} />}
-          {ecra==='referral'           && <ReferralScreen pessoa={MOCK.pessoa} onBack={()=>setEcra('home')} />}
-          {ecra==='historico_pontos'   && <HistoricoPontosScreen pessoa={MOCK.pessoa} historico={MOCK.pontos_historico} onBack={()=>setEcra('home')} />}
-          {ecra==='avaliacoes_screen'  && <AvaliacoesScreen avaliacoes={MOCK.avaliacoes_dadas} onBack={()=>setEcra('home')} />}
-          {ecra==='pagamentos'         && <PagamentosScreen metodos={MOCK.metodos_pagamento} onBack={()=>setEcra('home')} />}
-          {ecra==='notificacoes'       && <NotificacoesScreen notificacoes={MOCK.notificacoes} onBack={()=>setEcra('home')} />}
+          {ecra==='moradas_screen'     && <MoradasScreen onBack={()=>setEcra('home')} />}
+          {ecra==='codigo_promocional' && <CodigoPromocionalScreen onBack={()=>setEcra('home')} />}
+          {ecra==='referral'           && <ReferralScreen onBack={()=>setEcra('home')} />}
+          {ecra==='historico_pontos'   && <HistoricoPontosScreen onBack={()=>setEcra('home')} />}
+          {ecra==='avaliacoes_screen'  && <AvaliacoesScreen onBack={()=>setEcra('home')} />}
+          {ecra==='pagamentos'         && <PagamentosScreen onBack={()=>setEcra('home')} />}
+          {ecra==='notificacoes'       && <NotificacoesScreen onBack={()=>setEcra('home')} />}
           {ecra==='definicoes'         && <DefinicoesScreen onBack={()=>setEcra('home')} />}
-          {ecra==='ajuda'              && <AjudaScreen faq={MOCK.faq} onBack={()=>setEcra('home')} />}
+          {ecra==='ajuda'              && <AjudaScreen onBack={()=>setEcra('home')} />}
 
           {/* ── 3.3.7 Discovery screens ── */}
-          {ecra==='imoveis'            && <MoradasScreen imoveis={MOCK.imoveis} onBack={()=>setEcra('home')} />}
-          {ecra==='equipa'             && <EquipaScreen prestadores={MOCK.prestadores_favoritos} onBack={()=>setEcra('home')} onNavigatePrestador={(p)=>{ setSelNav({prestador:p}); setEcra('prestador_detail') }} />}
+          {ecra==='imoveis'            && <MoradasScreen onBack={()=>setEcra('home')} />}
+          {ecra==='equipa'             && <EquipaScreen onBack={()=>setEcra('home')} onNavigatePrestador={(p)=>{ setSelNav({prestador:p}); setEcra('prestador_detail') }} />}
           {ecra==='prestador_detail'   && <PrestadorDetailScreen prestador={selNav?.prestador} onBack={()=>setEcra('equipa')} />}
-          {ecra==='home_assessment'    && <HomeAssessmentScreen imovel={MOCK.imoveis.find(i=>i.id===imovelAtivoId)} onBack={()=>setEcra('home')} />}
+          {ecra==='home_assessment'    && <HomeAssessmentScreen onBack={()=>setEcra('home')} onConcluido={()=>setEcra('home')} />}
           {ecra==='categoria_detail'   && <CategoriaScreen categoria={selNav?.categoria} onBack={()=>setEcra('home')} onNavigateServico={(s)=>{ setSelNav(p=>({...p,servico:s})); setEcra('servico_detail') }} />}
           {ecra==='servico_detail'     && <ServicoDetailScreen servico={selNav?.servico} onBack={()=>{ setSelNav(p=>({...p,servico:null})); setEcra(selNav?.categoria ? 'categoria_detail' : 'mais_contratados') }} onPedir={(s)=>alert(`A encaminhar pedido: ${s.nome}`)} onAdicionarLista={(s)=>alert(`"${s.nome}" adicionado à lista!`)} />}
           {ecra==='combo_detail'       && <ComboDetailScreen combo={selNav?.combo} onBack={()=>setEcra('combos')} onPedir={(cb)=>alert(`Combo "${cb.titulo}" adicionado!`)} />}
@@ -10898,10 +10884,8 @@ export default function App() {
                 authUser={authUser}
               />
               {tab==='servicos' && <ServicosScreen authUser={authUser} onHamburguer={()=>setClienteDrawerOpen(true)} onAvatarClick={()=>setShowPerfilSheet(true)} />}
-              {tab==='inicio'   && <IniciaScreen authUser={authUser} localizacoes={casaLocalizacoes} localizacaoAtiva={casaActiveLoc} onNavigateCasa={()=>{ setTab('casa'); setEcra('home') }} onNavigateServicos={()=>setTab('servicos')} onHamburguer={()=>setClienteDrawerOpen(true)} onAvatarClick={()=>setShowPerfilSheet(true)} onNavigateScore={()=>setEcra('score_detail')} onNavigateAlerta={(a)=>{ setSelAlerta(a); setEcra('alerta_detail') }} onNavigateOwnersClub={()=>setEcra('owners_club')} />}
+              {tab==='inicio'   && <IniciaScreen authUser={authUser} onNavigateCasa={()=>{ setTab('casa'); setEcra('home') }} onNavigateServicos={()=>setTab('servicos')} onHamburguer={()=>setClienteDrawerOpen(true)} onAvatarClick={()=>setShowPerfilSheet(true)} onNavigateScore={()=>setEcra('score_detail')} onNavigateAlerta={(a)=>{ setSelAlerta(a); setEcra('alerta_detail') }} onNavigateOwnersClub={()=>setEcra('owners_club')} />}
               {tab==='casa' && !casaActiveEq && !casaSub && <CasaScreen
-                localizacoes={casaLocalizacoes}
-                localizacao={casaActiveLoc}
                 equipamentos={casaEquipamentos}
                 authUser={authUser}
                 onHamburguer={()=>setClienteDrawerOpen(true)}
@@ -10931,18 +10915,15 @@ export default function App() {
                 onAskAI={(payload)=>{ setCasaActiveEq(null); setCasaSub('aiexpert'); setCasaSubPayload(payload) }}
               />}
               {tab==='casa' && casaSub==='docs' && <DocsScreen
-                localizacao={casaActiveLoc}
                 authUser={authUser}
                 onBack={()=>setCasaSub(null)}
               />}
               {tab==='casa' && casaSub==='energia' && <EnergiaScreen
-                localizacao={casaActiveLoc}
                 equipamentos={casaEquipamentos}
                 authUser={authUser}
                 onBack={()=>setCasaSub(null)}
               />}
               {tab==='casa' && casaSub==='camera' && <CameraScreen
-                localizacao={casaActiveLoc}
                 authUser={authUser}
                 onBack={()=>setCasaSub(null)}
                 onCreated={(eq)=>{
@@ -10952,19 +10933,14 @@ export default function App() {
                 }}
               />}
               {tab==='casa' && casaSub==='aiexpert' && <AIExpertScreen
-                localizacao={casaActiveLoc}
                 equipamentos={casaEquipamentos}
                 authUser={authUser}
                 initialContext={casaSubPayload}
                 onBack={()=>{ setCasaSub(null); setCasaSubPayload(null) }}
               />}
               {tab==='casa' && casaSub==='locais' && <CasaLocais
-                localizacoes={casaLocalizacoes}
-                activeLocId={casaActiveLocId}
                 authUser={authUser}
                 onBack={()=>setCasaSub(null)}
-                onRefresh={refetchCasa}
-                onPickActive={(id)=>setCasaActiveLocId(id)}
               />}
               {tab==='pedidos'  && <PedidosScreen ordens={ordens} authUser={authUser} onOrdem={o=>{setSel(o);setEcra('ordem')}} onChat={o=>{setSel(o);setEcra('chat_prestador')}} onHamburguer={()=>setClienteDrawerOpen(true)} onAvatarClick={()=>setShowPerfilSheet(true)} />}
               {tab==='perfil'   && ecra!=='moradas' && ecra!=='wishlist' && (
@@ -11031,9 +11007,6 @@ export default function App() {
               />
               <ImovelSelectorSheet
                 open={showImovelSelector}
-                imoveis={MOCK.imoveis}
-                imovelAtivoId={imovelAtivoId}
-                onSelect={(id)=>{ setImovelAtivoId(id); setShowImovelSelector(false) }}
                 onClose={()=>setShowImovelSelector(false)}
                 onGerirImoveis={()=>{ setShowImovelSelector(false); setEcra('imoveis') }}
               />

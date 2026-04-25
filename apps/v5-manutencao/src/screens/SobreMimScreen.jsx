@@ -1,56 +1,100 @@
-import React from 'react'
-import { MOCK } from '../data/mock.js'
+import React, { useState, useEffect } from 'react'
+import { supa, supaCore } from '../supa.js'
+import { DEMO_PESSOA_ID } from '../lib/demo.js'
+import { nivelLabel } from '../lib/labels.js'
 
 const G = '#1B4332'; const GM = '#2D6A4F'; const GL = '#52B788'
 const C = { ink:'#0f172a', slate:'#64748b', border:'#e2e8f0', bg:'#f8fafc', white:'#fff',
             gold:'#D4A72C', goldLt:'#FFF4D6', line:'#E5E7EB', stone:'#6B7685' }
-const NIVEL_EMOJI = { Bronze:'🥉', Prata:'🥈', Ouro:'🥇', Platina:'💎', Diamante:'💠' }
 
-function Header({ onBack }) {
-  return (
-    <div style={{ background:`linear-gradient(145deg,${G},${GM})`, padding:'14px 16px 22px', color:'#fff' }}>
-      <div style={{ fontSize:10, color:'rgba(255,255,255,.7)', cursor:'pointer', marginBottom:12 }} onClick={onBack}>← Início</div>
-      <div style={{ fontSize:10, fontWeight:700, letterSpacing:.8, color:'rgba(255,255,255,.65)', marginBottom:4 }}>PERFIL</div>
-      <div style={{ fontSize:22, fontWeight:700, fontFamily:'Georgia,serif' }}>Sobre mim</div>
-    </div>
-  )
-}
+const NIVEL_EMOJI = { bronze:'🥉', silver:'🥈', gold:'🥇', platinum:'💎', diamond:'💠',
+                      Bronze:'🥉', Prata:'🥈', Ouro:'🥇', Platina:'💎', Diamante:'💠' }
 
 export default function SobreMimScreen({ onBack, onNavigate }) {
-  const p = MOCK.pessoa
-  const ini = p.nome.split(' ').filter(Boolean).map(w=>w[0]).slice(0,2).join('').toUpperCase()
-  const emoji = NIVEL_EMOJI[p.nivel] || '🥉'
-  const membroDesde = new Date(p.membro_desde).toLocaleDateString('pt-PT',{month:'long',year:'numeric'})
-  const totalPedidos = 17 // mock
-  const pctProximo = Math.round(((p.pontos_total - 500) / (1500 - 500)) * 100) // prata→ouro
+  const [dados, setDados] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [erro, setErro] = useState(null)
+
+  useEffect(() => {
+    let active = true
+    async function fetch() {
+      try {
+        const [pessoaRes, subRes, ordensRes] = await Promise.all([
+          supaCore.from('pessoas').select('nome, email, foto_url, created_at').eq('id', DEMO_PESSOA_ID).single(),
+          supa.from('subscricoes').select('pontos_total, nivel, streak_dias, streak_recorde').eq('pessoa_id', DEMO_PESSOA_ID).eq('estado', 'ativo').maybeSingle(),
+          supa.from('ordens').select('id', { count: 'exact', head: true }).eq('cliente_id', DEMO_PESSOA_ID),
+        ])
+        if (!active) return
+        if (pessoaRes.error) throw pessoaRes.error
+        setDados({
+          pessoa:      pessoaRes.data,
+          sub:         subRes.data || {},
+          totalOrdens: ordensRes.count ?? 0,
+        })
+      } catch (e) {
+        if (active) setErro(e.message || 'Erro a carregar')
+      } finally {
+        if (active) setLoading(false)
+      }
+    }
+    fetch()
+    return () => { active = false }
+  }, [])
+
+  if (loading) return (
+    <div style={{ minHeight:'100vh', background:C.bg, display:'flex', alignItems:'center', justifyContent:'center' }}>
+      <div style={{ color:C.slate, fontSize:13 }}>A carregar...</div>
+    </div>
+  )
+
+  if (erro || !dados) return (
+    <div style={{ minHeight:'100vh', background:C.bg, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:12 }}>
+      <div style={{ color:'#A32D2D', fontSize:13 }}>{erro || 'Sem dados'}</div>
+      <button onClick={() => { setErro(null); setLoading(true) }} style={{ padding:'8px 16px', borderRadius:8, background:G, color:'#fff', border:'none', fontSize:12, cursor:'pointer' }}>Tentar novamente</button>
+    </div>
+  )
+
+  const { pessoa, sub, totalOrdens } = dados
+  const nome       = pessoa.nome || 'Utilizador'
+  const ini        = nome.split(' ').filter(Boolean).map(w => w[0]).slice(0, 2).join('').toUpperCase()
+  const pontosTotal = sub.pontos_total ?? 0
+  const nivelKey   = sub.nivel || 'bronze'
+  const streakDias = sub.streak_dias ?? 0
+  const emoji      = NIVEL_EMOJI[nivelKey] || '🥉'
+  const { nivel, proximo, falta, max } = nivelLabel(pontosTotal, nivelKey)
+  const min        = { bronze:0, silver:500, gold:1500, platinum:3500, diamond:7500 }[nivelKey] ?? 0
+  const pctProximo = proximo ? Math.min(100, Math.round(((pontosTotal - min) / (max - min)) * 100)) : 100
+  const membroDesde = pessoa.created_at
+    ? new Date(pessoa.created_at).toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' })
+    : '—'
 
   return (
     <div style={{ minHeight:'100vh', background:C.bg, paddingBottom:32 }}>
-      <Header onBack={onBack}/>
+      <div style={{ background:`linear-gradient(145deg,${G},${GM})`, padding:'14px 16px 22px', color:'#fff' }}>
+        <div style={{ fontSize:10, color:'rgba(255,255,255,.7)', cursor:'pointer', marginBottom:12 }} onClick={onBack}>← Início</div>
+        <div style={{ fontSize:10, fontWeight:700, letterSpacing:.8, color:'rgba(255,255,255,.65)', marginBottom:4 }}>PERFIL</div>
+        <div style={{ fontSize:22, fontWeight:700, fontFamily:'Georgia,serif' }}>Sobre mim</div>
+      </div>
 
       {/* Avatar hero */}
       <div style={{ display:'flex', flexDirection:'column', alignItems:'center', padding:'24px 20px 16px', background:C.white, borderBottom:`1px solid ${C.border}` }}>
-        <div style={{
-          width:80, height:80, borderRadius:'50%',
-          background:`linear-gradient(135deg,${G},${GL})`,
-          display:'flex', alignItems:'center', justifyContent:'center',
-          fontSize:28, fontWeight:800, color:'#fff',
-          boxShadow:'0 4px 16px rgba(27,67,50,0.25)', marginBottom:12,
-        }}>{ini}</div>
-        <div style={{ fontSize:20, fontWeight:700, fontFamily:'Georgia,serif', color:C.ink, marginBottom:6 }}>{p.nome}</div>
-        <span style={{
-          background:C.goldLt, color:C.gold, fontWeight:800,
-          fontSize:12, padding:'3px 12px', borderRadius:20, border:`1px solid ${C.gold}44`,
-        }}>{emoji} {p.nivel} · {p.pontos_total.toLocaleString('pt-PT')} pts</span>
+        {pessoa.foto_url
+          ? <img src={pessoa.foto_url} alt="" style={{ width:80, height:80, borderRadius:'50%', objectFit:'cover', marginBottom:12, boxShadow:'0 4px 16px rgba(27,67,50,.25)' }}/>
+          : <div style={{ width:80, height:80, borderRadius:'50%', background:`linear-gradient(135deg,${G},${GL})`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:28, fontWeight:800, color:'#fff', boxShadow:'0 4px 16px rgba(27,67,50,.25)', marginBottom:12 }}>{ini}</div>
+        }
+        <div style={{ fontSize:20, fontWeight:700, fontFamily:'Georgia,serif', color:C.ink, marginBottom:6 }}>{nome}</div>
+        <span style={{ background:C.goldLt, color:C.gold, fontWeight:800, fontSize:12, padding:'3px 12px', borderRadius:20, border:`1px solid ${C.gold}44` }}>
+          {emoji} {nivel} · {pontosTotal.toLocaleString('pt-PT')} pts
+        </span>
       </div>
 
       {/* Stats grid */}
       <div style={{ margin:'12px 16px', display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
         {[
-          { label:'Membro desde', val:membroDesde },
-          { label:'Total pedidos', val:totalPedidos },
-          { label:'Pontos totais', val:p.pontos_total.toLocaleString('pt-PT') },
-          { label:'Streak actual', val:`🔥 ${p.streak_dias} dias` },
+          { label:'Membro desde',  val: membroDesde },
+          { label:'Total pedidos', val: totalOrdens },
+          { label:'Pontos totais', val: pontosTotal.toLocaleString('pt-PT') },
+          { label:'Streak actual', val: `🔥 ${streakDias} dias` },
         ].map(({ label, val }) => (
           <div key={label} style={{ background:C.white, border:`1px solid ${C.border}`, borderRadius:12, padding:'12px 14px' }}>
             <div style={{ fontSize:10, color:C.slate, fontWeight:600, marginBottom:4 }}>{label}</div>
@@ -61,14 +105,18 @@ export default function SobreMimScreen({ onBack, onNavigate }) {
 
       {/* Progresso nível */}
       <div style={{ margin:'0 16px 12px', background:C.white, border:`1px solid ${C.border}`, borderRadius:12, padding:'14px 16px' }}>
-        <div style={{ display:'flex', justifyContent:'space-between', fontSize:11, marginBottom:8 }}>
-          <span style={{ fontWeight:700, color:C.ink }}>🥈 Prata → 🥇 Ouro</span>
-          <span style={{ color:C.slate }}>{p.pontos_total} / 1500 pts</span>
-        </div>
-        <div style={{ height:7, background:C.border, borderRadius:4, overflow:'hidden' }}>
-          <div style={{ height:'100%', borderRadius:4, width:`${Math.min(100,pctProximo)}%`, background:`linear-gradient(90deg,${GL},${G})`, transition:'width .4s ease' }}/>
-        </div>
-        <div style={{ fontSize:10, color:C.slate, marginTop:6 }}>{1500 - p.pontos_total} pts para Ouro</div>
+        {proximo ? <>
+          <div style={{ display:'flex', justifyContent:'space-between', fontSize:11, marginBottom:8 }}>
+            <span style={{ fontWeight:700, color:C.ink }}>{emoji} {nivel} → {proximo}</span>
+            <span style={{ color:C.slate }}>{pontosTotal.toLocaleString('pt-PT')} / {max.toLocaleString('pt-PT')} pts</span>
+          </div>
+          <div style={{ height:7, background:C.border, borderRadius:4, overflow:'hidden' }}>
+            <div style={{ height:'100%', borderRadius:4, width:`${pctProximo}%`, background:`linear-gradient(90deg,${GL},${G})`, transition:'width .4s ease' }}/>
+          </div>
+          <div style={{ fontSize:10, color:C.slate, marginTop:6 }}>{falta.toLocaleString('pt-PT')} pts para {proximo}</div>
+        </> : (
+          <div style={{ textAlign:'center', fontSize:13, fontWeight:700, color:C.gold }}>💠 Nível Diamante atingido!</div>
+        )}
       </div>
 
       {/* Sugestões */}
@@ -84,20 +132,15 @@ export default function SobreMimScreen({ onBack, onNavigate }) {
               <div style={{ fontSize:13, fontWeight:700, color:C.ink }}>{s.titulo}</div>
               <div style={{ fontSize:11, color:C.slate, marginTop:2 }}>{s.sub}</div>
             </div>
-            <button onClick={() => onNavigate?.(s.id)} style={{
-              background:G, color:'#fff', border:'none', borderRadius:8,
-              padding:'6px 12px', fontSize:11, fontWeight:700, cursor:'pointer', flexShrink:0,
-            }}>{s.btn}</button>
+            <button onClick={() => onNavigate?.(s.id)} style={{ background:G, color:'#fff', border:'none', borderRadius:8, padding:'6px 12px', fontSize:11, fontWeight:700, cursor:'pointer', flexShrink:0 }}>{s.btn}</button>
           </div>
         ))}
       </div>
 
-      {/* CTA */}
       <div style={{ margin:'0 16px' }}>
-        <button onClick={() => onNavigate?.('dados_pessoais')} style={{
-          width:'100%', padding:13, borderRadius:10, background:G, color:'#fff',
-          border:'none', fontSize:14, fontWeight:700, cursor:'pointer',
-        }}>Editar dados pessoais →</button>
+        <button onClick={() => onNavigate?.('dados_pessoais')} style={{ width:'100%', padding:13, borderRadius:10, background:G, color:'#fff', border:'none', fontSize:14, fontWeight:700, cursor:'pointer' }}>
+          Editar dados pessoais →
+        </button>
       </div>
     </div>
   )

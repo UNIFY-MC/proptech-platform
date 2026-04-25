@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { supa } from './supa.js'
-import { DEMO_PESSOA_ID, DEMO_ORGANIZATION_ID, DEMO_LOCALIZACAO_ID } from './lib/demo.js'
+import { DEMO_PESSOA_ID, DEMO_ORGANIZATION_ID } from './lib/demo.js'
+import { useImovelAtivo } from './lib/ImovelAtivoContext.jsx'
 import { calcularCreditoMes } from './lib/subscription.js'
 import { calcularNivel } from './lib/gamification.js'
 import HeroHeader from './HeroHeader.jsx'
@@ -98,10 +99,10 @@ function casaLabel(score) {
   return 'Casa em Risco 🚨'
 }
 
-export default function IniciaScreen({ authUser, localizacoes, localizacaoAtiva, onNavigateCasa, onNavigateServicos, onHamburguer, onAvatarClick, onNavigateScore, onNavigateAlerta, onNavigateOwnersClub }) {
+export default function IniciaScreen({ authUser, onNavigateCasa, onNavigateServicos, onHamburguer, onAvatarClick, onNavigateScore, onNavigateAlerta, onNavigateOwnersClub }) {
+  const { imovelAtivo, imoveis } = useImovelAtivo()
   const [subscricao,  setSubscricao]  = useState(null)
   const [creditoMes,  setCreditoMes]  = useState(undefined)
-  const [localizacao, setLocalizacao] = useState(null)
   const [missoes,     setMissoes]     = useState(null)
   const [dataLoaded,  setDataLoaded]  = useState(false)
 
@@ -113,15 +114,13 @@ export default function IniciaScreen({ authUser, localizacoes, localizacaoAtiva,
     let active = true
     const now  = new Date()
     async function load() {
-      const [subRes, locRes, misRes] = await Promise.all([
+      const [subRes, misRes] = await Promise.all([
         supa.from('subscricoes').select('*').eq('pessoa_id', DEMO_PESSOA_ID).eq('estado', 'ativo').maybeSingle(),
-        supa.from('localizacoes').select('nome,tipologia,localidade,home_score,pontos_total').eq('id', DEMO_LOCALIZACAO_ID).maybeSingle(),
         supa.from('missoes_utilizador').select('*').eq('pessoa_id', DEMO_PESSOA_ID).eq('estado', 'aberta')
           .order('urgente', { ascending: false }).order('pontos', { ascending: false }).limit(2),
       ])
       if (!active) return
       setSubscricao(subRes.data || null)
-      setLocalizacao(locRes.data || null)
       setMissoes(misRes.data || [])
       setDataLoaded(true)
       const cm = await calcularCreditoMes(DEMO_PESSOA_ID, now.getFullYear(), now.getMonth() + 1)
@@ -138,11 +137,10 @@ export default function IniciaScreen({ authUser, localizacoes, localizacaoAtiva,
   const pontosProx  = nextNivel ? Math.max(0, NIVEL_THRESH[nextNivel] - pontosTotal) : 0
   const streak      = subscricao?.streak_atual ?? subscricao?.streak_dias ?? 0
 
-  // Localização activa: preferir prop do App (casaActiveLoc) sobre query própria
-  const loc         = localizacaoAtiva || localizacao
+  const loc         = imovelAtivo
   const homeScore   = loc?.home_score ?? 0
   const localidade  = loc?.localidade || ''
-  const nLocs       = (localizacoes || []).length
+  const nLocs       = imoveis.length
 
   // Morada para o header: "Nome da casa · LOCALIDADE" ex: "R. Palmira Bastos, 4 · COIMBRA"
   const locationLbl = loc

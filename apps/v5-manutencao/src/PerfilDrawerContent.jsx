@@ -1,5 +1,7 @@
-import React from 'react'
-import { MOCK } from './data/mock.js'
+import React, { useState, useEffect } from 'react'
+import { supaCore, supa } from './supa.js'
+import { DEMO_PESSOA_ID } from './lib/demo.js'
+import { nivelLabel } from './lib/labels.js'
 
 const V = {
   green:    '#1B4332',
@@ -11,7 +13,10 @@ const V = {
   goldSoft: '#FEF9C3',
 }
 
-const NIVEL_EMOJI = { Bronze:'🥉', Prata:'🥈', Ouro:'🥇', Platina:'💎', Diamante:'💠' }
+const NIVEL_EMOJI = {
+  bronze:'🥉', silver:'🥈', gold:'🥇', platinum:'💎', diamond:'💠',
+  Bronze:'🥉', Prata:'🥈', Ouro:'🥇', Platina:'💎', Diamante:'💠',
+}
 
 const GRUPOS = [
   {
@@ -51,9 +56,22 @@ const GRUPOS = [
 ]
 
 export default function PerfilDrawerContent({ authUser, onNavigate, onSwitchTab }) {
-  const p       = MOCK.pessoa
-  const iniciais = p.nome.split(' ').filter(Boolean).map(w => w[0]).slice(0, 2).join('').toUpperCase()
-  const emoji    = NIVEL_EMOJI[p.nivel] || '🥉'
+  const [pessoa, setPessoa] = useState(null)
+  const [sub,    setSub]    = useState(null)
+
+  useEffect(() => {
+    supaCore.from('pessoas').select('nome').eq('id', DEMO_PESSOA_ID).single()
+      .then(({ data }) => { if (data) setPessoa(data) })
+    supa.from('subscricoes').select('nivel, pontos_total').eq('pessoa_id', DEMO_PESSOA_ID).single()
+      .then(({ data }) => { if (data) setSub(data) })
+  }, [])
+
+  const nome     = pessoa?.nome || '—'
+  const iniciais = nome.split(' ').filter(Boolean).map(w => w[0]).slice(0, 2).join('').toUpperCase()
+  const nivel    = sub?.nivel || 'bronze'
+  const pontos   = sub?.pontos_total || 0
+  const { nivel: nivelPT } = nivelLabel(pontos, nivel)
+  const emoji    = NIVEL_EMOJI[nivel] || '🥉'
 
   function handleItem(item) {
     if (item.type === 'tab') onSwitchTab?.(item.tab)
@@ -72,11 +90,11 @@ export default function PerfilDrawerContent({ authUser, onNavigate, onSwitchTab 
             fontSize:15, fontWeight:800, color:'#fff', flexShrink:0,
           }}>{iniciais}</div>
           <div>
-            <div style={{ fontWeight:700, fontSize:14, color:V.ink, marginBottom:3 }}>{p.nome}</div>
+            <div style={{ fontWeight:700, fontSize:14, color:V.ink, marginBottom:3 }}>{nome}</div>
             <span style={{
               background:V.goldSoft, color:V.gold, fontWeight:700,
               fontSize:10, padding:'1px 8px', borderRadius:14, border:`1px solid ${V.gold}44`,
-            }}>{emoji} {p.nivel}</span>
+            }}>{emoji} {nivelPT}</span>
           </div>
         </div>
       </div>

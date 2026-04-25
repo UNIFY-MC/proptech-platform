@@ -1,32 +1,71 @@
-import React, { useState } from 'react'
-import { MOCK } from '../data/mock.js'
+import React, { useState, useEffect, useCallback } from 'react'
+import { supa } from '../supa.js'
+import { DEMO_PESSOA_ID } from '../lib/demo.js'
 
 const G = '#1B4332'; const GM = '#2D6A4F'
 const C = { ink:'#0f172a', slate:'#64748b', border:'#e2e8f0', bg:'#f8fafc', white:'#fff',
             line:'#E5E7EB', stone:'#6B7685', greenXl:'#D8F3DC', greenLt:'#52B788' }
 
-const TIPO_COLOR = {
-  urgente: { border:'#E76F51', bg:'#FFF7F5' },
-  info:    { border:'#3B82F6', bg:'#F0F7FF' },
-  sucesso: { border:'#52B788', bg:'#F0FDF4' },
+const NIVEL_COLOR = {
+  urgente:       { border:'#E76F51', bg:'#FFF7F5' },
+  atencao:       { border:'#F59E0B', bg:'#FFFBEB' },
+  info:          { border:'#3B82F6', bg:'#F0F7FF' },
+  boas_noticias: { border:'#52B788', bg:'#F0FDF4' },
+}
+
+const TIPO_EMOJI = {
+  meteo:        '🌤️',
+  equipamento:  '🔧',
+  eficiencia:   '⚡',
+  manutencao:   '🏠',
+  deteccao_ia:  '🤖',
+}
+
+function tempoRelativo(ts) {
+  const diff = (Date.now() - new Date(ts)) / 1000
+  if (diff < 60)    return 'agora'
+  if (diff < 3600)  return `${Math.round(diff / 60)}m`
+  if (diff < 86400) return `${Math.round(diff / 3600)}h`
+  return `${Math.round(diff / 86400)}d`
 }
 
 export default function NotificacoesScreen({ onBack }) {
-  const [notifs, setNotifs] = useState(MOCK.notificacoes)
-  const [tabAtivo, setTab] = useState('todas')
+  const [alertas,  setAlertas]  = useState([])
+  const [loading,  setLoading]  = useState(true)
+  const [tabAtivo, setTab]      = useState('todas')
 
-  const naoLidas = notifs.filter(n => !n.lido).length
-  const lista    = tabAtivo === 'nao_lidas' ? notifs.filter(n => !n.lido) : notifs
+  const fetchData = useCallback(async () => {
+    setLoading(true)
+    const { data } = await supa
+      .from('alertas_inteligentes')
+      .select('id, tipo, nivel, titulo, descricao, estado, created_at')
+      .eq('pessoa_id', DEMO_PESSOA_ID)
+      .order('created_at', { ascending: false })
+    setAlertas(data || [])
+    setLoading(false)
+  }, [])
 
-  function marcarTodas() {
-    setNotifs(prev => prev.map(n => ({ ...n, lido:true })))
-    // TODO(mario): actualizar em BD (Fase 3.3.9)
+  useEffect(() => { fetchData() }, [fetchData])
+
+  const naoLidas = alertas.filter(n => n.estado === 'ativo').length
+  const lista    = tabAtivo === 'nao_lidas' ? alertas.filter(n => n.estado === 'ativo') : alertas
+
+  async function marcarLida(id) {
+    setAlertas(prev => prev.map(n => n.id === id ? { ...n, estado:'arquivado' } : n))
+    await supa.from('alertas_inteligentes').update({ estado: 'arquivado' }).eq('id', id)
   }
 
-  function marcarLida(id) {
-    setNotifs(prev => prev.map(n => n.id === id ? { ...n, lido:true } : n))
-    // TODO(mario): actualizar em BD (Fase 3.3.9)
+  async function marcarTodas() {
+    setAlertas(prev => prev.map(n => ({ ...n, estado:'arquivado' })))
+    await supa.from('alertas_inteligentes').update({ estado: 'arquivado' })
+      .eq('pessoa_id', DEMO_PESSOA_ID).eq('estado', 'ativo')
   }
+
+  if (loading) return (
+    <div style={{ minHeight:'100vh', background:C.bg, display:'flex', alignItems:'center', justifyContent:'center' }}>
+      <div style={{ color:C.slate, fontSize:13 }}>A carregar...</div>
+    </div>
+  )
 
   return (
     <div style={{ minHeight:'100vh', background:C.bg, paddingBottom:32 }}>
@@ -44,11 +83,10 @@ export default function NotificacoesScreen({ onBack }) {
         </div>
       </div>
 
-      {/* Tabs */}
       <div style={{ background:C.white, borderBottom:`1px solid ${C.border}`, display:'flex', padding:'0 16px' }}>
         {[
-          { id:'todas',      l:'Todas' },
-          { id:'nao_lidas',  l:`Não lidas${naoLidas > 0 ? ` (${naoLidas})` : ''}` },
+          { id:'todas',     l:'Todas' },
+          { id:'nao_lidas', l:`Não lidas${naoLidas > 0 ? ` (${naoLidas})` : ''}` },
         ].map(t => (
           <button key={t.id} onClick={() => setTab(t.id)} style={{
             flex:1, padding:'10px 4px', background:'none', border:'none', cursor:'pointer',
@@ -67,27 +105,28 @@ export default function NotificacoesScreen({ onBack }) {
             <div style={{ fontSize:12, color:C.slate, marginTop:4 }}>Sem notificações não lidas</div>
           </div>
         ) : lista.map(n => {
-          const tc = TIPO_COLOR[n.tipo] || TIPO_COLOR.info
+          const lido = n.estado !== 'ativo'
+          const tc   = NIVEL_COLOR[n.nivel] || NIVEL_COLOR.info
           return (
             <div
               key={n.id}
-              onClick={() => marcarLida(n.id)}
+              onClick={() => !lido && marcarLida(n.id)}
               style={{
-                background: n.lido ? C.white : tc.bg,
+                background: lido ? C.white : tc.bg,
                 border:`1px solid ${C.border}`,
                 borderLeft:`4px solid ${tc.border}`,
                 borderRadius:12, padding:'12px 14px', marginBottom:8,
-                cursor:'pointer', display:'flex', gap:12, alignItems:'flex-start',
+                cursor: lido ? 'default' : 'pointer', display:'flex', gap:12, alignItems:'flex-start',
               }}
             >
-              <span style={{ fontSize:20, flexShrink:0 }}>{n.emoji}</span>
+              <span style={{ fontSize:20, flexShrink:0 }}>{TIPO_EMOJI[n.tipo] || '🔔'}</span>
               <div style={{ flex:1 }}>
-                <div style={{ fontSize:13, fontWeight: n.lido ? 600 : 700, color:C.ink }}>{n.titulo}</div>
-                <div style={{ fontSize:11, color:C.slate, marginTop:2, lineHeight:1.4 }}>{n.sub}</div>
+                <div style={{ fontSize:13, fontWeight: lido ? 600 : 700, color:C.ink }}>{n.titulo}</div>
+                <div style={{ fontSize:11, color:C.slate, marginTop:2, lineHeight:1.4 }}>{n.descricao}</div>
               </div>
               <div style={{ display:'flex', flexDirection:'column', alignItems:'flex-end', gap:6, flexShrink:0 }}>
-                <div style={{ fontSize:10, color:C.slate }}>{n.tempo}</div>
-                {!n.lido && <div style={{ width:8, height:8, borderRadius:'50%', background:'#3B82F6' }}/>}
+                <div style={{ fontSize:10, color:C.slate }}>{tempoRelativo(n.created_at)}</div>
+                {!lido && <div style={{ width:8, height:8, borderRadius:'50%', background:'#3B82F6' }}/>}
               </div>
             </div>
           )

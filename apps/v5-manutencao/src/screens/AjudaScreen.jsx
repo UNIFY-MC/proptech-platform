@@ -1,7 +1,6 @@
 import React, { useState } from 'react'
-import { MOCK } from '../data/mock.js'
 
-const G = '#1B4332'; const GM = '#2D6A4F'; const GL = '#52B788'
+const G = '#1B4332'; const GM = '#2D6A4F'
 const C = { ink:'#0f172a', slate:'#64748b', border:'#e2e8f0', bg:'#f8fafc', white:'#fff',
             line:'#E5E7EB', stone:'#6B7685', greenXl:'#D8F3DC' }
 
@@ -10,6 +9,18 @@ const CATS = [
   { emoji:'💳', label:'Pagamentos' },
   { emoji:'👤', label:'Conta' },
   { emoji:'💎', label:'Subscrição' },
+]
+
+// TODO(mario): migrar para tabela faq na BD — Fase 4
+const FAQ = [
+  { p:'Como cancelo um pedido?',        r:'Vai a Pedidos → toca no pedido → "Cancelar". Cancelamento gratuito até 24h antes.' },
+  { p:'O que é o Home+?',               r:'Subscrição mensal de 6,90€ que dá 5% de desconto em todos os serviços + 10% em crédito.' },
+  { p:'Como funciona o Owners Club?',   r:'Programa de fidelização que junta manutenção, energia e seguro. Poupas até 180€/ano.' },
+  { p:'Quanto tempo demora um pedido?', r:'Serviços imediatos: 30-60 min. Serviços agendados: conforme disponibilidade do técnico.' },
+  { p:'Os técnicos são verificados?',   r:'Sim, todos têm NIF validado, seguro de RC e avaliação mínima de 4.0 estrelas.' },
+  { p:'Posso pagar com MB WAY?',        r:'Sim. Aceitamos MB WAY, cartão Visa/Mastercard e referência MB.' },
+  { p:'O que é o Home Score?',          r:'Índice de 0-100 que mede a saúde da tua casa. Sobe com serviços concluídos e documentos subidos.' },
+  { p:'Como ganho pontos?',             r:'Por cada serviço concluído, avaliação dada, missão cumprida e documento carregado.' },
 ]
 
 function FaqItem({ p, r }) {
@@ -32,7 +43,7 @@ function FaqItem({ p, r }) {
 
 export default function AjudaScreen({ onBack }) {
   const [query, setQuery] = useState('')
-  const faqFiltrado = MOCK.faq.filter(f =>
+  const faqFiltrado = FAQ.filter(f =>
     !query || f.p.toLowerCase().includes(query.toLowerCase()) || f.r.toLowerCase().includes(query.toLowerCase())
   )
 
@@ -44,7 +55,6 @@ export default function AjudaScreen({ onBack }) {
         <div style={{ fontSize:22, fontWeight:700, fontFamily:'Georgia,serif' }}>Como te podemos ajudar?</div>
       </div>
 
-      {/* Search */}
       <div style={{ padding:'14px 16px 0' }}>
         <input
           value={query} onChange={e => setQuery(e.target.value)}
@@ -56,7 +66,6 @@ export default function AjudaScreen({ onBack }) {
         />
       </div>
 
-      {/* Categorias quick links */}
       {!query && (
         <>
           <div style={{ padding:'14px 16px 8px', fontSize:10, fontWeight:700, letterSpacing:.6, color:C.stone, textTransform:'uppercase' }}>Categorias</div>
@@ -75,7 +84,6 @@ export default function AjudaScreen({ onBack }) {
         </>
       )}
 
-      {/* FAQ */}
       <div style={{ margin:'14px 16px 0', background:C.white, border:`1px solid ${C.border}`, borderRadius:14, overflow:'hidden' }}>
         <div style={{ padding:'12px 16px', fontSize:9, fontWeight:700, letterSpacing:.6, color:C.stone, textTransform:'uppercase', background:C.bg, borderBottom:`1px solid ${C.border}` }}>PERGUNTAS FREQUENTES</div>
         {faqFiltrado.length === 0 ? (
@@ -83,13 +91,12 @@ export default function AjudaScreen({ onBack }) {
         ) : faqFiltrado.map((f, i) => <FaqItem key={i} p={f.p} r={f.r}/>)}
       </div>
 
-      {/* Contacto */}
       <div style={{ margin:'14px 16px 0' }}>
         <div style={{ fontSize:10, fontWeight:700, letterSpacing:.6, color:C.stone, textTransform:'uppercase', marginBottom:8 }}>Contacto directo</div>
         <div style={{ display:'flex', gap:8 }}>
           {[
-            { label:'📧 Email', action:() => window.open('mailto:suporte@oscar.app') },
-            { label:'💬 Chat', action:() => alert('Chat ao vivo — disponível Fase 3.5') },
+            { label:'📧 Email',    action:() => window.open('mailto:suporte@oscar.app') },
+            { label:'💬 Chat',     action:() => alert('Chat ao vivo — disponível Fase 3.5') },
             { label:'📞 Telefone', action:() => window.open('tel:+351220000000') },
           ].map(b => (
             <button key={b.label} onClick={b.action} style={{

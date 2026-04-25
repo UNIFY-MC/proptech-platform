@@ -1,5 +1,6 @@
-import React, { useState } from 'react'
-import { MOCK } from '../data/mock.js'
+import React, { useState, useEffect, useCallback } from 'react'
+import { supa } from '../supa.js'
+import { DEMO_PESSOA_ID } from '../lib/demo.js'
 
 const G = '#1B4332'; const GM = '#2D6A4F'
 const C = { ink:'#0f172a', slate:'#64748b', border:'#e2e8f0', bg:'#f8fafc', white:'#fff',
@@ -10,8 +11,30 @@ function Stars({ n }) {
 }
 
 export default function AvaliacoesScreen({ onBack }) {
-  const [tabAtivo, setTab] = useState('dei')
-  const avaliacoes = tabAtivo === 'dei' ? MOCK.avaliacoes_dadas : []
+  const [tabAtivo, setTab]     = useState('dei')
+  const [dadas,    setDadas]   = useState([])
+  const [loading,  setLoading] = useState(true)
+
+  const fetchData = useCallback(async () => {
+    setLoading(true)
+    const { data } = await supa
+      .from('avaliacoes')
+      .select('id, rating, texto, criado_em, servico_nome, prestadores(nome)')
+      .eq('cliente_id', DEMO_PESSOA_ID)
+      .order('criado_em', { ascending: false })
+    setDadas(data || [])
+    setLoading(false)
+  }, [])
+
+  useEffect(() => { fetchData() }, [fetchData])
+
+  const avaliacoes = tabAtivo === 'dei' ? dadas : []
+
+  if (loading) return (
+    <div style={{ minHeight:'100vh', background:C.bg, display:'flex', alignItems:'center', justifyContent:'center' }}>
+      <div style={{ color:C.slate, fontSize:13 }}>A carregar...</div>
+    </div>
+  )
 
   return (
     <div style={{ minHeight:'100vh', background:C.bg, paddingBottom:32 }}>
@@ -21,7 +44,6 @@ export default function AvaliacoesScreen({ onBack }) {
         <div style={{ fontSize:22, fontWeight:700, fontFamily:'Georgia,serif' }}>As minhas avaliações</div>
       </div>
 
-      {/* Tabs */}
       <div style={{ background:C.white, borderBottom:`1px solid ${C.border}`, display:'flex', padding:'0 16px' }}>
         {[{id:'dei',l:'Que dei'},{id:'recebi',l:'Que recebi'}].map(t => (
           <button key={t.id} onClick={() => setTab(t.id)} style={{
@@ -37,11 +59,16 @@ export default function AvaliacoesScreen({ onBack }) {
         {avaliacoes.length === 0 ? (
           <div style={{ background:C.white, border:`1px dashed ${C.border}`, borderRadius:12, padding:'32px 16px', textAlign:'center' }}>
             <div style={{ fontSize:32, marginBottom:8 }}>⭐</div>
-            <div style={{ fontSize:14, fontWeight:700, color:C.ink }}>Sem avaliações</div>
-            <div style={{ fontSize:12, color:C.slate, marginTop:4 }}>As avaliações dos técnicos aparecem aqui</div>
+            <div style={{ fontSize:14, fontWeight:700, color:C.ink }}>
+              {tabAtivo === 'recebi' ? 'Sem avaliações recebidas' : 'Sem avaliações'}
+            </div>
+            <div style={{ fontSize:12, color:C.slate, marginTop:4 }}>
+              {tabAtivo === 'recebi' ? 'Avaliações de prestadores aparecem aqui' : 'As tuas avaliações aos técnicos aparecem aqui'}
+            </div>
           </div>
         ) : avaliacoes.map(av => {
-          const ini = av.prestador.split(' ').filter(Boolean).map(w=>w[0]).slice(0,2).join('').toUpperCase()
+          const nomeP = av.prestadores?.nome || 'Técnico'
+          const ini   = nomeP.split(' ').filter(Boolean).map(w=>w[0]).slice(0,2).join('').toUpperCase()
           return (
             <div key={av.id} style={{ background:C.white, border:`1px solid ${C.border}`, borderRadius:14, padding:'14px 16px', marginBottom:10 }}>
               <div style={{ display:'flex', gap:12, alignItems:'flex-start', marginBottom:10 }}>
@@ -51,12 +78,12 @@ export default function AvaliacoesScreen({ onBack }) {
                   fontSize:14, fontWeight:800, color:'#fff', flexShrink:0,
                 }}>{ini}</div>
                 <div style={{ flex:1 }}>
-                  <div style={{ fontSize:14, fontWeight:700, color:C.ink }}>{av.prestador}</div>
-                  <div style={{ fontSize:11, color:C.slate }}>{av.servico}</div>
+                  <div style={{ fontSize:14, fontWeight:700, color:C.ink }}>{nomeP}</div>
+                  {av.servico_nome && <div style={{ fontSize:11, color:C.slate }}>{av.servico_nome}</div>}
                   <div style={{ marginTop:4 }}><Stars n={av.rating}/></div>
                 </div>
                 <div style={{ fontSize:11, color:C.slate, flexShrink:0 }}>
-                  {new Date(av.data).toLocaleDateString('pt-PT', { day:'2-digit', month:'short' })}
+                  {new Date(av.criado_em).toLocaleDateString('pt-PT', { day:'2-digit', month:'short' })}
                 </div>
               </div>
               {av.texto && (
@@ -65,7 +92,7 @@ export default function AvaliacoesScreen({ onBack }) {
                 </div>
               )}
               <div style={{ display:'flex', gap:8 }}>
-                <button onClick={() => alert('Editar avaliação — disponível Fase 3.3.9')} style={{
+                <button onClick={() => alert('Editar avaliação — disponível Fase 4')} style={{
                   flex:1, padding:'8px', borderRadius:8, background:C.bg,
                   border:`1px solid ${C.border}`, fontSize:12, fontWeight:600, color:C.slate, cursor:'pointer',
                 }}>Editar</button>
