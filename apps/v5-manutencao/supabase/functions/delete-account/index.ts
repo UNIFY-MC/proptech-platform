@@ -55,6 +55,13 @@ Deno.serve(async (req: Request) => {
       auth: { autoRefreshToken: false, persistSession: false },
     })
 
+    // Cliente separado para RPCs no schema core (Content-Profile: core)
+    // fn_anonymize_account está em core, não em public
+    const supaServiceCore = createClient(supabaseUrl, serviceKey, {
+      db: { schema: 'core' },
+      auth: { autoRefreshToken: false, persistSession: false },
+    })
+
     const { data: { user }, error: userError } = await supaService.auth.getUser(userToken)
     if (userError || !user) {
       return json({ error: 'Token inválido' }, 401, cors)
@@ -82,7 +89,7 @@ Deno.serve(async (req: Request) => {
     }
 
     // ── 3. Anonimizar dados (RPC SECURITY DEFINER, service_role) ───────
-    const { data: rpcData, error: rpcError } = await supaService.rpc('fn_anonymize_account', {
+    const { data: rpcData, error: rpcError } = await supaServiceCore.rpc('fn_anonymize_account', {
       p_auth_user_id: user.id,
     })
 
