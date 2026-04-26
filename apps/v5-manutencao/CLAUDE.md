@@ -1,7 +1,7 @@
 # v5-manutencao — Contexto para Claude Code
 
 Este ficheiro é lido automaticamente pelo Claude Code a cada invocação. Mantém-se curto e actual.
-**Última actualização:** 2026-04-26 · Sprint 3.4D concluída
+**Última actualização:** 2026-04-27 · Sprint 3.4D **FECHADA** · Próximo: decidir 3.5 vs Fase 4
 
 ---
 
@@ -29,11 +29,11 @@ Não esperar pelo fim do projecto. Cada commit que muda padrão estrutural deve 
 | **3.4B** | Onboarding wizard 5 steps · RPC fn_complete_onboarding atómica · cria org+membership+localizacao+perfil_fiscal · validação NIF PT · bloqueio total até conclusão |
 | **3.4C** | RLS em core (23 tabelas) + v5_manutencao (39 tabelas) · helpers SECURITY DEFINER · cross-tenant validado · REVOKE anon em RPCs públicas · empty states honestos · pre_auth_* eliminado |
 | **3.4D fix-ux #1** | primeiro_nome + apelidos em core.pessoas · wizard 2 campos · saudação usa primeiro_nome · PerfilDrawer actualizado |
-| **3.4D** | SMTP Resend (prataowners.pt) · email change in-app · password change in-app · GDPR via Edge Function · `is_staff()` + `core.staff_roles` · `.single()` audit (9 ficheiros) |
+| **3.4D** | SMTP Resend (prataowners.pt) · email change in-app · password change in-app · GDPR via Edge Function · `is_staff()` + `core.staff_roles` · `.single()` audit (9 ficheiros) · StaffBanner · PasswordInput toggle · smoke test G completo |
 
 ### Em curso
 
-- Nada · aguardar Smoke Test G e próxima decisão de sprint
+- Nada · **Sprint 3.4D fechada** · aguardar decisão de próximo sprint (3.5 fix-ux vs Fase 4 backoffice)
 
 ### Pendente
 
@@ -544,7 +544,7 @@ Colunas novas em `ordens_trabalho`:
 
 ## Débitos abertos (3.4D+)
 
-- **Smoke Test G pendente**: criar `mariocarvalho.biz+v5staff@gmail.com` + INSERT staff_roles + testar todos os fluxos
+- ~~**Smoke Test G concluído** (2026-04-27): staff banner ✅ · password change ✅ · GDPR delete ✅ · HomeScreen 400 fix ✅~~
 - **Moradas do cliente**: tabela `cliente_moradas` + selector no checkout; GPS + reverse geocoding Nominatim
 - **Configurador opções dinâmicas por serviço** (3.5 IA)
 - **Stripe checkout subscrição** — CTA desactivado em PlanoHomeDetalheScreen (Fase 5)
