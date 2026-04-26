@@ -333,7 +333,8 @@ Colunas novas em `ordens`:
 | **Sprint 3.3** | ✅ **FECHADA** | 8 fases base + 12 fix-ux (ux1–ux12) · 199 serviços · 4 combos BD · subscrições · descontos |
 | **3.4A** | ✅ **fechada** | Auth core: LoginScreen + Signup + Recover + AuthContext + DEMO_PESSOA_ID → useAuth() |
 | **3.4B** | ✅ **fechada** | Onboarding wizard 5 steps · RPC fn_complete_onboarding · needsOnboarding bloqueante |
-| **3.4C** | **próxima** | RLS policies + multi-org switcher rico + drop pre_auth_* policies |
+| **3.4C** | ✅ **fechada** | RLS todas as tabelas (core 23 + v5_manutencao 39) · helpers SECURITY DEFINER · multi-org switcher · OrgLocBottomSheet |
+| **3.4D** | **próxima** | SMTP custom Resend · email change re-verify · account delete · GDPR |
 
 ### Notas para 3.3.12
 
@@ -472,13 +473,12 @@ Colunas novas em `ordens`:
 
 ## Débitos abertos pós Sprint 3.3 (para 3.4A+)
 
-- **Auth real (3.4A — próxima)**: botões demo passam a fazer `signInWithPassword`; substituir policies `pre_auth_*`; schema `cliente_moradas`
+- **Moradas do cliente (3.4E)**: tabela `cliente_moradas` + selector no checkout; GPS + reverse geocoding Nominatim
 - **Configurador opções dinâmicas por serviço** (3.5 IA)
 - **Stripe checkout subscrição** — CTA desactivado em PlanoHomeDetalheScreen (Fase 5)
 - **UI admin descontos** — gestão web de `descontos_config` e `planos_subscricao`
 - **Reviews reais** por serviço e por categoria (3.5)
 - **FAQ seedado completo** — actualmente só 7 serviços em 199
-- **RLS** em `pedidos_orcamento`, `orcamentos_recebidos`, `contexto_servico`, `servicos_inclui_exclui`, `servicos_faq`, `platform_stats`
 - **Mapa visual** — Leaflet incompatível React 18; avaliar MapLibre ou Google Maps iframe
 - **Imagens AI brand próprias** (Fase 5+) — actualmente Unsplash
 - **SmartPromptsSheet no wizard** de orçamento
@@ -538,6 +538,30 @@ mapa estático em `ImovelDetalheScreen.jsx` (só leitura, sem interacção neces
   - `teste4.gestor@v5demo.pt` — tipo gestor_imoveis, skip step 4
 - **Débito 3.4C**: substituir `GRANT TO anon` por autenticação real; RLS policies; multi-org switcher
 - **Débito 3.4D**: email change re-verify, account delete, SMTP custom Resend
+
+## Notas para 3.4C — RLS + multi-org switcher
+
+- **Helpers SECURITY DEFINER** em schema `public` (padrão Supabase):
+  - `public.current_pessoa_id()` → `SELECT id FROM core.pessoas WHERE auth_user_id = auth.uid()`
+  - `public.current_organization_ids()` → `uuid[]` de orgs do utilizador via memberships
+  - `public.has_org_role(org_id, roles[])` → boolean para verificar role
+  - `GRANT EXECUTE TO authenticated`; indexes em `core.memberships(pessoa_id)` e `core.pessoas(auth_user_id)`
+- **RLS core schema** (23 tabelas): `pessoas` e `organizations` seleccionáveis pelo próprio; `memberships` seleccionável pelo próprio; 18 tabelas SISTEMA — RLS activo sem policies (service_role bypassa)
+- **supaCore JWT sync** — `syncSupaCore(session)` em `AuthContext.jsx` chama `supaCore.auth.setSession()` a cada mudança de sessão. Crítico: supaCore tem `persistSession:false` e não carrega JWT automaticamente
+- **RLS v5_manutencao** (39 tabelas):
+  - PER_ORG (12): `localizacoes`, `perfis_fiscais`, `ordens_trabalho`, `pedidos_orcamento`, `documentos`, `equipamentos`, `subscricoes`, `metodos_pagamento`, `alertas_inteligentes`, `codigos_referencia`, `avaliacoes`, `prestadores` (SELECT livre, write restrito a org)
+  - PER_ORG indirect (5): `intervencoes_equipamento` (via equipamento), `mensagens_chat` (via ordens_trabalho), `consumos_energia` (via equipamento), `creditos_mensais` (via subscricoes), `orcamentos_recebidos` (via pedidos_orcamento)
+  - PER_PESSOA (7): `missoes_utilizador`, `pontos_historico`, `prestadores_equipa_cliente`, `prestadores_favoritos`, `respostas_assessment`, `servicos_contratados`, `tickets_suporte`
+  - PER_PESSOA indirect (2): `mensagens_suporte` (via tickets), `contexto_servico` (via localizacoes)
+  - PER_PESSOA especial: `referidos` (referrer_id OU referido_id = current_pessoa_id)
+  - PUBLICO (12): catalogo_servicos, categorias_landing, combos, combo_servicos, descontos_config, planos_subscricao, platform_stats, promocoes, servicos_faq, servicos_inclui_exclui, sub_grupos_config, alertas_meteo — SELECT para anon+authenticated
+- **ImovelAtivoContext.jsx** reescrito: org-aware · carrega org details de `core.organizations` · persiste `last_org_id` em `core.pessoas.metadata` · `orgIdsKey` como dep estável em vez de array `memberships`
+- **OrgLocBottomSheet.jsx** — substitui `ImovelSelectorSheet`; mostra secção de org switching quando `organizations.length > 1`; backward compat: mesmas props (`open`, `onClose`, `onGerirImoveis`)
+- **App.jsx** — import `OrgLocBottomSheet` substitui `ImovelSelectorSheet`
+- **pre_auth_* policies**: já não existiam antes da 3.4C (removidas em versão anterior)
+- SQL helpers: `sql/16_v5_3_4c_rls_helpers.sql`
+- SQL v5_manutencao: `sql/17_v5_3_4c_rls_v5_manutencao.sql`
+- **TESTE obrigatório pré-3.4D**: login Maria + HomeScreen sem 403 na consola; login novo user sem membership → wizard bloqueante; após onboarding → HomeScreen com localizacoes corretas
 
 ## Estilo de comunicação
 

@@ -27,7 +27,7 @@ import ScoreDetailScreen from './ScoreDetailScreen.jsx'
 import AlertaDetailScreen from './AlertaDetailScreen.jsx'
 import OwnersClubScreen from './OwnersClubScreen.jsx'
 import ChatPedidoScreen from './ChatPedidoScreen.jsx'
-import ImovelSelectorSheet from './ImovelSelectorSheet.jsx'
+import OrgLocBottomSheet from './OrgLocBottomSheet.jsx'
 import SobreMimScreen from './screens/SobreMimScreen.jsx'
 import DadosPessoaisScreen from './screens/DadosPessoaisScreen.jsx'
 import LoginSegurancaScreen from './screens/LoginSegurancaScreen.jsx'
@@ -11233,7 +11233,7 @@ export default function App() {
                 }}
                 onLogout={()=>{ setClienteDrawerOpen(false); onLogout() }}
               />
-              <ImovelSelectorSheet
+              <OrgLocBottomSheet
                 open={showImovelSelector}
                 onClose={()=>setShowImovelSelector(false)}
                 onGerirImoveis={()=>{ setShowImovelSelector(false); setEcra('imoveis') }}

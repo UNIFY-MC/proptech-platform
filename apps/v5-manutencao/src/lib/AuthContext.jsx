@@ -1,8 +1,24 @@
 import { createContext, useContext, useEffect, useState } from 'react'
-import { supa } from '../supa'
-import { supaCore } from '../supa'
+import { supa, supaCore } from '../supa'
 
 const AuthCtx = createContext(null)
+
+// Sincroniza sessão JWT do cliente principal (supa) para supaCore,
+// para que queries a core.* com RLS activo incluam o JWT correcto.
+async function syncSupaCore(session) {
+  try {
+    if (session?.access_token) {
+      await supaCore.auth.setSession({
+        access_token:  session.access_token,
+        refresh_token: session.refresh_token,
+      })
+    } else {
+      await supaCore.auth.signOut()
+    }
+  } catch (e) {
+    console.warn('[AuthContext] supaCore sync failed:', e)
+  }
+}
 
 export function AuthProvider({ children }) {
   const [session,     setSession]     = useState(null)
@@ -11,8 +27,9 @@ export function AuthProvider({ children }) {
   const [loading,     setLoading]     = useState(true)
 
   useEffect(() => {
-    supa.auth.getSession().then(({ data: { session } }) => {
+    supa.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session)
+      await syncSupaCore(session)
       if (session?.user) {
         loadPessoa(session.user.id)
       } else {
@@ -23,6 +40,8 @@ export function AuthProvider({ children }) {
     const { data: { subscription } } = supa.auth.onAuthStateChange(
       async (event, session) => {
         setSession(session)
+        await syncSupaCore(session)
+
         if (event === 'SIGNED_OUT') {
           setPessoa(null)
           setMemberships([])
@@ -75,6 +94,7 @@ export function AuthProvider({ children }) {
   // signOut limpa sessão mas NÃO o localStorage de onboarding (retoma no próximo login)
   const signOut = async () => {
     await supa.auth.signOut()
+    // syncSupaCore é chamado via onAuthStateChange SIGNED_OUT
     setPessoa(null)
     setMemberships([])
     setSession(null)
@@ -85,7 +105,6 @@ export function AuthProvider({ children }) {
   }
 
   // needsOnboarding: sem memberships → wizard bloqueante até RPC G1 concluir
-  // Não há override, não há flag "dismissed"
   const needsOnboarding = !loading && !!session && memberships.length === 0
 
   return (
