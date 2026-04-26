@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { supaCore, supa } from '../supa'
+import PhoneInput from '../components/PhoneInput.jsx'
 
 const G = '#0B3D2E'; const G2 = '#164E3A'; const EM = '#10B981'
 const C = {
@@ -16,9 +17,11 @@ function validarNIF(nif) {
   const check = r < 2 ? 0 : 11 - r
   return parseInt(nif[8]) === check
 }
-function validarTelefone(t) {
-  if (!t || t.trim() === '') return true // opcional
-  return /^[923]\d{8}$/.test(t.replace(/[\s+]/g, ''))
+function validarTelefone(t, indicativo = '+351') {
+  if (!t || t.trim() === '') return false // obrigatório
+  const digits = t.replace(/\s/g, '')
+  if (indicativo === '+351') return /^9\d{8}$/.test(digits)
+  return /^\d{6,15}$/.test(digits)
 }
 function validarIBAN(iban) {
   if (!iban || iban.trim() === '') return true // opcional
@@ -45,7 +48,7 @@ const STEPS_FOR_TIPO = {
 }
 
 const DEFAULT_STATE = {
-  tipo: '', nome: '', nif: '', telemovel: '', foto_url: '',
+  tipo: '', nome: '', nif: '', telemovel: '', telefone_indicativo: '+351', foto_url: '',
   ent_nome: '', ent_nif: '', ent_morada: '', ent_localidade: '', ent_cp: '', ent_iban: '',
   loc_nome: '', loc_tipo: 'habitacao', loc_morada: '', loc_localidade: '', loc_cp: '', loc_area: '',
   loc_mesma_morada: false,
@@ -56,7 +59,7 @@ function canContinue(step, state) {
   if (step === 2) {
     return validarNome(state.nome) &&
            validarNIF(state.nif) &&
-           validarTelefone(state.telemovel)
+           validarTelefone(state.telemovel, state.telefone_indicativo)
   }
   if (step === 3) {
     if (state.tipo === 'gestor_imoveis') return true
@@ -146,7 +149,7 @@ function Step2DadosPessoais({ state, setState }) {
   const set = (f) => (e) => setState(s => ({ ...s, [f]: e.target.value }))
 
   const nifOk  = validarNIF(state.nif)
-  const telOk  = validarTelefone(state.telemovel)
+  const telOk  = validarTelefone(state.telemovel, state.telefone_indicativo)
   const nomeOk = validarNome(state.nome)
 
   return (
@@ -177,13 +180,28 @@ function Step2DadosPessoais({ state, setState }) {
         {state.nif.length === 9 && nifOk && <Hint ok={true} text="✓ NIF válido" />}
       </Field>
 
-      <Field label="Telemóvel (recomendado)">
-        <input
-          type="tel" value={state.telemovel}
-          onChange={set('telemovel')} onBlur={() => touch('telemovel')}
-          placeholder="912 345 678" style={inp(touched.telemovel && !telOk)}
+      <Field label="Telemóvel">
+        <PhoneInput
+          value={state.telemovel}
+          indicativo={state.telefone_indicativo}
+          hasError={touched.telemovel && !telOk}
+          onChange={(num, ind) => {
+            setState(s => ({ ...s, telemovel: num, telefone_indicativo: ind }))
+          }}
         />
-        {touched.telemovel && !telOk && <Hint ok={false} text="Formato PT: 9XX XXX XXX" />}
+        <div onClick={() => touch('telemovel')}>
+          {touched.telemovel && !state.telemovel.trim() && (
+            <Hint ok={false} text="Precisamos do telefone para o prestador te contactar" />
+          )}
+          {touched.telemovel && state.telemovel.trim() && !telOk && (
+            <Hint ok={false} text={state.telefone_indicativo === '+351'
+              ? 'Formato PT: 9X XXX XXXX (9 dígitos, começa em 9)'
+              : 'Número inválido (6-15 dígitos)'} />
+          )}
+          {state.telemovel.trim() && telOk && (
+            <Hint ok={true} text="✓ Número válido" />
+          )}
+        </div>
       </Field>
 
       <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 10, padding: '10px 12px' }}>
@@ -417,41 +435,43 @@ function Step4Localizacao({ state, setState }) {
 function Step5Welcome({ state, user, onComplete, clearStorage }) {
   const [status, setStatus] = useState('idle') // idle | loading | ok | error
   const [erro, setErro]     = useState(null)
-  const calledRef           = useRef(false)
+  // sessionStorage persiste através de re-mounts React (StrictMode / needsOnboarding flicker)
+  const RPC_KEY = `v5:onboarding:rpc:${user.id}`
 
   const primeiroNome = (state.nome || '').split(' ')[0] || 'bem-vindo'
 
   const callRPC = useCallback(async () => {
-    if (calledRef.current) return
-    calledRef.current = true
+    if (sessionStorage.getItem(RPC_KEY)) return
+    sessionStorage.setItem(RPC_KEY, '1')
     setStatus('loading')
     setErro(null)
 
     const payload = {
-      auth_user_id:   user.id,
-      tipo:           state.tipo,
-      nome:           state.nome.trim(),
-      nif_pessoal:    state.nif.trim(),
-      telemovel:      state.telemovel.trim(),
-      foto_url:       state.foto_url || null,
-      ent_nome:       state.ent_nome.trim(),
-      ent_nif:        state.ent_nif.trim(),
-      ent_morada:     state.ent_morada.trim(),
-      ent_localidade: state.ent_localidade.trim(),
-      ent_cp:         state.ent_cp.trim(),
-      ent_iban:       state.ent_iban.trim(),
-      loc_nome:       state.loc_nome.trim(),
-      loc_tipo:       state.loc_tipo,
-      loc_morada:     state.loc_morada.trim(),
-      loc_localidade: state.loc_localidade.trim(),
-      loc_cp:         state.loc_cp.trim(),
-      loc_area:       state.loc_area ? parseFloat(state.loc_area) : null,
+      auth_user_id:         user.id,
+      tipo:                 state.tipo,
+      nome:                 state.nome.trim(),
+      nif_pessoal:          state.nif.trim(),
+      telemovel:            state.telemovel.trim(),
+      telefone_indicativo:  state.telefone_indicativo || '+351',
+      foto_url:             state.foto_url || null,
+      ent_nome:             state.ent_nome.trim(),
+      ent_nif:              state.ent_nif.trim(),
+      ent_morada:           state.ent_morada.trim(),
+      ent_localidade:       state.ent_localidade.trim(),
+      ent_cp:               state.ent_cp.trim(),
+      ent_iban:             state.ent_iban.trim(),
+      loc_nome:             state.loc_nome.trim(),
+      loc_tipo:             state.loc_tipo,
+      loc_morada:           state.loc_morada.trim(),
+      loc_localidade:       state.loc_localidade.trim(),
+      loc_cp:               state.loc_cp.trim(),
+      loc_area:             state.loc_area ? parseFloat(state.loc_area) : null,
     }
 
     const { data, error } = await supaCore.rpc('fn_complete_onboarding', { payload })
 
     if (error || !data?.ok) {
-      calledRef.current = false // permite tentar de novo
+      sessionStorage.removeItem(RPC_KEY) // permite tentar de novo
       setErro(error?.message || 'Erro desconhecido — tenta de novo.')
       setStatus('error')
       return
@@ -459,7 +479,7 @@ function Step5Welcome({ state, user, onComplete, clearStorage }) {
 
     clearStorage()
     setStatus('ok')
-  }, [state, user, clearStorage])
+  }, [state, user, clearStorage, RPC_KEY])
 
   useEffect(() => { callRPC() }, [callRPC])
 
@@ -479,7 +499,7 @@ function Step5Welcome({ state, user, onComplete, clearStorage }) {
         {erro}
       </div>
       <button
-        onClick={() => { calledRef.current = false; callRPC() }}
+        onClick={() => { sessionStorage.removeItem(RPC_KEY); callRPC() }}
         style={{ width: '100%', padding: '13px', borderRadius: 10, background: G, color: '#fff', border: 'none', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}
       >
         Tentar de novo
@@ -580,24 +600,29 @@ export default function OnboardingWizardScreen({ user, onComplete }) {
 
   return (
     <div style={{ minHeight: '100vh', background: C.bg, fontFamily: "'Outfit',system-ui,sans-serif" }}>
-      {/* Header */}
+      {/* Header — logo centrado, consistente com LoginScreen/SignupScreen */}
       <div style={{
         background: `linear-gradient(145deg,${G},${G2})`,
-        padding: '12px 16px',
+        padding: '13px 16px',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
+        {/* Placeholder com mesma largura do botão "Sair" para centrar o logo */}
+        <div style={{ width: 52 }} />
+
+        {/* TODO(mario fix-ux): rever brand pública (V5/Property7/outra?) */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <div style={{ fontSize: 22 }}>🏠</div>
-          <div style={{ fontSize: 15, fontWeight: 700, color: '#fff', fontFamily: "'Fraunces',Georgia,serif" }}>
-            ServiçoPRO
+          <div style={{ fontSize: 26 }}>🏠</div>
+          <div style={{ fontSize: 18, fontWeight: 700, color: '#fff', fontFamily: "'Fraunces',Georgia,serif", letterSpacing: '-0.01em' }}>
+            V5 Manutenção
           </div>
         </div>
+
         <button
           onClick={handleLogout}
           style={{
             background: 'rgba(255,255,255,.12)', border: '1px solid rgba(255,255,255,.2)',
             borderRadius: 8, padding: '5px 12px', color: 'rgba(255,255,255,.8)',
-            fontSize: 12, cursor: 'pointer', fontFamily: 'inherit',
+            fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', width: 52,
           }}
         >
           Sair

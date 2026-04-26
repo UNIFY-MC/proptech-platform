@@ -952,7 +952,8 @@ function AuthScreen_REMOVED({ onAuth }) {
     <DarkScreen>
       <div style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',textAlign:'center',marginBottom:32}}>
         <Logo size={72}/>
-        <div style={{fontFamily:FONT,fontSize:28,fontWeight:900,color:'#fff',marginTop:20,letterSpacing:'-0.5px'}}>ServiçoPRO</div>
+        {/* TODO(mario fix-ux): rever brand pública (V5/Property7/outra?) */}
+        <div style={{fontFamily:FONT,fontSize:28,fontWeight:900,color:'#fff',marginTop:20,letterSpacing:'-0.5px'}}>V5 Manutenção</div>
         <div style={{fontFamily:FONT,fontSize:14,color:'rgba(255,255,255,0.65)',marginTop:6}}>Serviços domésticos de confiança</div>
       </div>
 
@@ -1157,7 +1158,7 @@ function AuthScreen_REMOVED({ onAuth }) {
       <BackBtn onClick={()=>setStep('otp_code')}/>
       <div style={{marginTop:28}}>
         <div style={{fontFamily:FONT,fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:'1.2px',color:SP.gray}}>Perfil</div>
-        <div style={{fontFamily:FONT,fontSize:24,fontWeight:900,color:SP.ink,marginTop:8,letterSpacing:'-0.4px',lineHeight:1.15}}>Como queres usar o ServiçoPRO?</div>
+        <div style={{fontFamily:FONT,fontSize:24,fontWeight:900,color:SP.ink,marginTop:8,letterSpacing:'-0.4px',lineHeight:1.15}}>Como queres usar a plataforma?</div>
         <div style={{fontFamily:FONT,fontSize:14,color:SP.gray,marginTop:6,lineHeight:1.5}}>Podes mudar mais tarde nas definições.</div>
       </div>
       <div style={{marginTop:28,display:'flex',flexDirection:'column',gap:12}}>
@@ -7213,7 +7214,7 @@ function AdminLogin({onLogin}){
         <div style={{textAlign:'center',marginBottom:28}}>
           <div style={{width:62,height:62,borderRadius:15,background:A.navy,display:'flex',alignItems:'center',justifyContent:'center',fontSize:28,margin:'0 auto 14px'}}>⚙️</div>
           <h1 style={{fontSize:20,fontWeight:800,color:A.navy,margin:'0 0 4px'}}>Painel de Administração</h1>
-          <p style={{fontSize:11,color:A.slate,margin:0}}>ServiçoPRO · v5-manutenção</p>
+          <p style={{fontSize:11,color:A.slate,margin:0}}>V5 Manutenção · v5-manutenção</p>
         </div>
         <label style={{display:'block',fontSize:10,fontWeight:700,color:A.slate,marginBottom:5,textTransform:'uppercase',letterSpacing:'0.04em'}}>Password</label>
         <input type='password' value={pw} onChange={e=>{setPw(e.target.value);setErr(false)}} onKeyDown={e=>e.key==='Enter'&&go()} placeholder='••••••••'
@@ -7233,7 +7234,7 @@ function AdminSidebar({active,set,onLogout}){
       <div style={{padding:'20px 18px 14px',borderBottom:'1px solid rgba(255,255,255,0.07)'}}>
         <div style={{display:'flex',alignItems:'center',gap:10}}>
           <div style={{width:36,height:36,borderRadius:10,background:A.accent,display:'flex',alignItems:'center',justifyContent:'center',fontSize:18}}>🏠</div>
-          <div><div style={{color:'#fff',fontSize:14,fontWeight:800,letterSpacing:'-0.01em'}}>ServiçoPRO</div><div style={{color:A.muted,fontSize:9,fontWeight:700,letterSpacing:'0.08em',marginTop:1}}>ADMIN v5</div></div>
+          <div><div style={{color:'#fff',fontSize:14,fontWeight:800,letterSpacing:'-0.01em'}}>V5 Manutenção</div><div style={{color:A.muted,fontSize:9,fontWeight:700,letterSpacing:'0.08em',marginTop:1}}>ADMIN v5</div></div>
         </div>
       </div>
       <nav style={{flex:1,padding:'8px 10px',overflowY:'auto'}}>
@@ -8013,7 +8014,7 @@ function AdminPagamentos({prest}){
 
 // ══ AdminConfig ════════════════════════
 function AdminConfig(){
-  const [f,setF]=useState({empresa:'ServiçoPRO',nif:'502 000 000',email:'admin@servicopro.pt',tel:'+351 262 000 000',morada:'Caldas da Rainha, 2500',iban:'PT50 0035 0000 0000 0000 0000 0',swan:'https://api.servicopro.pt/swan/webhook',supabaseUrl:'https://hkmvszkpxjbxmnixzqbl.supabase.co',fotos:'2',prazo:'24',comissao:'22'})
+  const [f,setF]=useState({empresa:'V5 Manutenção',nif:'502 000 000',email:'admin@servicopro.pt',tel:'+351 262 000 000',morada:'Caldas da Rainha, 2500',iban:'PT50 0035 0000 0000 0000 0000 0',swan:'https://api.servicopro.pt/swan/webhook',supabaseUrl:'https://hkmvszkpxjbxmnixzqbl.supabase.co',fotos:'2',prazo:'24',comissao:'22'})
   const [saved,setSaved]=useState(false), [saving,setSaving]=useState(false)
   const upd=(k,v)=>{setF(x=>({...x,[k]:v}));setSaved(false)}
   const saveAll=async()=>{setSaving(true);await new Promise(r=>setTimeout(r,600));setSaved(true);setSaving(false)}
@@ -8081,7 +8082,7 @@ function AdminDash({svcs,setSvcs,prestadores,setPrestadores,niveis,setNiveis,cli
    ASSISTENTE AI — Botão flutuante
 ══════════════════════════════════ */
 const AI_RESPOSTAS = {
-  default: 'Olá! Sou o assistente do ServiçoPRO. Posso ajudar com ordens de trabalho, dúvidas sobre pagamentos, escalões ou disponibilidade. Em que posso ajudar?',
+  default: 'Olá! Sou o assistente da V5 Manutenção. Posso ajudar com ordens de trabalho, dúvidas sobre pagamentos, escalões ou disponibilidade. Em que posso ajudar?',
   carteira: 'A tua carteira tem saldo disponível para levantamento imediato. Podes levantar para o teu IBAN via Swan SEPA CT em D+1. Queres ajuda com isso?',
   nivel: 'Estás no nível Gold (18% taxa). Para atingir Elite precisas de mais 160 serviços e manter avaliação ≥ 4.8. Cada serviço conta!',
   ordem: 'Para concluir uma ordem: 1) Aceita, 2) Executa, 3) Tira mínimo 2 fotos, 4) Aguarda assinatura do cliente. O pagamento é creditado em 24h.',
@@ -8156,7 +8157,7 @@ function AIChat() {
           <div style={{ display:'flex', alignItems:'center', gap:10 }}>
             <div style={{ width:36, height:36, borderRadius:'50%', background:'rgba(255,255,255,0.15)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:18 }}>✨</div>
             <div>
-              <div style={{ color:'#fff', fontSize:13, fontWeight:700 }}>Assistente ServiçoPRO</div>
+              <div style={{ color:'#fff', fontSize:13, fontWeight:700 }}>Assistente V5 Manutenção</div>
               <div style={{ color:'#86efac', fontSize:10 }}>● Online · Resposta imediata</div>
             </div>
           </div>

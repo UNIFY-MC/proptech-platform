@@ -63,7 +63,7 @@ export default function PerfilDrawerContent({ authUser, onNavigate, onSwitchTab 
   useEffect(() => {
     supaCore.from('pessoas').select('nome').eq('id', pessoa_id).single()
       .then(({ data }) => { if (data) setPessoa(data) })
-    supa.from('subscricoes').select('nivel, pontos_total').eq('pessoa_id', pessoa_id).single()
+    supa.from('subscricoes').select('nivel, pontos_total').eq('pessoa_id', pessoa_id).maybeSingle()
       .then(({ data }) => { if (data) setSub(data) })
   }, [])
 
