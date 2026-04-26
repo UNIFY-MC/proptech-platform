@@ -48,6 +48,11 @@ import OrcamentoConfirmadoScreen from './screens/OrcamentoConfirmadoScreen.jsx'
 import OrcamentoDetalheScreen from './screens/OrcamentoDetalheScreen.jsx'
 import PlanoHomeDetalheScreen from './screens/PlanoHomeDetalheScreen.jsx'
 import ServicosListaScreen from './screens/ServicosListaScreen.jsx'
+import EmergenciaScreen from './screens/EmergenciaScreen.jsx'
+import AIExpertFabScreen from './screens/AIExpertFabScreen.jsx'
+import AdicionarCamaraScreen from './screens/AdicionarCamaraScreen.jsx'
+import AdicionarDocScreen from './screens/AdicionarDocScreen.jsx'
+import AdicionarEnergiaScreen from './screens/AdicionarEnergiaScreen.jsx'
 import {
   ArrowLeft, X, Check, Camera, Clock, Plus, MapPin, ChevronRight,
   Shield, Lock, MessageSquare, FileImage, RefreshCw, Wrench,
@@ -2630,8 +2635,7 @@ function BNav({ tab, set, onFabClick }) {
           boxShadow:'0 6px 18px rgba(82,183,136,0.5)',
           color:'#fff',
         }}>
-          <span style={{ fontSize:18, lineHeight:1 }}>✨</span>
-          <span style={{ fontSize:7, marginTop:1, letterSpacing:.3, fontWeight:700 }}>PEDIR</span>
+          <span style={{ fontSize:22, lineHeight:1 }}>✨</span>
         </button>
       </div>
       {tabsR.map(renderTab)}
@@ -2715,8 +2719,20 @@ function MoradaPickerModal({ moradas, selectedMoradaId, onClose, onSelect, onMan
    Click numa categoria abre ServiceListScreenV2 dessa categoria.
    "Descrever livremente" leva ao PersonalizadoLandingV2 de Manutenção
    (catch-all mais abrangente) com a descrição pré-preenchida. */
-function FabPickerModal({ onClose, onPickCategory, onPickPersonalizado }) {
+function FabPickerModal({ onClose, onPickCategory, onPickPersonalizado, onEmergencia, onAIExpert, onAdicionarCamara, onAdicionarDoc, onAdicionarEnergia }) {
   const [description, setDescription] = useState('')
+
+  const PEDIR_CATS = [
+    { id:'limpeza',    emoji:'🧹', label:'Limpeza' },
+    { id:'manutencao', emoji:'🔧', label:'Manutenção' },
+    { id:'canalizacao',emoji:'💧', label:'Canalização' },
+  ]
+  const CASA_CATS = [
+    { id:'camara',    emoji:'📸', label:'Câmara',    fn: onAdicionarCamara },
+    { id:'documento', emoji:'📄', label:'Documento', fn: onAdicionarDoc },
+    { id:'energia',   emoji:'⚡', label:'Energia',   fn: onAdicionarEnergia },
+  ]
+
   return (
     <div onClick={onClose} style={{
       position:'fixed', inset:0, background:'rgba(10,22,32,0.55)',
@@ -2724,31 +2740,82 @@ function FabPickerModal({ onClose, onPickCategory, onPickPersonalizado }) {
     }}>
       <div onClick={e=>e.stopPropagation()} style={{
         background:'#fff', width:'100%', maxWidth:430,
-        borderRadius:'18px 18px 0 0', padding:'18px 18px 22px',
-        maxHeight:'86vh', overflowY:'auto',
+        borderRadius:'18px 18px 0 0', padding:'18px 18px 28px',
+        maxHeight:'92vh', overflowY:'auto',
         animation:'popIn 0.18s ease-out',
       }}>
-        <div style={{ width:38, height:4, borderRadius:2, background:'#e5e7eb', margin:'0 auto 14px' }}/>
-        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:4 }}>
-          <h2 style={{ margin:0, fontSize:17, fontWeight:700, color:'#0A1620' }}>Como podemos ajudar?</h2>
-          <button onClick={onClose} aria-label="Fechar" style={{ background:'none', border:'none', cursor:'pointer', padding:6, color:'#6B7685' }}><X size={18}/></button>
-        </div>
-        <div style={{ fontSize:12, color:'#6B7685', marginBottom:14 }}>Escolha uma categoria ou descreva o serviço que precisa.</div>
+        <div style={{ width:38, height:4, borderRadius:2, background:'#e5e7eb', margin:'0 auto 16px' }}/>
 
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:8, marginBottom:16 }}>
-          {CATS.map(c => (
+        {/* Secção 1 — Emergência */}
+        <div
+          onClick={()=>{ onEmergencia?.(); onClose() }}
+          style={{
+            background:'linear-gradient(135deg,#DC2626,#B91C1C)',
+            borderRadius:14, padding:'14px 16px', marginBottom:14,
+            cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'space-between',
+          }}
+        >
+          <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+            <span style={{ fontSize:26 }}>🚨</span>
+            <div>
+              <div style={{ fontSize:14, fontWeight:800, color:'#fff' }}>Emergência</div>
+              <div style={{ fontSize:11, color:'rgba(255,255,255,.75)', marginTop:1 }}>Caldeira · inundação · eléctrica</div>
+            </div>
+          </div>
+          <span style={{ fontSize:18, color:'rgba(255,255,255,.7)' }}>›</span>
+        </div>
+
+        {/* Secção 2 — Pedir serviço */}
+        <div style={{ fontSize:9, fontWeight:700, letterSpacing:.8, color:'#6B7685', textTransform:'uppercase', marginBottom:8 }}>Pedir serviço</div>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:8, marginBottom:16 }}>
+          {PEDIR_CATS.map(c => (
             <button key={c.id} onClick={()=>{ onPickCategory(c.id); onClose() }} style={{
               display:'flex', flexDirection:'column', alignItems:'center', gap:6,
               background:'#fff', border:`1.5px solid #ECE9E2`, borderRadius:12,
-              padding:'12px 4px', cursor:'pointer',
+              padding:'14px 4px', cursor:'pointer',
             }}>
-              <span style={{ fontSize:22 }}>{c.ic}</span>
-              <span style={{ fontSize:10, fontWeight:700, color:'#0A1620', textAlign:'center', lineHeight:1.2 }}>{c.l}</span>
+              <span style={{ fontSize:24 }}>{c.emoji}</span>
+              <span style={{ fontSize:11, fontWeight:700, color:'#0A1620', textAlign:'center', lineHeight:1.2 }}>{c.label}</span>
             </button>
           ))}
         </div>
 
-        <div style={{ fontSize:10, fontWeight:700, color:'#6B7685', textTransform:'uppercase', letterSpacing:0.6, marginBottom:6 }}>Ou descreva livremente</div>
+        {/* Secção 3 — AI Expert */}
+        <div
+          onClick={()=>{ onAIExpert?.(); onClose() }}
+          style={{
+            background:'linear-gradient(135deg,#4F46E5,#3730A3)',
+            borderRadius:14, padding:'14px 16px', marginBottom:14,
+            cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'space-between',
+          }}
+        >
+          <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+            <span style={{ fontSize:24 }}>🤖</span>
+            <div>
+              <div style={{ fontSize:13, fontWeight:800, color:'#fff' }}>AI Expert</div>
+              <div style={{ fontSize:11, color:'rgba(255,255,255,.75)', marginTop:1 }}>Pergunta sobre a tua casa</div>
+            </div>
+          </div>
+          <span style={{ fontSize:18, color:'rgba(255,255,255,.7)' }}>›</span>
+        </div>
+
+        {/* Secção 4 — Adicionar à casa */}
+        <div style={{ fontSize:9, fontWeight:700, letterSpacing:.8, color:'#6B7685', textTransform:'uppercase', marginBottom:8 }}>Adicionar à casa</div>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:8, marginBottom:16 }}>
+          {CASA_CATS.map(c => (
+            <button key={c.id} onClick={()=>{ c.fn?.(); onClose() }} style={{
+              display:'flex', flexDirection:'column', alignItems:'center', gap:6,
+              background:'#fff', border:`1.5px solid #ECE9E2`, borderRadius:12,
+              padding:'14px 4px', cursor:'pointer',
+            }}>
+              <span style={{ fontSize:24 }}>{c.emoji}</span>
+              <span style={{ fontSize:11, fontWeight:700, color:'#0A1620', textAlign:'center', lineHeight:1.2 }}>{c.label}</span>
+            </button>
+          ))}
+        </div>
+
+        {/* Secção 5 — Descrição livre */}
+        <div style={{ fontSize:9, fontWeight:700, color:'#6B7685', textTransform:'uppercase', letterSpacing:.6, marginBottom:6 }}>Ou descreve livremente</div>
         <textarea value={description} onChange={e=>setDescription(e.target.value)} rows={3} maxLength={500}
           placeholder="Ex: torneira a pingar na cozinha, barulho quando abro. Tem uma semana."
           style={{
@@ -10730,6 +10797,7 @@ export default function App() {
     'servico_detail','combo_detail','promocao_detail','combos','mais_contratados','servicos_lista','chat_suporte',
     'orcamentos_landing','orcamento_wizard','orcamento_confirmado','imovel_detalhe',
     'orcamento_detalhe','plano_home_detalhe',
+    'emergencia','ai_expert_fab','adicionar_camara','adicionar_doc','adicionar_energia',
   ].includes(ecra) || (role==='cliente' && catScreen !== null)
 
   return (
@@ -10898,6 +10966,11 @@ export default function App() {
           {ecra==='servico_detail'     && <ServicoDetailScreen servico={selNav?.servico} onBack={()=>{ setSelNav(p=>({...p,servico:null})); setEcra(selNav?.categoria ? 'categoria_detail' : selNav?.backFrom || 'mais_contratados') }} onPedir={(s)=>alert(`A encaminhar pedido: ${s.nome}`)} onAdicionarLista={(s)=>alert(`"${s.nome}" adicionado à lista!`)} onNavigateMoradas={()=>setEcra('moradas_screen')} />}
           {ecra==='combo_detail'       && <ComboDetailScreen combo={selNav?.combo} onBack={()=>setEcra(selNav?.comboBackFrom || 'home')} onPedir={(cb)=>alert(`Combo "${cb.titulo || cb.nome}" adicionado!`)} onNavigateMoradas={()=>setEcra('moradas_screen')} onNavigateServico={(s)=>{ setSelNav(p=>({...p,servico:s,backFrom:'combo_detail'})); setEcra('servico_detail') }} />}
           {ecra==='plano_home_detalhe' && <PlanoHomeDetalheScreen onBack={()=>setEcra('home')} />}
+          {ecra==='emergencia'         && <EmergenciaScreen onBack={()=>setEcra('home')} />}
+          {ecra==='ai_expert_fab'      && <AIExpertFabScreen onBack={()=>setEcra('home')} />}
+          {ecra==='adicionar_camara'   && <AdicionarCamaraScreen onBack={()=>setEcra('home')} />}
+          {ecra==='adicionar_doc'      && <AdicionarDocScreen onBack={()=>setEcra('home')} />}
+          {ecra==='adicionar_energia'  && <AdicionarEnergiaScreen onBack={()=>setEcra('home')} />}
           {ecra==='promocao_detail'    && <PromocaoDetailScreen promo={selNav?.promocao} onBack={()=>setEcra('home')} onNavigateServico={(s)=>{ setSelNav(p=>({...p,servico:s})); setEcra('servico_detail') }} />}
           {ecra==='combos'             && <CombosScreen onBack={()=>setEcra('home')} onNavigateCombo={(cb)=>{ setSelNav({combo:cb,comboBackFrom:'combos'}); setEcra('combo_detail') }} />}
           {ecra==='mais_contratados'   && <MaisContratadosScreen onBack={()=>setEcra('home')} onNavigateServico={(s)=>{ setSelNav({servico:s}); setEcra('servico_detail') }} />}
@@ -11071,6 +11144,11 @@ export default function App() {
                   setCatState(p=>({...p, description:desc}))
                   setCatScreen('form')
                 }}
+                onEmergencia={()=>{ setFabOpen(false); setEcra('emergencia') }}
+                onAIExpert={()=>{ setFabOpen(false); setEcra('ai_expert_fab') }}
+                onAdicionarCamara={()=>{ setFabOpen(false); setEcra('adicionar_camara') }}
+                onAdicionarDoc={()=>{ setFabOpen(false); setEcra('adicionar_doc') }}
+                onAdicionarEnergia={()=>{ setFabOpen(false); setEcra('adicionar_energia') }}
               />
             )}
           </>}

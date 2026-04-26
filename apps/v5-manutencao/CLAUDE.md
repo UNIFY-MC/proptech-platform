@@ -326,7 +326,8 @@ Colunas novas em `ordens`:
 | **3.3.14-fix-ux6** | ✅ fechada | Packs banner dourado + combos ligados BD + urgência clickável + Plano Home+ MVP + MaisContratados fix |
 | **3.3.14-fix-ux7** | ✅ fechada | planos_subscricao + descontos_config BD · CombosScreen BD · ServicosListaScreen · desconto Home+ no CTA |
 | **3.3.14-fix-ux8** | ✅ fechada | Packs fonte única BD · nav back stack (router.js) · BottomNav universal · imagens pool+hash · combos imagem_url |
-| **Sprint 3.3** | ✅ **FECHADA** | 8 fases · 8 fix-ux (ux1–ux8) · 199 serviços · 4 combos BD · subscrições · descontos |
+| **3.3.14-fix-ux9** | ✅ fechada | FAB redesign (sem PEDIR) · FabSheet 5 secções · 5 novos ecrãs (Emergência, AIExpertFab, Câmara, Doc, Energia) |
+| **Sprint 3.3** | ✅ **FECHADA** | 8 fases · 9 fix-ux (ux1–ux9) · 199 serviços · 4 combos BD · subscrições · descontos |
 | **3.4A** | **próxima** | Auth real Supabase + onboarding (Fase 2d) |
 
 ### Notas para 3.3.12
@@ -435,6 +436,17 @@ Colunas novas em `ordens`:
 - **Tarefa D — Imagens variadas**: `src/lib/imagens.js` reescrito com `POOL_POR_SUB_GRUPO` (28 sub-grupos, 2-3 URLs cada) + `hashStr()` determinístico; `getImagemServico()` usa `categoria + sub_grupo` para chave do pool; `imagem_url` adicionada a `adaptComboForDetail` (ServicosScreen) e `adaptCombo` (CombosScreen); `ComboDetailScreen` mostra hero 160px com gradient overlay quando `cb.imagem_url` existe; `CombosScreen` mostra thumbnail 60×60 round-corner nos cards
 - **BD**: `v5_manutencao.combos.imagem_url TEXT` adicionado (migration `v5_3_3_14_ux8_combo_imagem_url`); seed 4 imagens Unsplash por slug
 - **SQL**: `sql/12_v5_3_3_14_ux8_imagens.sql`
+
+## Notas para 3.3.14-fix-ux9
+
+- **FAB redesign**: `<span>PEDIR</span>` removido do BNav; FAB agora mostra só `✨` (fontSize 22)
+- **FabSheet**: `FabPickerModal` reescrito com 5 secções — banner Emergência (vermelho) + grid 3 Pedir serviço + banner AI Expert (índigo) + grid 3 Adicionar à casa + textarea descrição livre; props novas: `onEmergencia`, `onAIExpert`, `onAdicionarCamara`, `onAdicionarDoc`, `onAdicionarEnergia`
+- **EmergenciaScreen**: 3 tipos (💧 Inundação, 🔥 Caldeira, ⚡ Eléctrica) + aviso 112 + nota tarifa urgência; `onPedirEmergencia(tipo)` stub
+- **AIExpertFabScreen**: standalone MVP com mock chat (sem Claude API); chips de sugestão; respostas mock por keyword; Claude API real mantida intacta em `AIExpertScreen` (App.jsx ~linha 4977, tab Casa)
+- **AdicionarCamaraScreen**: upload stub com nota Fase 2d (Storage Supabase)
+- **AdicionarDocScreen**: grid 6 tipos de documento + upload stub
+- **AdicionarEnergiaScreen**: grid 6 tipos de equipamento + campos nome/marca/ano; stub guardar
+- **App.jsx**: 5 imports novos; cliOver estendido (`emergencia`, `ai_expert_fab`, `adicionar_camara`, `adicionar_doc`, `adicionar_energia`); 5 render cases após `plano_home_detalhe`; FabPickerModal call site com 5 novos handlers
 
 ## Débitos abertos pós Sprint 3.3
 
