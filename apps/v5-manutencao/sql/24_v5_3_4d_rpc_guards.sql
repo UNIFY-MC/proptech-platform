@@ -77,9 +77,19 @@ EXCEPTION WHEN OTHERS THEN
 END;
 $$;
 
--- Acesso APENAS via service_role (Edge Function)
-REVOKE ALL ON FUNCTION core.fn_anonymize_account(uuid) FROM PUBLIC;
-REVOKE ALL ON FUNCTION core.fn_anonymize_account(uuid) FROM authenticated;
-REVOKE ALL ON FUNCTION core.fn_anonymize_account(uuid) FROM anon;
+-- ─────────────────────────────────────────────────────────────────────────────
+-- PERMISSÕES de core.fn_anonymize_account
+-- Apenas service_role · chamada exclusivamente pelo Edge Function delete-account
+-- NUNCA chamável por authenticated/anon.
+--
+-- Bug fix de smoke test G da Fase 3.4D:
+-- SECURITY DEFINER sem GRANT EXECUTE = erro 42501 silencioso.
+-- ─────────────────────────────────────────────────────────────────────────────
+
+GRANT EXECUTE ON FUNCTION core.fn_anonymize_account(uuid) TO service_role;
+
+REVOKE EXECUTE ON FUNCTION core.fn_anonymize_account(uuid) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION core.fn_anonymize_account(uuid) FROM authenticated;
+REVOKE EXECUTE ON FUNCTION core.fn_anonymize_account(uuid) FROM anon;
 
 NOTIFY pgrst, 'reload schema';
