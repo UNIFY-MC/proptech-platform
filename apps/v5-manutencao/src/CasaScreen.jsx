@@ -4,6 +4,7 @@ import { supa } from './supa.js'
 import HeroHeader from './HeroHeader.jsx'
 import { useImovelAtivo } from './lib/ImovelAtivoContext.jsx'
 import { moradaCurta, categoriaEmoji } from './lib/labels.js'
+import { scoreLabelShort } from './lib/scoreLabel.js'
 
 /* Paleta CASA — duplicada aqui para isolar o módulo do App.jsx */
 const CASA = {
@@ -232,11 +233,7 @@ export default function CasaScreen({ equipamentos, authUser, onNavigate, onHambu
                 {loc.home_score ?? 0}
               </div>
               <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)', marginTop: 4 }}>
-                Home Score · {
-                  (loc.home_score ?? 0) >= 80 ? '🌟 Excelente' :
-                  (loc.home_score ?? 0) >= 60 ? '🌱 Saudável'  :
-                  (loc.home_score ?? 0) >= 40 ? '⚠️ A Cuidar'  : '🔧 A Melhorar'
-                }
+                Home Score · {scoreLabelShort(loc.home_score)}
               </div>
             </button>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 5, paddingTop: 10 }}>

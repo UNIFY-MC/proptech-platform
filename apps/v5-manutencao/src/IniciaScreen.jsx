@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { supa, supaPublic } from './supa.js'
 import { DEMO_ORGANIZATION_ID } from './lib/demo.js'
 import { useAuth } from './lib/AuthContext.jsx'
+import { casaScoreLabel } from './lib/scoreLabel.js'
 import { useImovelAtivo } from './lib/ImovelAtivoContext.jsx'
 import { calcularCreditoMes } from './lib/subscription.js'
 import { calcularNivel } from './lib/gamification.js'
@@ -96,12 +97,6 @@ function ScoreCircle({ score }) {
   )
 }
 
-function casaLabel(score) {
-  if (score == null || score === 0) return 'Casa por avaliar 🏠'
-  if (score >= 70) return 'Casa Saudável 🌱'
-  if (score >= 40) return 'Casa a Melhorar ⚠️'
-  return 'Casa em Risco 🚨'
-}
 
 export default function IniciaScreen({ authUser, onNavigateCasa, onNavigateServicos, onHamburguer, onAvatarClick, onNavigateScore, onNavigateAlerta, onNavigateOwnersClub, onNavigateNotificacoes, onNavigateChatSuporte, notifCount = 0, onOpenImovelSelector, onNavigateImovelDetalhe, onNavigateServico, onNavigateServicosLista, onNavigateCombo, onNavigateAIExpert, onNavigateMissoes, onNavigatePrestador, onNavigateEquipa, onNavigatePoupancas }) {
   const { pessoa_id, pessoa: authPessoa } = useAuth()
@@ -252,7 +247,7 @@ export default function IniciaScreen({ authUser, onNavigateCasa, onNavigateServi
                 <ScoreCircle score={homeScore} />
                 <div>
                   <div style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>
-                    {casaLabel(homeScore)}
+                    {casaScoreLabel(homeScore)}
                   </div>
                   <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.7)', marginTop: 2 }}>
                     {pontosProx > 0 && nextNivel

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { supa } from '../supa.js'
 import { useImovelAtivo } from '../lib/ImovelAtivoContext.jsx'
+import { casaScoreLabel } from '../lib/scoreLabel.js'
 import { calcularCompletude, corCompletude } from '../lib/completude.js'
 import { usePerfisFiscais } from '../lib/PerfisFiscaisContext.jsx'
 import { moradaCurta, moradaCompleta, tipoImovelEmoji, tipoImovelLabel, categoriaEmoji, categoriaLabel, isReadOnly, isExternalUse, externalAppLabel, usoLabel } from '../lib/labels.js'
@@ -209,7 +210,7 @@ export default function ImovelDetalheScreen({ id, onBack, onNavigateScore }) {
             </div>
             <div>
               <div style={{ fontSize: 13, fontWeight: 700, color: C.ink }}>
-                {(imovel.home_score ?? 0) >= 70 ? 'Casa Saudável 🌱' : (imovel.home_score ?? 0) >= 40 ? 'A Melhorar ⚠️' : 'Em Risco 🚨'}
+                {casaScoreLabel(imovel.home_score)}
               </div>
               <div style={{ fontSize: 11, color: C.slate, marginTop: 2 }}>Score calculado automaticamente</div>
             </div>
