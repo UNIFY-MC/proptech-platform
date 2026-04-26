@@ -41,7 +41,21 @@ CREATE POLICY "staff_roles: authenticated lê o seu"
   ON core.staff_roles FOR SELECT TO authenticated
   USING (auth_user_id = auth.uid());
 
--- Writes apenas via service_role (Edge Functions / migrations)
+-- ─────────────────────────────────────────────────────────────────────────────
+-- PERMISSÕES TABLE-LEVEL para core.staff_roles
+-- ─────────────────────────────────────────────────────────────────────────────
+-- RLS sem GRANT é bug silencioso (403 mesmo com policy correcta).
+-- POLICY é row-level, GRANT é table-level. Ambos necessários.
+-- Bug encontrado em smoke test G da Fase 3.4D.
+
+-- Authenticated pode ler os SEUS staff_roles (filtro RLS aplicado em cima)
+-- (GRANT SELECT já declarado acima antes da POLICY — repetido aqui por clareza documental)
+
+-- DENY explícito de writes a authenticated/anon
+-- Gestão de staff_roles é exclusivamente service_role (Fase 4 backoffice)
+REVOKE INSERT, UPDATE, DELETE ON core.staff_roles FROM authenticated;
+REVOKE INSERT, UPDATE, DELETE ON core.staff_roles FROM anon;
+REVOKE ALL ON core.staff_roles FROM anon;
 
 -- ─── Helper público (para RLS policies em outras tabelas) ──────────────────
 
