@@ -134,7 +134,7 @@ export default function ImovelDetalheScreen({ id, onBack, onNavigateScore }) {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: C.bg, paddingBottom: 40 }}>
+    <div style={{ minHeight: '100vh', background: C.bg, paddingBottom: 80 }}>
 
       {/* HEADER */}
       <div style={{ background: `linear-gradient(145deg,${G},${GM})`, padding: '14px 16px 18px', color: '#fff' }}>

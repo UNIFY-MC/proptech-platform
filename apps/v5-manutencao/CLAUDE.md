@@ -324,7 +324,10 @@ Colunas novas em `ordens`:
 | **3.3.14-fix-ux4** | ✅ fechada | ServicoDetailScreen redesign 15 secções + inclui/exclui BD + stats + imagens Unsplash + FAQ |
 | **3.3.14-fix-ux5** | ✅ fechada | Configurador variações + planos frequência + thumbnails CategoriaScreen |
 | **3.3.14-fix-ux6** | ✅ fechada | Packs banner dourado + combos ligados BD + urgência clickável + Plano Home+ MVP + MaisContratados fix |
-| **3.4.0** | **próxima** | Auth real (Fase 2d) + Lista de tarefas (Fase 3a) |
+| **3.3.14-fix-ux7** | ✅ fechada | planos_subscricao + descontos_config BD · CombosScreen BD · ServicosListaScreen · desconto Home+ no CTA |
+| **3.3.14-fix-ux8** | ✅ fechada | Packs fonte única BD · nav back stack (router.js) · BottomNav universal · imagens pool+hash · combos imagem_url |
+| **Sprint 3.3** | ✅ **FECHADA** | 8 fases · 8 fix-ux (ux1–ux8) · 199 serviços · 4 combos BD · subscrições · descontos |
+| **3.4A** | **próxima** | Auth real Supabase + onboarding (Fase 2d) |
 
 ### Notas para 3.3.12
 
@@ -414,19 +417,41 @@ Colunas novas em `ordens`:
 - **`src/screens/PlanoHomeDetalheScreen.jsx`**: ecrã full-screen Plano Home+; lê subscrição demo; mostra benefícios, preço, FAQ; CTA desactivado (Stripe futuro)
 - **`MaisContratadosScreen`**: corrigido — usa `supaPublic.from('servicos')` em vez de `supa`; select limpo (`preco_base`, sem joins problemáticos)
 
-## Débito 3.5 — Pendentes pós 3.3.14-fix-ux5
+## Notas para 3.3.14-fix-ux7
 
-- **RLS** em `pedidos_orcamento`, `orcamentos_recebidos`, `contexto_servico`, `servicos_inclui_exclui`, `servicos_faq`, `platform_stats` (sem policies — só funciona em demo)
-- **CategoriaScreen reviews reais**: query `avaliacoes` por categoria (actualmente mock)
-- **Reviews reais**: query `avaliacoes WHERE servico_id` (actualmente mock)
-- **FAQ seedado completo**: actualmente só 7 serviços; expandir para os 199
-- **Imagens próprias**: actualmente Unsplash; migrar para Supabase Storage + AI geradas
-- **Acções AlertaDetailScreen**: chat IA, tutorial inline, detalhe equipamento (ainda alerts)
-- **Aceitar proposta** no OrcamentoDetalheScreen: UPDATE `pedidos_orcamento.estado='aceite'` + `proposta_aceite_id`
-- **Cancelar pedido** no OrcamentoDetalheScreen: UPDATE `estado='cancelado'`
-- **SmartPromptsSheet no wizard** de orçamento (actualmente só em ServicoDetailScreen)
-- **Desconto Home+ no ServicoDetailScreen**: mostrar crédito `getDescontoAplicavel` abaixo do preço CTA (Tarefa E3 — não implementado em fix-ux6)
-- **Stripe checkout** no PlanoHomeDetalheScreen: CTA "Subscrever" actualmente desactivado
+- **BD**: criadas `v5_manutencao.planos_subscricao` + `v5_manutencao.descontos_config`; seed home_plus (5%, 9.99€) + home_pro (10%, 24.99€)
+- **BD**: Maria já tinha `subscricoes.plano='home_plus'` ativo — não necessário novo seed
+- **`CombosScreen.jsx`**: convertido de constante hardcoded para `supa.from('combos').select('*').eq('ativo',true).order('ordem')` com `adaptCombo()` inline; COMBOS_FALLBACK mantido para initial state
+- **`ServicosListaScreen.jsx`**: novo ecrã em `src/screens/`; aceita `filtro` (populares/recentes/todos) + `titulo`; queries `supaPublic.from('servicos')`; callbacks `onBack` + `onNavigateServico`
+- **`ServicoDetailScreen.jsx`**: adicionado chip desconto Home+ no CTA bottom; usa `getDescontoAplicavel(DEMO_PESSOA_ID, preco)` — mostra `✓ Home+ · 10% crédito`; TODO(mario Fase 4) substituir DEMO_PESSOA_ID por authUser real
+- **`App.jsx`**: import ServicosListaScreen; ecra `servicos_lista` adicionado à lista cliOver; novo case `ecra==='servicos_lista'`; `onNavigateMaisContratados` rewired → `servicos_lista` (filtro populares); `servico_detail.onBack` usa `selNav.backFrom` para voltar a `servicos_lista` quando navegado de lá
+- **SQL**: `sql/11_v5_3_3_14_ux7_planos.sql`
+
+## Notas para 3.3.14-fix-ux8
+
+- **Tarefa A — Packs fonte única BD**: `COMBOS_FALLBACK` removido de `ServicosScreen.jsx` e `CombosScreen.jsx`; ambos iniciam com `useState([])`; ServicosScreen carrossel usa `.eq('popular',true).limit(4)`; CombosScreen lista usa todos ativos; click no fallback vazio já não crashava mas agora é impossível
+- **Tarefa B — Nav back stack**: criado `src/lib/router.js` com `useNavStack()` hook para uso futuro; fix cirúrgico Caso 2 em App.jsx: `combo_detail onBack` usa `selNav.comboBackFrom || 'home'`; `combo_detail onNavigateServico` seta `backFrom:'combo_detail'`; navegação para combo guarda `comboBackFrom` (ServicosScreen→`'home'`, CombosScreen→`'combos'`); Casos 1 e 3 já funcionavam
+- **Tarefa C — BottomNav universal**: `BNav` e `FabPickerModal` movidos para fora do bloco `{!cliOver && <>}`; renderizados condicionalmente com `ecra !== 'orcamento_wizard'`; 9 screens actualizadas de paddingBottom:32/40 para 80: `CategoriaScreen`, `CombosScreen`, `ServicosListaScreen`, `NotificacoesScreen`, `OrcamentoDetalheScreen`, `OrcamentoConfirmadoScreen`, `ImovelDetalheScreen`, `PerfisFiscaisScreen`, `MoradasScreen`; screens já com pb ≥ 70 mantidas intactas
+- **Tarefa D — Imagens variadas**: `src/lib/imagens.js` reescrito com `POOL_POR_SUB_GRUPO` (28 sub-grupos, 2-3 URLs cada) + `hashStr()` determinístico; `getImagemServico()` usa `categoria + sub_grupo` para chave do pool; `imagem_url` adicionada a `adaptComboForDetail` (ServicosScreen) e `adaptCombo` (CombosScreen); `ComboDetailScreen` mostra hero 160px com gradient overlay quando `cb.imagem_url` existe; `CombosScreen` mostra thumbnail 60×60 round-corner nos cards
+- **BD**: `v5_manutencao.combos.imagem_url TEXT` adicionado (migration `v5_3_3_14_ux8_combo_imagem_url`); seed 4 imagens Unsplash por slug
+- **SQL**: `sql/12_v5_3_3_14_ux8_imagens.sql`
+
+## Débitos abertos pós Sprint 3.3
+
+- **Auth real (Fase 2d)**: botões demo passam a fazer `signInWithPassword`; substituir policies `pre_auth_*`; schema `cliente_moradas`
+- **Configurador opções dinâmicas por serviço** (3.5 IA)
+- **Stripe checkout subscrição** — CTA desactivado em PlanoHomeDetalheScreen (Fase 5)
+- **UI admin descontos** — gestão web de `descontos_config` e `planos_subscricao`
+- **Reviews reais** por serviço e por categoria (3.5)
+- **FAQ seedado completo** — actualmente só 7 serviços em 199
+- **RLS** em `pedidos_orcamento`, `orcamentos_recebidos`, `contexto_servico`, `servicos_inclui_exclui`, `servicos_faq`, `platform_stats`
+- **Mapa visual** — Leaflet incompatível React 18; avaliar MapLibre ou Google Maps iframe
+- **Imagens AI brand próprias** (Fase 5+) — actualmente Unsplash
+- **SmartPromptsSheet no wizard** de orçamento
+- **Aceitar/cancelar proposta** no OrcamentoDetalheScreen
+- **DEMO_PESSOA_ID em ServicoDetailScreen** → substituir por authUser.pessoa_id (Fase 4)
+- **Pesquisa: preservar query state ao voltar** (Fase 5)
+- **Packs sazonais filtrados por época** — TODO(mario Fase 5) em ServicosScreen
 
 ## Débito mapa visual — Continua de 3.3.12
 

@@ -14,7 +14,7 @@ const TIMELINE = [
 
 export default function OrcamentoConfirmadoScreen({ onVerPedidos, onVoltarInicio }) {
   return (
-    <div style={{ background: C.bg, minHeight: '100vh' }}>
+    <div style={{ background: C.bg, minHeight: '100vh', paddingBottom: 80 }}>
       {/* Hero verde */}
       <div style={{ background: `linear-gradient(135deg,${C.green},${C.greenMid})`, padding: '14px 14px 24px', color: '#fff', textAlign: 'center' }}>
         <div style={{ fontSize: 54, marginBottom: 8 }}>🎉</div>

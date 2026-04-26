@@ -53,12 +53,6 @@ const PROMOS = [
   },
 ]
 
-// Fallback enquanto BD carrega
-const COMBOS_FALLBACK = [
-  { id:'fb1', nome:'Pack Inverno',    sub:'Caldeira + caleiras + cobertura', preco_combo:'185', preco_normal:'229', desconto_pct:19, cor_hex:'#E6F1FB', emoji:'❄️', servicos_ids:[] },
-  { id:'fb2', nome:'Reset Primavera', sub:'Limpeza profunda + jardim',       preco_combo:'129', preco_normal:'175', desconto_pct:26, cor_hex:'#FCEBEB', emoji:'🌸', servicos_ids:[] },
-  { id:'fb3', nome:'Pré-venda casa',  sub:'Tudo em 48h',                    preco_combo:'399', preco_normal:'520', desconto_pct:23, cor_hex:'#D8F3DC', emoji:'🏡', servicos_ids:[] },
-]
 const MAIS_FALLBACK = [
   { id:'fb1', nome:'Limpeza doméstica',     categoria_id:'limpeza',     sub_grupo:'Limpeza regular', preco:'42', duracao_tipica:'2h' },
   { id:'fb2', nome:'Desentupimento urgente',categoria_id:'canalizacao', sub_grupo:'Fugas e diagnósticos', preco:'65', duracao_tipica:null },
@@ -95,6 +89,7 @@ function adaptComboForDetail(c) {
     servicos:      c.servicos_ids || [],
     poupanca:      `${poupanca}€`,
     descricao:     c.descricao_longa,
+    imagem_url:    c.imagem_url || null,
   }
 }
 
@@ -122,7 +117,7 @@ function MarketplaceView({
   onNavigateMaisContratados, onNavigateOrcamentoPersonalizado,
   onNavigatePlanoHome,
 }) {
-  const [combos,         setCombos]         = useState(COMBOS_FALLBACK)
+  const [combos,         setCombos]         = useState([])
   const [maisContratados,setMaisContratados] = useState(MAIS_FALLBACK)
   const [searchQuery,    setSearchQuery]    = useState('')
   const [searchResults,  setSearchResults]  = useState([])
@@ -132,7 +127,7 @@ function MarketplaceView({
 
   // Carregar combos da BD
   useEffect(() => {
-    supa.from('combos').select('*').eq('ativo', true).order('ordem')
+    supa.from('combos').select('*').eq('ativo', true).eq('popular', true).order('ordem').limit(4)
       .then(({ data }) => { if (data && data.length) setCombos(data) })
   }, [])
 
@@ -432,7 +427,7 @@ function MarketplaceView({
           {displayCombos.map((b, i) => (
             <div
               key={b.id || i}
-              onClick={() => b._raw ? onNavigateCombo?.(adaptComboForDetail(b._raw)) : onNavigatePacksLista?.()}
+              onClick={() => onNavigateCombo?.(adaptComboForDetail(b._raw))}
               style={{ minWidth: 155, background: b.bg, borderRadius: 12, padding: '11px 12px', cursor: 'pointer', flexShrink: 0 }}
             >
               <div style={{ fontSize: 9, color: V5.coral, fontWeight: 700, marginBottom: 4 }}>-{b.desc}%</div>

@@ -71,8 +71,17 @@ export default function ComboDetailScreen({ combo, onBack, onPedir, onNavigateSe
     {sheet}
     <div style={{ minHeight:'100vh', background:C.bg, paddingBottom:110 }}>
 
-      {/* Hero — fundo claro com texto escuro (cor_texto da BD) */}
-      <div style={{ background: heroBg, padding:'14px 16px 28px' }}>
+      {/* Hero — imagem + fundo claro com texto escuro (cor_texto da BD) */}
+      <div style={{ background: heroBg }}>
+        {cb.imagem_url && (
+          <div style={{ height:160, position:'relative', overflow:'hidden' }}>
+            <img src={cb.imagem_url} alt={cb.titulo || cb.nome}
+                 style={{ width:'100%', height:'100%', objectFit:'cover' }} />
+            <div style={{ position:'absolute', inset:0,
+                          background:`linear-gradient(180deg, transparent 50%, ${heroBg}dd)` }} />
+          </div>
+        )}
+        <div style={{ padding:'14px 16px 28px' }}>
         <div style={{ fontSize:10, color: heroTxtSub, cursor:'pointer', marginBottom:16 }} onClick={onBack}>← Voltar</div>
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
           <div style={{ flex:1, paddingRight:12 }}>
@@ -89,6 +98,7 @@ export default function ComboDetailScreen({ combo, onBack, onPedir, onNavigateSe
             <div style={{ fontSize:9, color: heroTxtSub, marginBottom:2 }}>POUPA</div>
             <div style={{ fontSize:22, fontWeight:800, color: heroTxt }}>-{cb.desconto}%</div>
           </div>
+        </div>
         </div>
       </div>
 

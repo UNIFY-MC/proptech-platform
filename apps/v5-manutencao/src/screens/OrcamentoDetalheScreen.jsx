@@ -82,7 +82,7 @@ export default function OrcamentoDetalheScreen({ orcamentoId, onBack }) {
   }[orc.estado] || orc.estado?.toUpperCase()
 
   return (
-    <div style={{ minHeight:'100vh', background:C.bg, paddingBottom:40 }}>
+    <div style={{ minHeight:'100vh', background:C.bg, paddingBottom:80 }}>
 
       {/* ── Header ── */}
       <div style={{ background:`linear-gradient(145deg,${G},${GM})`, padding:'14px 16px 20px', color:'#fff' }}>

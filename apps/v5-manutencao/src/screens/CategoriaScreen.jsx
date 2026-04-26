@@ -150,7 +150,7 @@ export default function CategoriaScreen({ categoria, onBack, onNavigateServico, 
   }
 
   return (
-    <div style={{ minHeight:'100vh', background:C.bg, paddingBottom:32 }}>
+    <div style={{ minHeight:'100vh', background:C.bg, paddingBottom:80 }}>
 
       {/* ── Hero gradient ── */}
       <div style={{ background:`linear-gradient(145deg,${G},${GM})`, padding:'14px 16px 20px', color:'#fff', position:'relative', overflow:'hidden' }}>

@@ -4,6 +4,8 @@ import { useImovelAtivo } from '../lib/ImovelAtivoContext.jsx'
 import { useEscolherImovel } from '../lib/useEscolherImovel.jsx'
 import SmartPromptsSheet from '../components/SmartPromptsSheet.jsx'
 import ImagemServico from '../components/ImagemServico.jsx'
+import { getDescontoAplicavel } from '../lib/descontos.js'
+import { DEMO_PESSOA_ID } from '../lib/demo.js'
 
 const G = '#1B4332'; const GM = '#2D6A4F'; const GL = '#52B788'
 const C = {
@@ -96,6 +98,7 @@ export default function ServicoDetailScreen({ servico, onBack, onPedir, onAdicio
   const [descExpanded,  setDescExpanded] = useState(false)
   const [faqOpen,       setFaqOpen]      = useState({})
   const [smartConfig,   setSmartConfig]  = useState(null)
+  const [desconto,      setDesconto]     = useState(null)
 
   const { imovelAtivo, isGlobal, imoveis } = useImovelAtivo()
   const { escolher, sheet } = useEscolherImovel()
@@ -202,6 +205,14 @@ export default function ServicoDetailScreen({ servico, onBack, onPedir, onAdicio
     const tmpl = detalhe?.frequency_template
     if (tmpl) fetchFrequencia(tmpl)
   }, [detalhe?.frequency_template, fetchFrequencia])
+
+  // TODO(mario Fase 4): substituir DEMO_PESSOA_ID por authUser.pessoa_id quando auth real activa
+  useEffect(() => {
+    const preco = detalhe?.preco || servico?.preco
+    if (!preco) return
+    getDescontoAplicavel(DEMO_PESSOA_ID, parseFloat(preco))
+      .then(d => setDesconto(d))
+  }, [detalhe?.preco, servico?.preco])
 
   // Merge: preferir BD, fallback ao prop servico
   const src     = detalhe || servico || {}
@@ -569,6 +580,11 @@ export default function ServicoDetailScreen({ servico, onBack, onPedir, onAdicio
               {precoSufixo && <span style={{ fontSize:11, color:GM, fontWeight:500 }}>{precoSufixo}</span>}
             </div>
             {duracaoAtual !== '—' && <div style={{ fontSize:10, color:C.slate, marginTop:2 }}>⏱ {duracaoAtual}</div>}
+            {desconto && (
+              <div style={{ fontSize:10, color:GL, fontWeight:700, marginTop:2 }}>
+                ✓ {desconto.label}
+              </div>
+            )}
           </div>
           <div style={{ flex:1, display:'flex', gap:8 }}>
             <button

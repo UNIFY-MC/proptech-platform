@@ -68,7 +68,7 @@ export default function NotificacoesScreen({ onBack, onNavigateAlerta }) {
   )
 
   return (
-    <div style={{ minHeight:'100vh', background:C.bg, paddingBottom:32 }}>
+    <div style={{ minHeight:'100vh', background:C.bg, paddingBottom:80 }}>
       <div style={{ background:`linear-gradient(145deg,${G},${GM})`, padding:'14px 16px 22px', color:'#fff' }}>
         <div style={{ fontSize:10, color:'rgba(255,255,255,.7)', cursor:'pointer', marginBottom:12 }} onClick={onBack}>← Voltar</div>
         <div style={{ fontSize:10, fontWeight:700, letterSpacing:.8, color:'rgba(255,255,255,.65)', marginBottom:4 }}>APP</div>

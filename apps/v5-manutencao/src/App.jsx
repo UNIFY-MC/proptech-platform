@@ -47,6 +47,7 @@ import OrcamentoWizardScreen from './screens/OrcamentoWizardScreen.jsx'
 import OrcamentoConfirmadoScreen from './screens/OrcamentoConfirmadoScreen.jsx'
 import OrcamentoDetalheScreen from './screens/OrcamentoDetalheScreen.jsx'
 import PlanoHomeDetalheScreen from './screens/PlanoHomeDetalheScreen.jsx'
+import ServicosListaScreen from './screens/ServicosListaScreen.jsx'
 import {
   ArrowLeft, X, Check, Camera, Clock, Plus, MapPin, ChevronRight,
   Shield, Lock, MessageSquare, FileImage, RefreshCw, Wrench,
@@ -10726,7 +10727,7 @@ export default function App() {
     'sobre_mim','dados_pessoais','login_seguranca','moradas_screen','codigo_promocional','referral',
     'historico_pontos','avaliacoes_screen','pagamentos','notificacoes','definicoes','ajuda',
     'imoveis','equipa','prestador_detail','home_assessment','categoria_detail',
-    'servico_detail','combo_detail','promocao_detail','combos','mais_contratados','chat_suporte',
+    'servico_detail','combo_detail','promocao_detail','combos','mais_contratados','servicos_lista','chat_suporte',
     'orcamentos_landing','orcamento_wizard','orcamento_confirmado','imovel_detalhe',
     'orcamento_detalhe','plano_home_detalhe',
   ].includes(ecra) || (role==='cliente' && catScreen !== null)
@@ -10894,12 +10895,13 @@ export default function App() {
           {ecra==='prestador_detail'   && <PrestadorDetailScreen prestador={selNav?.prestador} onBack={()=>setEcra('equipa')} />}
           {ecra==='home_assessment'    && <HomeAssessmentScreen onBack={()=>setEcra('home')} onConcluido={()=>setEcra('home')} />}
           {ecra==='categoria_detail'   && <CategoriaScreen categoria={selNav?.categoria} onBack={()=>setEcra('home')} onNavigateServico={(s)=>{ setSelNav(p=>({...p,servico:s})); setEcra('servico_detail') }} onNavigateOrcamento={()=>{ setSelNav(p=>({...p, wizardCategoria:selNav?.categoria?.id, wizardSkipStep1:true})); setEcra('orcamento_wizard') }} />}
-          {ecra==='servico_detail'     && <ServicoDetailScreen servico={selNav?.servico} onBack={()=>{ setSelNav(p=>({...p,servico:null})); setEcra(selNav?.categoria ? 'categoria_detail' : 'mais_contratados') }} onPedir={(s)=>alert(`A encaminhar pedido: ${s.nome}`)} onAdicionarLista={(s)=>alert(`"${s.nome}" adicionado à lista!`)} onNavigateMoradas={()=>setEcra('moradas_screen')} />}
-          {ecra==='combo_detail'       && <ComboDetailScreen combo={selNav?.combo} onBack={()=>setEcra('combos')} onPedir={(cb)=>alert(`Combo "${cb.titulo || cb.nome}" adicionado!`)} onNavigateMoradas={()=>setEcra('moradas_screen')} onNavigateServico={(s)=>{ setSelNav(p=>({...p,servico:s})); setEcra('servico_detail') }} />}
+          {ecra==='servico_detail'     && <ServicoDetailScreen servico={selNav?.servico} onBack={()=>{ setSelNav(p=>({...p,servico:null})); setEcra(selNav?.categoria ? 'categoria_detail' : selNav?.backFrom || 'mais_contratados') }} onPedir={(s)=>alert(`A encaminhar pedido: ${s.nome}`)} onAdicionarLista={(s)=>alert(`"${s.nome}" adicionado à lista!`)} onNavigateMoradas={()=>setEcra('moradas_screen')} />}
+          {ecra==='combo_detail'       && <ComboDetailScreen combo={selNav?.combo} onBack={()=>setEcra(selNav?.comboBackFrom || 'home')} onPedir={(cb)=>alert(`Combo "${cb.titulo || cb.nome}" adicionado!`)} onNavigateMoradas={()=>setEcra('moradas_screen')} onNavigateServico={(s)=>{ setSelNav(p=>({...p,servico:s,backFrom:'combo_detail'})); setEcra('servico_detail') }} />}
           {ecra==='plano_home_detalhe' && <PlanoHomeDetalheScreen onBack={()=>setEcra('home')} />}
           {ecra==='promocao_detail'    && <PromocaoDetailScreen promo={selNav?.promocao} onBack={()=>setEcra('home')} onNavigateServico={(s)=>{ setSelNav(p=>({...p,servico:s})); setEcra('servico_detail') }} />}
-          {ecra==='combos'             && <CombosScreen onBack={()=>setEcra('home')} onNavigateCombo={(cb)=>{ setSelNav({combo:cb}); setEcra('combo_detail') }} />}
+          {ecra==='combos'             && <CombosScreen onBack={()=>setEcra('home')} onNavigateCombo={(cb)=>{ setSelNav({combo:cb,comboBackFrom:'combos'}); setEcra('combo_detail') }} />}
           {ecra==='mais_contratados'   && <MaisContratadosScreen onBack={()=>setEcra('home')} onNavigateServico={(s)=>{ setSelNav({servico:s}); setEcra('servico_detail') }} />}
+          {ecra==='servicos_lista'     && <ServicosListaScreen filtro={selNav?.servicosListaFiltro||'populares'} titulo={selNav?.servicosListaTitulo||'Mais contratados'} onBack={()=>setEcra('home')} onNavigateServico={(s)=>{ setSelNav(p=>({...p,servico:s,backFrom:'servicos_lista'})); setEcra('servico_detail') }} />}
           {ecra==='orcamentos_landing'  && <OrcamentosLandingScreen onBack={()=>setEcra('home')} onIniciar={()=>setEcra('orcamento_wizard')} />}
           {ecra==='orcamento_wizard'    && <OrcamentoWizardScreen onBack={()=>{ const wasSkip=selNav?.wizardSkipStep1; const backEcra=selNav?.wizardBackTarget||(wasSkip?'categoria_detail':'orcamentos_landing'); setSelNav(p=>({...p,wizardSkipStep1:null,wizardCategoria:null,wizardDescricao:null,wizardBackTarget:null})); setEcra(backEcra) }} onConfirmado={(newId)=>{ if(newId) setSelNav(p=>({...p,orcamentoId:newId})); setEcra('orcamento_confirmado') }} localizacaoId={imovelAtivo?.id} categoriaSlug={selNav?.wizardCategoria} skipStep1={!!selNav?.wizardSkipStep1} descricaoInicial={selNav?.wizardDescricao} />}
           {ecra==='orcamento_confirmado'&& <OrcamentoConfirmadoScreen onVerPedidos={()=>{ setEcra('home'); setTab('pedidos') }} onVoltarInicio={()=>setEcra('home')} />}
@@ -10938,7 +10940,7 @@ export default function App() {
                 onClose={()=>{ setShowSubscricao(false); setShowPerfilSheet(true) }}
                 authUser={authUser}
               />
-              {tab==='servicos' && <ServicosScreen authUser={authUser} onHamburguer={()=>setClienteDrawerOpen(true)} onAvatarClick={()=>setShowPerfilSheet(true)} notifCount={notifsNaoLidas} onNavigateNotificacoes={()=>setEcra('notificacoes')} onNavigateChatSuporte={()=>setEcra('chat_suporte')} onOpenImovelSelector={()=>setShowImovelSelector(true)} onNavigateOrcamentos={()=>setEcra('orcamentos_landing')} onNavigateReferral={()=>setEcra('referral')} onNavigateCategoria={(cat)=>{ setSelNav(p=>({...p,categoria:cat})); setEcra('categoria_detail') }} onNavigateCombo={(cb)=>{ setSelNav(p=>({...p,combo:cb})); setEcra('combo_detail') }} onNavigateServico={(s)=>{ setSelNav(p=>({...p,servico:s})); setEcra('servico_detail') }} onNavigatePacksLista={()=>setEcra('combos')} onNavigateMaisContratados={()=>setEcra('mais_contratados')} onNavigateOrcamentoPersonalizado={(desc)=>{ setSelNav(p=>({...p,wizardDescricao:desc,wizardSkipStep1:true,wizardCategoria:null,wizardBackTarget:'orcamentos_landing'})); setEcra('orcamento_wizard') }} onNavigatePlanoHome={()=>setEcra('plano_home_detalhe')} />}
+              {tab==='servicos' && <ServicosScreen authUser={authUser} onHamburguer={()=>setClienteDrawerOpen(true)} onAvatarClick={()=>setShowPerfilSheet(true)} notifCount={notifsNaoLidas} onNavigateNotificacoes={()=>setEcra('notificacoes')} onNavigateChatSuporte={()=>setEcra('chat_suporte')} onOpenImovelSelector={()=>setShowImovelSelector(true)} onNavigateOrcamentos={()=>setEcra('orcamentos_landing')} onNavigateReferral={()=>setEcra('referral')} onNavigateCategoria={(cat)=>{ setSelNav(p=>({...p,categoria:cat})); setEcra('categoria_detail') }} onNavigateCombo={(cb)=>{ setSelNav(p=>({...p,combo:cb,comboBackFrom:'home'})); setEcra('combo_detail') }} onNavigateServico={(s)=>{ setSelNav(p=>({...p,servico:s})); setEcra('servico_detail') }} onNavigatePacksLista={()=>setEcra('combos')} onNavigateMaisContratados={()=>{ setSelNav(p=>({...p,servicosListaFiltro:'populares',servicosListaTitulo:'Mais contratados'})); setEcra('servicos_lista') }} onNavigateOrcamentoPersonalizado={(desc)=>{ setSelNav(p=>({...p,wizardDescricao:desc,wizardSkipStep1:true,wizardCategoria:null,wizardBackTarget:'orcamentos_landing'})); setEcra('orcamento_wizard') }} onNavigatePlanoHome={()=>setEcra('plano_home_detalhe')} />}
               {tab==='inicio'   && <IniciaScreen authUser={authUser} onNavigateCasa={()=>{ setTab('casa'); setEcra('home') }} onNavigateServicos={()=>setTab('servicos')} onHamburguer={()=>setClienteDrawerOpen(true)} onAvatarClick={()=>setShowPerfilSheet(true)} onNavigateScore={()=>setEcra('score_detail')} onNavigateAlerta={(a)=>{ setSelAlerta(a); setEcra('alerta_detail') }} onNavigateOwnersClub={()=>setEcra('owners_club')} notifCount={notifsNaoLidas} onNavigateNotificacoes={()=>setEcra('notificacoes')} onNavigateChatSuporte={()=>setEcra('chat_suporte')} onOpenImovelSelector={()=>setShowImovelSelector(true)} onNavigateImovelDetalhe={(id)=>{ setSelNav(p=>({...p,imovelDetalheId:id})); setEcra('imovel_detalhe') }} />}
               {tab==='casa' && !casaActiveEq && !casaSub && <CasaScreen
                 equipamentos={casaEquipamentos}
@@ -11023,20 +11025,6 @@ export default function App() {
                   ScheduleModal={CCScheduleModal}
                 />
               )}
-              <BNav tab={tab} set={t=>{setTab(t);setEcra('home');onTabChange(t)}} onFabClick={()=>setFabOpen(true)}/>
-              {fabOpen && (
-                <FabPickerModal
-                  onClose={()=>setFabOpen(false)}
-                  onPickCategory={(id)=>{ setCatCategoryId(id); setCatScreen('list') }}
-                  onPickPersonalizado={(desc)=>{
-                    // Entra no form personalizado da Manutenção com a descrição pré-preenchida
-                    setCatCategoryId('manutencao')
-                    setCatIsPersonalizado(true)
-                    setCatState(p=>({...p, description:desc}))
-                    setCatScreen('form')
-                  }}
-                />
-              )}
               <PerfilDrawer
                 open={clienteDrawerOpen}
                 onClose={()=>setClienteDrawerOpen(false)}
@@ -11070,6 +11058,21 @@ export default function App() {
                 onGerirImoveis={()=>{ setShowImovelSelector(false); setEcra('imoveis') }}
               />
             </>}
+            {ecra !== 'orcamento_wizard' && (
+              <BNav tab={tab} set={t=>{setTab(t);setEcra('home');onTabChange(t)}} onFabClick={()=>setFabOpen(true)}/>
+            )}
+            {fabOpen && (
+              <FabPickerModal
+                onClose={()=>setFabOpen(false)}
+                onPickCategory={(id)=>{ setCatCategoryId(id); setCatScreen('list') }}
+                onPickPersonalizado={(desc)=>{
+                  setCatCategoryId('manutencao')
+                  setCatIsPersonalizado(true)
+                  setCatState(p=>({...p, description:desc}))
+                  setCatScreen('form')
+                }}
+              />
+            )}
           </>}
         </>}
 

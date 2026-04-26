@@ -39,7 +39,7 @@ export default function PerfisFiscaisScreen({ onBack }) {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: C.bg, paddingBottom: 40 }}>
+    <div style={{ minHeight: '100vh', background: C.bg, paddingBottom: 80 }}>
       {/* Header */}
       <div style={{ background: `linear-gradient(145deg,${G},${GM})`, padding: '14px 16px 22px', color: '#fff' }}>
         <div style={{ fontSize: 10, color: 'rgba(255,255,255,.7)', cursor: 'pointer', marginBottom: 12 }} onClick={onBack}>← Voltar</div>
