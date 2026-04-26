@@ -27,8 +27,8 @@ function validarIBAN(iban) {
   if (!iban || iban.trim() === '') return true // opcional
   return /^PT50\d{21}$/.test(iban.replace(/[\s-]/g, '').toUpperCase())
 }
-function validarNome(n) {
-  return n && n.trim().split(/\s+/).filter(Boolean).length >= 2
+function validarPrimeiroNome(n) {
+  return n && n.trim().length >= 1
 }
 
 /* ─── Tipo de cliente ────────────────────────────────────────── */
@@ -48,7 +48,7 @@ const STEPS_FOR_TIPO = {
 }
 
 const DEFAULT_STATE = {
-  tipo: '', nome: '', nif: '', telemovel: '', telefone_indicativo: '+351', foto_url: '',
+  tipo: '', primeiro_nome: '', apelidos: '', nome: '', nif: '', telemovel: '', telefone_indicativo: '+351', foto_url: '',
   ent_nome: '', ent_nif: '', ent_morada: '', ent_localidade: '', ent_cp: '', ent_iban: '',
   loc_nome: '', loc_tipo: 'habitacao', loc_morada: '', loc_localidade: '', loc_cp: '', loc_area: '',
   loc_mesma_morada: false,
@@ -57,7 +57,7 @@ const DEFAULT_STATE = {
 function canContinue(step, state) {
   if (step === 1) return !!state.tipo
   if (step === 2) {
-    return validarNome(state.nome) &&
+    return validarPrimeiroNome(state.primeiro_nome) &&
            validarNIF(state.nif) &&
            validarTelefone(state.telemovel, state.telefone_indicativo)
   }
@@ -148,9 +148,9 @@ function Step2DadosPessoais({ state, setState }) {
   const touch = (f) => setTouch(t => ({ ...t, [f]: true }))
   const set = (f) => (e) => setState(s => ({ ...s, [f]: e.target.value }))
 
-  const nifOk  = validarNIF(state.nif)
-  const telOk  = validarTelefone(state.telemovel, state.telefone_indicativo)
-  const nomeOk = validarNome(state.nome)
+  const nifOk        = validarNIF(state.nif)
+  const telOk        = validarTelefone(state.telemovel, state.telefone_indicativo)
+  const primeiroNomeOk = validarPrimeiroNome(state.primeiro_nome)
 
   return (
     <div>
@@ -161,14 +161,26 @@ function Step2DadosPessoais({ state, setState }) {
         Precisamos disto para a tua conta e para os recibos.
       </div>
 
-      <Field label="Nome completo">
-        <input
-          type="text" value={state.nome}
-          onChange={set('nome')} onBlur={() => touch('nome')}
-          placeholder="Maria Santos" style={inp(touched.nome && !nomeOk)}
-        />
-        {touched.nome && !nomeOk && <Hint ok={false} text="Introduz o teu nome e apelido" />}
-      </Field>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 0 }}>
+        <Field label="Primeiro nome *">
+          <input
+            type="text" value={state.primeiro_nome}
+            onChange={set('primeiro_nome')} onBlur={() => touch('primeiro_nome')}
+            placeholder="Maria" style={inp(touched.primeiro_nome && !primeiroNomeOk)}
+          />
+          {touched.primeiro_nome && !primeiroNomeOk && <Hint ok={false} text="Obrigatório" />}
+        </Field>
+        <Field label="Apelido">
+          <input
+            type="text" value={state.apelidos}
+            onChange={set('apelidos')} onBlur={() => touch('apelidos')}
+            placeholder="Santos" style={inp(false)}
+          />
+        </Field>
+      </div>
+      <div style={{ fontSize: 11, color: C.slate, marginBottom: 12, marginTop: -4 }}>
+        O primeiro nome aparece nas saudações. O apelido completa o nome nos recibos.
+      </div>
 
       <Field label="NIF pessoal">
         <input
@@ -438,7 +450,7 @@ function Step5Welcome({ state, user, onComplete, clearStorage }) {
   // sessionStorage persiste através de re-mounts React (StrictMode / needsOnboarding flicker)
   const RPC_KEY = `v5:onboarding:rpc:${user.id}`
 
-  const primeiroNome = (state.nome || '').split(' ')[0] || 'bem-vindo'
+  const primeiroNome = state.primeiro_nome || (state.nome || '').split(' ')[0] || 'bem-vindo'
 
   const callRPC = useCallback(async () => {
     if (sessionStorage.getItem(RPC_KEY)) return
@@ -446,10 +458,15 @@ function Step5Welcome({ state, user, onComplete, clearStorage }) {
     setStatus('loading')
     setErro(null)
 
+    const nomeCompleto = [state.primeiro_nome, state.apelidos].filter(Boolean).join(' ').trim()
+      || state.nome?.trim() || ''
+
     const payload = {
       auth_user_id:         user.id,
       tipo:                 state.tipo,
-      nome:                 state.nome.trim(),
+      primeiro_nome:        state.primeiro_nome?.trim() || '',
+      apelidos:             state.apelidos?.trim() || '',
+      nome:                 nomeCompleto,
       nif_pessoal:          state.nif.trim(),
       telemovel:            state.telemovel.trim(),
       telefone_indicativo:  state.telefone_indicativo || '+351',
@@ -569,7 +586,16 @@ export default function OnboardingWizardScreen({ user, onComplete }) {
   })()
 
   const [step,  setStep]  = useState(saved?.step  || 1)
-  const [state, setState] = useState({ ...DEFAULT_STATE, ...saved?.state, nome: saved?.state?.nome || user.user_metadata?.nome_completo || '' })
+  const [state, setState] = useState(() => {
+    const base = { ...DEFAULT_STATE, ...saved?.state }
+    // Pré-preencher de user_metadata (Google OAuth, etc.) se ainda sem nome
+    if (!base.primeiro_nome && user.user_metadata?.nome_completo) {
+      const partes = user.user_metadata.nome_completo.trim().split(/\s+/)
+      base.primeiro_nome = partes[0] || ''
+      base.apelidos      = partes.slice(1).join(' ') || ''
+    }
+    return base
+  })
 
   // Persistir a cada mudança
   useEffect(() => {

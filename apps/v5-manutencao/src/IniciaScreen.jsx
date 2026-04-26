@@ -104,7 +104,7 @@ function casaLabel(score) {
 }
 
 export default function IniciaScreen({ authUser, onNavigateCasa, onNavigateServicos, onHamburguer, onAvatarClick, onNavigateScore, onNavigateAlerta, onNavigateOwnersClub, onNavigateNotificacoes, onNavigateChatSuporte, notifCount = 0, onOpenImovelSelector, onNavigateImovelDetalhe, onNavigateServico, onNavigateServicosLista, onNavigateCombo, onNavigateAIExpert, onNavigateMissoes, onNavigatePrestador, onNavigateEquipa, onNavigatePoupancas }) {
-  const { pessoa_id } = useAuth()
+  const { pessoa_id, pessoa: authPessoa } = useAuth()
   const { imovelAtivo, imoveis } = useImovelAtivo()
   const [subscricao,  setSubscricao]  = useState(null)
   const [creditoMes,  setCreditoMes]  = useState(undefined)
@@ -116,7 +116,10 @@ export default function IniciaScreen({ authUser, onNavigateCasa, onNavigateServi
 
   const hora = new Date().getHours()
   const saudacao = hora < 12 ? 'Bom dia' : hora < 19 ? 'Boa tarde' : 'Boa noite'
-  const primeiroNome = (authUser?.nome || 'Mário').split(' ')[0]
+  const rawNome = authPessoa?.nome || authUser?.nome || ''
+  const primeiroNome = authPessoa?.primeiro_nome
+    || (rawNome.includes('@') ? rawNome.split('@')[0].split('+')[0] : rawNome.split(' ')[0])
+    || 'Olá'
 
   useEffect(() => {
     let active = true

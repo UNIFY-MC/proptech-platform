@@ -61,14 +61,17 @@ export default function PerfilDrawerContent({ authUser, onNavigate, onSwitchTab 
   const [sub,    setSub]    = useState(null)
 
   useEffect(() => {
-    supaCore.from('pessoas').select('nome').eq('id', pessoa_id).single()
+    supaCore.from('pessoas').select('nome, primeiro_nome, apelidos').eq('id', pessoa_id).maybeSingle()
       .then(({ data }) => { if (data) setPessoa(data) })
     supa.from('subscricoes').select('nivel, pontos_total').eq('pessoa_id', pessoa_id).maybeSingle()
       .then(({ data }) => { if (data) setSub(data) })
   }, [])
 
-  const nome     = pessoa?.nome || '—'
-  const iniciais = nome.split(' ').filter(Boolean).map(w => w[0]).slice(0, 2).join('').toUpperCase()
+  const nomeDisplay = pessoa?.primeiro_nome || pessoa?.nome?.split(' ')[0] || '—'
+  const nomeLegal   = pessoa?.nome || '—'
+  const iniciais    = [pessoa?.primeiro_nome, pessoa?.apelidos].filter(Boolean)
+    .map(w => w[0]).slice(0, 2).join('').toUpperCase()
+    || nomeLegal.split(' ').filter(Boolean).map(w => w[0]).slice(0, 2).join('').toUpperCase()
   const nivel    = sub?.nivel || 'bronze'
   const pontos   = sub?.pontos_total || 0
   const { nivel: nivelPT } = nivelLabel(pontos, nivel)
@@ -91,7 +94,10 @@ export default function PerfilDrawerContent({ authUser, onNavigate, onSwitchTab 
             fontSize:15, fontWeight:800, color:'#fff', flexShrink:0,
           }}>{iniciais}</div>
           <div>
-            <div style={{ fontWeight:700, fontSize:14, color:V.ink, marginBottom:3 }}>{nome}</div>
+            <div style={{ fontWeight:700, fontSize:14, color:V.ink, marginBottom:1 }}>{nomeDisplay}</div>
+            {nomeLegal !== nomeDisplay && (
+              <div style={{ fontSize:10, color:V.slate, marginBottom:2 }}>{nomeLegal}</div>
+            )}
             <span style={{
               background:V.goldSoft, color:V.gold, fontWeight:700,
               fontSize:10, padding:'1px 8px', borderRadius:14, border:`1px solid ${V.gold}44`,

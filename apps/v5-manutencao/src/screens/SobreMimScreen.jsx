@@ -21,7 +21,7 @@ export default function SobreMimScreen({ onBack, onNavigate }) {
     async function fetch() {
       try {
         const [pessoaRes, subRes, ordensRes] = await Promise.all([
-          supaCore.from('pessoas').select('nome, email, foto_url, created_at').eq('id', pessoa_id).single(),
+          supaCore.from('pessoas').select('nome, email, foto_url, created_at').eq('id', pessoa_id).maybeSingle(),
           supa.from('subscricoes').select('pontos_total, nivel, streak_dias, streak_recorde').eq('pessoa_id', pessoa_id).eq('estado', 'ativo').maybeSingle(),
           supa.from('ordens').select('id', { count: 'exact', head: true }).eq('cliente_id', pessoa_id),
         ])

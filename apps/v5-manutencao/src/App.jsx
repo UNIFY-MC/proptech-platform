@@ -10489,6 +10489,13 @@ export default function App() {
     }
   }, [authenticated, session, pessoa]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Actualiza authUser.nome quando pessoa carrega após a sessão (fix race condition)
+  useEffect(() => {
+    if (pessoa?.nome && authUser && !authUser.demo) {
+      setAuthUser(prev => prev ? { ...prev, nome: pessoa.nome } : prev)
+    }
+  }, [pessoa?.nome]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const [tab,     setTab]    = useState('inicio')
   const [prevTab, setPrevTab] = useState('inicio')
   const [ecra,    setEcra]   = useState('home')

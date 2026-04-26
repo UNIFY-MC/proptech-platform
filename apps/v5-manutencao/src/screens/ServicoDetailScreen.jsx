@@ -112,7 +112,7 @@ export default function ServicoDetailScreen({ servico, onBack, onPedir, onAdicio
       .from('servicos')
       .select('id, nome, preco, preco_original, duracao_tipica, garantia_dias, inclui, nao_inclui, descricao_curta, descricao_longa, tagline, icon, categoria_id, imagem_url, imagem_alt, popular, sub_grupo, frequency_template')
       .eq('id', servId)
-      .single()
+      .maybeSingle()
     if (data) setDetalhe(data)
   }, [servId])
 
@@ -182,7 +182,7 @@ export default function ServicoDetailScreen({ servico, onBack, onPedir, onAdicio
       .from('frequency_templates')
       .select('options')
       .eq('id', templateId)
-      .single()
+      .maybeSingle()
     if (data?.options?.length) {
       setFreqOptions(data.options)
       setFreqSel(data.options[0]?.id || 'pontual')

@@ -1,7 +1,7 @@
 # v5-manutencao — Contexto para Claude Code
 
 Este ficheiro é lido automaticamente pelo Claude Code a cada invocação. Mantém-se curto e actual.
-**Última actualização:** 2026-04-26 · Sprint 3.4D em curso
+**Última actualização:** 2026-04-26 · Sprint 3.4D concluída
 
 ---
 
@@ -29,10 +29,11 @@ Não esperar pelo fim do projecto. Cada commit que muda padrão estrutural deve 
 | **3.4B** | Onboarding wizard 5 steps · RPC fn_complete_onboarding atómica · cria org+membership+localizacao+perfil_fiscal · validação NIF PT · bloqueio total até conclusão |
 | **3.4C** | RLS em core (23 tabelas) + v5_manutencao (39 tabelas) · helpers SECURITY DEFINER · cross-tenant validado · REVOKE anon em RPCs públicas · empty states honestos · pre_auth_* eliminado |
 | **3.4D fix-ux #1** | primeiro_nome + apelidos em core.pessoas · wizard 2 campos · saudação usa primeiro_nome · PerfilDrawer actualizado |
+| **3.4D** | SMTP Resend (prataowners.pt) · email change in-app · password change in-app · GDPR via Edge Function · `is_staff()` + `core.staff_roles` · `.single()` audit (9 ficheiros) |
 
 ### Em curso
 
-- **3.4D** — SMTP Resend configurado (domain prataowners.pt) · email change in-app · password change in-app · GDPR account delete · RPC guards is_staff() · `.single()` audit
+- Nada · aguardar Smoke Test G e próxima decisão de sprint
 
 ### Pendente
 
@@ -179,6 +180,44 @@ Lições aprendidas em 3.4C audit — nunca introduzir:
 
 ---
 
+## Modelo de identidade e papéis (V5)
+
+Princípio: **1 pessoa → 1 identidade** (`auth.users` + `core.pessoas`) → N papéis activáveis em N contextos.
+
+| Papel | Tabela | Chave | Significa |
+|---|---|---|---|
+| Cliente em org | `core.memberships` | pessoa_id + org_id | Pertence a uma organização cliente |
+| Staff plataforma | `core.staff_roles` | auth_user_id | Trabalha PARA a V5 (admin/support/readonly) |
+| Prestador (Fase 6) | `v5_manutencao.prestador_perfis` | pessoa_id | Executa serviços via V5 |
+
+**Coexistência:**
+- Maria → cliente apenas (memberships)
+- Sandra → cliente da sua casa + prestadora limpeza (memberships + prestador_perfis)
+- João → staff support (staff_roles · sem memberships de cliente)
+- Mário → staff admin + cliente da sua casa (testa como cliente)
+
+**Regra anti-ambiguidade:** NUNCA usar `pessoa_id` como sinónimo de "cliente" ou "prestador" em nomes de coluna. Usar `cliente_pessoa_id` + `prestador_pessoa_id` quando necessário. Actualmente `ordens_trabalho.pessoa_id` = cliente (inequívoco) e `prestador_id` é coluna separada.
+
+**Decisão prestador-cliente cross (registada 3.4D):**
+- Sandra (prestadora) PODE contratar Ricardo (prestador) via V5
+- Sem comissão entre prestadores (incentivo network interno)
+- Implementação Fase 6: detectar `prestador_perfis` em ambos os lados da ordem → skip fee
+
+**UI modos múltiplos (Fase 6):** Mode switcher Uber-style no header. Login com 1 perfil → entra directo. Login com 2+ → selector inline (após auth, antes router push). Último modo persistido em `pessoas.metadata.last_mode`.
+
+**Helpers RLS por perfil:**
+- `public.current_pessoa_id()` ✅ 3.4C
+- `public.current_organization_ids()` ✅ 3.4C
+- `public.has_org_role()` ✅ 3.4C
+- `public.is_staff()` ✅ 3.4D — consulta `core.staff_roles`
+- `public.current_prestador_id()` — Fase 6
+- `public.is_prestador_approved()` — Fase 6
+- `public.current_active_mode()` — Fase 6 (lê JWT custom claim)
+
+**Staff de teste:** `mariocarvalho.biz+v5staff@gmail.com` → role `admin` em `core.staff_roles`. NÃO usar `mariocarvalho.biz@gmail.com` (reservado para uso real futuro). NÃO usar `+v5test` (já é cliente normal).
+
+---
+
 ## Pontos de atenção
 
 ### RLS audit checklist obrigatório (lição 3.4C)
@@ -234,8 +273,8 @@ Para saudações e display, usar sempre `useAuth().pessoa.primeiro_nome` directa
       `ALTER TABLE ordens DROP COLUMN descricao_cliente;`
       `ALTER TABLE ordens DROP COLUMN notas_cliente;`
       `ALTER TABLE ordens DROP COLUMN nota_cliente;`
-- [ ] Concluir Task E 3.4D: `REVOKE anon` de `fn_complete_onboarding`
-- [ ] Concluir Task D 3.4D: `fn_delete_account` GDPR
+- [x] ~~Concluir Task E 3.4D: `REVOKE anon` de `fn_complete_onboarding`~~ ✅ 3.4D
+- [x] ~~Concluir Task D 3.4D: `fn_delete_account` GDPR~~ ✅ 3.4D (`fn_anonymize_account` + Edge Function `delete-account`)
 
 ---
 
@@ -245,7 +284,8 @@ Para saudações e display, usar sempre `useAuth().pessoa.primeiro_nome` directa
 
 - `core.pessoas` — auth_user_id, nome, **primeiro_nome**, **apelidos**, email, nif, telemovel
 - `core.organizations` — tipo (individual/empresa/condominio/gestor_imoveis), nome, nif
-- `core.memberships` — pessoa_id, organization_id, role (owner/admin/member)
+- `core.memberships` — pessoa_id, organization_id, role (owner/admin/member), **deleted_at** (soft-delete GDPR)
+- `core.staff_roles` — auth_user_id, role (admin|support|readonly), active, granted_by, revoked_at (3.4D)
 
 ### v5_manutencao schema
 
@@ -310,7 +350,7 @@ Colunas novas em `ordens_trabalho`:
 | **3.4B** | ✅ **fechada** | Onboarding wizard 5 steps · RPC fn_complete_onboarding · needsOnboarding bloqueante |
 | **3.4C** | ✅ **fechada** | RLS todas as tabelas (core 23 + v5_manutencao 39) · helpers SECURITY DEFINER · multi-org switcher · OrgLocBottomSheet · REVOKE anon RPCs · empty states honestos |
 | **3.4D fix-ux #1** | ✅ **fechada** | primeiro_nome+apelidos em core.pessoas · wizard 2 campos · saudação usa primeiro_nome · PerfilDrawer actualizado |
-| **3.4D** | **EM CURSO** | SMTP Resend (prataowners.pt) · email change · password change · GDPR delete · RPC guards is_staff() · .single() audit |
+| **3.4D** | ✅ **fechada** | SMTP Resend · email/password change in-app · GDPR Edge Function · staff_roles + is_staff() · .single() audit (9 ficheiros) · REVOKE anon fn_complete_onboarding |
 
 ---
 
@@ -421,11 +461,45 @@ Colunas novas em `ordens_trabalho`:
 - **`PerfilDrawerContent`**: `.single()` → `.maybeSingle()`; select inclui `primeiro_nome, apelidos`; header mostra `nomeDisplay` (primeiro nome) + `nomeLegal` como subtitle quando diferem; iniciais correctas
 - **SQL**: `sql/22_v5_3_4d_nome_split.sql`
 
+## Notas para 3.4D — Auth completa
+
+- **Email change**: `LoginSegurancaScreen` → `EmailModal` → `supa.auth.updateUser({ email })` → banner pendente + `metadata.email_pendente`
+- **Password change**: `PasswordModal` → `supa.auth.updateUser({ password })` → validação ≥8 chars + match
+- **GDPR delete**: `DeleteAccountModal` (checkbox + password) → `fetch` Edge Function `delete-account` → sign out automático
+- **Edge Function** `supabase/functions/delete-account/index.ts`: verifica JWT → verifica password via `signInWithPassword` → `core.fn_anonymize_account(uid)` → `auth.admin.deleteUser(uid)`
+- **`fn_anonymize_account`**: SECURITY DEFINER · só service_role · anonimiza pessoas + memberships (soft-delete) + perfis_fiscais · preserva ordens (AT 10 anos)
+- **`core.staff_roles`**: tabela auth-aware para staff da plataforma · `public.is_staff()` helper SECURITY DEFINER em `public`
+- **REVOKE**: `fn_complete_onboarding` perdeu GRANT PUBLIC + anon · mantém authenticated
+- **`.single()` audit**: 9 ficheiros corrigidos (todos SELECTs → `.maybeSingle()`; INSERTs mantidos)
+- **`supa.js`**: exporta `SUPABASE_URL` e `SUPABASE_ANON_KEY` para uso em fetch de Edge Functions
+- **`PerfilSheetContent`**: actualizado com `primeiro_nome`/`apelidos` (alinhado com PerfilDrawerContent)
+- **SQL**: `sql/23_v5_3_4d_staff_roles.sql` · `sql/24_v5_3_4d_rpc_guards.sql`
+
 ---
 
 ## Débitos abertos (3.4D+)
 
-- **3.4D em curso**: email change in-app · password change in-app · GDPR `fn_delete_account` · `is_staff()` guard · `.single()` audit (16 ocorrências em 11 ficheiros)
+- **Smoke Test G pendente**: criar `mariocarvalho.biz+v5staff@gmail.com` + INSERT staff_roles + testar todos os fluxos
+- **Moradas do cliente**: tabela `cliente_moradas` + selector no checkout; GPS + reverse geocoding Nominatim
+- **Configurador opções dinâmicas por serviço** (3.5 IA)
+- **Stripe checkout subscrição** — CTA desactivado em PlanoHomeDetalheScreen (Fase 5)
+- **Reviews reais** por serviço e por categoria (3.5)
+- **FAQ seedado completo** — actualmente só 7 serviços em 199
+- **Mapa visual** — Leaflet incompatível React 18; avaliar MapLibre ou Google Maps iframe
+- **Imagens AI brand próprias** (Fase 5+) — actualmente Unsplash
+- **Aceitar/cancelar proposta** no OrcamentoDetalheScreen
+- **Pesquisa: preservar query state ao voltar** (Fase 5)
+- **Poupanças reais** — `fn_calc_poupancas(pessoa_id)` (Fase 5)
+- **DEMO_PESSOA_ID em ServicoDetailScreen** → substituir por `useAuth().pessoa_id` (residual)
+
+### TODO Fase 6 — Conta prestador de teste
+
+- Criar `mariocarvalho.biz+v5prestador@gmail.com` com fluxo completo
+- Validar wizard prestador (formação, alvará, IBAN, seguro RC)
+- Aprovar via backoffice staff (endpoint admin)
+- Testar mode switcher cliente/prestador no header
+- Testar Sandra (cliente+prestador) cross-mode
+- Testar Sandra contrata Ricardo (sem comissão · regra registada 3.4D · ver "Modelo de identidade e papéis")
 - **Moradas do cliente**: tabela `cliente_moradas` + selector no checkout; GPS + reverse geocoding Nominatim
 - **Configurador opções dinâmicas por serviço** (3.5 IA)
 - **Stripe checkout subscrição** — CTA desactivado em PlanoHomeDetalheScreen (Fase 5)
@@ -453,12 +527,15 @@ Contexto: `MapaPicker` em `MoradasScreen.jsx` e `ImovelWizard.jsx`; mapa estáti
 - Poupanças: `useState(null)` + empty state com CTA, não hardcoded 229€
 - Pedidos: `useState([])` + query BD, não `ORDENS_INIT` partilhado
 
-### 3.4D — Nome e identidade
+### 3.4D — Nome, identidade e papéis
 - **Nome split**: `primeiro_nome` (obrigatório, display) + `apelidos` (opcional) + `nome` (gerado = primeiro_nome + apelidos, usado fiscal/recibos)
 - **Saudação UI**: usar `primeiro_nome`; fallback `split_part(nome,1)`; último fallback `email.split('@')[0].split('+')[0]`
 - **Phone com country code separado**: 🇵🇹 +351 default; dropdown com flags; validação condicional ao indicativo
 - **Empty states com null**: distingue loading / empty / zero legítimo (`null` ≠ `0`)
 - **GDPR delete**: anonimização (não DELETE físico) · ordens_trabalho preservadas (obrigação legal AT 10 anos)
+- **staff_roles**: tabela separada de `core.staff` (legacy) · usa `auth_user_id` · roles: admin/support/readonly
+- **is_staff()**: helper em `public` schema (PostgREST expõe) · SECURITY DEFINER · consulta staff_roles activos
+- **Audit pessoa_id**: todos os 28 `pessoa_id` são inequívocos (cliente). `ordens_trabalho` tem `prestador_id` separado. TODO Fase 6: quando `prestador_perfis` existir, `prestador_id` deve referenciar `prestador_perfis(id)` não `pessoas(id)`
 
 ---
 

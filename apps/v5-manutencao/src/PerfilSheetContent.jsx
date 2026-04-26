@@ -46,15 +46,20 @@ export default function PerfilSheetContent({ authUser, onNavigate, onLogout }) {
   const [sub,    setSub]    = useState(null)
 
   useEffect(() => {
-    supaCore.from('pessoas').select('nome, email').eq('id', pessoa_id).single()
+    supaCore.from('pessoas').select('nome, primeiro_nome, apelidos, email').eq('id', pessoa_id).maybeSingle()
       .then(({ data }) => { if (data) setPessoa(data) })
-    supa.from('subscricoes').select('nivel, pontos_total').eq('pessoa_id', pessoa_id).single()
+    supa.from('subscricoes').select('nivel, pontos_total').eq('pessoa_id', pessoa_id).maybeSingle()
       .then(({ data }) => { if (data) setSub(data) })
   }, [])
 
-  const nome     = pessoa?.nome || '—'
+  const nomeLegal = pessoa?.nome || '—'
+  const nome      = pessoa?.primeiro_nome
+    ? [pessoa.primeiro_nome, pessoa.apelidos].filter(Boolean).join(' ')
+    : nomeLegal
   const email    = pessoa?.email || '—'
-  const iniciais = nome.split(' ').filter(Boolean).map(w => w[0]).slice(0, 2).join('').toUpperCase()
+  const iniciais = [pessoa?.primeiro_nome, pessoa?.apelidos].filter(Boolean)
+    .map(w => w[0]).slice(0, 2).join('').toUpperCase()
+    || nomeLegal.split(' ').filter(Boolean).map(w => w[0]).slice(0, 2).join('').toUpperCase()
   const nivel    = sub?.nivel || 'bronze'
   const pontos   = sub?.pontos_total || 0
   const { nivel: nivelPT } = nivelLabel(pontos, nivel)

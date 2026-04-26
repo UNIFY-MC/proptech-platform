@@ -41,7 +41,7 @@ export function ImovelAtivoProvider({ children }) {
 
     const [orgsRes, pessoaRes] = await Promise.all([
       supaCore.from('organizations').select('id, nome, tipo').in('id', orgIds),
-      supaCore.from('pessoas').select('metadata, localizacao_ativa_id').eq('id', pessoa_id).single(),
+      supaCore.from('pessoas').select('metadata, localizacao_ativa_id').eq('id', pessoa_id).maybeSingle(),
     ])
 
     const orgs      = orgsRes.data  || []
@@ -77,7 +77,7 @@ export function ImovelAtivoProvider({ children }) {
   const setActiveOrg = useCallback(async (id) => {
     setOrganizationId(id)
     if (pessoa_id) {
-      const { data } = await supaCore.from('pessoas').select('metadata').eq('id', pessoa_id).single()
+      const { data } = await supaCore.from('pessoas').select('metadata').eq('id', pessoa_id).maybeSingle()
       await supaCore.from('pessoas')
         .update({ metadata: { ...(data?.metadata || {}), last_org_id: id } })
         .eq('id', pessoa_id)

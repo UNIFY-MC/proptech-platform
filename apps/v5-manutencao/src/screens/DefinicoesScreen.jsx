@@ -73,7 +73,7 @@ export default function DefinicoesScreen({ onBack }) {
 
   const fetchData = useCallback(async () => {
     setLoading(true)
-    const { data } = await supaCore.from('pessoas').select('idioma, metadata').eq('id', pessoa_id).single()
+    const { data } = await supaCore.from('pessoas').select('idioma, metadata').eq('id', pessoa_id).maybeSingle()
     if (data) {
       setIdiomaS(data.idioma || 'pt-PT')
       const m = data.metadata || {}

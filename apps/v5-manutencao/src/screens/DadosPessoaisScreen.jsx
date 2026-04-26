@@ -49,7 +49,7 @@ export default function DadosPessoaisScreen({ onBack }) {
     async function fetch() {
       try {
         const [pessoaRes, fiscalRes] = await Promise.all([
-          supaCore.from('pessoas').select('nome, telemovel, data_nascimento, idioma, foto_url').eq('id', pessoa_id).single(),
+          supaCore.from('pessoas').select('nome, telemovel, data_nascimento, idioma, foto_url').eq('id', pessoa_id).maybeSingle(),
           supa.from('perfis_fiscais').select('nif').eq('pessoa_id', pessoa_id).maybeSingle(),
         ])
         if (!active) return

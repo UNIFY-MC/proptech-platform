@@ -36,7 +36,7 @@ export default function OrcamentoDetalheScreen({ orcamentoId, onBack }) {
         supa.from('pedidos_orcamento')
           .select('*')
           .eq('id', orcamentoId)
-          .single(),
+          .maybeSingle(),
         supa.from('orcamentos_recebidos')
           .select('*, prestadores(nome, iniciais, rating_medio, aprovado)')
           .eq('pedido_id', orcamentoId)
