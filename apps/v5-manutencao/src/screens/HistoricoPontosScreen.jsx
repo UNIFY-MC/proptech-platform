@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { supa } from '../supa.js'
-import { DEMO_PESSOA_ID } from '../lib/demo.js'
+import { useAuth } from '../lib/AuthContext.jsx'
 
 const G = '#1B4332'; const GM = '#2D6A4F'
 const C = { ink:'#0f172a', slate:'#64748b', border:'#e2e8f0', bg:'#f8fafc', white:'#fff',
@@ -51,6 +51,7 @@ function agruparPorMes(pontos) {
 }
 
 export default function HistoricoPontosScreen({ onBack }) {
+  const { pessoa_id } = useAuth()
   const [subscricao, setSubscricao] = useState(null)
   const [historico,  setHistorico]  = useState([])
   const [loading,    setLoading]    = useState(true)
@@ -59,8 +60,8 @@ export default function HistoricoPontosScreen({ onBack }) {
   const fetchData = useCallback(async () => {
     setLoading(true)
     const [subRes, histRes] = await Promise.all([
-      supa.from('subscricoes').select('nivel, pontos_total').eq('pessoa_id', DEMO_PESSOA_ID).maybeSingle(),
-      supa.from('pontos_historico').select('id, pontos, motivo, data').eq('pessoa_id', DEMO_PESSOA_ID).order('data', { ascending: false }),
+      supa.from('subscricoes').select('nivel, pontos_total').eq('pessoa_id', pessoa_id).maybeSingle(),
+      supa.from('pontos_historico').select('id, pontos, motivo, data').eq('pessoa_id', pessoa_id).order('data', { ascending: false }),
     ])
     setSubscricao(subRes.data || null)
     setHistorico(histRes.data || [])

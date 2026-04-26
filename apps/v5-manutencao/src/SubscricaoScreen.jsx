@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { supa } from './supa.js'
-import { DEMO_PESSOA_ID } from './lib/demo.js'
+import { useAuth } from './lib/AuthContext.jsx'
 import { planosDisponiveis } from './lib/subscription.js'
 import { calcularNivel } from './lib/gamification.js'
 
@@ -45,6 +45,7 @@ const PLANO_FEATURES = {
 }
 
 export default function SubscricaoScreen({ open, onClose, authUser }) {
+  const { pessoa_id } = useAuth()
   const [subscricao, setSubscricao] = useState(null)
   const [pontosmes,  setPontosmes]  = useState(0)
   const [loading,    setLoading]    = useState(false)
@@ -52,7 +53,7 @@ export default function SubscricaoScreen({ open, onClose, authUser }) {
   useEffect(() => {
     if (!open) return
     setLoading(true)
-    const pid = DEMO_PESSOA_ID
+    const pid = pessoa_id
     const agora = new Date()
     const inicioMes = new Date(agora.getFullYear(), agora.getMonth(), 1).toISOString()
 

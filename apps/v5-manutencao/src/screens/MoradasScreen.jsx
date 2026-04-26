@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { supa } from '../supa.js'
-import { DEMO_PESSOA_ID } from '../lib/demo.js'
+import { useAuth } from '../lib/AuthContext.jsx'
 import { calcularCompletude, corCompletude } from '../lib/completude.js'
 import { useImovelAtivo } from '../lib/ImovelAtivoContext.jsx'
 import { usePerfisFiscais } from '../lib/PerfisFiscaisContext.jsx'
@@ -490,6 +490,7 @@ function ModalFaturacao({ imovel, perfis, onClose, onSaved }) {
 
 /* ─── Ecrã principal ─── */
 export default function MoradasScreen({ onBack, onNavigateDetalhe }) {
+  const { pessoa_id } = useAuth()
   const { imoveis, imovelAtivoId, setImovelAtivoId, refetch } = useImovelAtivo()
   const { perfis, refetch: refetchPerfis }                    = usePerfisFiscais()
   const [saving,      setSaving]      = useState(false)
@@ -504,7 +505,7 @@ export default function MoradasScreen({ onBack, onNavigateDetalhe }) {
 
   async function tornarPrincipal(id) {
     setSaving(true)
-    await supa.from('localizacoes').update({ principal: false }).eq('pessoa_id', DEMO_PESSOA_ID)
+    await supa.from('localizacoes').update({ principal: false }).eq('pessoa_id', pessoa_id)
     await supa.from('localizacoes').update({ principal: true  }).eq('id', id)
     await setImovelAtivoId(id)
     await refetch()

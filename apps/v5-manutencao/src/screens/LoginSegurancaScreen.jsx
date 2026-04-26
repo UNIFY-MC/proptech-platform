@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { supaCore } from '../supa.js'
-import { DEMO_PESSOA_ID } from '../lib/demo.js'
+import { useAuth } from '../lib/AuthContext.jsx'
 
 const G = '#1B4332'; const GM = '#2D6A4F'
 const C = { ink:'#0f172a', slate:'#64748b', border:'#e2e8f0', bg:'#f8fafc', white:'#fff',
@@ -44,13 +44,14 @@ function Toggle({ label, sub, value, onChange }) {
 }
 
 export default function LoginSegurancaScreen({ onBack }) {
+  const { pessoa_id } = useAuth()
   const [pessoa, setPessoa] = useState(null)
   const [twoFA, setTwoFA]   = useState(false)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     let active = true
-    supaCore.from('pessoas').select('email, telemovel, metadata').eq('id', DEMO_PESSOA_ID).single()
+    supaCore.from('pessoas').select('email, telemovel, metadata').eq('id', pessoa_id).single()
       .then(({ data, error }) => {
         if (!active) return
         if (!error && data) {
@@ -65,7 +66,7 @@ export default function LoginSegurancaScreen({ onBack }) {
   async function toggle2FA(val) {
     setTwoFA(val)
     const metaAtual = pessoa?.metadata || {}
-    await supaCore.from('pessoas').update({ metadata: { ...metaAtual, dois_fatores: val } }).eq('id', DEMO_PESSOA_ID)
+    await supaCore.from('pessoas').update({ metadata: { ...metaAtual, dois_fatores: val } }).eq('id', pessoa_id)
   }
 
   const emailDisplay  = loading ? '...' : (pessoa?.email  || '—')

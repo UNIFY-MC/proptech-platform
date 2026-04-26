@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { useImovelAtivo } from '../lib/ImovelAtivoContext.jsx'
 import { ganharPontos } from '../lib/gamification.js'
-import { DEMO_PESSOA_ID } from '../lib/demo.js'
+import { useAuth } from '../lib/AuthContext.jsx'
 
 const G = '#1B4332'; const GM = '#2D6A4F'; const GL = '#52B788'
 const C = { ink:'#0f172a', slate:'#64748b', border:'#e2e8f0', bg:'#f8fafc', white:'#fff',
@@ -44,6 +44,7 @@ const PERGUNTAS = [
 const N = PERGUNTAS.length
 
 export default function HomeAssessmentScreen({ onBack, onConcluido }) {
+  const { pessoa_id } = useAuth()
   const { imovelAtivo, refetch } = useImovelAtivo()
   const [step,     setStep]   = useState(0)
   const [respostas,setR]      = useState({})
@@ -69,7 +70,7 @@ export default function HomeAssessmentScreen({ onBack, onConcluido }) {
     if (step < N - 1) { setStep(s => s + 1); return }
     // Last question answered — save + award points
     setSaving(true)
-    await ganharPontos(DEMO_PESSOA_ID, 300, 'Avaliação da casa concluída')
+    await ganharPontos(pessoa_id, 300, 'Avaliação da casa concluída')
     await refetch()
     const score = imovelAtivo?.home_score ?? null
     setNovoScore(score)

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supa } from './supa.js'
-import { DEMO_PESSOA_ID, DEMO_LOCALIZACAO_ID } from './lib/demo.js'
+import { DEMO_LOCALIZACAO_ID } from './lib/demo.js'
+import { useAuth } from './lib/AuthContext.jsx'
 
 const V = {
   green:'#1B4332', greenMid:'#2D6A4F', greenLt:'#52B788', greenXl:'#D8F3DC',
@@ -29,6 +30,7 @@ const PREMIOS = [
 ]
 
 export default function ScoreDetailScreen({ onBack }) {
+  const { pessoa_id } = useAuth()
   const [loading, setLoading]           = useState(true)
   const [score, setScore]               = useState(74)
   const [nivel, setNivel]               = useState('silver')
@@ -42,14 +44,14 @@ export default function ScoreDetailScreen({ onBack }) {
     async function load() {
       try {
         const [subRes, locRes] = await Promise.all([
-          supa.from('subscricoes').select('pontos_total,nivel,streak_atual,streak_dias,streak_recorde,preco_mensal').eq('pessoa_id', DEMO_PESSOA_ID).eq('estado','ativo').maybeSingle(),
+          supa.from('subscricoes').select('pontos_total,nivel,streak_atual,streak_dias,streak_recorde,preco_mensal').eq('pessoa_id', pessoa_id).eq('estado','ativo').maybeSingle(),
           supa.from('localizacoes').select('home_score,score_avac,score_canaliz,score_eletrica,score_estrutura,score_agua').eq('id', DEMO_LOCALIZACAO_ID).maybeSingle(),
         ])
 
         const semanaStart = new Date()
         semanaStart.setDate(semanaStart.getDate() - 7)
         const { data: ptsRes } = await supa.from('pontos_historico')
-          .select('pontos').eq('pessoa_id', DEMO_PESSOA_ID)
+          .select('pontos').eq('pessoa_id', pessoa_id)
           .gte('data', semanaStart.toISOString())
         const pontosSemanaCalc = (ptsRes || []).reduce((s, r) => s + Math.max(0, Number(r.pontos || 0)), 0)
 

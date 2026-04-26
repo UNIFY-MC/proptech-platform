@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { supa, supaCore } from '../supa.js'
-import { DEMO_PESSOA_ID } from '../lib/demo.js'
+import { useAuth } from '../lib/AuthContext.jsx'
 import { nivelLabel } from '../lib/labels.js'
 
 const G = '#1B4332'; const GM = '#2D6A4F'; const GL = '#52B788'
@@ -11,6 +11,7 @@ const NIVEL_EMOJI = { bronze:'🥉', silver:'🥈', gold:'🥇', platinum:'💎'
                       Bronze:'🥉', Prata:'🥈', Ouro:'🥇', Platina:'💎', Diamante:'💠' }
 
 export default function SobreMimScreen({ onBack, onNavigate }) {
+  const { pessoa_id } = useAuth()
   const [dados, setDados] = useState(null)
   const [loading, setLoading] = useState(true)
   const [erro, setErro] = useState(null)
@@ -20,9 +21,9 @@ export default function SobreMimScreen({ onBack, onNavigate }) {
     async function fetch() {
       try {
         const [pessoaRes, subRes, ordensRes] = await Promise.all([
-          supaCore.from('pessoas').select('nome, email, foto_url, created_at').eq('id', DEMO_PESSOA_ID).single(),
-          supa.from('subscricoes').select('pontos_total, nivel, streak_dias, streak_recorde').eq('pessoa_id', DEMO_PESSOA_ID).eq('estado', 'ativo').maybeSingle(),
-          supa.from('ordens').select('id', { count: 'exact', head: true }).eq('cliente_id', DEMO_PESSOA_ID),
+          supaCore.from('pessoas').select('nome, email, foto_url, created_at').eq('id', pessoa_id).single(),
+          supa.from('subscricoes').select('pontos_total, nivel, streak_dias, streak_recorde').eq('pessoa_id', pessoa_id).eq('estado', 'ativo').maybeSingle(),
+          supa.from('ordens').select('id', { count: 'exact', head: true }).eq('cliente_id', pessoa_id),
         ])
         if (!active) return
         if (pessoaRes.error) throw pessoaRes.error

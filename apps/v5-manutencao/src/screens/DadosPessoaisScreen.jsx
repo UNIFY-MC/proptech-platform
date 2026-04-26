@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { supa, supaCore } from '../supa.js'
-import { DEMO_PESSOA_ID } from '../lib/demo.js'
+import { useAuth } from '../lib/AuthContext.jsx'
 
 const G = '#1B4332'; const GM = '#2D6A4F'; const GL = '#52B788'
 const C = { ink:'#0f172a', slate:'#64748b', border:'#e2e8f0', bg:'#f8fafc', white:'#fff', line:'#E5E7EB', stone:'#6B7685' }
@@ -32,6 +32,7 @@ function Section({ label, children }) {
 }
 
 export default function DadosPessoaisScreen({ onBack }) {
+  const { pessoa_id } = useAuth()
   const [loading, setLoading] = useState(true)
   const [erro,    setErro]    = useState(null)
   const [fotoUrl, setFotoUrl] = useState(null)
@@ -48,8 +49,8 @@ export default function DadosPessoaisScreen({ onBack }) {
     async function fetch() {
       try {
         const [pessoaRes, fiscalRes] = await Promise.all([
-          supaCore.from('pessoas').select('nome, telemovel, data_nascimento, idioma, foto_url').eq('id', DEMO_PESSOA_ID).single(),
-          supa.from('perfis_fiscais').select('nif').eq('pessoa_id', DEMO_PESSOA_ID).maybeSingle(),
+          supaCore.from('pessoas').select('nome, telemovel, data_nascimento, idioma, foto_url').eq('id', pessoa_id).single(),
+          supa.from('perfis_fiscais').select('nif').eq('pessoa_id', pessoa_id).maybeSingle(),
         ])
         if (!active) return
         if (pessoaRes.error) throw pessoaRes.error
@@ -74,9 +75,9 @@ export default function DadosPessoaisScreen({ onBack }) {
     setSaving(true)
     try {
       const [pessoaRes] = await Promise.all([
-        supaCore.from('pessoas').update({ nome, telemovel: tel, data_nascimento: nasc || null, idioma }).eq('id', DEMO_PESSOA_ID),
+        supaCore.from('pessoas').update({ nome, telemovel: tel, data_nascimento: nasc || null, idioma }).eq('id', pessoa_id),
         nif
-          ? supa.from('perfis_fiscais').upsert({ pessoa_id: DEMO_PESSOA_ID, nif, principal: true }, { onConflict: 'pessoa_id' })
+          ? supa.from('perfis_fiscais').upsert({ pessoa_id: pessoa_id, nif, principal: true }, { onConflict: 'pessoa_id' })
           : Promise.resolve(),
       ])
       if (pessoaRes.error) throw pessoaRes.error
@@ -92,11 +93,11 @@ export default function DadosPessoaisScreen({ onBack }) {
   async function uploadFoto(file) {
     if (!file) return
     const ext  = file.name.split('.').pop()?.toLowerCase() || 'jpg'
-    const path = `${DEMO_PESSOA_ID}/avatar-${Date.now()}.${ext}`
+    const path = `${pessoa_id}/avatar-${Date.now()}.${ext}`
     const { error: upErr } = await supaCore.storage.from('avatars').upload(path, file, { upsert: true })
     if (upErr) { alert('Upload falhou: ' + upErr.message); return }
     const { data: { publicUrl } } = supaCore.storage.from('avatars').getPublicUrl(path)
-    await supaCore.from('pessoas').update({ foto_url: publicUrl }).eq('id', DEMO_PESSOA_ID)
+    await supaCore.from('pessoas').update({ foto_url: publicUrl }).eq('id', pessoa_id)
     setFotoUrl(publicUrl)
   }
 

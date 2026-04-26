@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { supa } from '../supa.js'
-import { DEMO_PESSOA_ID } from '../lib/demo.js'
+import { useAuth } from '../lib/AuthContext.jsx'
 
 const G = '#1B4332'; const GM = '#2D6A4F'
 const C = { ink:'#0f172a', slate:'#64748b', border:'#e2e8f0', bg:'#f8fafc', white:'#fff',
@@ -11,6 +11,7 @@ function Stars({ n }) {
 }
 
 export default function AvaliacoesScreen({ onBack }) {
+  const { pessoa_id } = useAuth()
   const [tabAtivo, setTab]     = useState('dei')
   const [dadas,    setDadas]   = useState([])
   const [loading,  setLoading] = useState(true)
@@ -20,7 +21,7 @@ export default function AvaliacoesScreen({ onBack }) {
     const { data } = await supa
       .from('avaliacoes')
       .select('id, rating, texto, criado_em, servico_nome, prestadores(nome)')
-      .eq('cliente_id', DEMO_PESSOA_ID)
+      .eq('cliente_id', pessoa_id)
       .order('criado_em', { ascending: false })
     setDadas(data || [])
     setLoading(false)

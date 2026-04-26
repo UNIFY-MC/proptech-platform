@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { supa } from '../supa.js'
-import { DEMO_PESSOA_ID } from '../lib/demo.js'
+import { useAuth } from '../lib/AuthContext.jsx'
 import { planosDisponiveis } from '../lib/subscription.js'
 
 const G = '#1B4332'; const GM = '#2D6A4F'; const GL = '#52B788'
@@ -28,13 +28,14 @@ const FAQ = [
 ]
 
 export default function PlanoHomeDetalheScreen({ onBack }) {
+  const { pessoa_id } = useAuth()
   const [subscricao,    setSubscricao]    = useState(null)
   const [loadingSubs,   setLoadingSubs]   = useState(true)
 
   useEffect(() => {
     supa.from('subscricoes')
       .select('id, plano, estado, data_inicio, pontos_total')
-      .eq('pessoa_id', DEMO_PESSOA_ID)
+      .eq('pessoa_id', pessoa_id)
       .eq('estado', 'ativo')
       .maybeSingle()
       .then(({ data, error }) => {

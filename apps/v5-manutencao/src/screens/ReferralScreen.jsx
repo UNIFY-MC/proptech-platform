@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { supa } from '../supa.js'
-import { DEMO_PESSOA_ID } from '../lib/demo.js'
+import { useAuth } from '../lib/AuthContext.jsx'
 
 const G = '#1B4332'; const GM = '#2D6A4F'; const GL = '#52B788'
 const C = { ink:'#0f172a', slate:'#64748b', border:'#e2e8f0', bg:'#f8fafc', white:'#fff',
@@ -8,6 +8,7 @@ const C = { ink:'#0f172a', slate:'#64748b', border:'#e2e8f0', bg:'#f8fafc', whit
             greenXl:'#D8F3DC', purple:'#534AB7', purpleDk:'#26215C', amber:'#854F0B', amberLt:'#FAEEDA' }
 
 export default function ReferralScreen({ onBack }) {
+  const { pessoa_id } = useAuth()
   const [codigo,   setCodigo]   = useState(null)
   const [referidos,setReferidos]= useState([])
   const [loading,  setLoading]  = useState(true)
@@ -20,11 +21,11 @@ export default function ReferralScreen({ onBack }) {
         const [codigoRes, refsRes] = await Promise.all([
           supa.from('codigos_referencia')
             .select('codigo, total_referidos, total_credito_ganho')
-            .eq('pessoa_id', DEMO_PESSOA_ID)
+            .eq('pessoa_id', pessoa_id)
             .maybeSingle(),
           supa.from('referidos')
             .select('*')
-            .eq('referrer_id', DEMO_PESSOA_ID)
+            .eq('referrer_id', pessoa_id)
             .order('created_at', { ascending: false }),
         ])
         if (!active) return

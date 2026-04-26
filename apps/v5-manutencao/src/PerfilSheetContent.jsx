@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { supaCore, supa } from './supa.js'
-import { DEMO_PESSOA_ID } from './lib/demo.js'
+import { useAuth } from './lib/AuthContext.jsx'
 import { nivelLabel } from './lib/labels.js'
 
 const V = {
@@ -41,13 +41,14 @@ const GRUPOS = [
 ]
 
 export default function PerfilSheetContent({ authUser, onNavigate, onLogout }) {
+  const { pessoa_id } = useAuth()
   const [pessoa, setPessoa] = useState(null)
   const [sub,    setSub]    = useState(null)
 
   useEffect(() => {
-    supaCore.from('pessoas').select('nome, email').eq('id', DEMO_PESSOA_ID).single()
+    supaCore.from('pessoas').select('nome, email').eq('id', pessoa_id).single()
       .then(({ data }) => { if (data) setPessoa(data) })
-    supa.from('subscricoes').select('nivel, pontos_total').eq('pessoa_id', DEMO_PESSOA_ID).single()
+    supa.from('subscricoes').select('nivel, pontos_total').eq('pessoa_id', pessoa_id).single()
       .then(({ data }) => { if (data) setSub(data) })
   }, [])
 

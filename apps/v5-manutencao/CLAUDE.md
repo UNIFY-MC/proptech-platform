@@ -331,7 +331,8 @@ Colunas novas em `ordens`:
 | **3.3.14-fix-ux11** | ✅ fechada | Serviços populares HomeScreen · preco_base→preco · useState null robustness |
 | **3.3.14-fix-ux12** | ✅ fechada | Scroll-to-top universal · ServicosListaScreen error handling · 3 screens catch |
 | **Sprint 3.3** | ✅ **FECHADA** | 8 fases base + 12 fix-ux (ux1–ux12) · 199 serviços · 4 combos BD · subscrições · descontos |
-| **3.4A** | **próxima** | Auth real Supabase + onboarding (Fase 2d) |
+| **3.4A** | ✅ **fechada** | Auth core: LoginScreen + Signup + Recover + AuthContext + DEMO_PESSOA_ID → useAuth() |
+| **3.4B** | **próxima** | Onboarding wizard + RLS + tipo cliente |
 
 ### Notas para 3.3.12
 
@@ -496,6 +497,25 @@ Opções a avaliar:
 
 Contexto: `MapaPicker` em `MoradasScreen.jsx` e `ImovelWizard.jsx`;
 mapa estático em `ImovelDetalheScreen.jsx` (só leitura, sem interacção necessária).
+
+## Notas para 3.4A — Auth core Supabase
+
+- **`AuthProvider`** em `src/lib/AuthContext.jsx` — wraps toda a app via `main.jsx`; expõe `session`, `pessoa`, `pessoa_id`, `authenticated`, `loading`, `signOut`, `refreshPessoa`
+- **`ImovelAtivoContext`** e **`PerfisFiscaisContext`** migrados para usar `useAuth().pessoa_id` — não carregam se `pessoa_id=null`
+- **Auth screens** em `src/screens/auth/`: `LoginScreen`, `SignupScreen`, `ConfirmEmailPendingScreen`, `ConfirmEmailScreen`, `RecoverPasswordScreen`, `ResetPasswordScreen`
+- **`AuthRouter`** e **`LoadingScreen`** adicionados ao App.jsx (antes do bloco ROOT)
+- **`AuthScreen` original** removida do fluxo activo (função renomeada `AuthScreen_REMOVED`) — snapshot em `src/screens/AuthScreen.jsx`
+- **Botões demo** preservados no LoginScreen (secção "Acesso rápido de teste") — chamam `demoLogin()` que agora usa `supa.auth.signInWithPassword()`
+- **`DEMO_PESSOA_ID`** deprecated: substituído por `useAuth().pessoa_id` em 26 ficheiros; 3 usos residuais em App.jsx (EquipamentoFicha — TODO 3.4B)
+- **Bridge `useEffect`** em App.jsx: session real → `authUser` compatível (para manter componentes que recebem `authUser` prop)
+- **`supa.js`** actualizado: `detectSessionInUrl: true`, `flowType: 'pkce'`
+- **SQL**: `sql/14_v5_3_4_auth.sql` — `core.pessoas.auth_user_id`, `email_verified`, `ultimo_login`
+- **Maria**: precisa de auth user criado no Dashboard (maria.santos@v5demo.pt / Maria2026!) e UPDATE com UUID — ver PASSO A3
+- **Login teste**: `maria.santos@v5demo.pt` / `Maria2026!` (após A3)
+- **SMTP**: default `noreply@mail.app.supabase.io` (3.4A/B/C); custom Resend em 3.4D pré-launch
+- **Débito 3.4B**: onboarding wizard, RLS policies, tipo cliente (Individual/Empresa/Admin)
+- **Débito 3.4C**: substituir policies `pre_auth_*`, multi-org switcher
+- **Débito 3.4D**: email change re-verify, account delete, SMTP custom
 
 ## Estilo de comunicação
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { supa } from './supa.js'
-import { DEMO_PESSOA_ID } from './lib/demo.js'
+import { useAuth } from './lib/AuthContext.jsx'
 import { calcularCreditoMes } from './lib/subscription.js'
 import HeroHeader from './HeroHeader.jsx'
 import { useImovelAtivo } from './lib/ImovelAtivoContext.jsx'
@@ -215,14 +215,14 @@ function SubscricaoFooter({ ordens }) {
     const mes = now.getMonth() + 1
 
     async function load() {
-      // TODO(mario): substituir DEMO_PESSOA_ID por authUser.pessoa_id quando auth real implementada (Fase 4)
+      // TODO(mario): substituir pessoa_id por authUser.pessoa_id quando auth real implementada (Fase 4)
       const [subRes, creditoRes] = await Promise.all([
         supa.from('subscricoes')
           .select('id,plano,preco_mensal,estado')
-          .eq('pessoa_id', DEMO_PESSOA_ID)
+          .eq('pessoa_id', pessoa_id)
           .eq('estado', 'ativo')
           .maybeSingle(),
-        calcularCreditoMes(DEMO_PESSOA_ID, ano, mes),
+        calcularCreditoMes(pessoa_id, ano, mes),
       ])
 
       if (!active) return
@@ -346,6 +346,7 @@ function OrcamentoMockCard({ orc, onNavigate }) {
 }
 
 export default function PedidosScreen({ ordens, authUser, onOrdem, onChat, onHamburguer, onAvatarClick, onNavigateNotificacoes, onNavigateChatSuporte, notifCount = 0, onOpenImovelSelector, onNavigateOrcamentoDetalhe }) {
+  const { pessoa_id } = useAuth()
   const [tabAtivo, setTabAtivo] = useState('em_curso')
   const [pedidosOrc, setPedidosOrc] = useState([])
   const { setImovelAtivoForTab } = useImovelAtivo()
@@ -360,7 +361,7 @@ export default function PedidosScreen({ ordens, authUser, onOrdem, onChat, onHam
       const { data } = await supa
         .from('pedidos_orcamento')
         .select('id, titulo, areas, estado, n_orcamentos_esperados, propostas_recebidas, created_at, data_limite')
-        .eq('pessoa_id', DEMO_PESSOA_ID)
+        .eq('pessoa_id', pessoa_id)
         .not('estado', 'in', '(cancelado,expirado)')
         .order('created_at', { ascending: false })
       if (active) setPedidosOrc(data || [])

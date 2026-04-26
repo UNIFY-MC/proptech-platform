@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { supa, supaCore } from '../supa.js'
-import { DEMO_PESSOA_ID } from '../lib/demo.js'
+import { useAuth } from '../lib/AuthContext.jsx'
 
 const G = '#1B4332'; const GM = '#2D6A4F'
 const C = { ink:'#0f172a', slate:'#64748b', border:'#e2e8f0', bg:'#f8fafc', white:'#fff',
@@ -8,6 +8,7 @@ const C = { ink:'#0f172a', slate:'#64748b', border:'#e2e8f0', bg:'#f8fafc', whit
             greenXl:'#D8F3DC', greenLt:'#52B788' }
 
 export default function CodigoPromocionalScreen({ onBack }) {
+  const { pessoa_id } = useAuth()
   const [codigo,   setCodigo]   = useState(null)
   const [loading,  setLoading]  = useState(true)
   const [input,    setInput]    = useState('')
@@ -18,7 +19,7 @@ export default function CodigoPromocionalScreen({ onBack }) {
     let active = true
     supa.from('codigos_referencia')
       .select('codigo, total_referidos, total_credito_ganho')
-      .eq('pessoa_id', DEMO_PESSOA_ID)
+      .eq('pessoa_id', pessoa_id)
       .maybeSingle()
       .then(({ data }) => {
         if (active) { setCodigo(data || null); setLoading(false) }
@@ -42,13 +43,13 @@ export default function CodigoPromocionalScreen({ onBack }) {
         setFeedback({ ok: false, msg: 'Código inválido ou não encontrado.' })
         return
       }
-      if (codigoRef.pessoa_id === DEMO_PESSOA_ID) {
+      if (codigoRef.pessoa_id === pessoa_id) {
         setFeedback({ ok: false, msg: 'Não podes usar o teu próprio código.' })
         return
       }
       // Atribuir pontos
       await supa.from('pontos_historico').insert({
-        pessoa_id: DEMO_PESSOA_ID,
+        pessoa_id: pessoa_id,
         pontos:    250,
         motivo:    `Código aplicado: ${val}`,
       })

@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react'
 import { supa } from '../supa.js'
-import { DEMO_PESSOA_ID } from '../lib/demo.js'
+import { useAuth } from '../lib/AuthContext.jsx'
 import { useImovelAtivo } from '../lib/ImovelAtivoContext.jsx'
 import { usePerfisFiscais } from '../lib/PerfisFiscaisContext.jsx'
 import MapaPicker from './MapaPicker.jsx'
@@ -43,6 +43,7 @@ function SectionLabel({ children, mt = 16 }) {
 }
 
 export default function ImovelWizard({ onClose, onSaved }) {
+  const { pessoa_id } = useAuth()
   const { refetch } = useImovelAtivo()
   const { perfis }  = usePerfisFiscais()
 
@@ -100,7 +101,7 @@ export default function ImovelWizard({ onClose, onSaved }) {
     setSaving(true)
     try {
       const payload = {
-        pessoa_id:        DEMO_PESSOA_ID,
+        pessoa_id:        pessoa_id,
         nome:             form.nome.trim(),
         categoria,
         tipo:             CATEGORIA_TO_TIPO[categoria] || 'habitacao',

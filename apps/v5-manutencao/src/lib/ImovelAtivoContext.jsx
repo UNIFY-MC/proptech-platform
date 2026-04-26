@@ -1,38 +1,48 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react'
 import { supa, supaCore } from '../supa'
-import { DEMO_PESSOA_ID } from './demo'
+import { useAuth } from './AuthContext'
 
 const Ctx = createContext(null)
 
 export function ImovelAtivoProvider({ children }) {
+  const { pessoa_id } = useAuth()
+
   const [imoveis, setImoveis] = useState([])
   const [imovelAtivoId, setImovelAtivoIdState] = useState(null)
-  const [viewMode, setViewModeState] = useState('individual') // 'individual' | 'global'
+  const [viewMode, setViewModeState] = useState('individual')
   const [loading, setLoading] = useState(true)
   const [imovelAtivoPorTab, setImovelAtivoPorTab] = useState({
     inicio: null, casa: null, servicos: null, pedidos: 'global',
   })
 
   const refetch = useCallback(async () => {
+    if (!pessoa_id) {
+      setImoveis([])
+      setImovelAtivoIdState(null)
+      setLoading(false)
+      return
+    }
     setLoading(true)
     const [pessoaRes, locRes] = await Promise.all([
-      supaCore.from('pessoas').select('id, localizacao_ativa_id').eq('id', DEMO_PESSOA_ID).single(),
-      supa.from('localizacoes').select('*').eq('pessoa_id', DEMO_PESSOA_ID).eq('ativo', true).order('principal', { ascending: false }),
+      supaCore.from('pessoas').select('id, localizacao_ativa_id').eq('id', pessoa_id).single(),
+      supa.from('localizacoes').select('*').eq('pessoa_id', pessoa_id).eq('ativo', true).order('principal', { ascending: false }),
     ])
     const lista = locRes.data || []
     setImoveis(lista)
     const ativo = pessoaRes.data?.localizacao_ativa_id || lista[0]?.id || null
     setImovelAtivoIdState(ativo)
     setLoading(false)
-  }, [])
+  }, [pessoa_id])
 
   useEffect(() => { refetch() }, [refetch])
 
   const setImovelAtivoId = useCallback(async (id) => {
     setImovelAtivoIdState(id)
     setViewModeState('individual')
-    await supaCore.from('pessoas').update({ localizacao_ativa_id: id }).eq('id', DEMO_PESSOA_ID)
-  }, [])
+    if (pessoa_id) {
+      await supaCore.from('pessoas').update({ localizacao_ativa_id: id }).eq('id', pessoa_id)
+    }
+  }, [pessoa_id])
 
   const setViewModeGlobal = useCallback(() => setViewModeState('global'), [])
 
@@ -54,7 +64,6 @@ export function ImovelAtivoProvider({ children }) {
       setImovelAtivoIdState(memoria)
       setViewModeState('individual')
     } else {
-      // Fallback: usa principal
       const principal = imoveis.find(i => i.principal)
       if (principal) {
         setImovelAtivoIdState(principal.id)
@@ -68,7 +77,6 @@ export function ImovelAtivoProvider({ children }) {
     if (principal) setImovelAtivoIdState(principal.id)
     setViewModeState('individual')
     setImovelAtivoPorTab({ inicio: null, casa: null, servicos: null, pedidos: 'global' })
-    // TODO(mario 3.4): chamar antes de logout
   }, [imoveis])
 
   const isGlobal = viewMode === 'global'

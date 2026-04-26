@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { supa, supaCore } from './supa.js'
-import { DEMO_PESSOA_ID } from './lib/demo.js'
+import { useAuth } from './lib/AuthContext.jsx'
 import { calcularNivel } from './lib/gamification.js'
 
 const V = {
@@ -70,6 +70,7 @@ function formatData(iso) {
 }
 
 export default function PerfilMenuContent({ open, authUser, onNavigate, onLogout }) {
+  const { pessoa_id } = useAuth()
   const [pessoa,     setPessoa]     = useState(null)
   const [subscricao, setSubscricao] = useState(null)
   const [pontos,     setPontos]     = useState([])
@@ -80,9 +81,9 @@ export default function PerfilMenuContent({ open, authUser, onNavigate, onLogout
     if (!open) return
     setLoading(true)
     Promise.all([
-      supaCore.from('pessoas').select('id,nome,email').eq('id', DEMO_PESSOA_ID).maybeSingle(),
-      supa.from('subscricoes').select('id,plano,preco_mensal,estado,pontos_total,nivel').eq('pessoa_id', DEMO_PESSOA_ID).eq('estado','ativo').maybeSingle(),
-      supa.from('pontos_historico').select('id,pontos,motivo,data').eq('pessoa_id', DEMO_PESSOA_ID).order('data',{ascending:false}).limit(10),
+      supaCore.from('pessoas').select('id,nome,email').eq('id', pessoa_id).maybeSingle(),
+      supa.from('subscricoes').select('id,plano,preco_mensal,estado,pontos_total,nivel').eq('pessoa_id', pessoa_id).eq('estado','ativo').maybeSingle(),
+      supa.from('pontos_historico').select('id,pontos,motivo,data').eq('pessoa_id', pessoa_id).order('data',{ascending:false}).limit(10),
     ]).then(([rP,rS,rH]) => {
       setPessoa(rP.data || null)
       setSubscricao(rS.data || null)

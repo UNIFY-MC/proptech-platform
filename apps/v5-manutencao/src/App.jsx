@@ -2,9 +2,18 @@
 
 import React, { useState, useMemo, useEffect, useRef } from 'react'
 import CWishlist from './CWishlist'
+// @deprecated 3.4A · usar useAuth().pessoa_id
 import { DEMO_PESSOA_ID, DEMO_ORGANIZATION_ID } from './lib/demo.js'
 import { useImovelAtivo } from './lib/ImovelAtivoContext.jsx'
 import { usePerfisFiscais } from './lib/PerfisFiscaisContext.jsx'
+import { useAuth } from './lib/AuthContext.jsx'
+import { supa } from './supa.js'
+import LoginScreen from './screens/auth/LoginScreen.jsx'
+import SignupScreen from './screens/auth/SignupScreen.jsx'
+import ConfirmEmailPendingScreen from './screens/auth/ConfirmEmailPendingScreen.jsx'
+import ConfirmEmailScreen from './screens/auth/ConfirmEmailScreen.jsx'
+import RecoverPasswordScreen from './screens/auth/RecoverPasswordScreen.jsx'
+import ResetPasswordScreen from './screens/auth/ResetPasswordScreen.jsx'
 import { getPerfilFiscalAplicavel, snapshotPerfil } from './lib/faturacao.js'
 import PerfisFiscaisScreen from './screens/PerfisFiscaisScreen.jsx'
 import IniciaScreen from './IniciaScreen.jsx'
@@ -766,9 +775,10 @@ function SyncBadge({synced,loading}){
   return<span style={{fontSize:10,color:'#f59e0b',fontWeight:600}}>○ Demo local</span>
 }
 
-// ── Ecrã de Autenticação — design ServiçoPRO ──────────────────
-function AuthScreen({ onAuth }) {
-  // step: 'welcome' | 'otp_input' | 'otp_code' | 'role' | 'categories' | 'pending' | 'success'
+// AuthScreen removida em 3.4A — substituída por src/screens/auth/LoginScreen.jsx
+// Snapshot visual em src/screens/AuthScreen.jsx (Google/Apple/OTP visual mock)
+// eslint-disable-next-line no-unused-vars
+function AuthScreen_REMOVED({ onAuth }) {
   const [step,    setStep]    = useState('welcome')
   const [inputMode, setInputMode] = useState('phone') // 'phone' | 'email'
   const [contact, setContact] = useState('')
@@ -10389,12 +10399,74 @@ function ConfirmadoScreen({ onRestart }){
 */ /* ── fim V1_LEGACY ── */
 
 /* ══════════════════════════════════
+   AUTH — Loading + Router
+══════════════════════════════════ */
+function LoadingScreen() {
+  return (
+    <div style={{
+      minHeight: '100vh',
+      background: 'linear-gradient(135deg,#0B3D2E,#164E3A)',
+      display: 'flex', flexDirection: 'column',
+      alignItems: 'center', justifyContent: 'center',
+      fontFamily: "'Outfit',system-ui,sans-serif",
+    }}>
+      <div style={{ fontSize: 44, marginBottom: 20 }}>🏠</div>
+      <div style={{
+        width: 28, height: 28, borderRadius: '50%',
+        border: '3px solid rgba(255,255,255,.25)',
+        borderTopColor: '#10B981',
+        animation: 'spin .8s linear infinite',
+      }}/>
+    </div>
+  )
+}
+
+function AuthRouter({ onDemoLogin, onDemoAuth }) {
+  const [authScreen, setAuthScreen] = React.useState('login')
+  const [authParams, setAuthParams] = React.useState({})
+
+  const onNavigate = (screen, params = {}) => {
+    setAuthScreen(screen)
+    setAuthParams(params)
+  }
+
+  switch (authScreen) {
+    case 'signup':               return <SignupScreen onNavigate={onNavigate}/>
+    case 'recover_password':     return <RecoverPasswordScreen onNavigate={onNavigate}/>
+    case 'confirm_email_pending': return <ConfirmEmailPendingScreen onNavigate={onNavigate} params={authParams}/>
+    case 'confirm_email':        return <ConfirmEmailScreen onNavigate={onNavigate}/>
+    case 'reset_password':       return <ResetPasswordScreen onNavigate={onNavigate}/>
+    default: return <LoginScreen onNavigate={onNavigate} onDemoLogin={onDemoLogin} onDemoAuth={onDemoAuth}/>
+  }
+}
+
+/* ══════════════════════════════════
    ROOT
 ══════════════════════════════════ */
 export default function App() {
   // ── Auth ──────────────────────────────────
   const [authUser,  setAuthUser]  = useState(null) // {user, token, role, nome, perfil}
   const [role,      setRole]      = useState('prestador')
+
+  // 3.4A: AuthContext (sessão real Supabase)
+  const { session, pessoa, pessoa_id: authPessoaId, authenticated, loading: authLoading, signOut: authSignOut } = useAuth()
+  const sessionSetRef = useRef(null)
+
+  // Bridge: session real → authUser (para LoginScreen). Demo logins mantêm onAuth directo.
+  useEffect(() => {
+    if (authenticated && session?.user && !authUser && sessionSetRef.current !== session.user.id) {
+      sessionSetRef.current = session.user.id
+      const nome = pessoa?.nome || session.user.email?.split('@')[0] || 'Utilizador'
+      setAuthUser({ user: session.user, token: session.access_token, role: 'cliente', nome, demo: false })
+      setRole('cliente')
+    }
+    if (!authenticated && sessionSetRef.current) {
+      sessionSetRef.current = null
+      setAuthUser(null)
+      setRole('prestador')
+      setAdminAuth(false)
+    }
+  }, [authenticated, session, pessoa]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const [tab,     setTab]    = useState('inicio')
   const [prevTab, setPrevTab] = useState('inicio')
@@ -10406,11 +10478,13 @@ export default function App() {
   const [notifsNaoLidas, setNotifsNaoLidas] = useState(0)
 
   useEffect(() => {
+    const pessoaId = authPessoaId || DEMO_PESSOA_ID
+    if (!pessoaId) return
     let active = true
-    sbGetV5('alertas_inteligentes', `?pessoa_id=eq.${DEMO_PESSOA_ID}&estado=eq.nao_lido&select=id`)
+    sbGetV5('alertas_inteligentes', `?pessoa_id=eq.${pessoaId}&estado=eq.nao_lido&select=id`)
       .then(rows => { if (active) setNotifsNaoLidas(Array.isArray(rows) ? rows.length : 0) })
     return () => { active = false }
-  }, [])
+  }, [authPessoaId])
 
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
@@ -10781,20 +10855,40 @@ export default function App() {
     setRole(r); setTab('inicio'); setEcra('home'); setSel(null)
   }
 
-  // Callback de auth — pode vir do AuthScreen ou do botão admin
+  // Callback de auth — chamado pelos botões demo ou pelo onAuth admin
   const onAuth = (auth) => {
     setAuthUser(auth)
     if (auth.role === 'admin') { setRole('admin'); setAdminAuth(true) }
     else setRole(auth.role)
   }
 
+  // Login demo — usa supa.auth.signInWithPassword quando há chave (Fase 2d.2+)
+  const demoLogin = async (r) => {
+    const credenciais = {
+      cliente:   { email:'cliente@demov5.pt',   password:'Demo2026!', nome:'Maria Santos' },
+      prestador: { email:'prestador@demov5.pt', password:'Demo2026!', nome:'António Ferreira' },
+      admin:     { email:'admin@demov5.pt',     password:'Demo2026!', nome:'Admin' },
+    }
+    if (!SB_KEY) {
+      const locals = { cliente:{id:'demo-cli',nome:'Maria Santos'}, prestador:{id:'demo-prest',nome:'António Ferreira'}, admin:{id:'admin',nome:'Admin'} }
+      onAuth({ user:locals[r], token:null, role:r, nome:locals[r].nome, demo:true })
+      return
+    }
+    const { email, password, nome } = credenciais[r]
+    const { data, error } = await supa.auth.signInWithPassword({ email, password })
+    if (error) { alert(`Login demo falhou: ${error.message}`); return }
+    onAuth({ user:data.user, token:data.session?.access_token, role:r, nome, demo:true })
+  }
+
   const onLogout = async () => {
-    if (authUser?.token) await sbSignOut(authUser.token)
+    await authSignOut()
     setAuthUser(null); setRole('prestador'); setAdminAuth(false)
   }
 
-  // ── Mostrar AuthScreen se não autenticado ──
-  if (!authUser) return <AuthScreen onAuth={onAuth}/>
+  // ── Routing de auth ──────────────────────────────────────
+  if (authLoading) return <LoadingScreen/>
+  if (!authUser && !authenticated) return <AuthRouter onDemoLogin={demoLogin} onDemoAuth={onAuth}/>
+  if (authenticated && !authUser) return <LoadingScreen/>
 
   const hideRole = ecra==='carteira' || role==='admin' || (role==='cliente' && catScreen !== null)
   const cliOver  = ['nova','ordem','chat_c','chat_ordem_c','score_detail','alerta_detail','owners_club','chat_prestador',

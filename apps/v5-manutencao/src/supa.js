@@ -6,7 +6,14 @@ const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
 export const supa = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   db: { schema: 'v5_manutencao' },
-  auth: { storageKey: 'sb-v5-auth', persistSession: true, autoRefreshToken: true },
+  auth: {
+    storageKey: 'sb-v5-auth',
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+    flowType: 'pkce',
+    storage: typeof window !== 'undefined' ? window.localStorage : undefined,
+  },
 });
 
 export const supaCore = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {

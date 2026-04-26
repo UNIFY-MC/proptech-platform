@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { supa } from '../supa.js'
-import { DEMO_PESSOA_ID } from '../lib/demo.js'
+import { useAuth } from '../lib/AuthContext.jsx'
 
 const G = '#1B4332'; const GM = '#2D6A4F'; const GL = '#52B788'
 const C = { ink:'#0f172a', slate:'#64748b', border:'#e2e8f0', bg:'#f8fafc', white:'#fff',
@@ -18,13 +18,14 @@ function Stars({ v }) {
 }
 
 export default function PrestadoresEquipaScreen({ onBack, onNavigatePrestador }) {
+  const { pessoa_id } = useAuth()
   const [equipa,   setEquipa]   = useState(null)
   const [filtro,   setFiltro]   = useState('todos')
 
   useEffect(() => {
     supa.from('prestadores_equipa_cliente')
       .select('num_servicos_partilhados, favorito, ultima_interaccao, prestador:prestador_id(*)')
-      .eq('pessoa_id', DEMO_PESSOA_ID)
+      .eq('pessoa_id', pessoa_id)
       .order('num_servicos_partilhados', { ascending: false })
       .then(({ data, error }) => {
         if (error) console.warn('[PrestadoresEquipa] query error:', error.message)

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { supa } from '../supa.js'
-import { DEMO_PESSOA_ID } from '../lib/demo.js'
+import { useAuth } from '../lib/AuthContext.jsx'
 
 const G = '#1B4332'; const GM = '#2D6A4F'; const GL = '#52B788'
 const C = { ink:'#0f172a', slate:'#64748b', border:'#e2e8f0', bg:'#f8fafc', white:'#fff',
@@ -14,6 +14,7 @@ function labelMetodo(m) {
 }
 
 export default function PagamentosScreen({ onBack }) {
+  const { pessoa_id } = useAuth()
   const [metodos,  setMetodos]  = useState([])
   const [loading,  setLoading]  = useState(true)
 
@@ -22,7 +23,7 @@ export default function PagamentosScreen({ onBack }) {
     const { data } = await supa
       .from('metodos_pagamento')
       .select('*')
-      .eq('pessoa_id', DEMO_PESSOA_ID)
+      .eq('pessoa_id', pessoa_id)
       .order('principal', { ascending: false })
     setMetodos(data || [])
     setLoading(false)
@@ -32,7 +33,7 @@ export default function PagamentosScreen({ onBack }) {
 
   async function tornarPrincipal(id) {
     setMetodos(prev => prev.map(m => ({ ...m, principal: m.id === id })))
-    await supa.from('metodos_pagamento').update({ principal: false }).eq('pessoa_id', DEMO_PESSOA_ID)
+    await supa.from('metodos_pagamento').update({ principal: false }).eq('pessoa_id', pessoa_id)
     await supa.from('metodos_pagamento').update({ principal: true }).eq('id', id)
   }
 

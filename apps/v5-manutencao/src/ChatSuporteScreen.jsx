@@ -1,7 +1,7 @@
 // src/ChatSuporteScreen.jsx — Chat cliente↔plataforma (FIX 6, 3.3.10)
 import React, { useState, useEffect, useRef } from 'react'
 import { supa } from './supa.js'
-import { DEMO_PESSOA_ID } from './lib/demo.js'
+import { useAuth } from './lib/AuthContext.jsx'
 
 const G  = '#1B4332'
 const GM = '#2D6A4F'
@@ -29,6 +29,7 @@ function fmtHora(iso) {
 }
 
 export default function ChatSuporteScreen({ onBack }) {
+  const { pessoa_id } = useAuth()
   const [ticket,     setTicket]     = useState(null)
   const [mensagens,  setMensagens]  = useState(null)
   const [texto,      setTexto]      = useState('')
@@ -41,7 +42,7 @@ export default function ChatSuporteScreen({ onBack }) {
       const { data: existente } = await supa
         .from('tickets_suporte')
         .select('*')
-        .eq('pessoa_id', DEMO_PESSOA_ID)
+        .eq('pessoa_id', pessoa_id)
         .eq('estado', 'aberto')
         .maybeSingle()
       if (!active) return
@@ -50,7 +51,7 @@ export default function ChatSuporteScreen({ onBack }) {
       if (!t) {
         const { data: novo } = await supa
           .from('tickets_suporte')
-          .insert({ pessoa_id: DEMO_PESSOA_ID, assunto: 'Apoio geral' })
+          .insert({ pessoa_id: pessoa_id, assunto: 'Apoio geral' })
           .select()
           .single()
         if (!active) return

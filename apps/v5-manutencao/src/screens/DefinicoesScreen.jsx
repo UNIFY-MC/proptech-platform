@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { supaCore } from '../supa.js'
-import { DEMO_PESSOA_ID } from '../lib/demo.js'
+import { useAuth } from '../lib/AuthContext.jsx'
 
 const G = '#1B4332'; const GM = '#2D6A4F'
 const C = { ink:'#0f172a', slate:'#64748b', border:'#e2e8f0', bg:'#f8fafc', white:'#fff',
@@ -63,6 +63,7 @@ function ActionRow({ label, danger, onClick }) {
 }
 
 export default function DefinicoesScreen({ onBack }) {
+  const { pessoa_id } = useAuth()
   const [loading,  setLoading]  = useState(true)
   const [tema,     setTemaS]    = useState('auto')
   const [idioma,   setIdiomaS]  = useState('pt-PT')
@@ -72,7 +73,7 @@ export default function DefinicoesScreen({ onBack }) {
 
   const fetchData = useCallback(async () => {
     setLoading(true)
-    const { data } = await supaCore.from('pessoas').select('idioma, metadata').eq('id', DEMO_PESSOA_ID).single()
+    const { data } = await supaCore.from('pessoas').select('idioma, metadata').eq('id', pessoa_id).single()
     if (data) {
       setIdiomaS(data.idioma || 'pt-PT')
       const m = data.metadata || {}
@@ -88,13 +89,13 @@ export default function DefinicoesScreen({ onBack }) {
 
   async function saveIdioma(val) {
     setIdiomaS(val)
-    await supaCore.from('pessoas').update({ idioma: val }).eq('id', DEMO_PESSOA_ID)
+    await supaCore.from('pessoas').update({ idioma: val }).eq('id', pessoa_id)
   }
 
   async function saveMeta(patch) {
     const novoMeta = { ...meta, ...patch }
     setMeta(novoMeta)
-    await supaCore.from('pessoas').update({ metadata: novoMeta }).eq('id', DEMO_PESSOA_ID)
+    await supaCore.from('pessoas').update({ metadata: novoMeta }).eq('id', pessoa_id)
   }
 
   function setTema(val)    { setTemaS(val);    saveMeta({ tema: val }) }

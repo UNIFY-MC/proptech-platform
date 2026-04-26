@@ -1,7 +1,7 @@
 import { supa } from '../supa.js'
-import { DEMO_PESSOA_ID } from './demo.js'
 
-export async function fetchPerfisFiscais(pessoaId = DEMO_PESSOA_ID) {
+
+export async function fetchPerfisFiscais(pessoaId) {
   const { data } = await supa
     .from('perfis_fiscais')
     .select('*')

@@ -1,7 +1,8 @@
 import React, { useState } from 'react'
 import { MOCK_ORCAMENTOS_AREAS, MOCK_ORCAMENTOS_FORMATOS } from '../data/mock.js'
 import { supa } from '../supa.js'
-import { DEMO_PESSOA_ID, DEMO_ORGANIZATION_ID } from '../lib/demo.js'
+import { DEMO_ORGANIZATION_ID } from '../lib/demo.js'
+import { useAuth } from '../lib/AuthContext.jsx'
 
 const P = '#534AB7'; const PD = '#3D35A0'
 const C = {
@@ -288,6 +289,7 @@ function Step4({ areas, descricao, fotos, formatos, onBack, onSubmit, enviando, 
 
 // ── Main wizard ───────────────────────────────────────────────────────────────
 export default function OrcamentoWizardScreen({ onBack, onConfirmado, localizacaoId, categoriaSlug, skipStep1, descricaoInicial }) {
+  const { pessoa_id } = useAuth()
   const [step,      setStep]      = useState(skipStep1 ? 2 : 1)
   const [areas,     setAreas]     = useState([])
   const [descricao, setDescricao] = useState(descricaoInicial || '')
@@ -302,7 +304,7 @@ export default function OrcamentoWizardScreen({ onBack, onConfirmado, localizaca
       const { data, error } = await supa
         .from('pedidos_orcamento')
         .insert({
-          pessoa_id:              DEMO_PESSOA_ID,
+          pessoa_id:              pessoa_id,
           organization_id:        DEMO_ORGANIZATION_ID,
           localizacao_id:         localizacaoId || null,
           areas,

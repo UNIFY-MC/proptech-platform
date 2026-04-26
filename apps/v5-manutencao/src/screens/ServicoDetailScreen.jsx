@@ -5,7 +5,7 @@ import { useEscolherImovel } from '../lib/useEscolherImovel.jsx'
 import SmartPromptsSheet from '../components/SmartPromptsSheet.jsx'
 import ImagemServico from '../components/ImagemServico.jsx'
 import { getDescontoAplicavel } from '../lib/descontos.js'
-import { DEMO_PESSOA_ID } from '../lib/demo.js'
+import { useAuth } from '../lib/AuthContext.jsx'
 
 const G = '#1B4332'; const GM = '#2D6A4F'; const GL = '#52B788'
 const C = {
@@ -85,6 +85,7 @@ function IncluiItem({ texto, tipo }) {
 }
 
 export default function ServicoDetailScreen({ servico, onBack, onPedir, onAdicionarLista, onNavigateMoradas }) {
+  const { pessoa_id } = useAuth()
   const [detalhe,       setDetalhe]      = useState(null)
   const [inclui,        setInclui]       = useState([])
   const [naoInclui,     setNaoInclui]    = useState([])
@@ -206,11 +207,11 @@ export default function ServicoDetailScreen({ servico, onBack, onPedir, onAdicio
     if (tmpl) fetchFrequencia(tmpl)
   }, [detalhe?.frequency_template, fetchFrequencia])
 
-  // TODO(mario Fase 4): substituir DEMO_PESSOA_ID por authUser.pessoa_id quando auth real activa
+  // TODO(mario Fase 4): substituir pessoa_id por authUser.pessoa_id quando auth real activa
   useEffect(() => {
     const preco = detalhe?.preco || servico?.preco
     if (!preco) return
-    getDescontoAplicavel(DEMO_PESSOA_ID, parseFloat(preco))
+    getDescontoAplicavel(pessoa_id, parseFloat(preco))
       .then(d => setDesconto(d))
   }, [detalhe?.preco, servico?.preco])
 

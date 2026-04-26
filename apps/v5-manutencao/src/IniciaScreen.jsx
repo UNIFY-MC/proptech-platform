@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { supa, supaPublic } from './supa.js'
-import { DEMO_PESSOA_ID, DEMO_ORGANIZATION_ID } from './lib/demo.js'
+import { DEMO_ORGANIZATION_ID } from './lib/demo.js'
+import { useAuth } from './lib/AuthContext.jsx'
 import { useImovelAtivo } from './lib/ImovelAtivoContext.jsx'
 import { calcularCreditoMes } from './lib/subscription.js'
 import { calcularNivel } from './lib/gamification.js'
@@ -99,6 +100,7 @@ function casaLabel(score) {
 }
 
 export default function IniciaScreen({ authUser, onNavigateCasa, onNavigateServicos, onHamburguer, onAvatarClick, onNavigateScore, onNavigateAlerta, onNavigateOwnersClub, onNavigateNotificacoes, onNavigateChatSuporte, notifCount = 0, onOpenImovelSelector, onNavigateImovelDetalhe, onNavigateServico, onNavigateServicosLista, onNavigateCombo, onNavigateAIExpert, onNavigateMissoes, onNavigatePrestador, onNavigateEquipa, onNavigatePoupancas }) {
+  const { pessoa_id } = useAuth()
   const { imovelAtivo, imoveis } = useImovelAtivo()
   const [subscricao,  setSubscricao]  = useState(null)
   const [creditoMes,  setCreditoMes]  = useState(undefined)
@@ -117,14 +119,14 @@ export default function IniciaScreen({ authUser, onNavigateCasa, onNavigateServi
     const now  = new Date()
     async function load() {
       const [subRes, misRes, servRes, equipaRes, combosRes] = await Promise.all([
-        supa.from('subscricoes').select('*').eq('pessoa_id', DEMO_PESSOA_ID).eq('estado', 'ativo').maybeSingle(),
-        supa.from('missoes_utilizador').select('*').eq('pessoa_id', DEMO_PESSOA_ID).eq('estado', 'aberta')
+        supa.from('subscricoes').select('*').eq('pessoa_id', pessoa_id).eq('estado', 'ativo').maybeSingle(),
+        supa.from('missoes_utilizador').select('*').eq('pessoa_id', pessoa_id).eq('estado', 'aberta')
           .order('urgente', { ascending: false }).order('pontos', { ascending: false }).limit(2),
         supaPublic.from('servicos').select('id,nome,preco,categoria_id,imagem_url,tagline')
           .eq('activo', true).eq('popular', true).order('preco', { ascending: false }).limit(5),
         supa.from('prestadores_equipa_cliente')
           .select('num_servicos_partilhados, favorito, prestador:prestador_id(*)')
-          .eq('pessoa_id', DEMO_PESSOA_ID)
+          .eq('pessoa_id', pessoa_id)
           .order('num_servicos_partilhados', { ascending: false }).limit(4),
         supa.from('combos').select('*').eq('ativo', true).in('slug', ['reset-primavera','pack-inverno']),
       ])
@@ -137,7 +139,7 @@ export default function IniciaScreen({ authUser, onNavigateCasa, onNavigateServi
       combosRes.data?.forEach(c => { cd[c.slug] = c })
       setCombosDict(cd)
       setDataLoaded(true)
-      const cm = await calcularCreditoMes(DEMO_PESSOA_ID, now.getFullYear(), now.getMonth() + 1)
+      const cm = await calcularCreditoMes(pessoa_id, now.getFullYear(), now.getMonth() + 1)
       if (active) setCreditoMes(cm)
     }
     load()
