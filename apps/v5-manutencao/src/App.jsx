@@ -1500,7 +1500,7 @@ function adaptOrdemDB(row) {
     created_at:    row.created_at,
     dt_pedido_iso: row.created_at,
     servico_nome:  cat?.nome || null,
-    categoria_id:  cat?.categoria_id || null,
+    categoria_id:  cat?.categoria || null,
     is_personalizado: !row.catalogo_id,
     organization_id:  row.organization_id,
   }
@@ -10520,7 +10520,7 @@ export default function App() {
     if (!authPessoaId) { setOrdens([]); return }
     let active = true
     supa.from('ordens_trabalho')
-      .select('id, estado, valor_ot, morada_intervencao, data_agendada, created_at, organization_id, catalogo_id, catalogo_servico:catalogo_servicos(nome, categoria_id)')
+      .select('id, estado, valor_ot, morada_intervencao, data_agendada, created_at, organization_id, catalogo_id, catalogo_servico:catalogo_servicos(nome, categoria)')
       .order('created_at', { ascending: false })
       .then(({ data }) => { if (active) setOrdens((data || []).map(adaptOrdemDB)) })
     return () => { active = false }
