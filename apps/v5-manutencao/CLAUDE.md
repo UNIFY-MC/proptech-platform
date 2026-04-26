@@ -306,7 +306,7 @@ Colunas novas em `ordens`:
 3. Commits em inglês, prefixo convencional: `feat:`, `fix:`, `chore:`, `refactor:`, `docs:`.
 4. Não fazer `git push` automático.
 
-## Estado das fases (actualizado 2026-04-25)
+## Estado das fases (actualizado 2026-04-26)
 
 | Fase | Estado | Notas |
 |---|---|---|
@@ -332,7 +332,8 @@ Colunas novas em `ordens`:
 | **3.3.14-fix-ux12** | ✅ fechada | Scroll-to-top universal · ServicosListaScreen error handling · 3 screens catch |
 | **Sprint 3.3** | ✅ **FECHADA** | 8 fases base + 12 fix-ux (ux1–ux12) · 199 serviços · 4 combos BD · subscrições · descontos |
 | **3.4A** | ✅ **fechada** | Auth core: LoginScreen + Signup + Recover + AuthContext + DEMO_PESSOA_ID → useAuth() |
-| **3.4B** | **próxima** | Onboarding wizard + RLS + tipo cliente |
+| **3.4B** | ✅ **fechada** | Onboarding wizard 5 steps · RPC fn_complete_onboarding · needsOnboarding bloqueante |
+| **3.4C** | **próxima** | RLS policies + multi-org switcher rico + drop pre_auth_* policies |
 
 ### Notas para 3.3.12
 
@@ -516,6 +517,27 @@ mapa estático em `ImovelDetalheScreen.jsx` (só leitura, sem interacção neces
 - **Débito 3.4B**: onboarding wizard, RLS policies, tipo cliente (Individual/Empresa/Admin)
 - **Débito 3.4C**: substituir policies `pre_auth_*`, multi-org switcher
 - **Débito 3.4D**: email change re-verify, account delete, SMTP custom
+
+## Notas para 3.4B — Onboarding wizard
+
+- `OnboardingWizardScreen` em `src/screens/OnboardingWizardScreen.jsx` (~480 linhas)
+- 5 steps inline: Step1Tipo · Step2DadosPessoais · Step3Entidade · Step4Localizacao · Step5Welcome
+- Steps por tipo: individual=[1,2,4,5] · empresa/condo=[1,2,3,4,5] · gestor=[1,2,3,5]
+- Step 3 para `gestor_imoveis`: ecrã informativo, sem form, sem dados guardados
+- `fn_complete_onboarding(payload jsonb)` em schema `core` — SECURITY DEFINER · atómica
+- RPC cria: `core.pessoas` + `core.organizations` + `core.memberships` + `v5_manutencao.perfis_fiscais` + `v5_manutencao.localizacoes`
+- `needsOnboarding = memberships.length === 0` em AuthContext — bloqueante, sem override
+- Logout (botão no header do wizard) NÃO limpa `localStorage v5:onboarding:${uid}` — retoma no próximo login
+- `organizations.tipo` CHECK estendido: inclui `gestor_imoveis` (migration `v5_3_4b_onboarding_rpc`)
+- SQL: `sql/15_v5_3_4b_onboarding_rpc.sql`
+- Detectar Maria (já tem membership): vai directo para HomeScreen, não vê wizard
+- **Test users DEV** (Password123! — criar no Supabase Dashboard para testes):
+  - `teste1.individual@v5demo.pt` — tipo individual, skip step 3
+  - `teste2.empresa@v5demo.pt` — tipo empresa_comercial, todos os 5 steps
+  - `teste3.condominio@v5demo.pt` — tipo condominio
+  - `teste4.gestor@v5demo.pt` — tipo gestor_imoveis, skip step 4
+- **Débito 3.4C**: substituir `GRANT TO anon` por autenticação real; RLS policies; multi-org switcher
+- **Débito 3.4D**: email change re-verify, account delete, SMTP custom Resend
 
 ## Estilo de comunicação
 

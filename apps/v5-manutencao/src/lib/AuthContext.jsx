@@ -5,9 +5,10 @@ import { supaCore } from '../supa'
 const AuthCtx = createContext(null)
 
 export function AuthProvider({ children }) {
-  const [session,  setSession]  = useState(null)
-  const [pessoa,   setPessoa]   = useState(null)
-  const [loading,  setLoading]  = useState(true)
+  const [session,     setSession]     = useState(null)
+  const [pessoa,      setPessoa]      = useState(null)
+  const [memberships, setMemberships] = useState([])
+  const [loading,     setLoading]     = useState(true)
 
   useEffect(() => {
     supa.auth.getSession().then(({ data: { session } }) => {
@@ -24,6 +25,7 @@ export function AuthProvider({ children }) {
         setSession(session)
         if (event === 'SIGNED_OUT') {
           setPessoa(null)
+          setMemberships([])
           setLoading(false)
           return
         }
@@ -31,6 +33,7 @@ export function AuthProvider({ children }) {
           await loadPessoa(session.user.id)
         } else {
           setPessoa(null)
+          setMemberships([])
           setLoading(false)
         }
       }
@@ -48,13 +51,32 @@ export function AuthProvider({ children }) {
       .maybeSingle()
 
     if (error) console.error('[AuthContext] erro ao carregar pessoa:', error)
-    setPessoa(data || null)
+
+    const p = data || null
+    setPessoa(p)
+
+    if (p) {
+      await loadMemberships(p.id)
+    } else {
+      setMemberships([])
+    }
     setLoading(false)
   }
 
+  async function loadMemberships(pessoaId) {
+    const { data, error } = await supaCore
+      .from('memberships')
+      .select('id, organization_id, role')
+      .eq('pessoa_id', pessoaId)
+    if (error) console.error('[AuthContext] erro ao carregar memberships:', error)
+    setMemberships(data || [])
+  }
+
+  // signOut limpa sessão mas NÃO o localStorage de onboarding (retoma no próximo login)
   const signOut = async () => {
     await supa.auth.signOut()
     setPessoa(null)
+    setMemberships([])
     setSession(null)
   }
 
@@ -62,13 +84,19 @@ export function AuthProvider({ children }) {
     if (session?.user) await loadPessoa(session.user.id)
   }
 
+  // needsOnboarding: sem memberships → wizard bloqueante até RPC G1 concluir
+  // Não há override, não há flag "dismissed"
+  const needsOnboarding = !loading && !!session && memberships.length === 0
+
   return (
     <AuthCtx.Provider value={{
       session,
       pessoa,
-      pessoa_id: pessoa?.id ?? null,
-      authenticated: !!session,
+      pessoa_id:       pessoa?.id ?? null,
+      memberships,
+      authenticated:   !!session,
       loading,
+      needsOnboarding,
       signOut,
       refreshPessoa,
     }}>

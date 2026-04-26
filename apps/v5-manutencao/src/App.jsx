@@ -65,6 +65,7 @@ import AIExpertFabScreen from './screens/AIExpertFabScreen.jsx'
 import AdicionarCamaraScreen from './screens/AdicionarCamaraScreen.jsx'
 import AdicionarDocScreen from './screens/AdicionarDocScreen.jsx'
 import AdicionarEnergiaScreen from './screens/AdicionarEnergiaScreen.jsx'
+import OnboardingWizardScreen from './screens/OnboardingWizardScreen.jsx'
 import {
   ArrowLeft, X, Check, Camera, Clock, Plus, MapPin, ChevronRight,
   Shield, Lock, MessageSquare, FileImage, RefreshCw, Wrench,
@@ -10448,8 +10449,8 @@ export default function App() {
   const [authUser,  setAuthUser]  = useState(null) // {user, token, role, nome, perfil}
   const [role,      setRole]      = useState('prestador')
 
-  // 3.4A: AuthContext (sessão real Supabase)
-  const { session, pessoa, pessoa_id: authPessoaId, authenticated, loading: authLoading, signOut: authSignOut } = useAuth()
+  // 3.4A/B: AuthContext (sessão real Supabase)
+  const { session, pessoa, pessoa_id: authPessoaId, authenticated, loading: authLoading, needsOnboarding, signOut: authSignOut, refreshPessoa } = useAuth()
   const sessionSetRef = useRef(null)
 
   // Bridge: session real → authUser (para LoginScreen). Demo logins mantêm onAuth directo.
@@ -10888,6 +10889,8 @@ export default function App() {
   // ── Routing de auth ──────────────────────────────────────
   if (authLoading) return <LoadingScreen/>
   if (!authUser && !authenticated) return <AuthRouter onDemoLogin={demoLogin} onDemoAuth={onAuth}/>
+  // 3.4B: Onboarding bloqueante — sem skip, só RPC G1 desbloqueia
+  if (authenticated && needsOnboarding) return <OnboardingWizardScreen user={session.user} onComplete={refreshPessoa}/>
   if (authenticated && !authUser) return <LoadingScreen/>
 
   const hideRole = ecra==='carteira' || role==='admin' || (role==='cliente' && catScreen !== null)
