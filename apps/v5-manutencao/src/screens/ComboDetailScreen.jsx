@@ -34,10 +34,11 @@ export default function ComboDetailScreen({ combo, onBack, onPedir, onNavigateSe
     if (!cb?.id) { setLoading(false); return }
     supa
       .from('combo_servicos')
-      .select('ordem, servico:servico_id(id, nome, preco_base, duracao_tipica, descricao, imagem_url, categoria)')
+      .select('ordem, servico:catalogo_servicos(id, nome, preco_base, duracao_tipica, descricao, imagem_url, categoria)')
       .eq('combo_id', cb.id)
       .order('ordem')
-      .then(({ data }) => {
+      .then(({ data, error }) => {
+        if (error) console.warn('[ComboDetail] serviços query:', error.message)
         setServicos(data?.map(d => d.servico).filter(Boolean) || [])
         setLoading(false)
       })

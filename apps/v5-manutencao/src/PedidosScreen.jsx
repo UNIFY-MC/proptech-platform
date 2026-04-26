@@ -205,17 +205,18 @@ function OrdemCard({ o, onOrdem, onChat }) {
 
 /* ── Footer de subscrição ────────────────────────────────────── */
 function SubscricaoFooter({ ordens }) {
+  const { pessoa_id }             = useAuth()
   const [sub, setSub]         = useState(undefined) // undefined = a carregar, null = sem sub
   const [credito, setCredito] = useState(0)
 
   useEffect(() => {
+    if (!pessoa_id) { setSub(null); return }
     let active = true
     const now = new Date()
     const ano = now.getFullYear()
     const mes = now.getMonth() + 1
 
     async function load() {
-      // TODO(mario): substituir pessoa_id por authUser.pessoa_id quando auth real implementada (Fase 4)
       const [subRes, creditoRes] = await Promise.all([
         supa.from('subscricoes')
           .select('id,plano,preco_mensal,estado')

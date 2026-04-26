@@ -10512,7 +10512,7 @@ export default function App() {
     if (!authPessoaId) { setOrdens([]); return }
     let active = true
     supa.from('ordens_trabalho')
-      .select('id, estado, valor_ot, morada_intervencao, data_agendada, created_at, organization_id, catalogo_id, catalogo_servico:catalogo_id(nome, categoria_id)')
+      .select('id, estado, valor_ot, morada_intervencao, data_agendada, created_at, organization_id, catalogo_id, catalogo_servico:catalogo_servicos(nome, categoria_id)')
       .order('created_at', { ascending: false })
       .then(({ data }) => { if (active) setOrdens((data || []).map(adaptOrdemDB)) })
     return () => { active = false }

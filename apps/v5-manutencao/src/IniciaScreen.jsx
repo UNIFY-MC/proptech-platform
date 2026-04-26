@@ -74,7 +74,8 @@ function Skel({ h = 60, r = 12 }) {
 function ScoreCircle({ score }) {
   const r    = 22
   const circ = 138  // 2π×22 ≈ 138.2
-  const off  = circ - (score / 100) * circ
+  const hasScore = score != null && score > 0
+  const off  = hasScore ? circ - (score / 100) * circ : circ
   return (
     <div style={{ position: 'relative', width: 54, height: 54, flexShrink: 0 }}>
       <svg width="54" height="54" style={{ transform: 'rotate(-90deg)' }}>
@@ -86,7 +87,9 @@ function ScoreCircle({ score }) {
         position: 'absolute', top: 0, left: 0, width: 54, height: 54,
         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
       }}>
-        <div style={{ fontSize: 16, fontWeight: 700, color: '#fff', lineHeight: 1 }}>{score}</div>
+        <div style={{ fontSize: hasScore ? 16 : 13, fontWeight: 700, color: '#fff', lineHeight: 1 }}>
+          {hasScore ? score : '?'}
+        </div>
         <div style={{ fontSize: 7, color: 'rgba(255,255,255,0.6)', marginTop: 1 }}>SCORE</div>
       </div>
     </div>
@@ -94,6 +97,7 @@ function ScoreCircle({ score }) {
 }
 
 function casaLabel(score) {
+  if (score == null || score === 0) return 'Casa por avaliar 🏠'
   if (score >= 70) return 'Casa Saudável 🌱'
   if (score >= 40) return 'Casa a Melhorar ⚠️'
   return 'Casa em Risco 🚨'
@@ -154,7 +158,7 @@ export default function IniciaScreen({ authUser, onNavigateCasa, onNavigateServi
   const streak      = subscricao?.streak_atual ?? subscricao?.streak_dias ?? 0
 
   const loc         = imovelAtivo
-  const homeScore   = loc?.home_score ?? 0
+  const homeScore   = loc?.home_score ?? null
   const localidade  = loc?.localidade || ''
   const nLocs       = imoveis.length
 
