@@ -1485,6 +1485,25 @@ const ORDENS_INIT = [
   {id:'ot8',sid:'s5',cli:'Cond. Sol',    cliId:'cl4',morada:'Rua do Sol, 5, Caldas',       km:3.8, data:'18 Abr', hora:'11:00',tid:'p4',st:'concluida',          fotos:['🏊','📷'],     ass:true, aval:4,   notas:'',              pago:true,  val:55,  taxa:20,dt_pedido:'16 Abr 10:00'},
   {id:'ot9',sid:'s8',cli:'Sra. Alves',   cliId:'cl3',morada:'Quinta Rosas, Óbidos',        km:12.4,data:'10 Abr', hora:'09:00',tid:'p4',st:'faturada',           fotos:['🎨','📷','📷'],ass:true, aval:5,   notas:'Sala + quarto',  pago:true,  val:90,  taxa:20,dt_pedido:'8 Abr 15:00'},
 ]
+// Adapter: v5_manutencao.ordens_trabalho → shape esperado por PedidosScreen/OrdemCard
+function adaptOrdemDB(row) {
+  const cat = row.catalogo_servico
+  const da  = row.data_agendada ? new Date(row.data_agendada) : null
+  return {
+    id:            row.id,
+    st:            row.estado,
+    valor_cobrado: row.valor_ot,
+    morada:        row.morada_intervencao,
+    data_agendada: da ? da.toLocaleDateString('pt-PT', { day:'numeric', month:'short' }) : null,
+    hora_agendada: da ? da.toLocaleTimeString('pt-PT', { hour:'2-digit', minute:'2-digit' }) : null,
+    created_at:    row.created_at,
+    dt_pedido_iso: row.created_at,
+    servico_nome:  cat?.nome || null,
+    categoria_id:  cat?.categoria_id || null,
+    is_personalizado: !row.catalogo_id,
+    organization_id:  row.organization_id,
+  }
+}
 const MOVS = [
   {id:'m1',tipo:'credito', v:57.00, d:'Limpeza Mensal — Rua das Flores', dt:'Hoje 14:32',  st:'disponivel',oid:'ot1'},
   {id:'m2',tipo:'credito', v:57.00, d:'Limpeza Mensal — Av. Brasil',     dt:'Ontem 11:15', st:'disponivel',oid:'ot2'},
@@ -10473,7 +10492,7 @@ export default function App() {
   const [tab,     setTab]    = useState('inicio')
   const [prevTab, setPrevTab] = useState('inicio')
   const [ecra,    setEcra]   = useState('home')
-  const [ordens, setOrdens] = useState(ORDENS_INIT)
+  const [ordens, setOrdens] = useState([])
   const [sel,      setSel]      = useState(null)
   const [selAlerta,setSelAlerta]= useState(null)
   const [svcNova,  setSvcNova]  = useState(null)
@@ -10485,6 +10504,17 @@ export default function App() {
     let active = true
     sbGetV5('alertas_inteligentes', `?pessoa_id=eq.${pessoaId}&estado=eq.nao_lido&select=id`)
       .then(rows => { if (active) setNotifsNaoLidas(Array.isArray(rows) ? rows.length : 0) })
+    return () => { active = false }
+  }, [authPessoaId])
+
+  // Carrega ordens reais da BD via RLS (substitui ORDENS_INIT mock)
+  useEffect(() => {
+    if (!authPessoaId) { setOrdens([]); return }
+    let active = true
+    supa.from('ordens_trabalho')
+      .select('id, estado, valor_ot, morada_intervencao, data_agendada, created_at, organization_id, catalogo_id, catalogo_servico:catalogo_id(nome, categoria_id)')
+      .order('created_at', { ascending: false })
+      .then(({ data }) => { if (active) setOrdens((data || []).map(adaptOrdemDB)) })
     return () => { active = false }
   }, [authPessoaId])
 
@@ -11041,7 +11071,7 @@ export default function App() {
           )}
 
           {/* Ecrãs full-screen 3.3.6D (sobrepõem qualquer tab) */}
-          {ecra==='score_detail'   && <ScoreDetailScreen onBack={()=>setEcra('home')} />}
+          {ecra==='score_detail'   && <ScoreDetailScreen onBack={()=>setEcra('home')} onNavigateServicos={()=>{ setEcra('home'); setTab('servicos') }} />}
           {ecra==='alerta_detail'  && <AlertaDetailScreen alerta={selAlerta} onBack={()=>setEcra('home')} onPedirTecnico={()=>{ setEcra('home'); setTab('servicos') }} onNavigateOrcamento={()=>setEcra('orcamento_wizard')} />}
           {ecra==='owners_club'    && <OwnersClubScreen authUser={authUser} onBack={()=>setEcra('home')} onNavigate={(t)=>{ if(t==='subscricao'){setEcra('home');setShowSubscricao(true)} else setEcra('home') }} />}
           {ecra==='chat_prestador' && <ChatPedidoScreen ordem={sel} onBack={()=>setEcra('home')} />}

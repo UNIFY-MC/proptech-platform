@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { supa } from './supa.js'
-import { DEMO_LOCALIZACAO_ID } from './lib/demo.js'
+
 import HeroHeader from './HeroHeader.jsx'
 import { useImovelAtivo } from './lib/ImovelAtivoContext.jsx'
 import { moradaCurta, categoriaEmoji } from './lib/labels.js'
@@ -144,15 +144,14 @@ export default function CasaScreen({ equipamentos, authUser, onNavigate, onHambu
     return () => { active = false }
   }, [loc?.concelho])
 
-  // Histórico faturas OCR — energia já implementada (3.4 → já implementado)
-  // TODO(mario): substituir DEMO_LOCALIZACAO_ID por loc.id quando auth real (Fase 4)
+  // Histórico faturas OCR — energia
   useEffect(() => {
-    const locId = loc?.id || DEMO_LOCALIZACAO_ID
+    if (!loc?.id) { setFaturas([]); return }
     setFaturas(null)
     let active = true
     supa.from('documentos')
       .select('dados_ocr, created_at')
-      .eq('localizacao_id', locId)
+      .eq('localizacao_id', loc.id)
       .eq('tipo', 'fatura')
       .not('dados_ocr', 'is', null)
       .order('created_at', { ascending: false })

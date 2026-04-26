@@ -410,16 +410,17 @@ export default function IniciaScreen({ authUser, onNavigateCasa, onNavigateServi
           <div style={{ fontSize: 16, fontWeight: 700, color: V.ink, fontFamily: 'Georgia,serif' }}>💰 Poupanças este ano</div>
           <span style={{ fontSize: 11, color: V.greenLt, fontWeight: 700 }}>Detalhe →</span>
         </div>
+        {/* TODO(mario Fase 5): substituir 0€ por fn_calc_poupancas(pessoa_id) real */}
         <div onClick={() => onNavigatePoupancas?.()} style={{ margin: '0 14px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, cursor:'pointer' }}>
           <div style={{ background: V.greenXl, border: `1px solid ${V.greenLt}`, borderRadius: 12, padding: '10px 12px' }}>
             <div style={{ fontSize: 10, color: V.greenMid || '#2D6A4F', fontWeight: 600 }}>Serviços</div>
-            <div style={{ fontSize: 19, fontWeight: 700, color: V.green, marginTop: 2 }}>147€</div>
-            <div style={{ fontSize: 9, color: '#2D6A4F', marginTop: 2 }}>vs preços externos</div>
+            <div style={{ fontSize: 19, fontWeight: 700, color: V.green, marginTop: 2 }}>0€</div>
+            <div style={{ fontSize: 9, color: '#2D6A4F', marginTop: 2 }}>Sobe a cada serviço</div>
           </div>
           <div style={{ background: V.goldLt, border: `1px solid ${V.gold}`, borderRadius: 12, padding: '10px 12px' }}>
             <div style={{ fontSize: 10, color: V.amber, fontWeight: 600 }}>Energia</div>
-            <div style={{ fontSize: 19, fontWeight: 700, color: V.amber, marginTop: 2 }}>82€</div>
-            <div style={{ fontSize: 9, color: V.amber, marginTop: 2 }}>filtros AC + revisão</div>
+            <div style={{ fontSize: 19, fontWeight: 700, color: V.amber, marginTop: 2 }}>0€</div>
+            <div style={{ fontSize: 9, color: V.amber, marginTop: 2 }}>Sobe a cada serviço</div>
           </div>
         </div>
 
