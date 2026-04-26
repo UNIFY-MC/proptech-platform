@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { supaCore } from '../supa.js'
 import { useAuth } from '../lib/AuthContext.jsx'
+import { BRAND } from '../config/branding.js'
 
 const G = '#1B4332'; const GM = '#2D6A4F'
 const C = { ink:'#0f172a', slate:'#64748b', border:'#e2e8f0', bg:'#f8fafc', white:'#fff',
@@ -139,7 +140,7 @@ export default function DefinicoesScreen({ onBack }) {
         <ActionRow label="Eliminar conta permanentemente" danger onClick={() => alert('Para eliminar a tua conta contacta suporte@exemplo.pt.\n// TODO(mario): email real Fase 4')} />
       </Section>
 
-      <div style={{ textAlign:'center', padding:'8px 0', fontSize:11, color:C.slate }}>v0.5.3 · build dev</div>
+      <div style={{ textAlign:'center', padding:'8px 0', fontSize:11, color:C.slate }}>v{BRAND.version} · {BRAND.buildEnv}</div>
     </div>
   )
 }

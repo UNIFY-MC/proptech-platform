@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { supaCore, supa } from '../supa'
 import PhoneInput from '../components/PhoneInput.jsx'
+import { BRAND } from '../config/branding.js'
 
 const G = '#0B3D2E'; const G2 = '#164E3A'; const EM = '#10B981'
 const C = {
@@ -635,11 +636,10 @@ export default function OnboardingWizardScreen({ user, onComplete }) {
         {/* Placeholder com mesma largura do botão "Sair" para centrar o logo */}
         <div style={{ width: 52 }} />
 
-        {/* TODO(mario fix-ux): rever brand pública (V5/Property7/outra?) */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <div style={{ fontSize: 26 }}>🏠</div>
+          <div style={{ fontSize: 26 }}>{BRAND.emoji}</div>
           <div style={{ fontSize: 18, fontWeight: 700, color: '#fff', fontFamily: "'Fraunces',Georgia,serif", letterSpacing: '-0.01em' }}>
-            V5 Manutenção
+            {BRAND.name}
           </div>
         </div>
 

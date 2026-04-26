@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { supa, supaCore } from './supa.js'
 import { useAuth } from './lib/AuthContext.jsx'
+import { BRAND } from './config/branding.js'
 import { calcularNivel } from './lib/gamification.js'
 
 const V = {
@@ -221,7 +222,7 @@ export default function PerfilMenuContent({ open, authUser, onNavigate, onLogout
             fontSize:14, fontWeight:700,
           }}
         >Sair</button>
-        <div style={{ fontSize:10, color:V.stone, letterSpacing:'0.04em', textAlign:'center', marginTop:10 }}>v0.5.2 · build dev</div>
+        <div style={{ fontSize:10, color:V.stone, letterSpacing:'0.04em', textAlign:'center', marginTop:10 }}>v{BRAND.version} · {BRAND.buildEnv}</div>
       </div>
     </div>
   )

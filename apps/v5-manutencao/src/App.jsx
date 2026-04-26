@@ -4,6 +4,7 @@ import React, { useState, useMemo, useEffect, useRef } from 'react'
 import CWishlist from './CWishlist'
 // @deprecated 3.4A · usar useAuth().pessoa_id
 import { DEMO_PESSOA_ID, DEMO_ORGANIZATION_ID } from './lib/demo.js'
+import { BRAND } from './config/branding.js'
 import { useImovelAtivo } from './lib/ImovelAtivoContext.jsx'
 import { usePerfisFiscais } from './lib/PerfisFiscaisContext.jsx'
 import { useAuth } from './lib/AuthContext.jsx'
@@ -953,8 +954,7 @@ function AuthScreen_REMOVED({ onAuth }) {
     <DarkScreen>
       <div style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',textAlign:'center',marginBottom:32}}>
         <Logo size={72}/>
-        {/* TODO(mario fix-ux): rever brand pública (V5/Property7/outra?) */}
-        <div style={{fontFamily:FONT,fontSize:28,fontWeight:900,color:'#fff',marginTop:20,letterSpacing:'-0.5px'}}>V5 Manutenção</div>
+        <div style={{fontFamily:FONT,fontSize:28,fontWeight:900,color:'#fff',marginTop:20,letterSpacing:'-0.5px'}}>{BRAND.name}</div>
         <div style={{fontFamily:FONT,fontSize:14,color:'rgba(255,255,255,0.65)',marginTop:6}}>Serviços domésticos de confiança</div>
       </div>
 
@@ -7234,7 +7234,7 @@ function AdminLogin({onLogin}){
         <div style={{textAlign:'center',marginBottom:28}}>
           <div style={{width:62,height:62,borderRadius:15,background:A.navy,display:'flex',alignItems:'center',justifyContent:'center',fontSize:28,margin:'0 auto 14px'}}>⚙️</div>
           <h1 style={{fontSize:20,fontWeight:800,color:A.navy,margin:'0 0 4px'}}>Painel de Administração</h1>
-          <p style={{fontSize:11,color:A.slate,margin:0}}>V5 Manutenção · v5-manutenção</p>
+          <p style={{fontSize:11,color:A.slate,margin:0}}>{BRAND.name} · v{BRAND.version}</p>
         </div>
         <label style={{display:'block',fontSize:10,fontWeight:700,color:A.slate,marginBottom:5,textTransform:'uppercase',letterSpacing:'0.04em'}}>Password</label>
         <input type='password' value={pw} onChange={e=>{setPw(e.target.value);setErr(false)}} onKeyDown={e=>e.key==='Enter'&&go()} placeholder='••••••••'
@@ -7253,8 +7253,8 @@ function AdminSidebar({active,set,onLogout}){
     <div style={{width:240,background:A.sidebar,height:'100vh',position:'fixed',left:0,top:0,display:'flex',flexDirection:'column',zIndex:20,boxShadow:'4px 0 20px rgba(0,0,0,0.25)'}}>
       <div style={{padding:'20px 18px 14px',borderBottom:'1px solid rgba(255,255,255,0.07)'}}>
         <div style={{display:'flex',alignItems:'center',gap:10}}>
-          <div style={{width:36,height:36,borderRadius:10,background:A.accent,display:'flex',alignItems:'center',justifyContent:'center',fontSize:18}}>🏠</div>
-          <div><div style={{color:'#fff',fontSize:14,fontWeight:800,letterSpacing:'-0.01em'}}>V5 Manutenção</div><div style={{color:A.muted,fontSize:9,fontWeight:700,letterSpacing:'0.08em',marginTop:1}}>ADMIN v5</div></div>
+          <div style={{width:36,height:36,borderRadius:10,background:A.accent,display:'flex',alignItems:'center',justifyContent:'center',fontSize:18}}>{BRAND.emoji}</div>
+          <div><div style={{color:'#fff',fontSize:14,fontWeight:800,letterSpacing:'-0.01em'}}>{BRAND.name}</div><div style={{color:A.muted,fontSize:9,fontWeight:700,letterSpacing:'0.08em',marginTop:1}}>ADMIN v{BRAND.version}</div></div>
         </div>
       </div>
       <nav style={{flex:1,padding:'8px 10px',overflowY:'auto'}}>
@@ -8102,7 +8102,7 @@ function AdminDash({svcs,setSvcs,prestadores,setPrestadores,niveis,setNiveis,cli
    ASSISTENTE AI — Botão flutuante
 ══════════════════════════════════ */
 const AI_RESPOSTAS = {
-  default: 'Olá! Sou o assistente da V5 Manutenção. Posso ajudar com ordens de trabalho, dúvidas sobre pagamentos, escalões ou disponibilidade. Em que posso ajudar?',
+  default: `Olá! Sou o assistente da ${BRAND.name}. Posso ajudar com ordens de trabalho, dúvidas sobre pagamentos, escalões ou disponibilidade. Em que posso ajudar?`,
   carteira: 'A tua carteira tem saldo disponível para levantamento imediato. Podes levantar para o teu IBAN via Swan SEPA CT em D+1. Queres ajuda com isso?',
   nivel: 'Estás no nível Gold (18% taxa). Para atingir Elite precisas de mais 160 serviços e manter avaliação ≥ 4.8. Cada serviço conta!',
   ordem: 'Para concluir uma ordem: 1) Aceita, 2) Executa, 3) Tira mínimo 2 fotos, 4) Aguarda assinatura do cliente. O pagamento é creditado em 24h.',
@@ -8177,7 +8177,7 @@ function AIChat() {
           <div style={{ display:'flex', alignItems:'center', gap:10 }}>
             <div style={{ width:36, height:36, borderRadius:'50%', background:'rgba(255,255,255,0.15)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:18 }}>✨</div>
             <div>
-              <div style={{ color:'#fff', fontSize:13, fontWeight:700 }}>Assistente V5 Manutenção</div>
+              <div style={{ color:'#fff', fontSize:13, fontWeight:700 }}>Assistente {BRAND.name}</div>
               <div style={{ color:'#86efac', fontSize:10 }}>● Online · Resposta imediata</div>
             </div>
           </div>

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { supa } from '../../supa'
 import PasswordInput from '../../components/PasswordInput.jsx'
+import { BRAND } from '../../config/branding.js'
 
 const G = '#0B3D2E'
 const G2 = '#164E3A'
@@ -43,10 +44,9 @@ export default function LoginScreen({ onNavigate, onDemoLogin, onDemoAuth }) {
       fontFamily: "'Outfit',system-ui,sans-serif",
     }}>
       <div style={{ textAlign: 'center', marginBottom: 28 }}>
-        <div style={{ fontSize: 38, marginBottom: 6 }}>🏠</div>
-        {/* TODO(mario fix-ux): rever brand pública (V5/Property7/outra?) */}
+        <div style={{ fontSize: 38, marginBottom: 6 }}>{BRAND.emoji}</div>
         <div style={{ fontSize: 21, fontWeight: 700, color: '#fff', fontFamily: "'Fraunces',Georgia,serif" }}>
-          V5 Manutenção
+          {BRAND.name}
         </div>
         <div style={{ fontSize: 12, color: 'rgba(255,255,255,.65)', marginTop: 3 }}>
           Bem-vindo de volta
