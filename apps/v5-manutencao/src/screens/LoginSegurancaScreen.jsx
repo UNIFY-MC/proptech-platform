@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { supaCore, supa, SUPABASE_URL, SUPABASE_ANON_KEY } from '../supa.js'
 import { useAuth } from '../lib/AuthContext.jsx'
+import PasswordInput from '../components/PasswordInput.jsx'
 
 const G = '#1B4332'; const GM = '#2D6A4F'
 const C = {
@@ -47,21 +48,19 @@ function Toggle({ label, sub, value, onChange }) {
 }
 
 function InputField({ label, type = 'text', value, onChange, placeholder, error }) {
+  const inputStyle = {
+    width:'100%', boxSizing:'border-box',
+    padding:'10px 12px', borderRadius:10, fontSize:14,
+    border:`1.5px solid ${error ? C.red : C.border}`,
+    background:C.bg, color:C.ink, outline:'none',
+  }
   return (
     <div style={{ marginBottom:14 }}>
       <div style={{ fontSize:11, fontWeight:600, color:C.slate, marginBottom:5 }}>{label}</div>
-      <input
-        type={type}
-        value={value}
-        onChange={e => onChange(e.target.value)}
-        placeholder={placeholder}
-        style={{
-          width:'100%', boxSizing:'border-box',
-          padding:'10px 12px', borderRadius:10, fontSize:14,
-          border:`1.5px solid ${error ? C.red : C.border}`,
-          background:C.bg, color:C.ink, outline:'none',
-        }}
-      />
+      {type === 'password'
+        ? <PasswordInput value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} style={inputStyle} />
+        : <input type={type} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} style={inputStyle} />
+      }
       {error && <div style={{ fontSize:11, color:C.red, marginTop:4 }}>{error}</div>}
     </div>
   )

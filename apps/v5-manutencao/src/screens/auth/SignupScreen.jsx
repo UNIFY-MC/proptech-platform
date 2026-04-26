@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { supa } from '../../supa'
+import PasswordInput from '../../components/PasswordInput.jsx'
 
 const G = '#0B3D2E'
 const G2 = '#164E3A'
@@ -121,8 +122,8 @@ export default function SignupScreen({ onNavigate }) {
           <label style={{ fontSize: 10, color: '#555', fontWeight: 700, display: 'block', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '.05em' }}>
             PASSWORD
           </label>
-          <input
-            type="password" value={password} onChange={e => setPassword(e.target.value)}
+          <PasswordInput
+            value={password} onChange={e => setPassword(e.target.value)}
             placeholder="mín. 8 caracteres" required autoComplete="new-password"
             style={{ width: '100%', padding: '10px 12px', fontSize: 14, border: '1.5px solid #ddd', borderRadius: 9, boxSizing: 'border-box', outline: 'none' }}
           />
@@ -140,8 +141,8 @@ export default function SignupScreen({ onNavigate }) {
           <label style={{ fontSize: 10, color: '#555', fontWeight: 700, display: 'block', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '.05em' }}>
             CONFIRMAR PASSWORD
           </label>
-          <input
-            type="password" value={passwordConfirm} onChange={e => setPasswordConfirm(e.target.value)}
+          <PasswordInput
+            value={passwordConfirm} onChange={e => setPasswordConfirm(e.target.value)}
             placeholder="••••••••" required autoComplete="new-password"
             style={{
               width: '100%', padding: '10px 12px', fontSize: 14,

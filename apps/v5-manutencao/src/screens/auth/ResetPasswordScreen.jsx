@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supa } from '../../supa'
+import PasswordInput from '../../components/PasswordInput.jsx'
 
 const G = '#0B3D2E'
 
@@ -92,8 +93,8 @@ export default function ResetPasswordScreen({ onNavigate }) {
             <label style={{ fontSize: 10, color: '#555', fontWeight: 700, display: 'block', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '.05em' }}>
               {f.label}
             </label>
-            <input
-              type="password" value={f.val} onChange={e => f.set(e.target.value)}
+            <PasswordInput
+              value={f.val} onChange={e => f.set(e.target.value)}
               placeholder="mín. 8 caracteres" required autoComplete={f.auto}
               style={{ width: '100%', padding: '10px 12px', fontSize: 14, border: '1.5px solid #ddd', borderRadius: 9, boxSizing: 'border-box', outline: 'none' }}
             />
