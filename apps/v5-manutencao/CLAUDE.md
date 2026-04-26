@@ -415,7 +415,7 @@ Colunas novas em `ordens_trabalho`:
 | **3.4B** | ✅ **fechada** | Onboarding wizard 5 steps · RPC fn_complete_onboarding · needsOnboarding bloqueante |
 | **3.4C** | ✅ **fechada** | RLS todas as tabelas (core 23 + v5_manutencao 39) · helpers SECURITY DEFINER · multi-org switcher · OrgLocBottomSheet · REVOKE anon RPCs · empty states honestos |
 | **3.4D fix-ux #1** | ✅ **fechada** | primeiro_nome+apelidos em core.pessoas · wizard 2 campos · saudação usa primeiro_nome · PerfilDrawer actualizado |
-| **3.4D** | ✅ **fechada** | SMTP Resend · email/password change in-app · GDPR Edge Function · staff_roles + is_staff() · .single() audit (9 ficheiros) · REVOKE anon fn_complete_onboarding |
+| **3.4D** | ✅ **fechada** | SMTP Resend · email/password change in-app · GDPR delete · staff_roles + is_staff() · refactor nome split · 4 bug fixes (categoria_id, GRANT staff_roles, GRANT EXECUTE fn_anonymize, PasswordInput) |
 
 ---
 
@@ -487,12 +487,18 @@ Colunas novas em `ordens_trabalho`:
 - **SQL**: `sql/14_v5_3_4_auth.sql` — `core.pessoas.auth_user_id`, `email_verified`, `ultimo_login`
 - **Contas demo** (Login rápido de teste):
 
-| Role      | Email                    | Password    |
-|-----------|--------------------------|-------------|
-| Admin     | `admin@demov5.pt`        | `Demo2026!` |
-| Prestador | `prestador@demov5.pt`    | `Demo2026!` |
-| Cliente   | `cliente@demov5.pt`      | `Demo2026!` |
-| Demo Maria| `maria.santos@v5demo.pt` | `Maria2026!`|
+| Role | Email | Password | Notas |
+|---|---|---|---|
+| Admin demo | `admin@demov5.pt` | `Demo2026!` | |
+| Prestador demo | `prestador@demov5.pt` | `Demo2026!` | |
+| Cliente demo | `cliente@demov5.pt` | `Demo2026!` | |
+| Cliente principal | `maria.santos@v5demo.pt` | `Maria2026!` | Apartamento Lisboa, Score 65, Prata 700pts |
+| Cliente sem histórico | `rls-test@v5demo.pt` | `Password123!` | Para testes RLS cross-tenant |
+| Cliente Mario | `mariocarvalho.biz+v5test@gmail.com` | (mario sabe) | Caldas da Rainha, casa |
+| Staff teste | `mariocarvalho.biz+v5staff@gmail.com` | (mario sabe) | role admin · banner staff |
+| GDPR teste | `mariocarvalho.biz+v5gdpr@gmail.com` | descartável | recriado a cada teste GDPR |
+| **RESERVADO** | `mariocarvalho.biz@gmail.com` | — | uso real futuro · NÃO criar |
+| **TODO Fase 6** | `mariocarvalho.biz+v5prestador@gmail.com` | — | a criar com fluxo prestador |
 
 ## Notas para 3.4B — Onboarding wizard
 
@@ -526,19 +532,51 @@ Colunas novas em `ordens_trabalho`:
 - **`PerfilDrawerContent`**: `.single()` → `.maybeSingle()`; select inclui `primeiro_nome, apelidos`; header mostra `nomeDisplay` (primeiro nome) + `nomeLegal` como subtitle quando diferem; iniciais correctas
 - **SQL**: `sql/22_v5_3_4d_nome_split.sql`
 
-## Notas para 3.4D — Auth completa
+## Notas para 3.4D
 
-- **Email change**: `LoginSegurancaScreen` → `EmailModal` → `supa.auth.updateUser({ email })` → banner pendente + `metadata.email_pendente`
-- **Password change**: `PasswordModal` → `supa.auth.updateUser({ password })` → validação ≥8 chars + match
-- **GDPR delete**: `DeleteAccountModal` (checkbox + password) → `fetch` Edge Function `delete-account` → sign out automático
-- **Edge Function** `supabase/functions/delete-account/index.ts`: verifica JWT → verifica password via `signInWithPassword` → `core.fn_anonymize_account(uid)` → `auth.admin.deleteUser(uid)`
-- **`fn_anonymize_account`**: SECURITY DEFINER · só service_role · anonimiza pessoas + memberships (soft-delete) + perfis_fiscais · preserva ordens (AT 10 anos)
-- **`core.staff_roles`**: tabela auth-aware para staff da plataforma · `public.is_staff()` helper SECURITY DEFINER em `public`
-- **REVOKE**: `fn_complete_onboarding` perdeu GRANT PUBLIC + anon · mantém authenticated
-- **`.single()` audit**: 9 ficheiros corrigidos (todos SELECTs → `.maybeSingle()`; INSERTs mantidos)
-- **`supa.js`**: exporta `SUPABASE_URL` e `SUPABASE_ANON_KEY` para uso em fetch de Edge Functions
-- **`PerfilSheetContent`**: actualizado com `primeiro_nome`/`apelidos` (alinhado com PerfilDrawerContent)
-- **SQL**: `sql/23_v5_3_4d_staff_roles.sql` · `sql/24_v5_3_4d_rpc_guards.sql`
+### Auth & segurança in-app
+- **EmailModal**: alteração email via `supa.auth.updateUser({email})` + banner pendente em `pessoas.metadata.email_pendente`
+- **PasswordModal**: re-auth + nova password ≥8 chars + match
+- **DeleteAccountModal**: danger modal · re-auth + checkbox confirmação · chama Edge Function `delete-account`
+- **PasswordInput** (`src/components/PasswordInput.jsx`): toggle eye show/hide · usado em todos os ecrãs auth + modais
+
+### GDPR delete
+- Edge Function `supabase/functions/delete-account/index.ts`: JWT verify → re-auth password → chama `core.fn_anonymize_account` → `supabase.auth.admin.deleteUser()`
+- RPC `core.fn_anonymize_account(p_auth_user_id uuid)`: SECURITY DEFINER · apenas `service_role` (GRANT EXECUTE explícito) · anonimiza `core.pessoas` via `metadata = jsonb_build_object('deleted', true, 'deleted_at', now())` + sets nome='Conta eliminada', email='deleted+<uuid>@v5casa.pt', primeiro_nome/apelidos/telemovel/nif/foto_url=NULL · marca `core.memberships.deleted_at = now()` · anonimiza `v5_manutencao.perfis_fiscais` · preserva `ordens_trabalho` (10 anos AT)
+- **Pattern soft-delete:** `core.pessoas` usa `metadata->>'deleted'`, NÃO coluna dedicada. `core.memberships` usa coluna `deleted_at`. Inconsistência aceite (pessoas é hot-path, memberships é metadata operacional).
+
+### Staff roles
+- Tabela `core.staff_roles`: `auth_user_id` (NÃO `pessoa_id`) · `role` (admin/support/operator) · `active` · `granted_by` · `revoked_at`
+- Helper `public.is_staff()`: SECURITY DEFINER · GRANT EXECUTE TO authenticated
+- RLS staff_roles: policy SELECT `auth_user_id = auth.uid()` (cada user vê os seus)
+- GRANT SELECT TO authenticated obrigatório (POLICY sem GRANT = 403)
+- StaffBanner componente: amarelo discreto fixed top · expansível · só renderiza se `isStaff===true`
+- AuthContext extended com `isStaff` + `staffRoles[]`
+- Gestão (INSERT/UPDATE/DELETE) reservada para Fase 4 backoffice via service_role
+
+### Refactor nome split
+- `core.pessoas` ganhou `primeiro_nome` + `apelidos` (mantém `nome` completo para fiscal)
+- Backfill de 70+ pessoas via split simples
+- `fn_complete_onboarding` actualizado para escrever os 3 campos
+- UI saudação usa `primeiro_nome` (fallback split de `nome`)
+- PerfilDrawer mostra display name + nome legal subtitle
+
+### SMTP Resend
+- Provider: Resend (`smtp.resend.com:465`) · domain `prataowners.pt` verificado
+- Sender: `info@prataowners.pt` (partilhado com V2 Condomínios — Fase 7 mudar para domínio dedicado)
+- API key `v5-dev-supabase` em Supabase Dashboard SMTP settings
+- Rate 30/h, min interval 60s
+
+### Bugs descobertos em smoke test G e fixados
+1. **App.jsx `categoria_id` vs `categoria`**: embed PostgREST de `catalogo_servicos` pedia coluna `categoria_id` (nome V1) mas tabela V5 usa `categoria` (string). Fix: `catalogo_servicos(nome, categoria)`.
+2. **staff_roles RLS sem GRANT**: policy SELECT correcta mas falta `GRANT SELECT ON core.staff_roles TO authenticated` → retorna null silencioso. Persistido em `sql/23_v5_3_4d_staff_roles.sql`.
+3. **fn_anonymize_account 42501**: SECURITY DEFINER sem GRANT EXECUTE a service_role. Persistido em `sql/24_v5_3_4d_rpc_guards.sql`.
+4. **fn_anonymize_account schema**: Edge Function chamava sem `db: { schema: 'core' }` → PostgREST procurava em public. Fix no `index.ts`.
+
+### SQL files 3.4D
+- `sql/22_*` — refactor nome split (primeiro_nome + apelidos)
+- `sql/23_*` — staff_roles + is_staff() + GRANT SELECT authenticated
+- `sql/24_*` — REVOKE anon fn_complete_onboarding · fn_anonymize_account · GRANT EXECUTE service_role · deleted_at em memberships
 
 ---
 
