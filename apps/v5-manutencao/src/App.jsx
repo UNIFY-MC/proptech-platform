@@ -49,6 +49,9 @@ import OrcamentoDetalheScreen from './screens/OrcamentoDetalheScreen.jsx'
 import PlanoHomeDetalheScreen from './screens/PlanoHomeDetalheScreen.jsx'
 import ServicosListaScreen from './screens/ServicosListaScreen.jsx'
 import EmergenciaScreen from './screens/EmergenciaScreen.jsx'
+import MissoesScreen from './screens/MissoesScreen.jsx'
+import PrestadoresEquipaScreen from './screens/PrestadoresEquipaScreen.jsx'
+import PoupancasDetalheScreen from './screens/PoupancasDetalheScreen.jsx'
 import AIExpertFabScreen from './screens/AIExpertFabScreen.jsx'
 import AdicionarCamaraScreen from './screens/AdicionarCamaraScreen.jsx'
 import AdicionarDocScreen from './screens/AdicionarDocScreen.jsx'
@@ -10798,6 +10801,7 @@ export default function App() {
     'orcamentos_landing','orcamento_wizard','orcamento_confirmado','imovel_detalhe',
     'orcamento_detalhe','plano_home_detalhe',
     'emergencia','ai_expert_fab','adicionar_camara','adicionar_doc','adicionar_energia',
+    'missoes_semana','prestadores_equipa','poupancas_detalhe',
   ].includes(ecra) || (role==='cliente' && catScreen !== null)
 
   return (
@@ -10967,7 +10971,10 @@ export default function App() {
           {ecra==='combo_detail'       && <ComboDetailScreen combo={selNav?.combo} onBack={()=>setEcra(selNav?.comboBackFrom || 'home')} onPedir={(cb)=>alert(`Combo "${cb.titulo || cb.nome}" adicionado!`)} onNavigateMoradas={()=>setEcra('moradas_screen')} onNavigateServico={(s)=>{ setSelNav(p=>({...p,servico:s,backFrom:'combo_detail'})); setEcra('servico_detail') }} />}
           {ecra==='plano_home_detalhe' && <PlanoHomeDetalheScreen onBack={()=>setEcra('home')} />}
           {ecra==='emergencia'         && <EmergenciaScreen onBack={()=>setEcra('home')} />}
-          {ecra==='ai_expert_fab'      && <AIExpertFabScreen onBack={()=>setEcra('home')} />}
+          {ecra==='missoes_semana'      && <MissoesScreen onBack={()=>setEcra('home')} onNavigateAction={(a)=>{ setEcra(a==='moradas'?'moradas_screen':a==='adicionar_energia'?'adicionar_energia':a==='adicionar_camara'?'adicionar_camara':'adicionar_doc') }} />}
+          {ecra==='prestadores_equipa' && <PrestadoresEquipaScreen onBack={()=>setEcra('home')} onNavigatePrestador={(p)=>{ setSelNav(v=>({...v,prestador:p})); setEcra('prestador_detail') }} />}
+          {ecra==='poupancas_detalhe'  && <PoupancasDetalheScreen onBack={()=>setEcra('home')} onNavigateCombo={(cb)=>{ setSelNav(v=>({...v,combo:cb,comboBackFrom:'home'})); setEcra('combo_detail') }} />}
+          {ecra==='ai_expert_fab'      && <AIExpertFabScreen onBack={()=>setEcra('home')} perguntaInicial={selNav?.aiExpertPergunta||null} />}
           {ecra==='adicionar_camara'   && <AdicionarCamaraScreen onBack={()=>setEcra('home')} />}
           {ecra==='adicionar_doc'      && <AdicionarDocScreen onBack={()=>setEcra('home')} />}
           {ecra==='adicionar_energia'  && <AdicionarEnergiaScreen onBack={()=>setEcra('home')} />}
@@ -11014,7 +11021,7 @@ export default function App() {
                 authUser={authUser}
               />
               {tab==='servicos' && <ServicosScreen authUser={authUser} onHamburguer={()=>setClienteDrawerOpen(true)} onAvatarClick={()=>setShowPerfilSheet(true)} notifCount={notifsNaoLidas} onNavigateNotificacoes={()=>setEcra('notificacoes')} onNavigateChatSuporte={()=>setEcra('chat_suporte')} onOpenImovelSelector={()=>setShowImovelSelector(true)} onNavigateOrcamentos={()=>setEcra('orcamentos_landing')} onNavigateReferral={()=>setEcra('referral')} onNavigateCategoria={(cat)=>{ setSelNav(p=>({...p,categoria:cat})); setEcra('categoria_detail') }} onNavigateCombo={(cb)=>{ setSelNav(p=>({...p,combo:cb,comboBackFrom:'home'})); setEcra('combo_detail') }} onNavigateServico={(s)=>{ setSelNav(p=>({...p,servico:s})); setEcra('servico_detail') }} onNavigatePacksLista={()=>setEcra('combos')} onNavigateMaisContratados={()=>{ setSelNav(p=>({...p,servicosListaFiltro:'populares',servicosListaTitulo:'Mais contratados'})); setEcra('servicos_lista') }} onNavigateOrcamentoPersonalizado={(desc)=>{ setSelNav(p=>({...p,wizardDescricao:desc,wizardSkipStep1:true,wizardCategoria:null,wizardBackTarget:'orcamentos_landing'})); setEcra('orcamento_wizard') }} onNavigatePlanoHome={()=>setEcra('plano_home_detalhe')} />}
-              {tab==='inicio'   && <IniciaScreen authUser={authUser} onNavigateCasa={()=>{ setTab('casa'); setEcra('home') }} onNavigateServicos={()=>setTab('servicos')} onHamburguer={()=>setClienteDrawerOpen(true)} onAvatarClick={()=>setShowPerfilSheet(true)} onNavigateScore={()=>setEcra('score_detail')} onNavigateAlerta={(a)=>{ setSelAlerta(a); setEcra('alerta_detail') }} onNavigateOwnersClub={()=>setEcra('owners_club')} notifCount={notifsNaoLidas} onNavigateNotificacoes={()=>setEcra('notificacoes')} onNavigateChatSuporte={()=>setEcra('chat_suporte')} onOpenImovelSelector={()=>setShowImovelSelector(true)} onNavigateImovelDetalhe={(id)=>{ setSelNav(p=>({...p,imovelDetalheId:id})); setEcra('imovel_detalhe') }} />}
+              {tab==='inicio'   && <IniciaScreen authUser={authUser} onNavigateCasa={()=>{ setTab('casa'); setEcra('home') }} onNavigateServicos={()=>setTab('servicos')} onHamburguer={()=>setClienteDrawerOpen(true)} onAvatarClick={()=>setShowPerfilSheet(true)} onNavigateScore={()=>setEcra('score_detail')} onNavigateAlerta={(a)=>{ setSelAlerta(a); setEcra('alerta_detail') }} onNavigateOwnersClub={()=>setEcra('owners_club')} notifCount={notifsNaoLidas} onNavigateNotificacoes={()=>setEcra('notificacoes')} onNavigateChatSuporte={()=>setEcra('chat_suporte')} onOpenImovelSelector={()=>setShowImovelSelector(true)} onNavigateImovelDetalhe={(id)=>{ setSelNav(p=>({...p,imovelDetalheId:id})); setEcra('imovel_detalhe') }} onNavigateServico={(s)=>{ setSelNav(p=>({...p,servico:s,backFrom:'home'})); setEcra('servico_detail') }} onNavigateServicosLista={()=>{ setSelNav(p=>({...p,servicosListaFiltro:'populares',servicosListaTitulo:'Mais contratados'})); setEcra('servicos_lista') }} onNavigateCombo={(cb)=>{ setSelNav(p=>({...p,combo:cb,comboBackFrom:'home'})); setEcra('combo_detail') }} onNavigateAIExpert={(params)=>{ setSelNav(p=>({...p,aiExpertPergunta:params?.perguntaInicial||null})); setEcra('ai_expert_fab') }} onNavigateMissoes={()=>setEcra('missoes_semana')} onNavigatePrestador={(pr)=>{ setSelNav(p=>({...p,prestador:pr})); setEcra('prestador_detail') }} onNavigateEquipa={()=>setEcra('prestadores_equipa')} onNavigatePoupancas={()=>setEcra('poupancas_detalhe')} />}
               {tab==='casa' && !casaActiveEq && !casaSub && <CasaScreen
                 equipamentos={casaEquipamentos}
                 authUser={authUser}

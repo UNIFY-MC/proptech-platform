@@ -327,7 +327,8 @@ Colunas novas em `ordens`:
 | **3.3.14-fix-ux7** | ✅ fechada | planos_subscricao + descontos_config BD · CombosScreen BD · ServicosListaScreen · desconto Home+ no CTA |
 | **3.3.14-fix-ux8** | ✅ fechada | Packs fonte única BD · nav back stack (router.js) · BottomNav universal · imagens pool+hash · combos imagem_url |
 | **3.3.14-fix-ux9** | ✅ fechada | FAB redesign (sem PEDIR) · FabSheet 5 secções · 5 novos ecrãs (Emergência, AIExpertFab, Câmara, Doc, Energia) |
-| **Sprint 3.3** | ✅ **FECHADA** | 8 fases · 9 fix-ux (ux1–ux9) · 199 serviços · 4 combos BD · subscrições · descontos |
+| **3.3.14-fix-ux10** | ✅ fechada | Home onClicks · serviços pop BD · equipa BD · missões · poupanças · AI Expert pergunta_inicial |
+| **Sprint 3.3** | ✅ **FECHADA** | 8 fases base + 10 fix-ux (ux1–ux10) · 199 serviços · 4 combos BD · subscrições · descontos |
 | **3.4A** | **próxima** | Auth real Supabase + onboarding (Fase 2d) |
 
 ### Notas para 3.3.12
@@ -448,9 +449,26 @@ Colunas novas em `ordens`:
 - **AdicionarEnergiaScreen**: grid 6 tipos de equipamento + campos nome/marca/ano; stub guardar
 - **App.jsx**: 5 imports novos; cliOver estendido (`emergencia`, `ai_expert_fab`, `adicionar_camara`, `adicionar_doc`, `adicionar_energia`); 5 render cases após `plano_home_detalhe`; FabPickerModal call site com 5 novos handlers
 
-## Débitos abertos pós Sprint 3.3
+## Notas para 3.3.14-fix-ux10
 
-- **Auth real (Fase 2d)**: botões demo passam a fazer `signInWithPassword`; substituir policies `pre_auth_*`; schema `cliente_moradas`
+- **IniciaScreen**: `SERVICOS_POP` e `EQUIPA` hardcoded removidos; 3 novas queries no `useEffect` load (servicos popular, prestadores_equipa_cliente, combos by slug); 8 novos props: `onNavigateServico`, `onNavigateServicosLista`, `onNavigateCombo`, `onNavigateAIExpert`, `onNavigateMissoes`, `onNavigatePrestador`, `onNavigateEquipa`, `onNavigatePoupancas`
+- **PROMOS**: cada card tem `actionKey` → `handlePromoAction()` — Reset Primavera/Pack Inverno navegam para combo_detail via BD; Urgência vai para alerta_detail
+- **Serviços populares**: BD `public.servicos` filtro `popular=true` + skeleton loading; cards → `onNavigateServico`; "Ver tudo →" → `servicos_lista` populares
+- **Poupanças**: toda a secção tem onClick → `poupancas_detalhe`
+- **Dica IA**: "Perguntar à IA" → `ai_expert_fab` com `perguntaInicial` pré-preenchida
+- **Equipa**: carregada de `prestadores_equipa_cliente JOIN prestadores`; cards → `prestador_detail`; "Ver todos →" → `prestadores_equipa`
+- **Missões**: cards e título → `missoes_semana`
+- **MissoesScreen**: 5 missões mock com redirect para acções relevantes; progress bar; TODO Fase 5
+- **PrestadoresEquipaScreen**: query BD + filtros Todos/Favoritos; cards → `prestador_detail`; PrestadorDetailScreen (já existia) reutilizado
+- **PoupancasDetalheScreen**: breakdown hardcoded (147€ serviços + 82€ energia = 229€); sugestões; TODO Fase 5 query real
+- **AIExpertFabScreen**: prop `perguntaInicial` — no mount faz `enviar(perguntaInicial)` automático via `iniciouRef`
+- **BD**: `prestadores` ganhou `bio`, `especialidades` jsonb, `verificado`, `ordem`; criada `prestadores_equipa_cliente`; seed Maria com AF(4), SM(8, fav), RG(2)
+- **App.jsx**: 3 imports novos, cliOver+3, 4 render cases novos, IniciaScreen props expandido, AIExpertFabScreen recebe `perguntaInicial`
+- **SQL**: `sql/13_v5_3_3_14_ux10_equipa.sql`
+
+## Débitos abertos pós Sprint 3.3 (para 3.4A+)
+
+- **Auth real (3.4A — próxima)**: botões demo passam a fazer `signInWithPassword`; substituir policies `pre_auth_*`; schema `cliente_moradas`
 - **Configurador opções dinâmicas por serviço** (3.5 IA)
 - **Stripe checkout subscrição** — CTA desactivado em PlanoHomeDetalheScreen (Fase 5)
 - **UI admin descontos** — gestão web de `descontos_config` e `planos_subscricao`

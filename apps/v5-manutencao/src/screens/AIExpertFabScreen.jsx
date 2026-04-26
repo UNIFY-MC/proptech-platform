@@ -34,13 +34,21 @@ function getMockResposta(texto) {
   return RESPOSTAS_MOCK.default
 }
 
-export default function AIExpertFabScreen({ onBack }) {
+export default function AIExpertFabScreen({ onBack, perguntaInicial }) {
   const [msgs, setMsgs] = useState([
     { de:'ai', t:'Olá! Sou o AI Expert da tua casa. Descreve o que está a acontecer e dou-te uma recomendação concreta.' }
   ])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const bottomRef = useRef(null)
+  const iniciouRef = useRef(false)
+
+  useEffect(() => {
+    if (perguntaInicial && !iniciouRef.current) {
+      iniciouRef.current = true
+      setTimeout(() => enviar(perguntaInicial), 300)
+    }
+  }, [perguntaInicial])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior:'smooth' })

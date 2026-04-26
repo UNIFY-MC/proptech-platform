@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { supa } from './supa.js'
+import { supa, supaPublic } from './supa.js'
 import { DEMO_PESSOA_ID, DEMO_ORGANIZATION_ID } from './lib/demo.js'
 import { useImovelAtivo } from './lib/ImovelAtivoContext.jsx'
 import { calcularCreditoMes } from './lib/subscription.js'
@@ -36,6 +36,7 @@ const PROMOS = [
     sub: 'Válido até 31 Maio · 8 serviços',
     bg: 'linear-gradient(135deg,#FCEBEB,#FDE4DC)',
     tagColor: V.coral, highlightColor: V.coral, btnBg: V.coral, deco: '🌸',
+    actionKey: 'reset-primavera',
   },
   {
     tag: '❄️ PACK INVERNO',
@@ -43,6 +44,7 @@ const PROMOS = [
     sub: 'Pack completo · economize 44€',
     bg: 'linear-gradient(135deg,#E6F1FB,#EEF5FD)',
     tagColor: '#185FA5', highlightColor: '#185FA5', btnBg: '#185FA5', deco: '❄️',
+    actionKey: 'pack-inverno',
   },
   {
     tag: '💧 URGÊNCIA HOJE',
@@ -50,22 +52,18 @@ const PROMOS = [
     sub: 'Disponível 24/7 · sem custo extra',
     bg: 'linear-gradient(135deg,#E0E8FA,#EDF1FC)',
     tagColor: V.purple, highlightColor: V.purple, btnBg: V.purple, deco: '💧',
+    actionKey: 'urgencia',
   },
 ]
 
-const SERVICOS_POP = [
-  { ic: '✨', cat: 'Limpeza',     nome: 'Limpeza manutenção apartamento', preco: '42€' },
-  { ic: '🔧', cat: 'Manutenção',  nome: 'Revisão anual caldeira',         preco: '75€' },
-  { ic: '💧', cat: 'Canalização', nome: 'Desentupimento',                 preco: '65€' },
-  { ic: '🖌️', cat: 'Pintura',     nome: 'Pintura sala 20m²',              preco: '180€' },
-  { ic: '🌿', cat: 'Jardim',      nome: 'Manutenção jardim mensal',       preco: '35€' },
-]
-
-const EQUIPA = [
-  { i: 'AF', n: 'António Ferreira', s: 'Canaliz · Elétrica', r: '4.9', v: 12 },
-  { i: 'RG', n: 'Ricardo Gomes',    s: 'Manut · Pintura',    r: '5.0', v: 8  },
-  { i: 'SM', n: 'Sandra Matos',     s: 'Limpeza · Obras',    r: '4.9', v: 15 },
-]
+const CATEG_EMOJI = {
+  limpeza:'✨', manutencao:'🔧', canalizacao:'💧', eletrica:'⚡',
+  pintura:'🖌️', jardim:'🌿', piscina:'🏊', pos_obra:'🏗️', packs:'🎁',
+}
+const CATEG_LABEL = {
+  limpeza:'Limpeza', manutencao:'Manutenção', canalizacao:'Canalização',
+  eletrica:'Elétrica', pintura:'Pintura', jardim:'Jardim', piscina:'Piscina',
+}
 
 function Skel({ h = 60, r = 12 }) {
   return <div style={{ height: h, borderRadius: r, background: 'rgba(27,67,50,0.08)', marginBottom: 6 }} />
@@ -100,12 +98,15 @@ function casaLabel(score) {
   return 'Casa em Risco 🚨'
 }
 
-export default function IniciaScreen({ authUser, onNavigateCasa, onNavigateServicos, onHamburguer, onAvatarClick, onNavigateScore, onNavigateAlerta, onNavigateOwnersClub, onNavigateNotificacoes, onNavigateChatSuporte, notifCount = 0, onOpenImovelSelector, onNavigateImovelDetalhe }) {
+export default function IniciaScreen({ authUser, onNavigateCasa, onNavigateServicos, onHamburguer, onAvatarClick, onNavigateScore, onNavigateAlerta, onNavigateOwnersClub, onNavigateNotificacoes, onNavigateChatSuporte, notifCount = 0, onOpenImovelSelector, onNavigateImovelDetalhe, onNavigateServico, onNavigateServicosLista, onNavigateCombo, onNavigateAIExpert, onNavigateMissoes, onNavigatePrestador, onNavigateEquipa, onNavigatePoupancas }) {
   const { imovelAtivo, imoveis } = useImovelAtivo()
   const [subscricao,  setSubscricao]  = useState(null)
   const [creditoMes,  setCreditoMes]  = useState(undefined)
   const [missoes,     setMissoes]     = useState(null)
   const [dataLoaded,  setDataLoaded]  = useState(false)
+  const [servicosPop, setServicosPop] = useState([])
+  const [equipa,      setEquipa]      = useState([])
+  const [combosDict,  setCombosDict]  = useState({})
 
   const hora = new Date().getHours()
   const saudacao = hora < 12 ? 'Bom dia' : hora < 19 ? 'Boa tarde' : 'Boa noite'
@@ -115,14 +116,26 @@ export default function IniciaScreen({ authUser, onNavigateCasa, onNavigateServi
     let active = true
     const now  = new Date()
     async function load() {
-      const [subRes, misRes] = await Promise.all([
+      const [subRes, misRes, servRes, equipaRes, combosRes] = await Promise.all([
         supa.from('subscricoes').select('*').eq('pessoa_id', DEMO_PESSOA_ID).eq('estado', 'ativo').maybeSingle(),
         supa.from('missoes_utilizador').select('*').eq('pessoa_id', DEMO_PESSOA_ID).eq('estado', 'aberta')
           .order('urgente', { ascending: false }).order('pontos', { ascending: false }).limit(2),
+        supaPublic.from('servicos').select('id,nome,preco_base,categoria_id,imagem_url,tagline')
+          .eq('activo', true).eq('popular', true).order('preco_base', { ascending: false }).limit(5),
+        supa.from('prestadores_equipa_cliente')
+          .select('num_servicos_partilhados, favorito, prestador:prestador_id(*)')
+          .eq('pessoa_id', DEMO_PESSOA_ID)
+          .order('num_servicos_partilhados', { ascending: false }).limit(4),
+        supa.from('combos').select('*').eq('ativo', true).in('slug', ['reset-primavera','pack-inverno']),
       ])
       if (!active) return
       setSubscricao(subRes.data || null)
       setMissoes(misRes.data || [])
+      setServicosPop(servRes.data || [])
+      setEquipa(equipaRes.data?.map(e => ({ ...e.prestador, num_servicos_partilhados: e.num_servicos_partilhados, favorito: e.favorito })) || [])
+      const cd = {}
+      combosRes.data?.forEach(c => { cd[c.slug] = c })
+      setCombosDict(cd)
       setDataLoaded(true)
       const cm = await calcularCreditoMes(DEMO_PESSOA_ID, now.getFullYear(), now.getMonth() + 1)
       if (active) setCreditoMes(cm)
@@ -144,6 +157,28 @@ export default function IniciaScreen({ authUser, onNavigateCasa, onNavigateServi
   const nLocs       = imoveis.length
 
   const locationLbl = loc ? (moradaCurta(loc) || loc.nome) : 'A MINHA CASA'
+
+  function adaptComboSimple(c) {
+    if (!c) return null
+    const p = parseFloat(c.preco_combo), o = parseFloat(c.preco_normal)
+    return {
+      id:c.id, titulo:c.nome, sub:c.sub, emoji:c.emoji||'🏠',
+      preco:`€${p.toFixed(0)}`, precoOrig:`€${o.toFixed(0)}`, precoOriginal:`€${o.toFixed(0)}`,
+      desc:c.desconto_pct||Math.round((1-p/o)*100), desconto:c.desconto_pct||Math.round((1-p/o)*100),
+      bg:c.cor_hex||'#E6F1FB', cor_texto:c.cor_texto||'#1B4332',
+      poupanca:`${(o-p).toFixed(0)}€`, descricao:c.descricao_longa,
+      imagem_url:c.imagem_url||null, _raw:c,
+    }
+  }
+
+  function handlePromoAction(actionKey) {
+    if (actionKey === 'urgencia') {
+      onNavigateAlerta?.({ ic:'💧', titulo:'Canalização urgente hoje', descricao:'Técnico disponível em 2h · sem custo de deslocação extra', local:'' })
+    } else {
+      const raw = combosDict[actionKey]
+      if (raw) onNavigateCombo?.(adaptComboSimple(raw))
+    }
+  }
 
   function handleLocationClick() {
     if (nLocs > 1) { onOpenImovelSelector?.(); return }
@@ -299,7 +334,7 @@ export default function IniciaScreen({ authUser, onNavigateCasa, onNavigateServi
           overflowX: 'auto', WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none',
         }}>
           {PROMOS.map((promo, i) => (
-            <div key={i} style={{
+            <div key={i} onClick={() => handlePromoAction(promo.actionKey)} style={{
               minWidth: '85%', borderRadius: 14, padding: '12px 14px',
               background: promo.bg, cursor: 'pointer', flexShrink: 0,
               position: 'relative', overflow: 'hidden',
@@ -316,7 +351,7 @@ export default function IniciaScreen({ authUser, onNavigateCasa, onNavigateServi
                 {promo.titleAfter}
               </div>
               <div style={{ fontSize: 11, color: V.slate, marginTop: 3 }}>{promo.sub}</div>
-              <button style={{
+              <button onClick={e => { e.stopPropagation(); handlePromoAction(promo.actionKey) }} style={{
                 background: promo.btnBg, color: '#fff', padding: '7px 13px',
                 borderRadius: 9, fontSize: 11, fontWeight: 700, border: 'none', cursor: 'pointer', marginTop: 10,
               }}>Explorar →</button>
@@ -327,7 +362,7 @@ export default function IniciaScreen({ authUser, onNavigateCasa, onNavigateServi
         {/* 🛠 Serviços populares */}
         <div style={{ padding: '16px 14px 8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ fontSize: 15, fontWeight: 700, color: V.ink, fontFamily: 'Georgia,serif' }}>🛠 Serviços populares</div>
-          <button onClick={onNavigateServicos} style={{ fontSize: 11, color: V.greenLt, fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer' }}>
+          <button onClick={() => onNavigateServicosLista?.()} style={{ fontSize: 11, color: V.greenLt, fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer' }}>
             Ver tudo →
           </button>
         </div>
@@ -336,29 +371,38 @@ export default function IniciaScreen({ authUser, onNavigateCasa, onNavigateServi
           display: 'flex', gap: 10,
           overflowX: 'auto', WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none',
         }}>
-          {SERVICOS_POP.map((s, i) => (
-            <div key={i} onClick={onNavigateServicos} style={{
-              minWidth: 145, padding: '11px 12px',
-              background: V.white, border: `1px solid ${V.border}`,
-              borderRadius: 12, cursor: 'pointer', flexShrink: 0,
-            }}>
-              <div style={{ fontSize: 28 }}>{s.ic}</div>
-              <div style={{ fontSize: 9, color: V.slate, textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 6 }}>
-                {s.cat}
+          {servicosPop.length === 0
+            ? [0,1,2,3,4].map(i => (
+                <div key={i} style={{ minWidth:145, padding:'11px 12px', background:V.white, border:`1px solid ${V.border}`, borderRadius:12, flexShrink:0 }}>
+                  <Skel h={70} r={8} />
+                </div>
+              ))
+            : servicosPop.map(s => (
+              <div key={s.id} onClick={() => onNavigateServico?.(s)} style={{
+                minWidth: 145, padding: '11px 12px',
+                background: V.white, border: `1px solid ${V.border}`,
+                borderRadius: 12, cursor: 'pointer', flexShrink: 0,
+              }}>
+                <div style={{ fontSize: 28 }}>{CATEG_EMOJI[s.categoria_id] || '🛠️'}</div>
+                <div style={{ fontSize: 9, color: V.slate, textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 6 }}>
+                  {CATEG_LABEL[s.categoria_id] || s.categoria_id || '—'}
+                </div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: V.ink, lineHeight: 1.3, marginTop: 2 }}>{s.nome}</div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: V.green, marginTop: 6 }}>
+                  {s.preco_base ? `€${Number(s.preco_base).toFixed(0)}` : '—'}
+                </div>
+                <div style={{ fontSize: 9, color: V.greenLt, marginTop: 2 }}>ver detalhes →</div>
               </div>
-              <div style={{ fontSize: 12, fontWeight: 700, color: V.ink, lineHeight: 1.3, marginTop: 2 }}>{s.nome}</div>
-              <div style={{ fontSize: 15, fontWeight: 700, color: V.green, marginTop: 6 }}>{s.preco}</div>
-              <div style={{ fontSize: 9, color: V.greenLt, marginTop: 2 }}>ver detalhes →</div>
-            </div>
-          ))}
+            ))
+          }
         </div>
 
         {/* 💰 Poupanças este ano */}
-        <div style={{ padding: '16px 14px 6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div onClick={() => onNavigatePoupancas?.()} style={{ padding: '16px 14px 6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor:'pointer' }}>
           <div style={{ fontSize: 16, fontWeight: 700, color: V.ink, fontFamily: 'Georgia,serif' }}>💰 Poupanças este ano</div>
-          <span style={{ fontSize: 11, color: V.greenLt, fontWeight: 700, cursor: 'pointer' }}>Detalhe →</span>
+          <span style={{ fontSize: 11, color: V.greenLt, fontWeight: 700 }}>Detalhe →</span>
         </div>
-        <div style={{ margin: '0 14px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+        <div onClick={() => onNavigatePoupancas?.()} style={{ margin: '0 14px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, cursor:'pointer' }}>
           <div style={{ background: V.greenXl, border: `1px solid ${V.greenLt}`, borderRadius: 12, padding: '10px 12px' }}>
             <div style={{ fontSize: 10, color: V.greenMid || '#2D6A4F', fontWeight: 600 }}>Serviços</div>
             <div style={{ fontSize: 19, fontWeight: 700, color: V.green, marginTop: 2 }}>147€</div>
@@ -415,43 +459,48 @@ export default function IniciaScreen({ authUser, onNavigateCasa, onNavigateServi
               <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
                 <span style={{ fontSize: 11, color: V.amber, fontWeight: 700, cursor: 'pointer' }}>Ler mais →</span>
                 <span style={{ fontSize: 11, color: V.slate }}>·</span>
-                <span style={{ fontSize: 11, color: V.amber, fontWeight: 700, cursor: 'pointer' }}>💬 Perguntar à IA</span>
+                <span onClick={() => onNavigateAIExpert?.({ perguntaInicial:'Como posso reduzir a fatura do AC este verão?' })} style={{ fontSize: 11, color: V.amber, fontWeight: 700, cursor: 'pointer' }}>💬 Perguntar à IA</span>
               </div>
             </div>
           </div>
         </div>
 
-        {/* 👷 A sua equipa */}
+        {/* 👷 A minha equipa */}
         <div style={{ padding: '16px 14px 6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div style={{ fontSize: 16, fontWeight: 700, color: V.ink, fontFamily: 'Georgia,serif' }}>A sua equipa</div>
-          <span style={{ fontSize: 11, color: V.greenLt, fontWeight: 700, cursor: 'pointer' }}>Ver todos →</span>
+          <div style={{ fontSize: 16, fontWeight: 700, color: V.ink, fontFamily: 'Georgia,serif' }}>👥 A minha equipa</div>
+          <span onClick={() => onNavigateEquipa?.()} style={{ fontSize: 11, color: V.greenLt, fontWeight: 700, cursor: 'pointer' }}>Ver todos →</span>
         </div>
         <div style={{ padding: '0 14px 4px', display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
-          {EQUIPA.map(({ i, n, s, r, v }) => (
-            <div key={n} style={{
-              background: V.white, border: `1px solid ${V.border}`,
-              borderRadius: 12, padding: '11px 6px', textAlign: 'center',
-              cursor: 'pointer', position: 'relative',
-            }}>
-              {v === 15 && (
-                <div style={{ position: 'absolute', top: 6, right: 6, fontSize: 9, background: V.greenLt, color: '#fff', padding: '1px 6px', borderRadius: 6, fontWeight: 700 }}>🏆</div>
-              )}
-              <div style={{ width: 38, height: 38, borderRadius: '50%', background: V.greenLt, color: '#fff', fontWeight: 700, fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 6px' }}>{i}</div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: V.ink }}>{n.split(' ')[0]}</div>
-              <div style={{ fontSize: 9, color: V.slate, margin: '2px 0 3px' }}>{s}</div>
-              <div style={{ fontSize: 11, color: '#F59E0B' }}>{'★'.repeat(5)}</div>
-              <div style={{ fontSize: 9, color: V.slate, marginTop: 2 }}>{r} · {v} visitas</div>
-            </div>
-          ))}
+          {equipa.length === 0
+            ? [0,1,2].map(i => <div key={i} style={{ borderRadius:12 }}><Skel h={110} r={12}/></div>)
+            : equipa.slice(0,3).map(p => (
+              <div key={p.id} onClick={() => onNavigatePrestador?.(p)} style={{
+                background: V.white, border: `1px solid ${V.border}`,
+                borderRadius: 12, padding: '11px 6px', textAlign: 'center',
+                cursor: 'pointer', position: 'relative',
+              }}>
+                {p.favorito && (
+                  <div style={{ position: 'absolute', top: 6, right: 6, fontSize: 13 }}>⭐</div>
+                )}
+                <div style={{ width: 38, height: 38, borderRadius: '50%', background: V.greenLt, color: '#fff', fontWeight: 700, fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 6px' }}>{p.iniciais}</div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: V.ink }}>{p.nome?.split(' ')[0]}</div>
+                <div style={{ fontSize: 9, color: V.slate, margin: '2px 0 3px' }}>
+                  {(p.categorias || []).slice(0,2).join(' · ')}
+                </div>
+                <div style={{ fontSize: 10, color: '#F59E0B' }}>★ {Number(p.rating_medio||0).toFixed(1)}</div>
+                <div style={{ fontSize: 9, color: V.slate, marginTop: 2 }}>{p.num_servicos_partilhados}x contigo</div>
+              </div>
+            ))
+          }
         </div>
 
         {/* 🎯 Missões da semana (max 2, compacto) */}
         <div style={{ padding: '16px 14px 6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div style={{ fontSize: 16, fontWeight: 700, color: V.ink, fontFamily: 'Georgia,serif' }}>Missões da semana</div>
+          <div onClick={() => onNavigateMissoes?.()} style={{ fontSize: 16, fontWeight: 700, color: V.ink, fontFamily: 'Georgia,serif', cursor:'pointer' }}>Missões da semana</div>
           {missoes && missoes.length > 0 && (
-            <div style={{ fontSize: 11, color: V.greenLt, fontWeight: 700 }}>
+            <span onClick={() => onNavigateMissoes?.()} style={{ fontSize: 11, color: V.greenLt, fontWeight: 700, cursor:'pointer' }}>
               +{missoes.reduce((s, m) => s + (m.pontos || 0), 0)} pts disp.
-            </div>
+            </span>
           )}
         </div>
         <div style={{ padding: '0 14px' }}>
@@ -465,7 +514,7 @@ export default function IniciaScreen({ authUser, onNavigateCasa, onNavigateServi
               { ic: '🌧️', titulo: 'Verificar caleiras', sub: 'Antes da chuva · +200 pts', pts: 200, urg: true },
               { ic: '🔥', titulo: 'Revisão anual caldeira', sub: 'Há 5 meses em atraso · +250 pts', pts: 250, urg: false },
             ].map((m, i) => (
-              <div key={i} style={{
+              <div key={i} onClick={() => onNavigateMissoes?.()} style={{
                 background: V.white, border: `1px solid ${V.border}`,
                 borderRadius: 12, padding: '10px 12px', marginBottom: 7,
                 display: 'flex', gap: 10, alignItems: 'center', cursor: 'pointer',
@@ -482,7 +531,7 @@ export default function IniciaScreen({ authUser, onNavigateCasa, onNavigateServi
               </div>
             ))
           ) : missoes.map((m) => (
-            <div key={m.id} style={{
+            <div key={m.id} onClick={() => onNavigateMissoes?.()} style={{
               background: V.white, border: `1px solid ${V.border}`,
               borderRadius: 12, padding: '10px 12px', marginBottom: 7,
               display: 'flex', gap: 10, alignItems: 'center', cursor: 'pointer',
