@@ -25,6 +25,8 @@ export function AuthProvider({ children }) {
   const [pessoa,      setPessoa]      = useState(null)
   const [memberships, setMemberships] = useState([])
   const [loading,     setLoading]     = useState(true)
+  const [isStaff,     setIsStaff]     = useState(false)
+  const [staffRoles,  setStaffRoles]  = useState([])
 
   useEffect(() => {
     supa.auth.getSession().then(async ({ data: { session } }) => {
@@ -45,6 +47,8 @@ export function AuthProvider({ children }) {
         if (event === 'SIGNED_OUT') {
           setPessoa(null)
           setMemberships([])
+          setIsStaff(false)
+          setStaffRoles([])
           setLoading(false)
           return
         }
@@ -75,11 +79,27 @@ export function AuthProvider({ children }) {
     setPessoa(p)
 
     if (p) {
-      await loadMemberships(p.id)
+      await Promise.all([
+        loadMemberships(p.id),
+        loadStaffRoles(authUserId),
+      ])
     } else {
       setMemberships([])
+      setIsStaff(false)
+      setStaffRoles([])
     }
     setLoading(false)
+  }
+
+  async function loadStaffRoles(authUserId) {
+    const { data } = await supaCore
+      .from('staff_roles')
+      .select('role')
+      .eq('auth_user_id', authUserId)
+      .eq('active', true)
+    const roles = data?.map(r => r.role) ?? []
+    setStaffRoles(roles)
+    setIsStaff(roles.length > 0)
   }
 
   async function loadMemberships(pessoaId) {
@@ -97,6 +117,8 @@ export function AuthProvider({ children }) {
     // syncSupaCore é chamado via onAuthStateChange SIGNED_OUT
     setPessoa(null)
     setMemberships([])
+    setIsStaff(false)
+    setStaffRoles([])
     setSession(null)
   }
 
@@ -116,6 +138,8 @@ export function AuthProvider({ children }) {
       authenticated:   !!session,
       loading,
       needsOnboarding,
+      isStaff,
+      staffRoles,
       signOut,
       refreshPessoa,
     }}>

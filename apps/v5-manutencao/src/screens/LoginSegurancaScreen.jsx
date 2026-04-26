@@ -328,7 +328,7 @@ function DeleteAccountModal({ onClose }) {
             'Authorization': `Bearer ${session?.access_token ?? ''}`,
             'apikey': SUPABASE_ANON_KEY,
           },
-          body: JSON.stringify({ password_confirmation: password }),
+          body: JSON.stringify({ password }),
         }
       )
       const json = await res.json()

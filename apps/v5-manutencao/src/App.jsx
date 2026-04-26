@@ -66,6 +66,7 @@ import AdicionarCamaraScreen from './screens/AdicionarCamaraScreen.jsx'
 import AdicionarDocScreen from './screens/AdicionarDocScreen.jsx'
 import AdicionarEnergiaScreen from './screens/AdicionarEnergiaScreen.jsx'
 import OnboardingWizardScreen from './screens/OnboardingWizardScreen.jsx'
+import StaffBanner from './components/StaffBanner.jsx'
 import {
   ArrowLeft, X, Check, Camera, Clock, Plus, MapPin, ChevronRight,
   Shield, Lock, MessageSquare, FileImage, RefreshCw, Wrench,
@@ -10470,7 +10471,7 @@ export default function App() {
   const [role,      setRole]      = useState('prestador')
 
   // 3.4A/B: AuthContext (sessão real Supabase)
-  const { session, pessoa, pessoa_id: authPessoaId, authenticated, loading: authLoading, needsOnboarding, signOut: authSignOut, refreshPessoa } = useAuth()
+  const { session, pessoa, pessoa_id: authPessoaId, authenticated, loading: authLoading, needsOnboarding, isStaff, signOut: authSignOut, refreshPessoa } = useAuth()
   const sessionSetRef = useRef(null)
 
   // Bridge: session real → authUser (para LoginScreen). Demo logins mantêm onAuth directo.
@@ -10978,6 +10979,9 @@ export default function App() {
 
       {/* ── APP MOBILE (container 430px) ── */}
       {role!=='admin' && <div style={{ maxWidth:430, margin:'0 auto', minHeight:'100vh', background:'#f8fafc', position:'relative', boxShadow:'0 0 80px rgba(0,0,0,0.5)' }}>
+
+        {/* Staff banner — visível apenas para utilizadores com core.staff_roles activo */}
+        {isStaff && <StaffBanner />}
 
         {/* RoleBar removido — Sair e configurações em PerfilSheet/PerfilDrawer */}
 
