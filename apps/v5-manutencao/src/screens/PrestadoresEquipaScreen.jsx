@@ -26,7 +26,8 @@ export default function PrestadoresEquipaScreen({ onBack, onNavigatePrestador })
       .select('num_servicos_partilhados, favorito, ultima_interaccao, prestador:prestador_id(*)')
       .eq('pessoa_id', DEMO_PESSOA_ID)
       .order('num_servicos_partilhados', { ascending: false })
-      .then(({ data }) => {
+      .then(({ data, error }) => {
+        if (error) console.warn('[PrestadoresEquipa] query error:', error.message)
         setEquipa(data?.map(e => ({
           ...e.prestador,
           num_servicos_partilhados: e.num_servicos_partilhados,
@@ -34,6 +35,7 @@ export default function PrestadoresEquipaScreen({ onBack, onNavigatePrestador })
           ultima_interaccao: e.ultima_interaccao,
         })) || [])
       })
+      .catch(e => { console.warn('[PrestadoresEquipa] fetch failed:', e); setEquipa([]) })
   }, [])
 
   const lista = equipa === null ? [] : equipa.filter(p => {

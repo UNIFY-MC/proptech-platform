@@ -10412,6 +10412,10 @@ export default function App() {
     return () => { active = false }
   }, [])
 
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
+  }, [ecra])
+
   // 3.3.9: imovelAtivoId e imovelAtivo vêm do ImovelAtivoContext (fonte única canónica)
   const { imovelAtivoId, imovelAtivo, onTabChange } = useImovelAtivo()
   const { perfis: perfisFiscais }       = usePerfisFiscais()

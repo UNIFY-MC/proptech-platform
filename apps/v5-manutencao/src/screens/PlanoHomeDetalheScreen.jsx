@@ -37,7 +37,12 @@ export default function PlanoHomeDetalheScreen({ onBack }) {
       .eq('pessoa_id', DEMO_PESSOA_ID)
       .eq('estado', 'ativo')
       .maybeSingle()
-      .then(({ data }) => { setSubscricao(data); setLoadingSubs(false) })
+      .then(({ data, error }) => {
+        if (error) console.warn('[PlanoHome] query error:', error.message)
+        setSubscricao(data || null)
+        setLoadingSubs(false)
+      })
+      .catch(e => { console.warn('[PlanoHome] fetch failed:', e); setLoadingSubs(false) })
   }, [])
 
   const isMembro = subscricao?.plano === 'home_plus'

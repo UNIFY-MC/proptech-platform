@@ -328,7 +328,9 @@ Colunas novas em `ordens`:
 | **3.3.14-fix-ux8** | ✅ fechada | Packs fonte única BD · nav back stack (router.js) · BottomNav universal · imagens pool+hash · combos imagem_url |
 | **3.3.14-fix-ux9** | ✅ fechada | FAB redesign (sem PEDIR) · FabSheet 5 secções · 5 novos ecrãs (Emergência, AIExpertFab, Câmara, Doc, Energia) |
 | **3.3.14-fix-ux10** | ✅ fechada | Home onClicks · serviços pop BD · equipa BD · missões · poupanças · AI Expert pergunta_inicial |
-| **Sprint 3.3** | ✅ **FECHADA** | 8 fases base + 10 fix-ux (ux1–ux10) · 199 serviços · 4 combos BD · subscrições · descontos |
+| **3.3.14-fix-ux11** | ✅ fechada | Serviços populares HomeScreen · preco_base→preco · useState null robustness |
+| **3.3.14-fix-ux12** | ✅ fechada | Scroll-to-top universal · ServicosListaScreen error handling · 3 screens catch |
+| **Sprint 3.3** | ✅ **FECHADA** | 8 fases base + 12 fix-ux (ux1–ux12) · 199 serviços · 4 combos BD · subscrições · descontos |
 | **3.4A** | **próxima** | Auth real Supabase + onboarding (Fase 2d) |
 
 ### Notas para 3.3.12

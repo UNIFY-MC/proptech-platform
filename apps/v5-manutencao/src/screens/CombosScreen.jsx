@@ -34,7 +34,11 @@ export default function CombosScreen({ onBack, onNavigateCombo }) {
 
   useEffect(() => {
     supa.from('combos').select('*').eq('ativo', true).order('ordem')
-      .then(({ data }) => { if (data?.length) setCombos(data.map(adaptCombo)) })
+      .then(({ data, error }) => {
+        if (error) { console.warn('[Combos] query error:', error.message); return }
+        if (data?.length) setCombos(data.map(adaptCombo))
+      })
+      .catch(e => console.warn('[Combos] fetch failed:', e))
   }, [])
 
   return (
