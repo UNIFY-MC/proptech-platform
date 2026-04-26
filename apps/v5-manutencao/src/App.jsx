@@ -7270,7 +7270,7 @@ function AdminSidebar({active,set,onLogout}){
       <div style={{padding:'12px 12px 18px',borderTop:'1px solid rgba(255,255,255,0.07)'}}>
         <div style={{display:'flex',alignItems:'center',gap:9,marginBottom:10,padding:'8px 10px',borderRadius:9,background:'rgba(255,255,255,0.04)'}}>
           <div style={{width:32,height:32,borderRadius:'50%',background:A.accent,display:'flex',alignItems:'center',justifyContent:'center',fontSize:14,color:'#fff',fontWeight:800,flexShrink:0}}>A</div>
-          <div><div style={{color:'#fff',fontSize:12,fontWeight:700}}>Administrador</div><div style={{color:A.muted,fontSize:10}}>admin@servicopro.pt</div></div>
+          <div><div style={{color:'#fff',fontSize:12,fontWeight:700}}>Administrador</div><div style={{color:A.muted,fontSize:10}}>{BRAND.supportEmail}</div></div>
         </div>
         <button onClick={onLogout} style={{width:'100%',padding:'8px 12px',border:'none',borderRadius:8,background:'rgba(239,68,68,0.1)',color:'#fca5a5',fontSize:12,fontWeight:600,cursor:'pointer',textAlign:'left',fontFamily:'inherit'}}>🚪 Terminar sessão</button>
       </div>
@@ -8034,7 +8034,7 @@ function AdminPagamentos({prest}){
 
 // ══ AdminConfig ════════════════════════
 function AdminConfig(){
-  const [f,setF]=useState({empresa:'V5 Manutenção',nif:'502 000 000',email:'admin@servicopro.pt',tel:'+351 262 000 000',morada:'Caldas da Rainha, 2500',iban:'PT50 0035 0000 0000 0000 0000 0',swan:'https://api.servicopro.pt/swan/webhook',supabaseUrl:'https://hkmvszkpxjbxmnixzqbl.supabase.co',fotos:'2',prazo:'24',comissao:'22'})
+  const [f,setF]=useState({empresa:BRAND.companyName,nif:'502 000 000',email:BRAND.supportEmail,tel:'+351 262 000 000',morada:'Caldas da Rainha, 2500',iban:'PT50 0035 0000 0000 0000 0000 0',swan:`https://api.${BRAND.domain}/swan/webhook`,supabaseUrl:'https://hkmvszkpxjbxmnixzqbl.supabase.co',fotos:'2',prazo:'24',comissao:'22'})
   const [saved,setSaved]=useState(false), [saving,setSaving]=useState(false)
   const upd=(k,v)=>{setF(x=>({...x,[k]:v}));setSaved(false)}
   const saveAll=async()=>{setSaving(true);await new Promise(r=>setTimeout(r,600));setSaved(true);setSaving(false)}
