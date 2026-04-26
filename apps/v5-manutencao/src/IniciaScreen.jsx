@@ -104,8 +104,8 @@ export default function IniciaScreen({ authUser, onNavigateCasa, onNavigateServi
   const [creditoMes,  setCreditoMes]  = useState(undefined)
   const [missoes,     setMissoes]     = useState(null)
   const [dataLoaded,  setDataLoaded]  = useState(false)
-  const [servicosPop, setServicosPop] = useState([])
-  const [equipa,      setEquipa]      = useState([])
+  const [servicosPop, setServicosPop] = useState(null)
+  const [equipa,      setEquipa]      = useState(null)
   const [combosDict,  setCombosDict]  = useState({})
 
   const hora = new Date().getHours()
@@ -120,8 +120,8 @@ export default function IniciaScreen({ authUser, onNavigateCasa, onNavigateServi
         supa.from('subscricoes').select('*').eq('pessoa_id', DEMO_PESSOA_ID).eq('estado', 'ativo').maybeSingle(),
         supa.from('missoes_utilizador').select('*').eq('pessoa_id', DEMO_PESSOA_ID).eq('estado', 'aberta')
           .order('urgente', { ascending: false }).order('pontos', { ascending: false }).limit(2),
-        supaPublic.from('servicos').select('id,nome,preco_base,categoria_id,imagem_url,tagline')
-          .eq('activo', true).eq('popular', true).order('preco_base', { ascending: false }).limit(5),
+        supaPublic.from('servicos').select('id,nome,preco,categoria_id,imagem_url,tagline')
+          .eq('activo', true).eq('popular', true).order('preco', { ascending: false }).limit(5),
         supa.from('prestadores_equipa_cliente')
           .select('num_servicos_partilhados, favorito, prestador:prestador_id(*)')
           .eq('pessoa_id', DEMO_PESSOA_ID)
@@ -371,12 +371,18 @@ export default function IniciaScreen({ authUser, onNavigateCasa, onNavigateServi
           display: 'flex', gap: 10,
           overflowX: 'auto', WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none',
         }}>
-          {servicosPop.length === 0
+          {servicosPop === null
             ? [0,1,2,3,4].map(i => (
                 <div key={i} style={{ minWidth:145, padding:'11px 12px', background:V.white, border:`1px solid ${V.border}`, borderRadius:12, flexShrink:0 }}>
                   <Skel h={70} r={8} />
                 </div>
               ))
+            : servicosPop.length === 0
+            ? (
+                <div style={{ padding:'20px 14px', fontSize:12, color:V.slate }}>
+                  Serviços populares indisponíveis de momento.
+                </div>
+              )
             : servicosPop.map(s => (
               <div key={s.id} onClick={() => onNavigateServico?.(s)} style={{
                 minWidth: 145, padding: '11px 12px',
@@ -389,7 +395,7 @@ export default function IniciaScreen({ authUser, onNavigateCasa, onNavigateServi
                 </div>
                 <div style={{ fontSize: 12, fontWeight: 700, color: V.ink, lineHeight: 1.3, marginTop: 2 }}>{s.nome}</div>
                 <div style={{ fontSize: 15, fontWeight: 700, color: V.green, marginTop: 6 }}>
-                  {s.preco_base ? `€${Number(s.preco_base).toFixed(0)}` : '—'}
+                  {s.preco ? `€${Number(s.preco).toFixed(0)}` : '—'}
                 </div>
                 <div style={{ fontSize: 9, color: V.greenLt, marginTop: 2 }}>ver detalhes →</div>
               </div>
@@ -471,8 +477,10 @@ export default function IniciaScreen({ authUser, onNavigateCasa, onNavigateServi
           <span onClick={() => onNavigateEquipa?.()} style={{ fontSize: 11, color: V.greenLt, fontWeight: 700, cursor: 'pointer' }}>Ver todos →</span>
         </div>
         <div style={{ padding: '0 14px 4px', display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
-          {equipa.length === 0
+          {equipa === null
             ? [0,1,2].map(i => <div key={i} style={{ borderRadius:12 }}><Skel h={110} r={12}/></div>)
+            : equipa.length === 0
+            ? <div style={{ gridColumn:'1/-1', fontSize:12, color:V.slate, padding:'8px 0' }}>Ainda sem equipa formada.</div>
             : equipa.slice(0,3).map(p => (
               <div key={p.id} onClick={() => onNavigatePrestador?.(p)} style={{
                 background: V.white, border: `1px solid ${V.border}`,
