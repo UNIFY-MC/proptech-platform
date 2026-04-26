@@ -200,6 +200,45 @@ Quando adicionas embed `tabela:nome_real(col1, col2)`, **abre o schema da tabela
 
 Não fazer copy-paste de embeds entre schemas diferentes. Se a query falha com 400, lê o campo `hint` na resposta PostgREST — indica a coluna correcta. Bug encontrado em 3.4D smoke test G (`App.jsx:10523`).
 
+- **SECURITY DEFINER sem GRANT EXECUTE = erro 42501 silencioso (lição 3.4D)**:
+
+Para qualquer função `SECURITY DEFINER`, declarar explicitamente quem pode executar:
+
+```sql
+CREATE OR REPLACE FUNCTION schema.fn_x(...) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER AS $$ ... $$;
+
+-- OBRIGATÓRIO depois do CREATE:
+GRANT EXECUTE ON FUNCTION schema.fn_x(...) TO <role_específico>;
+REVOKE EXECUTE ON FUNCTION schema.fn_x(...) FROM PUBLIC;
+```
+
+Roles típicos: Edge Function via service_role key → `TO service_role`; RPC frontend → `TO authenticated`; Admin → `TO postgres`.
+Sintoma: `code: "42501", message: "permission denied for function X"`. Bug encontrado em 3.4D smoke test G T4 (`core.fn_anonymize_account`).
+
+- **`core.pessoas` usa `metadata` JSONB para soft-delete GDPR (não coluna `deleted_at`)**:
+
+```sql
+UPDATE core.pessoas SET
+  metadata = jsonb_build_object('deleted', true, 'deleted_at', now()::text),
+  nome = 'Conta eliminada', email = 'deleted+<uuid>@v5casa.pt',
+  primeiro_nome = NULL, apelidos = NULL, telemovel = NULL, nif = NULL
+WHERE id = <pessoa_id>;
+
+-- Filtrar activas:
+WHERE COALESCE(metadata->>'deleted', 'false') != 'true'
+```
+
+Inconsistência conhecida e aceite: `core.memberships` usa coluna `deleted_at` dedicada; `core.pessoas` usa metadata. ADR a alinhar em Fase 7+.
+
+- **Naming consistency — colunas diferem entre schemas, não copiar (lição 3.4D)**:
+
+| Conceito | `core.pessoas` | `public.servicos` | `v5_manutencao.catalogo_servicos` |
+|---|---|---|---|
+| Telefone | `telemovel` | n/a | n/a |
+| Categoria | n/a | `categoria_id` (FK int) | `categoria` (string) |
+| Soft-delete | `metadata->>'deleted'` | n/a | n/a |
+| Soft-delete memberships | `deleted_at` (coluna) | n/a | n/a |
+
 ---
 
 ## Modelo de identidade e papéis (V5)
