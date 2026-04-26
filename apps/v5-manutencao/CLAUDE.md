@@ -190,6 +190,15 @@ RLS sem GRANT = PostgREST devolve `data: null` silenciosamente (sem erro visíve
 Como ter fechadura sem maçaneta — ninguém entra mesmo com a chave certa.
 Efeito prático: queries JS devolvem `null`, estados ficam em `[]`/`false`, sem alerta.
 **Verificar sempre:** `GRANT` antes de `CREATE POLICY`, em todos os schemas (`core`, `v5_manutencao`, `public`).
+Diagnóstico rápido: `SELECT grantee, privilege_type FROM information_schema.role_table_grants WHERE table_schema='X' AND table_name='Y';`
+
+- **Embeds PostgREST são literais às colunas reais (lição 3.4D)**:
+
+Quando adicionas embed `tabela:nome_real(col1, col2)`, **abre o schema da tabela embedded primeiro**. Nunca infiras nomes de colunas pelo padrão de outras tabelas. Em particular:
+- `public.servicos` (V1 legacy) usa `categoria_id` (FK numérica)
+- `v5_manutencao.catalogo_servicos` (V5) usa `categoria` (string, sem `_id`)
+
+Não fazer copy-paste de embeds entre schemas diferentes. Se a query falha com 400, lê o campo `hint` na resposta PostgREST — indica a coluna correcta. Bug encontrado em 3.4D smoke test G (`App.jsx:10523`).
 
 ---
 
@@ -229,6 +238,8 @@ Princípio: **1 pessoa → 1 identidade** (`auth.users` + `core.pessoas`) → N 
 
 **Staff de teste:** `mariocarvalho.biz+v5staff@gmail.com` → role `admin` em `core.staff_roles`. NÃO usar `mariocarvalho.biz@gmail.com` (reservado para uso real futuro). NÃO usar `+v5test` (já é cliente normal).
 
+**GDPR test:** `mariocarvalho.biz+v5gdpr@gmail.com` — conta descartável para testes de eliminação. Pode ser recriada a qualquer altura. Após delete, fica com email `deleted+<uuid_sem_hifens>@v5casa.pt` em `core.pessoas` (formato real de `fn_anonymize_account`). Validação: `SELECT email FROM core.pessoas WHERE email LIKE 'deleted+%@v5casa.pt' ORDER BY updated_at DESC LIMIT 5;`
+
 ---
 
 ## Pontos de atenção
@@ -249,6 +260,8 @@ ANTES de fechar qualquer fase que aplique/altere RLS:
 4. Cross-tenant test: criar 2º utilizador, validar que NÃO vê dados do 1º (Network tab + Response inspection)
 5. Testar UI com utilizador novo (sem histórico) — não pode ver mocks
 6. `NOTIFY pgrst, 'reload schema';` após cada batch de policies
+7. **Inspecionar Network tab durante smoke test** — qualquer 400 indica embed PostgREST mal formado (coluna inexistente); qualquer 403 indica GRANT em falta na tabela
+8. **Para tabelas novas com RLS**, confirmar GRANT em `information_schema.role_table_grants` antes de fechar a fase
 
 ### Naming PostgREST embed (lição 3.4C bugs)
 
