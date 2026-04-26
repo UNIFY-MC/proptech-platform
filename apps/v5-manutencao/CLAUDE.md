@@ -169,7 +169,7 @@ Princípio aplicado a partir de 3.4C — **zero como ponto de partida visível, 
 
 ### Anti-padrões PROIBIDOS
 
-Lições aprendidas em 3.4C audit — nunca introduzir:
+Lições aprendidas em 3.4C/3.4D audit — nunca introduzir:
 
 - `DEMO_*`, `MOCK_*`, `FAKE_*`, `HARDCODED_*` fora de testes/storybook
 - Fallback arrays em renderização (`[90,65,80,50,68][i]` etc.)
@@ -177,6 +177,19 @@ Lições aprendidas em 3.4C audit — nunca introduzir:
 - Mock data partilhado entre utilizadores (todos vêem os mesmos pedidos/poupanças)
 - `.single()` sem garantia de ≥1 row — usar `.maybeSingle()`
 - Funções RPC `SECURITY DEFINER` com `GRANT anon` sem guard interno (`auth.uid() IS NOT NULL`)
+- **RLS sem GRANT — bug silencioso (lição 3.4D)**:
+
+```sql
+-- PADRÃO OBRIGATÓRIO para toda tabela nova com RLS:
+ALTER TABLE schema.tabela ENABLE ROW LEVEL SECURITY;
+GRANT SELECT ON schema.tabela TO authenticated;  -- ← OBRIGATÓRIO antes da POLICY
+CREATE POLICY "..." ON schema.tabela FOR SELECT TO authenticated USING (...);
+```
+
+RLS sem GRANT = PostgREST devolve `data: null` silenciosamente (sem erro visível no console).
+Como ter fechadura sem maçaneta — ninguém entra mesmo com a chave certa.
+Efeito prático: queries JS devolvem `null`, estados ficam em `[]`/`false`, sem alerta.
+**Verificar sempre:** `GRANT` antes de `CREATE POLICY`, em todos os schemas (`core`, `v5_manutencao`, `public`).
 
 ---
 

@@ -33,6 +33,9 @@ COMMENT ON TABLE core.staff_roles IS
 
 ALTER TABLE core.staff_roles ENABLE ROW LEVEL SECURITY;
 
+-- GRANT obrigatório antes da POLICY (sem GRANT, PostgREST devolve null silenciosamente)
+GRANT SELECT ON core.staff_roles TO authenticated;
+
 -- Utilizador vê apenas o seu próprio registo
 CREATE POLICY "staff_roles: authenticated lê o seu"
   ON core.staff_roles FOR SELECT TO authenticated
