@@ -169,6 +169,16 @@ Princípio aplicado a partir de 3.4C — **zero como ponto de partida visível, 
 
 ### Anti-padrões PROIBIDOS
 
+**Regra AA — Edge Functions: nunca redeploy sem ver tool_error real (lição 1B.1.2)**
+
+Quando uma Edge Function de agent retorna 500, fazer SEMPRE diagnóstico antes de qualquer fix:
+1. `SELECT tool_error FROM core.agent_audit_log WHERE agent_name='<x>' ORDER BY created_at DESC LIMIT 5;`
+2. Logs do Supabase Dashboard → Functions → `<fn>` → Logs
+
+Causa real pode ser API key corrompida, não código. Três deploys especulativos não substituem 1 query de diagnóstico.
+
+---
+
 Lições aprendidas em 3.4C/3.4D audit — nunca introduzir:
 
 - `DEMO_*`, `MOCK_*`, `FAKE_*`, `HARDCODED_*` fora de testes/storybook
@@ -418,6 +428,7 @@ Colunas novas em `ordens_trabalho`:
 | **3.4D** | ✅ **fechada** | SMTP Resend · email/password change in-app · GDPR delete · staff_roles + is_staff() · refactor nome split · 4 bug fixes (categoria_id, GRANT staff_roles, GRANT EXECUTE fn_anonymize, PasswordInput) |
 | **3.5** | ✅ **fechada** | branding.js · scoreLabel · empty states honestos · meta SEO · missões hierarquia · faturação labels · audit DEMO_ · favicon |
 | **1B.1.1** | ✅ **fechada** | Schema agents · agent_audit_log + agent_policies + api_usage · helper fn_can_use_api · regras W+X aplicadas |
+| **1B.1.2** | ✅ **fechada** | Anthropic raw fetch + runAgent.ts + Edge Function agent-test · cost tracking + audit · smoke test B+C+D OK |
 
 ---
 
@@ -677,9 +688,65 @@ Contexto: `MapaPicker` em `MoradasScreen.jsx` e `ImovelWizard.jsx`; mapa estáti
 - UNIQUE em `agent_policies` era apenas `(organization_id)` → substituída por `(organization_id, agent_name)`
 - Helpers estão em `public.*` (não `auth.*`) — corrigido no SQL
 
-### Próximo (1B.1.2)
-- Anthropic SDK Edge Function template (tool use loop)
-- `src/lib/agents/runAgent.ts`
+### Próximo (1B.2)
+- image_inspector com 8 tools reais (Vision + Postgres)
+
+---
+
+## Notas para 1B.1.2 — Anthropic SDK + runAgent + agent-test
+
+### Convenção arquitectural agents
+- Agents correm SEMPRE em Edge Functions (server-side)
+- API key Anthropic em Supabase secrets (nunca `.env.local` nem `VITE_*`)
+- Chamar Anthropic via **raw fetch** (não npm SDK) — ver Lições abaixo
+- service_role para audit log (cross-tenant write); user JWT para fn_can_use_api
+- Tools agnósticas a vertical → vivem em `_shared/agents/tools/<dominio>/`
+- Cada agent → sua Edge Function própria (não multiplexar)
+- **Endpoint key naming:** `'agent.<nome_agent>'` para invocações reais (ex: `agent.image_inspector`). Reservar `'helper.test_call'` ou similar para testes manuais à `fn_can_use_api`. Evita colisão entre testes interactivos e rate limits de produção.
+
+### Ficheiros _shared/agents/
+- `types.ts` — interfaces partilhadas (`AgentTool`, `AgentContext`, `AgentRunOptions`, `AgentRunResult`, `AgentPolicy`)
+- `anthropic.ts` — raw fetch a `api.anthropic.com` + `calculateCostEur()`
+- `runAgent.ts` — tool use loop (max 20 iter) + audit por iteration + audit por tool execution
+
+### runAgent.ts — convenção stop_reason no audit
+- Row de iteration: `stop_reason = resp.stop_reason` (`end_turn`/`tool_use`/`max_tokens`/`error`)
+- Rows de tool execution: `stop_reason = NULL` — só `tool_name`/`tool_input`/`tool_output`/`tool_error`
+
+### Helpers public.* reutilizados (criados em 3.4C)
+- `public.current_pessoa_id()` — já existe, chamado directamente via `.rpc()`
+- `public.current_organization_ids()` — idem
+- Razão: não criar wrappers `_for_agent` — os helpers `public.*` já são expostos pelo PostgREST
+
+### TODOs adiados
+- Human-in-loop (`approval_required_tools`) → 1B.2 image_inspector
+- CORS apertar para domínio próprio → Onda 4 (Capacitor)
+- Web fetch + pgvector tools → Onda 2
+
+### Lições do smoke test 1B.1.2
+
+- **API keys via Supabase secrets:** colar directamente em `supabase secrets set KEY=value` é mais seguro que Read-Host/SecureString (PowerShell). Estes últimos podem injectar newline invisível que faz Anthropic responder `"failed to parse header value"`.
+
+- **Anthropic no Deno — raw fetch obrigatório:** `npm:@anthropic-ai/sdk` na compat layer npm do Deno tenta usar o `https` module Node.js e devolve `"Connection error"`. Fix: chamar `https://api.anthropic.com/v1/messages` directamente com `fetch()` nativo Deno — zero dependências externas.
+
+- **Se npm SDK for necessário no futuro:** `npm:@anthropic-ai/sdk@0.30.0` (versão exacta, sem `^`) + `new Anthropic({ apiKey, fetch: globalThis.fetch })`. Ambos obrigatórios em conjunto.
+
+### Regra AA — Edge Functions: nunca redeploy sem ver tool_error real
+
+Quando uma Edge Function de agent retorna 500, antes de propor QUALQUER fix:
+
+1. ```sql
+   SELECT iteration, stop_reason, tool_error, model
+   FROM core.agent_audit_log
+   WHERE agent_name = '<agent>'
+   ORDER BY created_at DESC LIMIT 5;
+   ```
+2. Ler logs do Edge Function via Supabase Dashboard → Functions → `<fn>` → Logs.
+
+Lição 1B.1.2: 3 deploys especulativos (fetch override, versão SDK, raw fetch) eram red herrings. Causa real era contaminação da API key com newline (PowerShell SecureString). Diagnóstico antes de fix poupa deploys e sanidade.
+
+### sql/27
+- `sql/27_v5_1b_1_2_seed_test_echo.sql` — seed `v5.test_echo` em `core.agent_policies` (Sonnet 4.6, enabled, sem tools de aprovação)
 
 ---
 
