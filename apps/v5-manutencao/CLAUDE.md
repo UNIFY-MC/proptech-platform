@@ -417,6 +417,7 @@ Colunas novas em `ordens_trabalho`:
 | **3.4D fix-ux #1** | ✅ **fechada** | primeiro_nome+apelidos em core.pessoas · wizard 2 campos · saudação usa primeiro_nome · PerfilDrawer actualizado |
 | **3.4D** | ✅ **fechada** | SMTP Resend · email/password change in-app · GDPR delete · staff_roles + is_staff() · refactor nome split · 4 bug fixes (categoria_id, GRANT staff_roles, GRANT EXECUTE fn_anonymize, PasswordInput) |
 | **3.5** | ✅ **fechada** | branding.js · scoreLabel · empty states honestos · meta SEO · missões hierarquia · faturação labels · audit DEMO_ · favicon |
+| **1B.1.1** | ✅ **fechada** | Schema agents · agent_audit_log + agent_policies + api_usage · helper fn_can_use_api · regras W+X aplicadas |
 
 ---
 
@@ -578,6 +579,7 @@ Colunas novas em `ordens_trabalho`:
 - `sql/22_*` — refactor nome split (primeiro_nome + apelidos)
 - `sql/23_*` — staff_roles + is_staff() + GRANT SELECT authenticated
 - `sql/24_*` — REVOKE anon fn_complete_onboarding · fn_anonymize_account · GRANT EXECUTE service_role · deleted_at em memberships
+- `sql/26_v5_1b_1_1_agents_schema.sql` — Schema base agents Onda 1B (audit log + policies + rate limit + fn_can_use_api). Aplicar antes de qualquer Edge Function de agent.
 
 ---
 
@@ -640,6 +642,44 @@ Contexto: `MapaPicker` em `MoradasScreen.jsx` e `ImovelWizard.jsx`; mapa estáti
 - **staff_roles**: tabela separada de `core.staff` (legacy) · usa `auth_user_id` · roles: admin/support/readonly
 - **is_staff()**: helper em `public` schema (PostgREST expõe) · SECURITY DEFINER · consulta staff_roles activos
 - **Audit pessoa_id**: todos os 28 `pessoa_id` são inequívocos (cliente). `ordens_trabalho` tem `prestador_id` separado. TODO Fase 6: quando `prestador_perfis` existir, `prestador_id` deve referenciar `prestador_perfis(id)` não `pessoas(id)`
+
+---
+
+## Notas para 1B.1.1 — Schema agents
+
+### Tabelas core
+- `core.agent_audit_log` — uma row por iteration (várias por session_id) · colunas de custo e tokens
+- `core.agent_policies` — config per-org per-agent (limits, approval, model) · seeds default por org
+- `core.api_usage` — rate limit tracker · auto-cleanup 30 dias
+
+### Helper
+- `core.fn_can_use_api(endpoint, limit, window_hours)` SECURITY DEFINER
+  · Retorna jsonb `{ allowed, used, limit, remaining, window_hours }`
+  · Cada Edge Function de agent chama isto antes de executar
+  · GRANT EXECUTE TO authenticated (regra W)
+
+### Convenção naming
+- Agents: `v5.*` (consumer) ou `admin.*` (backoffice)
+- Tools: prefixo por domínio — `vision.*`, `equipamento.*`, `weather.*`, `catalogo.*`
+
+### Modelo por agent (seeds default)
+- v5.image_inspector → claude-opus-4-7 (Vision precisa precisão)
+- v5.casa_advisor → claude-sonnet-4-6 (cost-effective)
+
+### Free tier vs Home+
+- Free image_inspector: 3/dia + 10/mês (2 chamadas a fn_can_use_api)
+- Home+: limit=999999 se `pessoas.metadata->>'tier'='home_plus'`
+- Stripe + tier real chega na Onda 2
+
+### Achados do Passo 0 (histórico)
+- `agent_audit_log` e `agent_policies` já existiam como stubs (schema diferente, 0 dados, RLS activo mas zero policies → tudo bloqueado)
+- `anon` tinha ALL nas duas tabelas → revogado
+- UNIQUE em `agent_policies` era apenas `(organization_id)` → substituída por `(organization_id, agent_name)`
+- Helpers estão em `public.*` (não `auth.*`) — corrigido no SQL
+
+### Próximo (1B.1.2)
+- Anthropic SDK Edge Function template (tool use loop)
+- `src/lib/agents/runAgent.ts`
 
 ---
 
