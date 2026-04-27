@@ -6,20 +6,28 @@ const C = { ink:'#0f172a', slate:'#64748b', border:'#e2e8f0', bg:'#f8fafc', whit
             greenXl:'#D8F3DC', greenLt:'#52B788', coral:'#E76F51' }
 
 // TODO(mario Fase 5): missões reais via BD (tabela missoes_utilizador + tipos de missão configuráveis)
+// ordem=1 = Home Assessment (obrigatório, sem prerequisito)
+// ordem≥2 = desbloqueadas apenas após Home Assessment concluído
+// Schema migration sql/25 fica para Fase 3.6 (sprint 3.5: UI-only)
 const MISSOES_SEMANA = [
-  { id:1, emoji:'⚡', titulo:'Adiciona 1 fatura de energia',      sub:'Liga um documento de energia à tua casa', recompensa:50,  concluida:false, action:'adicionar_energia' },
-  { id:2, emoji:'📸', titulo:'Tira foto à tua caldeira',          sub:'Regista o estado actual do equipamento',   recompensa:30,  concluida:false, action:'adicionar_camara' },
-  { id:3, emoji:'🏠', titulo:'Completa a ficha de 1 imóvel',      sub:'Preenche área, tipologia e ano',           recompensa:100, concluida:true,  action:'moradas' },
-  { id:4, emoji:'🔧', titulo:'Agenda uma revisão de caldeira',    sub:'Recomendação para o teu equipamento',      recompensa:80,  concluida:false, action:'servico_caldeira' },
-  { id:5, emoji:'📄', titulo:'Faz upload do seguro multirriscos', sub:'Mantém os teus documentos actualizados',   recompensa:60,  concluida:false, action:'adicionar_doc' },
+  { id:'home_assessment', ordem:1, prerequisito:null,             emoji:'🏠', titulo:'Completa a ficha de 1 imóvel',      sub:'Primeiro passo — preenche área, tipologia e ano',  recompensa:100, concluida:false, action:'moradas' },
+  { id:'energia',         ordem:2, prerequisito:'home_assessment', emoji:'⚡', titulo:'Adiciona 1 fatura de energia',      sub:'Liga um documento de energia à tua casa',          recompensa:50,  concluida:false, action:'adicionar_energia' },
+  { id:'camara',          ordem:3, prerequisito:'home_assessment', emoji:'📸', titulo:'Tira foto à tua caldeira',          sub:'Regista o estado actual do equipamento',            recompensa:30,  concluida:false, action:'adicionar_camara' },
+  { id:'caldeira',        ordem:4, prerequisito:'home_assessment', emoji:'🔧', titulo:'Agenda uma revisão de caldeira',    sub:'Recomendação para o teu equipamento',              recompensa:80,  concluida:false, action:'servico_caldeira' },
+  { id:'seguro',          ordem:5, prerequisito:'home_assessment', emoji:'📄', titulo:'Faz upload do seguro multirriscos', sub:'Mantém os teus documentos actualizados',           recompensa:60,  concluida:false, action:'adicionar_doc' },
 ]
 
-const concluidas = MISSOES_SEMANA.filter(m => m.concluida).length
-const totalPts   = MISSOES_SEMANA.filter(m => !m.concluida).reduce((s, m) => s + m.recompensa, 0)
-
 export default function MissoesScreen({ onBack, onNavigateAction }) {
-  function handleAction(action) {
-    if (onNavigateAction) onNavigateAction(action)
+  const concluidas = MISSOES_SEMANA.filter(m => m.concluida).length
+  const totalPts   = MISSOES_SEMANA.filter(m => !m.concluida).reduce((s, m) => s + m.recompensa, 0)
+
+  function isDesbloqueada(m) {
+    if (!m.prerequisito) return true
+    return MISSOES_SEMANA.find(p => p.id === m.prerequisito)?.concluida ?? false
+  }
+
+  function handleAction(m) {
+    if (!m.concluida && isDesbloqueada(m) && onNavigateAction) onNavigateAction(m.action)
   }
 
   return (
@@ -49,39 +57,49 @@ export default function MissoesScreen({ onBack, onNavigateAction }) {
           </div>
         </div>
 
-        {/* Lista missões */}
-        {MISSOES_SEMANA.map(m => (
-          <div
-            key={m.id}
-            onClick={() => !m.concluida && handleAction(m.action)}
-            style={{
-              background:C.white, border:`1px solid ${m.concluida ? C.greenXl : C.border}`,
-              borderRadius:12, padding:'12px 14px', marginBottom:8,
-              display:'flex', alignItems:'center', gap:12,
-              cursor: m.concluida ? 'default' : 'pointer',
-              opacity: m.concluida ? 0.7 : 1,
-            }}
-          >
-            <div style={{
-              width:44, height:44, borderRadius:12, flexShrink:0, fontSize:22,
-              background: m.concluida ? C.greenXl : C.bg,
-              border:`1px solid ${m.concluida ? C.greenLt : C.border}`,
-              display:'flex', alignItems:'center', justifyContent:'center',
-            }}>
-              {m.concluida ? '✅' : m.emoji}
+        {/* Lista missões ordenada */}
+        {MISSOES_SEMANA.sort((a,b) => a.ordem - b.ordem).map(m => {
+          const desbloqueada = isDesbloqueada(m)
+          const locked = !m.concluida && !desbloqueada
+
+          return (
+            <div
+              key={m.id}
+              onClick={() => handleAction(m)}
+              style={{
+                background:C.white,
+                border:`1px solid ${m.concluida ? C.greenXl : locked ? C.border : C.border}`,
+                borderRadius:12, padding:'12px 14px', marginBottom:8,
+                display:'flex', alignItems:'center', gap:12,
+                cursor: m.concluida || locked ? 'default' : 'pointer',
+                opacity: locked ? 0.5 : 1,
+              }}
+            >
+              <div style={{
+                width:44, height:44, borderRadius:12, flexShrink:0, fontSize:22,
+                background: m.concluida ? C.greenXl : locked ? '#f1f5f9' : C.bg,
+                border:`1px solid ${m.concluida ? C.greenLt : C.border}`,
+                display:'flex', alignItems:'center', justifyContent:'center',
+              }}>
+                {m.concluida ? '✅' : locked ? '🔒' : m.emoji}
+              </div>
+              <div style={{ flex:1, minWidth:0 }}>
+                <div style={{ fontSize:13, fontWeight:700, color: m.concluida ? C.slate : locked ? C.slate : C.ink }}>{m.titulo}</div>
+                <div style={{ fontSize:10, color:C.slate, marginTop:2 }}>
+                  {locked ? 'Completa o Home Assessment primeiro' : m.sub}
+                </div>
+              </div>
+              <div style={{ textAlign:'right', flexShrink:0 }}>
+                {m.concluida
+                  ? <div style={{ fontSize:11, color:C.greenLt, fontWeight:700 }}>✓ Feito</div>
+                  : locked
+                    ? <div style={{ fontSize:10, color:C.slate }}>🔒</div>
+                    : <div style={{ fontSize:12, fontWeight:700, color:C.gold, background:C.goldLt, padding:'4px 9px', borderRadius:8 }}>+{m.recompensa}</div>
+                }
+              </div>
             </div>
-            <div style={{ flex:1, minWidth:0 }}>
-              <div style={{ fontSize:13, fontWeight:700, color: m.concluida ? C.slate : C.ink }}>{m.titulo}</div>
-              <div style={{ fontSize:10, color:C.slate, marginTop:2 }}>{m.sub}</div>
-            </div>
-            <div style={{ textAlign:'right', flexShrink:0 }}>
-              {m.concluida
-                ? <div style={{ fontSize:11, color:C.greenLt, fontWeight:700 }}>✓ Feito</div>
-                : <div style={{ fontSize:12, fontWeight:700, color:C.gold, background:C.goldLt, padding:'4px 9px', borderRadius:8 }}>+{m.recompensa}</div>
-              }
-            </div>
-          </div>
-        ))}
+          )
+        })}
 
         {/* Rodapé info */}
         <div style={{ background:C.goldLt, border:`1px solid ${C.gold}44`, borderRadius:12, padding:'12px 14px', marginTop:8, fontSize:11.5, color:'#8C6508', lineHeight:1.55 }}>
