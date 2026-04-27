@@ -1,7 +1,7 @@
 # v5-manutencao — Contexto para Claude Code
 
 Este ficheiro é lido automaticamente pelo Claude Code a cada invocação. Mantém-se curto e actual.
-**Última actualização:** 2026-04-27 · Sprint 3.4D **FECHADA** · Próximo: decidir 3.5 vs Fase 4
+**Última actualização:** 2026-04-27 · Sprint 3.5 **FECHADA** · Próximo: decidir Fase 4 backoffice vs Fase 7 Capacitor
 
 ---
 
@@ -33,7 +33,7 @@ Não esperar pelo fim do projecto. Cada commit que muda padrão estrutural deve 
 
 ### Em curso
 
-- Nada · **Sprint 3.4D fechada** · aguardar decisão de próximo sprint (3.5 fix-ux vs Fase 4 backoffice)
+- Nada · **Sprint 3.5 fechada** · aguardar decisão de próximo sprint (Fase 4 backoffice vs Fase 7 Capacitor)
 
 ### Pendente
 
@@ -416,6 +416,7 @@ Colunas novas em `ordens_trabalho`:
 | **3.4C** | ✅ **fechada** | RLS todas as tabelas (core 23 + v5_manutencao 39) · helpers SECURITY DEFINER · multi-org switcher · OrgLocBottomSheet · REVOKE anon RPCs · empty states honestos |
 | **3.4D fix-ux #1** | ✅ **fechada** | primeiro_nome+apelidos em core.pessoas · wizard 2 campos · saudação usa primeiro_nome · PerfilDrawer actualizado |
 | **3.4D** | ✅ **fechada** | SMTP Resend · email/password change in-app · GDPR delete · staff_roles + is_staff() · refactor nome split · 4 bug fixes (categoria_id, GRANT staff_roles, GRANT EXECUTE fn_anonymize, PasswordInput) |
+| **3.5** | ✅ **fechada** | branding.js · scoreLabel · empty states honestos · meta SEO · missões hierarquia · faturação labels · audit DEMO_ · favicon |
 
 ---
 
@@ -639,6 +640,45 @@ Contexto: `MapaPicker` em `MoradasScreen.jsx` e `ImovelWizard.jsx`; mapa estáti
 - **staff_roles**: tabela separada de `core.staff` (legacy) · usa `auth_user_id` · roles: admin/support/readonly
 - **is_staff()**: helper em `public` schema (PostgREST expõe) · SECURITY DEFINER · consulta staff_roles activos
 - **Audit pessoa_id**: todos os 28 `pessoa_id` são inequívocos (cliente). `ordens_trabalho` tem `prestador_id` separado. TODO Fase 6: quando `prestador_perfis` existir, `prestador_id` deve referenciar `prestador_perfis(id)` não `pessoas(id)`
+
+---
+
+## Notas para 3.5
+
+### Branding centralizado
+- `src/config/branding.js` — ponto único para nome, emoji, versão, emails, domínio, cor primária
+- **Codename interno**: "Zelo" (decisão pendente Mario) — `BRAND.name = 'V5 Manutenção'` até confirmação
+- Ficheiros migrados: LoginScreen, SignupScreen, OnboardingWizard, App.jsx (splash, admin sidebar, AI assistant), PerfilMenuContent, PerfilSheetContent, DefinicoesScreen
+- `BRAND.version` substitui strings "v0.5.2/v0.5.3 · build dev" hardcoded nos 3 perfil screens
+- `admin@servicopro.pt` e `api.servicopro.pt` eliminados → `BRAND.supportEmail` e `BRAND.domain`
+
+### Score labels
+- `src/lib/scoreLabel.js` — `scoreLabel()`, `scoreLabelShort()`, `casaScoreLabel()`
+- Elimina `casaLabel()` inline em IniciaScreen
+- `'Casa em Risco 🚨'` removido — substituído por `'Casa com Atenção 🔧'` (score < 40)
+- null/0 → `'Casa por avaliar 🏠'` em IniciaScreen, CasaScreen, ImovelDetalheScreen
+
+### SEO / Meta
+- `index.html`: title com tagline, meta description PT, theme-color `#0B3D2E`, og:title/description/type
+- Comentário no topo avisa que strings são duplicadas de `branding.js`
+- favicon.ico 16x16 verde placeholder em `public/` — substituir por logo no rebrand
+
+### Missões
+- `MissoesScreen.jsx` reescrito: Home Assessment = ordem 1, sem prerequisito
+- Missões 2-5 locked (🔒) até Home Assessment concluído — `isDesbloqueada()` check UI-only
+- Schema migration `sql/25` (coluna `ordem` + `prerequisito_missao_id` em `missoes_utilizador`) → Fase 3.6
+
+### Audit 3.5 findings
+- `OrcamentoWizardScreen.jsx`: `DEMO_ORGANIZATION_ID` hardcoded substituído por `memberships[0].organization_id`
+- Restantes `DEMO_PESSOA_ID` em App.jsx (3 locais): fallbacks @deprecated, baixo risco — Fase 5
+- `MOCK_ALERTAS_ENRIQUECIDOS` (AlertaDetailScreen) + `MOCK_REVIEWS` (ServicoDetailScreen): dados estáticos esperados até Fase 5
+- `MoradasScreen.jsx`: label "Faturação: X" unificado para `nome || nome_facturacao || 'dados pessoais'`
+
+### Backlog para 3.6
+- Schema `missoes_utilizador`: colunas `ordem` + `prerequisito_missao_id`
+- Favicon real (substituir placeholder verde por logo)
+- Loading/error UX consistency (Tarefa 3.5.10 não feita — time-box seria excedido)
+- Códigos postais autocomplete (Tarefa 3.5.9 — estimativa >4h, adiado)
 
 ---
 
