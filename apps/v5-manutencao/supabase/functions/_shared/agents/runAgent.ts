@@ -137,7 +137,7 @@ export async function runAgent(opts: AgentRunOptions): Promise<AgentRunResult> {
         isError = true;
       } else {
         try {
-          result = await executor(block.input, context);
+          result = await executor(block.input, { ...context, sessionId });
         } catch (err: any) {
           result = { error: String(err?.message ?? err) };
           isError = true;

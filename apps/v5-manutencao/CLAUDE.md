@@ -1,7 +1,7 @@
 # v5-manutencao — Contexto para Claude Code
 
 Este ficheiro é lido automaticamente pelo Claude Code a cada invocação. Mantém-se curto e actual.
-**Última actualização:** 2026-04-27 · Sprint 3.5 **FECHADA** · Próximo: decidir Fase 4 backoffice vs Fase 7 Capacitor
+**Última actualização:** 2026-04-27 · Sprint 1B.2.1 **FECHADA** · Próximo: 1B.2.2 Edge Function image-inspector (Vision + deploy)
 
 ---
 
@@ -30,10 +30,14 @@ Não esperar pelo fim do projecto. Cada commit que muda padrão estrutural deve 
 | **3.4C** | RLS em core (23 tabelas) + v5_manutencao (39 tabelas) · helpers SECURITY DEFINER · cross-tenant validado · REVOKE anon em RPCs públicas · empty states honestos · pre_auth_* eliminado |
 | **3.4D fix-ux #1** | primeiro_nome + apelidos em core.pessoas · wizard 2 campos · saudação usa primeiro_nome · PerfilDrawer actualizado |
 | **3.4D** | SMTP Resend (prataowners.pt) · email change in-app · password change in-app · GDPR via Edge Function · `is_staff()` + `core.staff_roles` · `.single()` audit (9 ficheiros) · StaffBanner · PasswordInput toggle · smoke test G completo |
+| **3.5** | branding.js · scoreLabel · empty states honestos · meta SEO · missões hierarquia · faturação labels · audit DEMO_ · favicon |
+| **1B.1.1** | Schema agents · agent_audit_log + agent_policies + api_usage · fn_can_use_api · regras W+X |
+| **1B.1.2** | Anthropic raw fetch + runAgent.ts + agent-test Edge Function · cost tracking + audit · smoke test B+C+D OK |
+| **1B.2.1** | image_inspector infra · bucket equipamentos-fotos · fn_match_existing_equipamento · 4 tool executors com validação · system prompt pt-PT · types.ts objective: string \| unknown[] |
 
 ### Em curso
 
-- Nada · **Sprint 3.5 fechada** · aguardar decisão de próximo sprint (Fase 4 backoffice vs Fase 7 Capacitor)
+- Nada · **Sprint 1B.2.1 fechada** · Próximo: **1B.2.2** Edge Function `image-inspector` (Vision + deploy)
 
 ### Pendente
 
@@ -176,6 +180,21 @@ Quando uma Edge Function de agent retorna 500, fazer SEMPRE diagnóstico antes d
 2. Logs do Supabase Dashboard → Functions → `<fn>` → Logs
 
 Causa real pode ser API key corrompida, não código. Três deploys especulativos não substituem 1 query de diagnóstico.
+
+**Regra BB — Validação categórica de inputs de agentes (lição 1B.2.1)**
+
+Tools de agentes que aceitem string para uma coluna categórica (categoria, status, tipo) **devem validar contra `Set<string>` hardcoded antes do SQL**, com throw explícito listando valores válidos.
+
+Razão: agentes podem alucinar valores (`'boiler'` em inglês, `'aquecimento_central'` inventado), Anthropic não impõe constraints em runtime, e CHECK na BD é frágil para conjuntos que evoluem. Validação no executor permite ao agente fazer retry com valor válido (frequentemente `'outros'`).
+
+```ts
+const VALID_CATEGORIAS = new Set(["aquecimento", "climatizacao", /* ... */]);
+function assertCategoria(cat: string): void {
+  if (!VALID_CATEGORIAS.has(cat)) throw new Error(`Categoria inválida: '${cat}'. Válidos: ${[...VALID_CATEGORIAS].join(" | ")}`);
+}
+```
+
+Lição 1B.2.1: `equipamento_create`, `equipamento_update`, `catalogo_search_servico_relevante` usam `VALID_EQUIPAMENTO_CATEGORIAS` e `VALID_SERVICO_CATEGORIAS` (Sets separados — as listas são diferentes).
 
 ---
 
@@ -429,6 +448,7 @@ Colunas novas em `ordens_trabalho`:
 | **3.5** | ✅ **fechada** | branding.js · scoreLabel · empty states honestos · meta SEO · missões hierarquia · faturação labels · audit DEMO_ · favicon |
 | **1B.1.1** | ✅ **fechada** | Schema agents · agent_audit_log + agent_policies + api_usage · helper fn_can_use_api · regras W+X aplicadas |
 | **1B.1.2** | ✅ **fechada** | Anthropic raw fetch + runAgent.ts + Edge Function agent-test · cost tracking + audit · smoke test B+C+D OK |
+| **1B.2.1** | ✅ **fechada** | image_inspector infra · bucket equipamentos-fotos · fn_match_existing_equipamento · 4 tool executors com validação · system prompt pt-PT (74 linhas) · types.ts objective: string \| unknown[] |
 
 ---
 
@@ -674,7 +694,7 @@ Contexto: `MapaPicker` em `MoradasScreen.jsx` e `ImovelWizard.jsx`; mapa estáti
 - Tools: prefixo por domínio — `vision.*`, `equipamento.*`, `weather.*`, `catalogo.*`
 
 ### Modelo por agent (seeds default)
-- v5.image_inspector → claude-opus-4-7 (Vision precisa precisão)
+- v5.image_inspector → claude-sonnet-4-6 (actualizado em 1B.2.1 — Opus era excesso para este use case)
 - v5.casa_advisor → claude-sonnet-4-6 (cost-effective)
 
 ### Free tier vs Home+
@@ -703,6 +723,7 @@ Contexto: `MapaPicker` em `MoradasScreen.jsx` e `ImovelWizard.jsx`; mapa estáti
 - Tools agnósticas a vertical → vivem em `_shared/agents/tools/<dominio>/`
 - Cada agent → sua Edge Function própria (não multiplexar)
 - **Endpoint key naming:** `'agent.<nome_agent>'` para invocações reais (ex: `agent.image_inspector`). Reservar `'helper.test_call'` ou similar para testes manuais à `fn_can_use_api`. Evita colisão entre testes interactivos e rate limits de produção.
+- **Score vs match_type:** ferramentas de lookup/match devem retornar `score` numérico (0.0–1.0), não `match_type` categórico. Permite ao agente ajustar limiar dinamicamente em vez de hardcode da lógica no system prompt. Decisão 1B.2.1: `fn_match_existing_equipamento` retorna `score real` com thresholds 0.6 (match forte) / 0.3–0.59 (possível duplicado) / <0.3 (novo).
 
 ### Ficheiros _shared/agents/
 - `types.ts` — interfaces partilhadas (`AgentTool`, `AgentContext`, `AgentRunOptions`, `AgentRunResult`, `AgentPolicy`)
@@ -747,6 +768,82 @@ Lição 1B.1.2: 3 deploys especulativos (fetch override, versão SDK, raw fetch)
 
 ### sql/27
 - `sql/27_v5_1b_1_2_seed_test_echo.sql` — seed `v5.test_echo` em `core.agent_policies` (Sonnet 4.6, enabled, sem tools de aprovação)
+
+---
+
+## Notas para 1B.2.1 — image_inspector infra
+
+### Storage bucket
+- Bucket `equipamentos-fotos`: privado (public=false) · 10MB · MIME: jpeg/png/webp/heic/heif
+- Path convention: `{pessoa_id}/{eq_id}/{timestamp}.{ext}` — 1º segmento é o pessoa_id
+- RLS em `storage.objects`: 3 policies (INSERT/SELECT/DELETE) isolam por `(foldername(name))[1] = current_pessoa_id()`
+- service_role bypassa RLS — uploads da Edge Function são sempre autorizados
+
+### fn_match_existing_equipamento
+- `v5_manutencao.fn_match_existing_equipamento(p_localizacao_id, p_categoria, p_nome)` SECURITY DEFINER
+- Retorna top-5 por score numérico [0,1]: 0.5 se categoria exacta + até 0.5 por `similarity()` (pg_trgm)
+- GRANT EXECUTE TO service_role; REVOKE de anon + authenticated
+- pg_trgm foi instalado em 1B.2.1 (`CREATE EXTENSION IF NOT EXISTS pg_trgm WITH SCHEMA extensions`)
+
+### Tool executors — `_shared/agents/tools/equipamento.ts`
+- **`equipamento_lookup`**: chama `fn_match_existing_equipamento` via `serviceRole.schema('v5_manutencao').rpc()`
+- **`equipamento_create`**: INSERT em `equipamentos` com `organization_id: ctx.organizationId`; injeta `agente_inspecao_session_id` + `agente_inspecao_em` no `dados_ia` (NÃO confiar no agente para estes campos)
+- **`equipamento_update`**: guard Opção C via `localizacao_id → localizacoes → memberships` (3 queries; funciona mesmo com `equipamentos.organization_id IS NULL` legacy); merge PATCH de `dados_ia` com histórico das últimas 10 sessões em `agente_inspecao_history[]`
+- **`catalogo_search_servico_relevante`**: `.or('nome.ilike.%q%,descricao.ilike.%q%').limit(10)` + ranking JS (nome antes de descricao) + slice(0,5)
+
+### dados_ia merge behavior (não overwrite)
+Para `equipamento_update`, o `dados_ia` passado pelo agente é um PATCH:
+```ts
+mergedDadosIA = { ...existing, ...input.dados_ia, agente_inspecao_session_id, agente_inspecao_em, agente_inspecao_history }
+```
+A sessão anterior é arquivada em `agente_inspecao_history[]` (últimas 10). O agente só envia o que detectou na sessão actual.
+
+### Validação categórica (Regra BB aplicada)
+Dois Sets hardcoded no executor (não na BD — sem CHECK constraint nova):
+- `VALID_EQUIPAMENTO_CATEGORIAS` (14 valores) — validado em `equipamento_lookup` + `equipamento_create`
+- `VALID_SERVICO_CATEGORIAS` (8 valores) — validado em `catalogo_search_servico_relevante`
+Throw com mensagem útil → agente recebe `is_error: true` e pode retry com `'outros'`.
+
+### Tool naming convention
+snake_case sem dots: `equipamento_lookup`, `equipamento_create`, `equipamento_update`, `catalogo_search_servico_relevante`.
+(Dots só no `agent_name` da policy: `v5.image_inspector`.)
+
+### Free tier 3/dia + 10/mês
+Edge Function `image-inspector` (1B.2.2) vai chamar `fn_can_use_api` 2×:
+1. `(endpoint='agent.image_inspector', limit=3, window_hours=24)` — limite diário
+2. `(endpoint='agent.image_inspector.monthly', limit=10, window_hours=720)` — limite mensal
+Bloqueia se qualquer falhar. Home+: limit=999999 quando `pessoas.metadata->>'tier'='home_plus'`.
+
+### types.ts — AgentRunOptions.objective
+Alterado de `string` para `string | unknown[]` para suportar Vision content blocks (array com `image` + `text`).
+`runAgent.ts` não precisa de mudança — `content: objective` funciona para ambos os tipos.
+O caller (Edge Function 1B.2.2) constrói o array com `{ type: "image", source: {...} }` + `{ type: "text", text: "..." }`.
+
+### ctx.sessionId injectado por runAgent
+`AgentContext` ganhou `sessionId?: string`. `runAgent.ts` injeta `{ ...context, sessionId }` ao chamar cada executor.
+Permite aos executors registar a session ID no `dados_ia` sem que o agente tenha acesso directo.
+
+### Extensão pg_trgm (1B.2.1)
+- Activada via `sql/28`: `CREATE EXTENSION IF NOT EXISTS pg_trgm WITH SCHEMA extensions;`
+- Permite score numérico `0.0–1.0` via `similarity()` em `fn_match_existing_equipamento` em vez de match_type categórico
+- `fn_match_existing_equipamento` usa `similarity()` (função), NÃO o operador `%` — importante para search_path
+- `SET search_path = v5_manutencao, extensions, public` na função para que `similarity()` seja encontrado no schema `extensions`
+- Confirmar instalação: `SELECT extname FROM pg_extension WHERE extname='pg_trgm';`
+- Versão aplicada: `1.6` · schema: `extensions`
+
+### Debug interactivo browser (DEV)
+- `src/supa.js` expõe `window.supabase` / `window.supaCore` / `window.supaPublic` dentro de `if (import.meta.env.DEV)`
+- Vite remove este bloco em production build (tree-shake)
+- Uso: `window.supabase.from('ordens_trabalho').select('id,estado').limit(5).then(console.log)`
+- NÃO usar `VITE_*` para credentials — os clientes são criados com a anon key (segura para browser)
+
+### sql files 1B.2.1
+- `sql/28_v5_1b_2_1_bucket_and_helper.sql` — bucket equipamentos-fotos + RLS + pg_trgm + fn_match_existing_equipamento
+- `sql/29_v5_1b_2_1_update_policies.sql` — UPDATE core.agent_policies para v5.image_inspector (model → sonnet, limit=3, approval=['equipamento_create'])
+
+### Próximo: 1B.2.2
+Edge Function `image-inspector`: recebe foto (base64) + localizacao_id → upload bucket → chama `runAgent` com Vision content blocks → retorna resultado ao cliente.
+Também requer: `tools/vision.ts` (helper para Vision blocks), rate limit duplo (3/dia + 10/mês).
 
 ---
 

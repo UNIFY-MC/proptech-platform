@@ -16,6 +16,7 @@ export interface AgentContext {
   organizationId: string;
   supabase: any;    // cliente com JWT do user (para RPCs autenticadas)
   serviceRole: any; // cliente service_role (audit log + lookups cross-schema)
+  sessionId?: string; // injectado por runAgent — não passar pelo caller
 }
 
 export interface AgentRunOptions {
@@ -23,7 +24,7 @@ export interface AgentRunOptions {
   systemPrompt: string;
   tools: AgentTool[];
   toolExecutors: Record<string, (input: any, ctx: AgentContext) => Promise<any>>;
-  objective: string;       // input do utilizador
+  objective: string | unknown[]; // string ou Vision content blocks
   context: AgentContext;
   model?: string;          // override; default vem de core.agent_policies
   maxIterations?: number;  // default 20

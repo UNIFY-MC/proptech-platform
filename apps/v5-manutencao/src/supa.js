@@ -25,3 +25,19 @@ export const supaPublic = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   db: { schema: 'public' },
   auth: { storageKey: 'sb-public-auth', persistSession: false, autoRefreshToken: false },
 });
+
+// DEBUG INTERACTIVO BROWSER (DEV only — removido em production build pelo Vite)
+// Expõe os 3 clientes Supabase na window para queries ad-hoc na consola do browser.
+//
+// Uso:
+//   window.supabase.from('ordens_trabalho').select('id,estado').limit(5).then(console.log)
+//   window.supaCore.from('pessoas').select('id,email').limit(5).then(console.log)
+//   window.supaPublic.rpc('current_pessoa_id').then(console.log)
+//
+// Em produção (npm run build) o Vite faz tree-shake deste bloco completo.
+if (import.meta.env.DEV) {
+  window.supabase = supa;
+  window.supaCore = supaCore;
+  window.supaPublic = supaPublic;
+  console.log('[dev] window.supabase / supaCore / supaPublic expostos para debug');
+}
