@@ -1,12 +1,101 @@
 # V5 Manutenção — Roadmap pós-3.5
 
-> **Status actual (28 Abr 2026, manhã):** Sprint 1B.1.1 + 1B.1.2 + 1B.2.1 + 1B.2.2 fechadas (commits `5a41135`, `53683aa`, `5aca88d`, `09e95ca` em branch `feat/v5-3.5-polish`).
+> **Status actual (28 Abr 2026, fim de dia):** Sprint 1B.2.3c fechada (commit `06d8091`). Onda 1B ~90% fechada. 9 sub-sprints concluídas hoje.
 >
-> **Marco atingido:** Agente Vision em produção. Smoke test E2E real passou — Bosch SMV41D10EU/56 (máquina lavar loiça encastrável de 26 anos) identificada via OCR de número de série e código FD, em 4 iterations a €0.0864.
+> **Marco do dia:** `EquipamentoFichaScreen` completa — edição + uploads fatura/fotos + delete. Ficha apresentável sem constrangimento a síndico ou prestador.
 >
-> **Próximo:** decidir 1B.2.5 (bug fixes interlúdio) ou 1B.2.3 (UI AdicionarCamaraScreen). Em paralelo: arrancar V2 scaffold + extrair `packages/db` + `packages/auth`.
+> **Próximo (decisão Mario 29 Abr):** 1B.2.3d (fechar 1B.2 100%) · 1B.5A (foundations multi-vertical) · 1B.3 (casa_advisor) · ou 1B.5 (bug fixes massa).
 >
-> **Decisão estratégica (28 Abr):** V2 e V5 evoluem em paralelo (não sequencial). Mediação seguros + parcerias energia confirmadas como vector de upsell V5. Tese financeira validada — V2 sustenta operação enquanto V5 escala.
+> **Decisão estratégica consolidada (28 Abr):** V2 + V5 paralelos. Catálogo partilhado de modelos = defensibilidade longo prazo. Markdown IA persistido justifica €0.08/análise visualmente.
+
+---
+
+## Estado em 28 Abril 2026 — fim de dia
+
+### Progresso Onda 1B (tabela completa)
+
+| Sub-sprint | Estado | Commit | O que entregou |
+|---|---|---|---|
+| 1B.1.1 | ✅ | `5a41135` | Schema agents (audit_log, policies, api_usage, fn_can_use_api) |
+| 1B.1.2 | ✅ | `53683aa` | Anthropic raw fetch + runAgent.ts + agent-test Edge Function |
+| 1B.2.1 | ✅ | `5aca88d` | image_inspector infra (bucket, pg_trgm, fn_match, 4 tools) |
+| 1B.2.2 | ✅ | `09e95ca` | Edge Function Vision E2E · smoke test real Bosch €0.0864 |
+| 1B.2.3a | ✅ | `dab1003` | UI image_inspector com dados ricos (AdicionarCamaraScreen) |
+| 1B.2.3b p1 | ✅ | `89f34a5` | EquipamentoFichaScreen read-only |
+| 1B.2.3b p2 | ✅ | `577d294` | UX refinement + markdown IA persistido (marked + DOMPurify) |
+| 1B.2.3c | ✅ | `06d8091` | Edição completa + uploads fatura/fotos + delete individual |
+| 1B.2.4 | ✅ | `c9532f4` | Docs hygiene + .claude folder + anti-patterns.md |
+| 1B.2.5 | ✅ | `6c20992` | ImovelWizard organization_id fix |
+| 1B.2.5b | ✅ | `46bb404` | ordens_trabalho queries fix em App.jsx |
+| 1B.2.5c | ✅ | `ef5203b` | GRANT memberships service_role + REVOKE anon |
+| **1B.2.3d** | ⏳ | — | Documentos por equipamento + refactor Anexos unified |
+| 1B.2.6 | ⏳ | — | Polish image_inspector prompt (subcategorias em PT) |
+| 1B.3 | ⏳ | — | casa_advisor agente conversacional |
+| 1B.4 | ⏳ | — | IPMA + Score evolução |
+| **1B.4.5** | ⏳ | — | Inventário rico de divisões (especificações por divisão) |
+| 1B.5 | ⏳ | — | Bug fixes UX backlog (12 itens) |
+| **1B.5A** | ⏳ | — | Foundations packages/db + packages/auth + V2 scaffold |
+
+### Estado demonstrável hoje (localhost:5175)
+
+Fluxo completo sem console tricks:
+
+- Login → CasaScreen com imóvel + 2 equipamentos com dados ricos
+- FAB → câmara → IA identifica em ~5s → CRUD na BD com €0.08/foto
+- Click card equipamento → ficha completa:
+  - Hero refinado: nome / categoria + badge IA / 🏠 imóvel clicável · 📍 divisão
+  - Análise IA com markdown rico do agente (marked + DOMPurify)
+  - Issues detectados como badges
+  - Ficha técnica editável (edit mode toggle)
+  - Datas instalação + compra com precisao toggle
+  - Fatura compra: upload PDF/imagem + ver / substituir / eliminar
+  - Galeria fotos: upload + badge IA/Manual + eliminar individual
+  - Placeholder "Manutenções e reparações (0)" — Sprint 1B.6
+  - Placeholder "Documentos do equipamento (0)" — Sprint 1B.2.3d
+  - Eliminar equipamento (confirm + CASCADE)
+
+**Apresentável a síndico ou prestador hoje sem constrangimento.**
+
+### Bugs estruturais resolvidos hoje
+
+| Bug | Causa raiz | Fix aplicado | Regra documentada |
+|---|---|---|---|
+| equipamento.update silent fail | GRANT SELECT em falta `core.memberships → service_role` | SQL GRANT + REVOKE anon | (W consolidada) |
+| Upload fatura/foto silent fail | `supaPublic` não partilha JWT → `auth.uid()=null` → RPCs retornam `null` | `useAuth()` em vez de RPCs | **DD adicionada** |
+| `compressImage` passa objecto ao Storage | Return de `compressImage` não incluía `blob` | Adicionado `blob` ao return | (Regra CC adjacente) |
+
+### Decisões estratégicas de hoje (7)
+
+1. **V2 + V5 paralelos, não sequenciais.** Validação: certificado mediação seguros ASF + 5 prestadores activos + síndicos a querer testar V2 + v63 gera receita.
+
+2. **Catálogo partilhado de modelos = defensibilidade longo prazo.** Onda 2.X formalizada em 3 fases (equipamento_enricher → docs_curator → casa_advisor RAG).
+
+3. **Magic link viral cliente→prestador** para aquisição zero-cost (Sprint 3.4 revista).
+
+4. **Markdown IA persistido na BD** justifica visualmente custo €0.08/análise — análise rica sempre disponível na ficha sem nova chamada API.
+
+5. **Distinção semântica obrigatória:** "Análise IA" (automático, não certificável) ≠ "Inspecção/Manutenção" (profissional, faturável). Ficha mostra os dois como secções separadas.
+
+6. **Sprint 1B.4.5 nova:** Inventário rico de divisões com especificações por espaço (tinta RAL, tipo piso, papel parede, estores) — dados para casa_advisor e prestadores.
+
+7. **Schema preparatório Onda 2 sem implementar ainda:**
+   - `equipamentos.modelo_catalogo_id` (FK pendente para catálogo)
+   - `equipamento_fotos.origem` CHECK com `'catalogo_oficial'`/`'catalogo_curado'`
+
+### Próximas prioridades — Decisão amanhã (29 Abr)
+
+| # | Sprint | Esforço | Valor | Quando |
+|---|---|---|---|---|
+| A | 1B.2.3d — fechar 1B.2 100% | ~4h | Médio · polish | Qualquer altura |
+| B | 1B.5A — foundations multi-vertical | 2-3 dias | **Alto** · desbloqueia V2 | Antes de V2 arrancar |
+| C | 1B.3 — casa_advisor conversacional | 3-4 dias | **Alto** · diferenciador comercial | Após 1B.4.5 ou em paralelo |
+| D | 1B.5 — bug fixes massa (12 itens) | ~1 dia | Médio · qualidade | Qualquer altura |
+
+**Recomendação Claude (28 Abr):** B → C → A → D
+
+Razão: foundations primeiro (desbloqueia V2 limpo), depois casa_advisor (ROI sobre markdown IA persistido hoje), depois 1B.2.3d quando manuais existirem, depois bug sweep em massa.
+
+**DECISÃO MARIO: pendente para 29 Abr.**
 
 ---
 
@@ -201,35 +290,71 @@ Beta testing entre cada onda (3-10 pessoas próximas). Decisão go/no-go.
 - **Estimativa original era irrealista (€0.005)** — assumia 1 call sem contexto. Tool use loop com 4 iterations é o caso real
 - **prompt_cache adiado para Onda 2** (poupança esperada 60-70%, €0.025-0.035/análise)
 
-### Sprint 1B.2.3 — UI AdicionarCamaraScreen (PRÓXIMO — 3-4 dias)
+### Sprint 1B.2.3 — UI AdicionarCamaraScreen ✅ COMPLETED (28 Abr)
 
-**Objectivo:** UI cliente para tirar foto e invocar `agent-image-inspector`. Hoje só funciona via console DEV.
+Entregue em 4 sub-sprints (a → b p1 → b p2 → c). Ver tabela de progresso no topo.
 
-#### Componentes
-- [ ] `AdicionarCamaraScreen.jsx` em `src/screens/` (NOVO ficheiro — não meter em App.jsx, recomendação Sprint 1B.5)
-- [ ] Tirar foto (mobile getUserMedia + fallback file input)
-- [ ] Selector localização (caso user tenha múltiplas)
-- [ ] Botão "Analisar com IA" → invoca `agent-image-inspector` (já feito em 1B.2.2)
-- [ ] Loading state com mensagem progressiva
-- [ ] Após sucesso → redirect para `EquipamentoFichaScreen.jsx` (NOVO)
-- [ ] Toast graceful em caso de falha (free tier excedido → upsell Home+)
+#### ✅ 1B.2.3a — UI image_inspector com dados ricos (commit `dab1003`)
+- [x] `AdicionarCamaraScreen.jsx` — tirar foto + selector localização + invocar `agent-image-inspector`
+- [x] Loading state com mensagem progressiva
+- [x] Após sucesso → EquipamentoFichaScreen com dados IA
 
-#### `EquipamentoFichaScreen.jsx` (NOVO)
-- [ ] Mostrar foto principal do equipamento
-- [ ] Dados extraídos pelo agente (marca, modelo, idade, serial)
-- [ ] `dados_ia.confianca_identificacao` visível
-- [ ] `dados_ia.issues_detectados` como cards
-- [ ] CTA: "Pedir manutenção" → ServicosListaScreen filtrado
+#### ✅ 1B.2.3b — EquipamentoFichaScreen (commits `89f34a5`, `577d294`)
+- [x] Ficha read-only com foto principal, dados IA, issues, confiança
+- [x] Markdown IA persistido via `marked` + `DOMPurify` (renderização segura)
+- [x] Nomenclatura semântica: "Análises IA (✨)" vs "Manutenções (🔧)"
+- [x] step 10.5 no image-inspector: guarda `ai_resumo_markdown` na BD
 
-#### Refresh CasaScreen
-- [ ] Listagem equipamentos da localização activa
-- [ ] Aparecer equipamento criado pelo agente
-- [ ] Long-press → ficha completa
+#### ✅ 1B.2.3c — Edição completa + uploads + delete (commit `06d8091`)
+- [x] Edit mode toggle (editar / cancelar / guardar) com erro tipificado
+- [x] Hero: categoria · imóvel clicável · 📍 divisão; dropdown DISTINCT divisões
+- [x] Date pickers data_instalacao + data_compra com precisao toggle
+- [x] Upload fatura compra (PDF/imagem) + ver / substituir / eliminar
+- [x] Upload fotos extras (`compressImage.blob`) + galeria + eliminar individual
+- [x] Eliminar equipamento (confirm() + DELETE CASCADE)
+- [x] **BUG FIXES:** `supaPublic` JWT (Regra DD) + `compressImage` blob em falta
+- [x] Schema: `equipamentos` ganhou `data_compra`, `data_compra_precisao`, `fatura_compra_path`, `modelo_catalogo_id`; nova tabela `equipamento_fotos` com RLS
 
-#### Smoke test 1B.2.3
-- [ ] Mario tira foto via app web (localhost:5175) — fluxo completo
-- [ ] Mario tira foto via mobile real (Capacitor preview no iPhone)
-- [ ] 3 equipamentos diferentes testados (caldeira/AC/electrodoméstico)
+### Sprint 1B.2.3d — Documentos por equipamento + refactor Anexos (⏳ pendente)
+
+**Esforço:** ~4h · **Dependência:** nenhuma (standalone)
+
+#### Schema novo
+```sql
+CREATE TABLE v5_manutencao.equipamento_documentos (
+  id              uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+  equipamento_id  uuid        NOT NULL REFERENCES v5_manutencao.equipamentos(id) ON DELETE CASCADE,
+  tipo            text        NOT NULL CHECK (tipo IN (
+    'manual', 'garantia', 'ficha_tecnica',
+    'contrato_servico', 'relatorio_manutencao', 'outro'
+  )),
+  nome            text,
+  path            text        NOT NULL,
+  tamanho_bytes   integer,
+  origem          text        NOT NULL DEFAULT 'upload_user'
+    CHECK (origem IN ('upload_user', 'agente_descobriu', 'catalogo_oficial')),
+  created_at      timestamptz NOT NULL DEFAULT now()
+);
+-- RLS + GRANT pattern obrigatório (Regra W)
+```
+
+#### Storage (decisão a tomar antes de implementar)
+- Opção A: renomear `equipamentos-fotos` → `equipamentos-anexos` (único bucket, paths por tipo)
+- Opção B: buckets dedicados `equipamentos-fotos` / `equipamentos-documentos`
+- **Recomendação:** Opção A (menos gestão, Storage não tem custo por bucket)
+
+#### UI EquipamentoFichaScreen
+- Refactor "Anexos" unified block com 3 tabs: **Fotos · Fatura · Documentos**
+- Substitui os blocos separados actuais
+- Upload com dropdown tipo + file picker
+- Preview PDF inline (via signed URL)
+- Download / eliminar por linha
+- Badge origem: IA / Manual / Catálogo
+
+#### Clarificação cross-screen
+- Câmara na CasaScreen → continua para "adicionar novo equipamento"
+- Documentos do imóvel → ficam em CasaScreen ou DocsScreen
+- Documentos de equipamento → ficam exclusivamente na ficha
 
 ### Sprint 1B.2.5 — Bug fixes interlúdio (NOVO — 1-2h)
 
@@ -283,34 +408,44 @@ Beta testing entre cada onda (3-10 pessoas próximas). Decisão go/no-go.
 - [ ] UI gráfico Recharts (12 meses passado + 3 projecção)
 - [ ] Card em `CasaScreen.jsx`
 
-### ⭐ Sprint 1B.5 — Fundações + V2 scaffold paralelo (NOVO — 5-7 dias)
+### ⭐ Sprint 1B.5A — Foundations multi-vertical (FORMALIZADA 28 Abr — 2-3 dias)
 
-**Razão:** decisão estratégica 28 Abr. Necessário antes do V2 arrancar a sério para evitar duplicação V5↔V2.
+**Razão:** V2 + V5 paralelos decidido. Foundations mínimas antes de V2 arrancar evita duplicação.
 
-**Princípio:** fundações **mínimas suficientes** para V2 nascer limpo. Não fazer `packages/ui-*` ou `agent-runtime` ainda — adiar para quando 3+ apps existirem.
+**Princípio:** fundações **mínimas suficientes**. Não fazer `packages/ui-*` nem `agent-runtime` ainda — adiar para quando 3+ apps existirem e a dor for real.
 
-#### Parte A — Fundações mínimas (2-3 dias)
-- [ ] Extrair `packages/db/` — cliente Supabase + tipos auto-gerados via `supabase gen types`
+#### Scope
+- [ ] Extrair `packages/db/` — clientes Supabase partilhados + tipos auto-gerados via `supabase gen types`
 - [ ] Extrair `packages/auth/` — AuthContext + useOrganization() + login/recover
 - [ ] V5 migra para consumir os packages (não duplica código)
-- [ ] Migrations com timestamp `YYYYMMDDHHMM_descricao.sql` adoptadas a partir do próximo SQL
-- [ ] Decompor `App.jsx` (10523 linhas) — incremental: cada novo screen vai para `src/screens/<Name>.jsx`
+- [ ] Migrations com timestamp `YYYYMMDDHHMM_descricao.sql` (padrão já adoptado em 1B.2.4 + 1B.2.3c)
+- [ ] Scaffold mínimo `apps/v2-condominios/` com Login + Home vazia em `localhost:5174`
+- [ ] V2 lê de `packages/auth` + `packages/db`
 
-#### Parte B — V2 scaffold (3-4 dias)
-- [ ] `apps/v2-condominios/` (React+Vite+JS, mesmo stack que V5)
-- [ ] Login + Home vazia a correr em `localhost:5174`
-- [ ] Lê de `packages/auth` + `packages/db`
-- [ ] Importar v63 prataowners read-only (queries de listagem)
-- [ ] Schema V2: `v2_condominios.*` aplicado em separado
-- [ ] 1 vista funcional: extracto bancário read-only
+#### NÃO fazer ainda
+- `packages/ui` — cedo demais, padrões diferem (V5 usa Outfit/Fraunces inline; V2 usará design system diferente)
+- `packages/agent-runtime` — cedo demais, agentes ainda imaturos
+- Write features V2 — primeiro read-only v63, depois CRUD quando validado
 
-#### Critério de fecho 1B.5
+#### Critério de fecho 1B.5A
 - [ ] V5 ainda funciona (regression-free) consumindo packages/db + packages/auth
 - [ ] V2 corre em localhost:5174 com login a funcionar
 - [ ] 2-3 síndicos podem consultar dados v63 no V2 (read-only)
-- [ ] Migrations timestamp aplicadas a partir do próximo SQL
-- [ ] Pelo menos 1 screen do V5 movido de App.jsx para ficheiro próprio (`AdicionarCamaraScreen.jsx`)
-- [ ] CLAUDE.md actualizado com regras descobertas
+- [ ] CLAUDE.md actualizado
+
+### ⭐ Sprint 1B.5 — Bug fixes UX backlog (12 itens — ~1 dia)
+
+**Razão:** 12 bugs descobertos durante 1B.2.x, maioria não bloqueante mas degradam experiência.
+
+**Prioridade:** depois de 1B.5A ou em paralelo (não são dependentes).
+
+- [ ] #3 Modal fecha em copy-paste
+- [ ] #4 Distrito dropdown PT + CP autocomplete
+- [ ] #5 Sistemas comuns condomínio-only
+- [ ] #6 Dois imóveis "principais" simultâneos
+- [ ] #8 Duplicate key "left" App.jsx
+- [ ] #11 Morada duplicada CasaScreen header
+- [ ] Restantes itens conforme prioridade
 
 ### Sprint 1B.6 — Smoke test Onda 1B (1-2 dias)
 
@@ -1002,12 +1137,19 @@ Steps:
 - [ ] Nota disclaimer UI: "IA não substitui certificação técnica profissional"
 - [ ] Clarificar aos clientes que "Análise IA" é auxiliar, não auditável
 
-- [x] **#1 (alta):** ImovelWizard.jsx "Erro ao guardar" — payload sem organization_id, RLS rejeita ✅ 1B.2.5
-- [ ] **#1b (média):** ImovelWizard sem selector de organização. Multi-org users vêem 1ª org por convenção. Adicionar selector quando user tiver 2+ memberships activos. (Sprint 1B.5 ou Fase 6.)
-- [ ] **#2:** App.jsx query `ordens` em vez de `ordens_trabalho` (404)
+- [x] **#1 (alta):** ImovelWizard "Erro ao guardar" — payload sem `organization_id`, RLS rejeita ✅ 1B.2.5
+- [ ] **#1b (média):** Multi-org sem selector explícito. Adicionar selector quando user tiver 2+ memberships activos.
+- [x] **#2:** App.jsx query `ordens` em vez de `ordens_trabalho` (404) ✅ 1B.2.5b
 - [ ] **#3:** Modal/drawer fecha em copy-paste (onClickOutside mal config)
-- [ ] **#4:** Distrito como dropdown PT + autopreencher CP via API CTT
-- [ ] **#5:** Sistemas "comuns" (CCTV, Elevador) só visíveis para `categoria='condominio'`
+- [ ] **#4:** Distrito como dropdown PT (18 distritos + ilhas) + autopreencher CP via API CTT
+- [ ] **#5:** Sistemas "comuns" (CCTV, Elevador, Limpeza partes comuns) só visíveis para `categoria='condominio'`
+- [ ] **#6:** 2 imóveis "principais" simultâneos na UI (selector não limpa o anterior)
+- [ ] **#7:** ImovelWizard só "criar" — falta "editar sistemas" (REVISTO: tratado em 1B.4.5)
+- [ ] **#8:** Duplicate key "left" warning em App.jsx (linha 8165)
+- [ ] **#9:** Warning React `borderBottom` em EquipamentoFichaScreen (CSS inline)
+- [x] **#10:** equipamento.update RLS bug (GRANT memberships service_role) ✅ 1B.2.5c
+- [ ] **#11 (NOVO 28 Abr):** Morada duplicada no header da CasaScreen — aparece 2× após navegação
+- [ ] **#12 (NOVO 28 Abr):** Badge fotos errado — foto `origem='manual_user'` mostrava badge "IA" (fix incluído no commit `06d8091`)
 
 ---
 
@@ -1127,27 +1269,30 @@ Regras descobertas em produção, não teóricas:
 | AA | **Edge Functions: nunca redeploy sem ler `tool_error` real** (pagou-se em 1B.2.2 — 3 fixes diagnosticados, não especulativos) |
 | BB | Validação categórica em executor de agentes, não BD (whitelist em código) |
 | CC | Helpers DEV `window.__test*` tolerantes a string\|object (lição 1B.2.2 deploy v3) |
+| **DD** | **`supaPublic` não partilha JWT** — nunca usar para RPCs com `auth.uid()` context; usar `useAuth()` ou `supa` (lição 1B.2.3c — uploads silenciosos falhavam porque `current_pessoa_id()` retornava `null`) |
 
 ---
 
-## Aprovação para arrancar próximo passo
+## Decisão 29 Abril — escolher próximo passo
 
-Decisões já tomadas em 28 Abr permitem arrancar **três frentes em paralelo**:
+Sprints 1B.2.5 + 1B.2.5b + 1B.2.5c + 1B.2.3 todas fechadas. Backlog limpo.
 
-1. **Sprint 1B.2.5** (1-2h) — fix #1 ImovelWizard antes de qualquer coisa
-2. **Sprint 1B.2.3** (3-4 dias) — UI AdicionarCamaraScreen + EquipamentoFichaScreen
-3. **Sprint 1B.5 paralelo** (5-7 dias) — extrair packages/db + auth + scaffold V2
+**Quatro caminhos disponíveis amanhã:**
 
-Para Mario confirmar antes de arrancar:
+| Caminho | Sprint | Esforço | O que desbloqueia |
+|---|---|---|---|
+| A | 1B.2.3d — Documentos por equipamento | ~4h | Fecha 1B.2 a 100% |
+| **B** | **1B.5A — Foundations + V2 scaffold** | **2-3 dias** | **V2 paralelo limpo** |
+| C | 1B.3 — casa_advisor conversacional | 3-4 dias | Diferenciador comercial IA |
+| D | 1B.5 — Bug fixes UX (12 itens) | ~1 dia | Qualidade geral |
 
-```
-Próximo arranque:
-1. Avançar 1B.2.5 (fix #1) primeiro? [SIM/NÃO]
-2. Depois 1B.2.3 (UI câmara) ou 1B.5 (fundações)? [1B.2.3 / 1B.5 / paralelo]
-3. Decisões pendentes B (codename), C (beta testers), F (magic link), G (QR), H (bundle): [respostas]
-4. Confirmar tipo síndicos V2 (profissionais/auto/mix): [resposta]
-5. Confirmar categoria 5 prestadores V5 (limpezas/canalização/mix): [resposta]
-```
+**Recomendação Claude:** B → C → A → D
+
+Decisões pendentes (se ainda abertas):
+- **B** (codename "Zelo"): confirmar para BRAND constants?
+- **C** (beta testers 3-5 pessoas): identificados?
+- **J** (tipo síndicos V2): profissionais / auto-síndicos / mix?
+- **J** (categoria prestadores V5): limpezas / canalização / mix?
 
 ---
 
@@ -1184,6 +1329,6 @@ Próximo arranque:
 ---
 
 **Documento criado:** 27 Abril 2026
-**Última actualização:** 28 Abril 2026 (tarde) — fecho 1B.2.3b + decisão arquitectural Onda 2 (equipamento_enricher + docs_curator schema + casa_advisor RAG integration + princípio ecossistema agentes)
-**Próxima revisão:** após fecho Sprint 1B.5 (fundações + V2 scaffold)
+**Última actualização:** 28 Abril 2026 (fim de dia) — fecho 1B.2.3c (edição completa + uploads + delete) · tabela progresso Onda 1B · 7 decisões estratégicas · Sprint 1B.2.3d formalizada · 1B.5A formalizada · Backlog UX expandido (#11 + #12) · Regra DD adicionada
+**Próxima revisão:** após decisão Mario 29 Abr (caminho A/B/C/D)
 **Autor:** Claude (chat) + Mario
