@@ -818,7 +818,8 @@ Steps:
 
 **Não bloqueante, exceto #1.** Entra em Sprint 1B.2.5 ou 1B.5.
 
-- [ ] **#1 (alta):** ImovelWizard.jsx "Erro ao guardar" — payload sem organization_id, RLS rejeita
+- [x] **#1 (alta):** ImovelWizard.jsx "Erro ao guardar" — payload sem organization_id, RLS rejeita ✅ 1B.2.5
+- [ ] **#1b (média):** ImovelWizard sem selector de organização. Multi-org users vêem 1ª org por convenção. Adicionar selector quando user tiver 2+ memberships activos. (Sprint 1B.5 ou Fase 6.)
 - [ ] **#2:** App.jsx query `ordens` em vez de `ordens_trabalho` (404)
 - [ ] **#3:** Modal/drawer fecha em copy-paste (onClickOutside mal config)
 - [ ] **#4:** Distrito como dropdown PT + autopreencher CP via API CTT

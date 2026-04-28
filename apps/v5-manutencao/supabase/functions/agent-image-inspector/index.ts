@@ -259,6 +259,27 @@ Deno.serve(async (req: Request) => {
         ?? auditRow?.tool_output?.updated?.id;
     }
 
+    // ── 10.5. Guardar markdown da análise no equipamento ─────────────────────
+    if (equipamentoId && agentResult.success) {
+      const markdownAnalise = Array.isArray(agentResult.result)
+        ? (agentResult.result as any[]).find((b) => b.type === "text")?.text ?? null
+        : null;
+      if (markdownAnalise) {
+        try {
+          await serviceRole
+            .schema("v5_manutencao")
+            .from("equipamentos")
+            .update({
+              ai_resumo_markdown: markdownAnalise,
+              ai_resumo_updated_at: new Date().toISOString(),
+            })
+            .eq("id", equipamentoId);
+        } catch (markdownErr: any) {
+          console.warn("Markdown save failed (non-critical):", markdownErr?.message);
+        }
+      }
+    }
+
     // ── 11. Resposta ──────────────────────────────────────────────────────────
     const response: ImageInspectorResponse = {
       success: agentResult.success,
