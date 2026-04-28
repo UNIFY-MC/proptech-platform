@@ -45,6 +45,16 @@ const config = typeof opts === 'string'
 
 **Aplicado em:** `src/supa.js` `__testImageInspector`.
 
+### Regra DD — supaPublic não partilha JWT (bug silencioso de auth)
+
+`supaPublic` é criado com `persistSession: false` e `storageKey: 'sb-public-auth'` — não partilha a sessão JWT de `supa`. Chamar RPCs `SECURITY INVOKER` (como `current_pessoa_id()`) via `supaPublic` executa como `anon`, logo `auth.uid() = null` → retorna `null` silenciosamente (sem erro HTTP).
+
+**Usar `supaPublic` APENAS para** queries verdadeiramente públicas que não precisem de identidade do utilizador (ex: `SELECT * FROM catalogo_servicos`).
+
+**Para RPCs com `auth.uid()` context ou RLS:** usar `supa` (sessão JWT activa) ou `useAuth()` (valores já resolvidos pelo AuthContext). Nunca usar `supaPublic.rpc('current_pessoa_id')` — vai sempre retornar `null`.
+
+**Lição 1B.2.3c:** `EquipamentoFichaScreen` usava `supaPublic.rpc('current_pessoa_id')` → `pessoaId` sempre `null` → uploads de fatura e foto silenciosamente abortavam no guard `if (!pessoaId) return`. Fix: substituir por `useAuth().pessoa_id`.
+
 ---
 
 ## Regras de BD / RLS (série 3.4)

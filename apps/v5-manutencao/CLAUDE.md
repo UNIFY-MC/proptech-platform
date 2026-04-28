@@ -180,6 +180,7 @@ Regras em vigor:
 - **AA** — nunca redeploy sem ver audit log + Edge Function logs
 - **BB** — validação categórica de inputs de agentes com `Set<string>` hardcoded
 - **CC** — helpers DEV tolerantes a `string | object` (lição 1B.2.2)
+- **DD** — `supaPublic` não partilha JWT — nunca usar para RPCs com `auth.uid()` context; usar `useAuth()` ou `supa` (lição 1B.2.3c)
 - **W** — RLS sem GRANT devolve `null` silencioso — sempre GRANT antes de CREATE POLICY
 - **X** — SECURITY DEFINER sem GRANT EXECUTE lança 42501 — sempre GRANT EXECUTE explícito
 - **Y** — PostgREST embeds são literais às colunas reais — abrir schema antes de escrever

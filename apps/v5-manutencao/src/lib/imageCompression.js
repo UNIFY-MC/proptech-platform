@@ -31,6 +31,7 @@ export async function compressImage(file) {
 
   return {
     base64: btoa(binary),
+    blob,
     mimeType: "image/jpeg",
     width,
     height,

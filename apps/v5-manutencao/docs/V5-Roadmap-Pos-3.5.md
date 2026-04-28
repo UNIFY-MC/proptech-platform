@@ -986,6 +986,22 @@ Steps:
 
 **Não bloqueante, exceto #1.** Entra em Sprint 1B.2.5 ou 1B.5.
 
+### Sprint 1B.6 candidata — Histórico de manutenções na ficha (observação Mario 28 Abr 16:30)
+
+**Distinção semântica importante (decidida 28 Abr):**
+- "Análise IA" = identificação automática por foto (agente, sem intervenção humana)
+- "Manutenção/Reparação" = intervenção profissional (certificada, faturável, relevante para AT)
+- Os dois NÃO devem ser misturados — são linhas de tempo diferentes
+
+**Pendente:**
+- [ ] Schema check: `ordens_trabalho` tem coluna `equipamento_id`?
+      → Se não: `ALTER TABLE v5_manutencao.ordens_trabalho ADD COLUMN IF NOT EXISTS equipamento_id uuid;` (FK opcional — um pedido pode não ter equipamento)
+- [ ] Query: `ordens_trabalho WHERE equipamento_id = X AND estado IN ('concluida', 'concluida_avaliada')`
+- [ ] Render no bloco "Manutenções e reparações" da ficha:
+      data · prestador (nome) · categoria · custo · descrição curta
+- [ ] Nota disclaimer UI: "IA não substitui certificação técnica profissional"
+- [ ] Clarificar aos clientes que "Análise IA" é auxiliar, não auditável
+
 - [x] **#1 (alta):** ImovelWizard.jsx "Erro ao guardar" — payload sem organization_id, RLS rejeita ✅ 1B.2.5
 - [ ] **#1b (média):** ImovelWizard sem selector de organização. Multi-org users vêem 1ª org por convenção. Adicionar selector quando user tiver 2+ memberships activos. (Sprint 1B.5 ou Fase 6.)
 - [ ] **#2:** App.jsx query `ordens` em vez de `ordens_trabalho` (404)
