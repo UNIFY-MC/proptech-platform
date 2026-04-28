@@ -10,24 +10,39 @@
 |----|---------|-----------|
 | D1 | npm workspaces | ✅ Mario 28 Abr |
 | D2 | @proptech/* naming | ✅ Mario 28 Abr |
-| D3 | Manter divergências React/supa, peer ranges largos | ✅ Mario 28 Abr |
+| D3 | V5+V2 usam versões exactas recentes; V63 isolado e excluído | ✅ Mario 28 Abr (revista) |
 | D4 | Verificar @proptech disponível npm | ⏳ Fase 2 |
 | D5 | V2 scope: login mínimo | ✅ Mario 28 Abr |
 
-### Implicações da D3 (versions)
+### Implicações da D3 — Versions (revista 28 Abr 23h)
 
-- `packages/db` declara `"@supabase/supabase-js": "^2.45.0"` (aceita 2.45 → 2.103+)
-- `packages/auth` declara peer dep `"react": "^18 || ^19"`
-- V2 novo (`apps/v2-condominios`) arranca com React 19 (latest) + supabase-js 2.103+ (latest)
-- V5 fica em React 18 / supabase 2.45 **sem mexer** — produção intocável
-- Risco aceite: bug latente onde V5 pode comportar-se diferente de V2/V4. Mitigação: testes nos packages/* exercitam ambas as ranges
+V5 + V2 novo usam `packages/*` com versões exactas e recentes:
+- `packages/db`: `"@supabase/supabase-js": "^2.103.0"`
+- `packages/auth`: peer `"react": "^19.0.0"`
 
-### Sprint 1B.5B futura — Upgrade V5
+V63 fica fora de scope:
+- `v63-prataowners/` **NÃO migra** para packages
+- Mantém-se em React 18 + supa-js 2.45 isolado
+- Continua em produção até `v2-condominios` atingir feature parity
+- Quando V2 novo estiver pronto → migração de utilizadores → V63 deprecated
 
-Quando V5 tiver testes E2E suficientes, upgrade para React 19 + supabase 2.103.
-- Pré-requisito: smoke test V5 manual cobrir paths críticos (auth, onboarding, uploads, GDPR)
-- Esforço estimado: 1-2 dias com cuidado
-- Branch dedicada; nunca no mesmo PR que a extracção dos packages
+Vantagens desta abordagem:
+- Zero hacks de compatibilidade (sem `"^18 || ^19"` defensivo)
+- packages limpos com versões exactas
+- V5 e V2 evoluem juntos como "nova plataforma"
+- V63 morre naturalmente sem bloquear inovação
+- Sem risco de bugs latentes entre versões diferentes
+
+### Sprint futura — Substituição V63 → V2 novo
+
+Não é upgrade, é replacement. Quando `v2-condominios` atingir feature parity com `v63-prataowners`:
+1. Migration plan de utilizadores
+2. Migration plan de dados (se necessário)
+3. Cutover (período em paralelo + cutover final)
+4. V63 deprecated mas mantido read-only durante 3–6 meses
+5. V63 archived
+
+Esforço estimado: muito grande, depende do scope final V2. **NÃO é parte de 1B.5A.**
 
 ---
 
@@ -35,12 +50,14 @@ Quando V5 tiver testes E2E suficientes, upgrade para React 19 + supabase 2.103.
 
 ### Apps existentes
 
-| App | React | supabase-js | Notas |
-|-----|-------|-------------|-------|
-| `apps/v1-core` | 19.2.4 | 2.103.3 | Port do admin/index.html legacy · SPA html único |
-| `apps/core` | 19.2.4 | 2.103.3 | Cópia idêntica de v1-core · mesmo package.json |
-| `apps/v4-energia` | 19.x | 2.103.3 | Shell inicial · `supa.js` minimalista (2 clients, sem DEV helpers) |
-| `apps/v5-manutencao` | 18.3.1 | 2.45.0 | App principal · `supa.js` completo + AuthContext · 55+32 imports |
+| App | React | supabase-js | Usa packages? | Notas |
+|-----|-------|-------------|---------------|-------|
+| `apps/v5-manutencao` | 18.3.1 | 2.45.0 | ✅ Sim (Fase 2) | App principal · `supa.js` completo + AuthContext · 55+32 imports |
+| `apps/v2-condominios` (NOVO) | 19 | 2.103 | ✅ Sim (Fase 2) | Construído de raiz · substitui V63 |
+| `apps/v63-prataowners` | 18 | 2.45 | ❌ Não — legacy isolado | Produção viva · intocável até V2 feature parity |
+| `apps/v1-core` | 19.2.4 | 2.103.3 | ❌ Não — fora scope | Port do admin/index.html legacy |
+| `apps/core` | 19.2.4 | 2.103.3 | ❌ Não — fora scope | Cópia idêntica de v1-core |
+| `apps/v4-energia` | 19.x | 2.103.3 | ❌ Não — fora scope | Shell inicial · fora de 1B.5A |
 
 ### Ferramentas de workspace
 
@@ -149,12 +166,12 @@ AuthContext em V5 é o componente mais crítico — toca em login, onboarding bl
 
 **D2 ✅ — Naming `@proptech/*`** (`@proptech/db` + `@proptech/auth`) — scope correcto para uso cross-vertical
 
-**D3 ✅ — Manter divergências de versão; peer ranges largos**
-- Não upgradar V5 antes da extracção
-- `packages/db` peer `"@supabase/supabase-js": "^2.45.0"`
-- `packages/auth` peer `"react": "^18 || ^19"`
-- V2 novo arranca com React 19 + supa 2.103; V5 fica intocável
-- Upgrade V5 adiado para Sprint 1B.5B (pré-requisito: E2E suficientes)
+**D3 ✅ — Versões exactas recentes; V63 excluído de packages**
+- `packages/db`: `"@supabase/supabase-js": "^2.103.0"`
+- `packages/auth`: peer `"react": "^19.0.0"`
+- V5 e V2 novo usam as mesmas versões — zero hacks de compatibilidade
+- V63 (`v63-prataowners`) **excluído** — legacy isolado, substituto não upgrade
+- *Nota:* V5 ainda está em React 18 / supa 2.45 — Fase 2 inclui upgrade de V5 antes de ligar packages
 
 **D4 ⏳ — Verificar namespace @proptech no npm** (executar no início da Fase 2)
 - Comando: `npm info @proptech/db 2>&1 | head -5` — se 404, namespace livre; se 200, escolher alternativa
@@ -169,14 +186,14 @@ AuthContext em V5 é o componente mais crítico — toca em login, onboarding bl
 | Step | Descrição | Estimativa |
 |------|-----------|-----------|
 | 2.0 | Verificar D4 (`npm info @proptech/db`) + `package.json` raiz + workspace config | 20 min |
-| 2.1 | Criar `packages/db`: URL/key + factories (peer supa ^2.45.0) | 30 min |
-| 2.2 | Adaptar `supa.js` de V5 para usar `@proptech/db` | 20 min |
-| 2.3 | Adaptar `supa.js` de V4 para usar `@proptech/db` | 10 min |
+| 2.1 | Upgrade V5: React 18→19 + supabase-js 2.45→2.103 (alinhar com packages) | 30 min + smoke test |
+| 2.2 | Criar `packages/db`: URL/key + factories (supa ^2.103.0) | 30 min |
+| 2.3 | Adaptar `supa.js` de V5 para usar `@proptech/db` | 20 min |
 | 2.4 | Mover `AuthContext.jsx` para `packages/auth` (fase 1 — shim em V5) | 45 min |
-| 2.5 | Refactorizar `AuthProvider` para aceitar clients via props (peer react ^18\|\|^19) | 45 min |
+| 2.5 | Refactorizar `AuthProvider` para aceitar clients via props (peer react ^19) | 45 min |
 | 2.6 | Smoke test V5 completo (auth, uploads, onboarding, GDPR) | 30 min |
-| 2.7 | Scaffold login mínimo V2 com `@proptech/auth` (validação cross-app) | 20 min |
-| **Total** | | **~3h30** |
+| 2.7 | Scaffold login mínimo V2 com `@proptech/auth` (D5 validation) | 20 min |
+| **Total** | | **~4h** |
 
 ---
 
@@ -184,12 +201,12 @@ AuthContext em V5 é o componente mais crítico — toca em login, onboarding bl
 
 ```
 chore(monorepo): add npm workspaces root package.json + packages/ scaffold
-feat(packages/db): @proptech/db — Supabase client factories (peer supa ^2.45.0)
+chore(v5): upgrade react 18→19 + supabase-js 2.45→2.103 (align with packages)
+feat(packages/db): @proptech/db — Supabase client factories (supa ^2.103.0)
 refactor(v5): supa.js → uses @proptech/db factory
-refactor(v4): supa.js → uses @proptech/db factory
 feat(packages/auth): @proptech/auth — AuthContext + useAuth extracted from V5
 refactor(v5): AuthContext → consumes @proptech/auth (shim, no logic change)
-refactor(v5): AuthProvider accepts mainClient + coreClient via props
+refactor(v5): AuthProvider accepts mainClient + coreClient via props (react ^19)
 test(v5): smoke test auth + uploads + onboarding post-extraction
 feat(v2): scaffold login mínimo using @proptech/auth (D5 validation)
 ```
