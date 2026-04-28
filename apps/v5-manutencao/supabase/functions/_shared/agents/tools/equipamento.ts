@@ -353,7 +353,7 @@ async function equipamento_update(
   if (!loc) throw new Error("Localização do equipamento não encontrada");
 
   // 3. Validar membership activa
-  const { data: membership } = await ctx.serviceRole
+  const { data: membership, error: memErr } = await ctx.serviceRole
     .schema("core")
     .from("memberships")
     .select("id")
@@ -361,6 +361,7 @@ async function equipamento_update(
     .eq("organization_id", loc.organization_id)
     .is("deleted_at", null)
     .maybeSingle();
+  if (memErr) throw new Error(`Erro ao verificar acesso (${memErr.code}): ${memErr.message}`);
   if (!membership) throw new Error("Pessoa sem acesso a este equipamento");
 
   // 4. Defense in depth: inconsistência silenciosa
