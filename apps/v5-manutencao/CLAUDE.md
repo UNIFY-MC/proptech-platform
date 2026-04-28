@@ -174,113 +174,18 @@ Princípio aplicado a partir de 3.4C — **zero como ponto de partida visível, 
 
 ### Anti-padrões PROIBIDOS
 
-**Regra AA — Edge Functions: nunca redeploy sem ver tool_error real (lição 1B.1.2)**
+> Regras completas em **`.claude/rules/anti-patterns.md`** (indexáveis via grep).
 
-Quando uma Edge Function de agent retorna 500, fazer SEMPRE diagnóstico antes de qualquer fix:
-1. `SELECT tool_error FROM core.agent_audit_log WHERE agent_name='<x>' ORDER BY created_at DESC LIMIT 5;`
-2. Logs do Supabase Dashboard → Functions → `<fn>` → Logs
+Regras em vigor:
+- **AA** — nunca redeploy sem ver audit log + Edge Function logs
+- **BB** — validação categórica de inputs de agentes com `Set<string>` hardcoded
+- **CC** — helpers DEV tolerantes a `string | object` (lição 1B.2.2)
+- **W** — RLS sem GRANT devolve `null` silencioso — sempre GRANT antes de CREATE POLICY
+- **X** — SECURITY DEFINER sem GRANT EXECUTE lança 42501 — sempre GRANT EXECUTE explícito
+- **Y** — PostgREST embeds são literais às colunas reais — abrir schema antes de escrever
+- **Z** — Audit RLS checklist obrigatório antes de fechar qualquer fase com RLS
 
-Causa real pode ser API key corrompida, não código. Três deploys especulativos não substituem 1 query de diagnóstico.
-
-**Regra BB — Validação categórica de inputs de agentes (lição 1B.2.1)**
-
-Tools de agentes que aceitem string para uma coluna categórica (categoria, status, tipo) **devem validar contra `Set<string>` hardcoded antes do SQL**, com throw explícito listando valores válidos.
-
-Razão: agentes podem alucinar valores (`'boiler'` em inglês, `'aquecimento_central'` inventado), Anthropic não impõe constraints em runtime, e CHECK na BD é frágil para conjuntos que evoluem. Validação no executor permite ao agente fazer retry com valor válido (frequentemente `'outros'`).
-
-```ts
-const VALID_CATEGORIAS = new Set(["aquecimento", "climatizacao", /* ... */]);
-function assertCategoria(cat: string): void {
-  if (!VALID_CATEGORIAS.has(cat)) throw new Error(`Categoria inválida: '${cat}'. Válidos: ${[...VALID_CATEGORIAS].join(" | ")}`);
-}
-```
-
-Lição 1B.2.1: `equipamento_create`, `equipamento_update`, `catalogo_search_servico_relevante` usam `VALID_EQUIPAMENTO_CATEGORIAS` e `VALID_SERVICO_CATEGORIAS` (Sets separados — as listas são diferentes).
-
-**Regra CC — Helpers DEV de teste devem ser tolerantes a inputs (lição 1B.2.2)**
-
-Helpers `window.__test*` que aceitem opções devem aceitar string solta E object. Lição 1B.2.2 (deploy v3-v4): helper recebia `{ localizacao_id: 'uuid' }` e enviava o objecto inteiro como valor do campo, PostgREST falhava com `22P02 "invalid input syntax for type uuid: [object Object]"`.
-
-Pattern obrigatório:
-```js
-const config = typeof opts === 'string'
-  ? { localizacao_id: opts }
-  : opts;
-```
-
-Aplicado em: `src/supa.js` `__testImageInspector`.
-
----
-
-Lições aprendidas em 3.4C/3.4D audit — nunca introduzir:
-
-- `DEMO_*`, `MOCK_*`, `FAKE_*`, `HARDCODED_*` fora de testes/storybook
-- Fallback arrays em renderização (`[90,65,80,50,68][i]` etc.)
-- `useState` com valor não-zero/não-null que pareça dado real
-- Mock data partilhado entre utilizadores (todos vêem os mesmos pedidos/poupanças)
-- `.single()` sem garantia de ≥1 row — usar `.maybeSingle()`
-- Funções RPC `SECURITY DEFINER` com `GRANT anon` sem guard interno (`auth.uid() IS NOT NULL`)
-- **RLS sem GRANT — bug silencioso (lição 3.4D)**:
-
-```sql
--- PADRÃO OBRIGATÓRIO para toda tabela nova com RLS:
-ALTER TABLE schema.tabela ENABLE ROW LEVEL SECURITY;
-GRANT SELECT ON schema.tabela TO authenticated;  -- ← OBRIGATÓRIO antes da POLICY
-CREATE POLICY "..." ON schema.tabela FOR SELECT TO authenticated USING (...);
-```
-
-RLS sem GRANT = PostgREST devolve `data: null` silenciosamente (sem erro visível no console).
-Como ter fechadura sem maçaneta — ninguém entra mesmo com a chave certa.
-Efeito prático: queries JS devolvem `null`, estados ficam em `[]`/`false`, sem alerta.
-**Verificar sempre:** `GRANT` antes de `CREATE POLICY`, em todos os schemas (`core`, `v5_manutencao`, `public`).
-Diagnóstico rápido: `SELECT grantee, privilege_type FROM information_schema.role_table_grants WHERE table_schema='X' AND table_name='Y';`
-
-- **Embeds PostgREST são literais às colunas reais (lição 3.4D)**:
-
-Quando adicionas embed `tabela:nome_real(col1, col2)`, **abre o schema da tabela embedded primeiro**. Nunca infiras nomes de colunas pelo padrão de outras tabelas. Em particular:
-- `public.servicos` (V1 legacy) usa `categoria_id` (FK numérica)
-- `v5_manutencao.catalogo_servicos` (V5) usa `categoria` (string, sem `_id`)
-
-Não fazer copy-paste de embeds entre schemas diferentes. Se a query falha com 400, lê o campo `hint` na resposta PostgREST — indica a coluna correcta. Bug encontrado em 3.4D smoke test G (`App.jsx:10523`).
-
-- **SECURITY DEFINER sem GRANT EXECUTE = erro 42501 silencioso (lição 3.4D)**:
-
-Para qualquer função `SECURITY DEFINER`, declarar explicitamente quem pode executar:
-
-```sql
-CREATE OR REPLACE FUNCTION schema.fn_x(...) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER AS $$ ... $$;
-
--- OBRIGATÓRIO depois do CREATE:
-GRANT EXECUTE ON FUNCTION schema.fn_x(...) TO <role_específico>;
-REVOKE EXECUTE ON FUNCTION schema.fn_x(...) FROM PUBLIC;
-```
-
-Roles típicos: Edge Function via service_role key → `TO service_role`; RPC frontend → `TO authenticated`; Admin → `TO postgres`.
-Sintoma: `code: "42501", message: "permission denied for function X"`. Bug encontrado em 3.4D smoke test G T4 (`core.fn_anonymize_account`).
-
-- **`core.pessoas` usa `metadata` JSONB para soft-delete GDPR (não coluna `deleted_at`)**:
-
-```sql
-UPDATE core.pessoas SET
-  metadata = jsonb_build_object('deleted', true, 'deleted_at', now()::text),
-  nome = 'Conta eliminada', email = 'deleted+<uuid>@v5casa.pt',
-  primeiro_nome = NULL, apelidos = NULL, telemovel = NULL, nif = NULL
-WHERE id = <pessoa_id>;
-
--- Filtrar activas:
-WHERE COALESCE(metadata->>'deleted', 'false') != 'true'
-```
-
-Inconsistência conhecida e aceite: `core.memberships` usa coluna `deleted_at` dedicada; `core.pessoas` usa metadata. ADR a alinhar em Fase 7+.
-
-- **Naming consistency — colunas diferem entre schemas, não copiar (lição 3.4D)**:
-
-| Conceito | `core.pessoas` | `public.servicos` | `v5_manutencao.catalogo_servicos` |
-|---|---|---|---|
-| Telefone | `telemovel` | n/a | n/a |
-| Categoria | n/a | `categoria_id` (FK int) | `categoria` (string) |
-| Soft-delete | `metadata->>'deleted'` | n/a | n/a |
-| Soft-delete memberships | `deleted_at` (coluna) | n/a | n/a |
+Anti-padrões gerais: nunca introduzir `DEMO_*`/`MOCK_*`/`FAKE_*`, fallback arrays em render, `useState` com valor mock, `.single()` sem garantia de ≥1 row, `GRANT anon` em funções SECURITY DEFINER sem guard interno.
 
 ---
 
@@ -326,36 +231,17 @@ Princípio: **1 pessoa → 1 identidade** (`auth.users` + `core.pessoas`) → N 
 
 ## Pontos de atenção
 
-### RLS audit checklist obrigatório (lição 3.4C)
+### Regra Z — RLS audit checklist + Regra Y — PostgREST embeds
 
-ANTES de fechar qualquer fase que aplique/altere RLS:
+> Detalhes completos em `.claude/rules/anti-patterns.md` (Regra Z e Regra Y).
 
-1. `grep -rn "DEMO_\|MOCK_\|FAKE_\|HARDCODED_" src/` → deve dar 0 matches
-2. Auditar TODAS as views (regulares e materialized) sem RLS explícita
-3. Auditar TODAS as funções RPC SECURITY DEFINER:
-   ```sql
-   SELECT n.nspname, p.proname, p.prosecdef
-   FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
-   WHERE n.nspname IN ('core','v5_manutencao','public');
-   ```
-   → cada uma deve ter guard `auth.uid() IS NOT NULL` ou `is_staff()` interno
-4. Cross-tenant test: criar 2º utilizador, validar que NÃO vê dados do 1º (Network tab + Response inspection)
-5. Testar UI com utilizador novo (sem histórico) — não pode ver mocks
-6. `NOTIFY pgrst, 'reload schema';` após cada batch de policies
-7. **Inspecionar Network tab durante smoke test** — qualquer 400 indica embed PostgREST mal formado (coluna inexistente); qualquer 403 indica GRANT em falta na tabela
-8. **Para tabelas novas com RLS**, confirmar GRANT em `information_schema.role_table_grants` antes de fechar a fase
+Checklist rápido pré-fecho de fase com RLS:
+1. `grep -rn "DEMO_\|MOCK_\|FAKE_\|HARDCODED_" src/` → 0 matches
+2. `NOTIFY pgrst, 'reload schema';` após batch de policies
+3. Network tab: 400 = embed mal formado · 403 = GRANT em falta
+4. Cross-tenant test com 2º utilizador
 
-### Naming PostgREST embed (lição 3.4C bugs)
-
-Sintaxe correcta para foreign embed:
-
-```js
-// ERRADO — PostgREST procura tabela chamada "servico_id" (não existe):
-.select('ordem, servico:servico_id(id, nome)')
-
-// CORRECTO — embed por nome da tabela destino:
-.select('ordem, servico:catalogo_servicos(id, nome)')
-```
+PostgREST embed: usar nome da tabela destino, nunca o nome da FK. Se 400, ler campo `hint` da resposta.
 
 ### Race condition authUser bridge (lição 3.4D)
 
