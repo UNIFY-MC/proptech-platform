@@ -76,8 +76,8 @@ export default function ImovelDetalheScreen({ id, onBack, onNavigateScore }) {
     async function load() {
       const [imRes, ordRes, eqRes] = await Promise.all([
         supa.from('localizacoes').select('*').eq('id', id).maybeSingle(),
-        supa.from('ordens').select('id,numero,estado,created_at,descricao_personalizada,metadata')
-          .eq('localizacao_id', id).order('created_at', { ascending: false }).limit(5),
+        supa.from('ordens_trabalho').select('id,estado,created_at,notas_cliente,catalogo_servico:catalogo_servicos(nome)')
+          .eq('imovel_id', id).order('created_at', { ascending: false }).limit(5),
         supa.from('equipamentos').select('id', { count: 'exact', head: true }).eq('localizacao_id', id),
       ])
       if (!active) return
@@ -392,7 +392,7 @@ export default function ImovelDetalheScreen({ id, onBack, onNavigateScore }) {
           }}>
             <div>
               <div style={{ fontSize: 12, fontWeight: 600, color: C.ink }}>
-                {o.metadata?.servico_nome || o.descricao_personalizada || `Ordem #${o.numero}`}
+                {o.catalogo_servico?.nome || o.notas_cliente || 'Ordem sem título'}
               </div>
               <div style={{ fontSize: 10, color: C.slate, marginTop: 2 }}>
                 {new Date(o.created_at).toLocaleDateString('pt-PT')}
