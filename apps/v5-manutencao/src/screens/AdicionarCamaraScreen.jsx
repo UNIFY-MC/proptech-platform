@@ -85,7 +85,7 @@ function parseError(err) {
   }
 }
 
-export default function AdicionarCamaraScreen({ onBack, localizacaoId }) {
+export default function AdicionarCamaraScreen({ onBack, localizacaoId, onSuccess }) {
   const [uiState,        setUiState]        = useState(STATES.INITIAL)
   const [photoFile,      setPhotoFile]      = useState(null)
   const [photoPreview,   setPhotoPreview]   = useState(null)
@@ -253,7 +253,7 @@ export default function AdicionarCamaraScreen({ onBack, localizacaoId }) {
         {uiState === STATES.CAMERA_ACTIVE && <StateCameraActive videoRef={videoRef} onCapture={capture} onCancel={() => { stopStream(); setUiState(STATES.INITIAL) }} />}
         {uiState === STATES.PREVIEW    && <StatePreview    preview={photoPreview} onRetake={retake} onAnalyze={analyze} />}
         {uiState === STATES.ANALYZING  && <StateAnalyzing  message={loadingMsg} />}
-        {uiState === STATES.RESULT     && <StateResult     result={result} onAddAnother={resetToInitial} />}
+        {uiState === STATES.RESULT     && <StateResult     result={result} onAddAnother={resetToInitial} onViewFicha={result?.equipamento_id && onSuccess ? ()=>onSuccess(result.equipamento_id) : null} />}
         {uiState === STATES.ERROR      && <StateError      error={error} onRetry={() => { setUiState(STATES.PREVIEW) }} />}
       </div>
 
@@ -434,7 +434,7 @@ function StateAnalyzing({ message }) {
   )
 }
 
-function StateResult({ result, onAddAnother }) {
+function StateResult({ result, onAddAnother, onViewFicha }) {
   const eq      = result?.equipamento || {}
   const dadosIa = eq.dados_ia || {}
   const issues  = dadosIa.issues_detectados || []
@@ -492,14 +492,17 @@ function StateResult({ result, onAddAnother }) {
       </div>
 
       <button
-        disabled
+        onClick={onViewFicha || undefined}
+        disabled={!onViewFicha}
         style={{
           width: '100%', padding: 14, borderRadius: 12, border: 'none',
-          background: C.border, color: C.slate, fontSize: 14, fontWeight: 600,
-          cursor: 'not-allowed', marginBottom: 10,
+          background: onViewFicha ? G : C.border,
+          color: onViewFicha ? '#fff' : C.slate,
+          fontSize: 14, fontWeight: 600,
+          cursor: onViewFicha ? 'pointer' : 'not-allowed', marginBottom: 10,
         }}
       >
-        ver ficha completa → (em breve)
+        {onViewFicha ? 'ver ficha completa →' : 'ver ficha completa → (em breve)'}
       </button>
 
       <button
