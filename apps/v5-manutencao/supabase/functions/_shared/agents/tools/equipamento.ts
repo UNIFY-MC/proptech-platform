@@ -123,20 +123,43 @@ export const EQUIPAMENTO_TOOLS: AgentTool[] = [
         },
         dados_ia: {
           type: "object",
-          description:
-            "Struct completa dos dados detectados. " +
-            "Campos: foto_principal_path (path no bucket), data_instalacao_precisao ('exact'|'year_only'|'estimated'), " +
-            "idade_estimada_anos (inteiro 0-50; só se precisao='estimated'), " +
-            "issues_detectados (lista com valores controlados), " +
-            "confianca_identificacao ('alta'|'media'|'baixa'). " +
-            "NÃO incluir agente_inspecao_session_id nem agente_inspecao_em.",
+          description: "Struct completa dos dados detectados pela IA nesta sessão. NÃO incluir agente_inspecao_session_id nem agente_inspecao_em.",
+          properties: {
+            foto_principal_path: {
+              type: "string",
+              description: "Path da foto no bucket (fornecido no prompt — copiar exactamente).",
+            },
+            data_instalacao_precisao: {
+              type: "string",
+              enum: ["exact", "year_only", "estimated"],
+              description: "Nível de certeza sobre a data de instalação.",
+            },
+            confianca_identificacao: {
+              type: "string",
+              enum: ["alta", "media", "baixa"],
+              description: "Grau de certeza na identificação do equipamento.",
+            },
+            idade_estimada_anos: {
+              type: "integer",
+              minimum: 0,
+              maximum: 50,
+              description: "Estimativa de anos desde instalação. Preencher apenas se data_instalacao_precisao='estimated'.",
+            },
+            issues_detectados: {
+              type: "array",
+              items: { type: "string" },
+              description: "Issues visíveis. Valores válidos: oxidacao|fuga_agua|fuga_gas|fissura|ferrugem|manchas|ruido_anormal|etiqueta_ilegivel|instalacao_irregular|outros:<desc>",
+            },
+          },
+          required: ["foto_principal_path", "data_instalacao_precisao", "confianca_identificacao"],
+          additionalProperties: true,
         },
         marca: { type: "string", description: "Marca detectada na etiqueta." },
         modelo: { type: "string", description: "Modelo detectado na etiqueta." },
-        numero_serie: { type: "string", description: "Número de série da etiqueta." },
+        numero_serie: { type: "string", description: "Número de série da etiqueta. NÃO inventar — omitir se não for claramente legível. Fazer trim de whitespace." },
         localizacao_imovel: {
           type: "string",
-          description: "Local dentro do imóvel: cozinha, casa_de_banho, cave, exterior, sala, garagem, sotao, etc.",
+          description: "Local dentro do imóvel em snake_case. Valores comuns: cozinha, casa_de_banho, sala, quartos, lavandaria, garagem, sotao, cave, exterior, jardim, telhado, hall. Outros valores aceites — usa snake_case.",
         },
         data_instalacao: {
           type: "string",
@@ -163,16 +186,41 @@ export const EQUIPAMENTO_TOOLS: AgentTool[] = [
         },
         dados_ia: {
           type: "object",
-          description:
-            "Patch de dados da IA — merged com dados_ia existente. " +
-            "Incluir: foto_principal_path, data_instalacao_precisao, issues_detectados, confianca_identificacao. " +
-            "Se data_instalacao_precisao='estimated', incluir idade_estimada_anos (inteiro 0-50). " +
-            "NÃO incluir agente_inspecao_session_id nem agente_inspecao_em.",
+          description: "Patch de dados — merged com dados_ia existente (sessão anterior arquivada no histórico). NÃO incluir agente_inspecao_session_id nem agente_inspecao_em.",
+          properties: {
+            foto_principal_path: {
+              type: "string",
+              description: "Path da foto no bucket (fornecido no prompt — copiar exactamente).",
+            },
+            data_instalacao_precisao: {
+              type: "string",
+              enum: ["exact", "year_only", "estimated"],
+              description: "Nível de certeza sobre a data de instalação.",
+            },
+            confianca_identificacao: {
+              type: "string",
+              enum: ["alta", "media", "baixa"],
+              description: "Grau de certeza na identificação do equipamento.",
+            },
+            idade_estimada_anos: {
+              type: "integer",
+              minimum: 0,
+              maximum: 50,
+              description: "Estimativa de anos desde instalação. Preencher apenas se data_instalacao_precisao='estimated'.",
+            },
+            issues_detectados: {
+              type: "array",
+              items: { type: "string" },
+              description: "Issues visíveis. Valores válidos: oxidacao|fuga_agua|fuga_gas|fissura|ferrugem|manchas|ruido_anormal|etiqueta_ilegivel|instalacao_irregular|outros:<desc>",
+            },
+          },
+          required: ["foto_principal_path", "data_instalacao_precisao", "confianca_identificacao"],
+          additionalProperties: true,
         },
         marca: { type: "string", description: "Marca (só se detectada — caso contrário omitir)." },
         modelo: { type: "string", description: "Modelo (só se detectado)." },
-        numero_serie: { type: "string", description: "Número de série (só se detectado)." },
-        localizacao_imovel: { type: "string", description: "Local dentro do imóvel (só se identificado)." },
+        numero_serie: { type: "string", description: "Número de série (só se detectado). NÃO inventar — omitir se não for claramente legível. Fazer trim de whitespace." },
+        localizacao_imovel: { type: "string", description: "Local dentro do imóvel em snake_case (só se identificado). Valores comuns: cozinha, casa_de_banho, sala, quartos, lavandaria, garagem, sotao, cave, exterior, jardim, telhado, hall." },
         data_instalacao: {
           type: "string",
           description: "Data YYYY-MM-DD ou YYYY-01-01 se só o ano é conhecido. Omitir se estimado.",

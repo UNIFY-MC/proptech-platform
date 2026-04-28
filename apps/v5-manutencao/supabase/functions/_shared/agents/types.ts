@@ -28,6 +28,7 @@ export interface AgentRunOptions {
   context: AgentContext;
   model?: string;          // override; default vem de core.agent_policies
   maxIterations?: number;  // default 20
+  sessionId?: string;      // se omitido, runAgent gera UUID próprio
 }
 
 export interface AgentRunResult {
@@ -47,4 +48,30 @@ export interface AgentPolicy {
   approval_required_tools: string[];
   approval_threshold_eur: number | null;
   model: string;
+}
+
+// Vision content block para Anthropic API (usado em image-inspector)
+export interface VisionContentBlock {
+  type: "image" | "text";
+  source?: { type: "url"; url: string };
+  text?: string;
+}
+
+// Payload recebido pelo Edge Function image-inspector
+export interface ImageInspectorRequest {
+  base64Image: string;    // base64 sem prefixo data:...
+  mimeType: string;       // "image/jpeg" | "image/png" | "image/webp"
+  localizacaoId?: string; // UUID — se omitido, agent pergunta ao utilizador
+}
+
+// Resposta do Edge Function image-inspector ao cliente
+export interface ImageInspectorResponse {
+  success: boolean;
+  sessionId: string;
+  iterations: number;
+  result?: unknown;
+  error?: string;
+  reason?: string;
+  totalCostEur?: number;
+  fotoPath?: string; // path no bucket após upload (para guardar na UI)
 }

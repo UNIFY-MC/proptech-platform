@@ -1,7 +1,7 @@
 # v5-manutencao — Contexto para Claude Code
 
 Este ficheiro é lido automaticamente pelo Claude Code a cada invocação. Mantém-se curto e actual.
-**Última actualização:** 2026-04-27 · Sprint 1B.2.1 **FECHADA** · Próximo: 1B.2.2 Edge Function image-inspector (Vision + deploy)
+**Última actualização:** 2026-04-28 · Sprint 1B.2.2 **FECHADA** · Próximo: 1B.2.3 UI AdicionarCamaraScreen
 
 ---
 
@@ -34,10 +34,11 @@ Não esperar pelo fim do projecto. Cada commit que muda padrão estrutural deve 
 | **1B.1.1** | Schema agents · agent_audit_log + agent_policies + api_usage · fn_can_use_api · regras W+X |
 | **1B.1.2** | Anthropic raw fetch + runAgent.ts + agent-test Edge Function · cost tracking + audit · smoke test B+C+D OK |
 | **1B.2.1** | image_inspector infra · bucket equipamentos-fotos · fn_match_existing_equipamento · 4 tool executors com validação · system prompt pt-PT · types.ts objective: string \| unknown[] |
+| **1B.2.2** | Edge Function image-inspector · Vision pipeline completo · imageCompression.js cliente · 4 deploys evolutivos · smoke test E2E PASSOU (Bosch SMV41D10EU) · custo real €0.08/análise · Regra CC |
 
 ### Em curso
 
-- Nada · **Sprint 1B.2.1 fechada** · Próximo: **1B.2.2** Edge Function `image-inspector` (Vision + deploy)
+- Nada · **Sprint 1B.2.2 fechada** · Próximo: **1B.2.3** UI `AdicionarCamaraScreen`
 
 ### Pendente
 
@@ -195,6 +196,19 @@ function assertCategoria(cat: string): void {
 ```
 
 Lição 1B.2.1: `equipamento_create`, `equipamento_update`, `catalogo_search_servico_relevante` usam `VALID_EQUIPAMENTO_CATEGORIAS` e `VALID_SERVICO_CATEGORIAS` (Sets separados — as listas são diferentes).
+
+**Regra CC — Helpers DEV de teste devem ser tolerantes a inputs (lição 1B.2.2)**
+
+Helpers `window.__test*` que aceitem opções devem aceitar string solta E object. Lição 1B.2.2 (deploy v3-v4): helper recebia `{ localizacao_id: 'uuid' }` e enviava o objecto inteiro como valor do campo, PostgREST falhava com `22P02 "invalid input syntax for type uuid: [object Object]"`.
+
+Pattern obrigatório:
+```js
+const config = typeof opts === 'string'
+  ? { localizacao_id: opts }
+  : opts;
+```
+
+Aplicado em: `src/supa.js` `__testImageInspector`.
 
 ---
 
@@ -449,6 +463,7 @@ Colunas novas em `ordens_trabalho`:
 | **1B.1.1** | ✅ **fechada** | Schema agents · agent_audit_log + agent_policies + api_usage · helper fn_can_use_api · regras W+X aplicadas |
 | **1B.1.2** | ✅ **fechada** | Anthropic raw fetch + runAgent.ts + Edge Function agent-test · cost tracking + audit · smoke test B+C+D OK |
 | **1B.2.1** | ✅ **fechada** | image_inspector infra · bucket equipamentos-fotos · fn_match_existing_equipamento · 4 tool executors com validação · system prompt pt-PT (74 linhas) · types.ts objective: string \| unknown[] |
+| **1B.2.2** | ✅ **fechada** | Edge Function image-inspector com Vision · 4 deploys (3 fixes evolutivos) · smoke test E2E PASSOU com Bosch SMV41D10EU · custo real €0.08/análise · prompt_cache adiado p/ Onda 2 |
 
 ---
 
@@ -778,6 +793,7 @@ Lição 1B.1.2: 3 deploys especulativos (fetch override, versão SDK, raw fetch)
 - Path convention: `{pessoa_id}/{eq_id}/{timestamp}.{ext}` — 1º segmento é o pessoa_id
 - RLS em `storage.objects`: 3 policies (INSERT/SELECT/DELETE) isolam por `(foldername(name))[1] = current_pessoa_id()`
 - service_role bypassa RLS — uploads da Edge Function são sempre autorizados
+- TODO: sem policy UPDATE para `authenticated`. Edge Function usa service_role (bypass RLS). Se UI futura precisar de update directo do user (raro), adicionar policy.
 
 ### fn_match_existing_equipamento
 - `v5_manutencao.fn_match_existing_equipamento(p_localizacao_id, p_categoria, p_nome)` SECURITY DEFINER
@@ -841,9 +857,39 @@ Permite aos executors registar a session ID no `dados_ia` sem que o agente tenha
 - `sql/28_v5_1b_2_1_bucket_and_helper.sql` — bucket equipamentos-fotos + RLS + pg_trgm + fn_match_existing_equipamento
 - `sql/29_v5_1b_2_1_update_policies.sql` — UPDATE core.agent_policies para v5.image_inspector (model → sonnet, limit=3, approval=['equipamento_create'])
 
-### Próximo: 1B.2.2
-Edge Function `image-inspector`: recebe foto (base64) + localizacao_id → upload bucket → chama `runAgent` com Vision content blocks → retorna resultado ao cliente.
-Também requer: `tools/vision.ts` (helper para Vision blocks), rate limit duplo (3/dia + 10/mês).
+---
+
+## Notas para 1B.2.2 — Edge Function image-inspector (Vision)
+
+### Ficheiros criados / alterados
+- `supabase/functions/agent-image-inspector/index.ts` — pipeline completo: auth → parse → localização → rate limit → upload bucket → signed URL → runAgent com Vision blocks → resposta
+- `src/lib/imageCompression.js` — compressão cliente (max 1568px, JPEG q85, OffscreenCanvas, sem deps)
+- `src/supa.js` — `window.__testImageInspector(file, opts)` helper DEV tolerante a string|object
+- `supabase/functions/_shared/agents/runAgent.ts` — `opts.sessionId ?? crypto.randomUUID()` (antes era sempre novo UUID)
+- `supabase/functions/_shared/agents/types.ts` — `AgentRunOptions.sessionId?: string`; `VisionContentBlock`, `ImageInspectorRequest`, `ImageInspectorResponse` interfaces
+
+### Custo real Vision (medido em smoke test)
+- Foto 1176×1568px ≈ 1.568 tokens (fórmula linear Anthropic: `width×height/750`, sem tiles)
+- System prompt + tools schema ≈ 3.500 tokens fixos por iteration
+- Cada iteration carrega foto + histórico completo da conversa
+- Custo médio por análise (4 iterations típicas): **€0.08–0.10**
+- Free tier 3/dia + 10/mês = max €1.00/user/mês (aceitável)
+
+### Estimativa original (€0.005) era irrealista
+Assumia 1 call sem contexto. Tool use loop com 4 iterations é o caso real. Não é bug — é arquitectura do agent loop.
+
+### TODO Onda 2: prompt_cache para system prompt + tools
+Anthropic `prompt_cache` (`cache_control: { type: "ephemeral" }`) reduz tokens fixos para 10% após aquecer. Estimado 60-70% redução do custo (€0.08 → €0.025–0.035). Não fazer agora — Onda 2.
+
+### Bugs encontrados e corrigidos durante sprint
+1. **orgIds[0] indeterminado (deploy v1 → v2)**: validação usava `loc.organization_id !== orgIds[0]`. Para utilizadores com 2+ orgs, `orgIds[0]` é indeterminado. Fix: `!(orgIds as string[]).includes(loc.organization_id)` + `organizationId = loc.organization_id` (vem da localização, não do array).
+2. **Helper opts object vs string (deploy v3 → v4)**: `window.__testImageInspector(file, { localizacao_id: '...' })` enviava objecto inteiro como valor UUID, PostgREST falhava com `22P02`. Fix: extracção tolerante com `typeof opts === 'string' ? opts : opts?.localizacao_id`. Ver Regra CC.
+
+### sessionId pre-gerado pelo Edge Function
+O `sessionId` é gerado em `index.ts` antes do upload, passado ao `runAgent` via `opts.sessionId`. Garante que path do bucket, audit log e `dados_ia` partilham o mesmo ID. `runAgent.ts` usa `opts.sessionId ?? crypto.randomUUID()` — back-compat com `agent-test` que não passa sessionId.
+
+### Rate limit duplo sem double-count
+Dois endpoints separados: `'agent.image_inspector'` (daily) e `'agent.image_inspector.monthly'` (monthly). Contadores independentes — sem interferência entre si.
 
 ---
 

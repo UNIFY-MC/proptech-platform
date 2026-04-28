@@ -12,7 +12,7 @@ import { createMessage, calculateCostEur } from "./anthropic.ts";
 import type { AgentRunOptions, AgentRunResult } from "./types.ts";
 
 export async function runAgent(opts: AgentRunOptions): Promise<AgentRunResult> {
-  const sessionId = crypto.randomUUID();
+  const sessionId = opts.sessionId ?? crypto.randomUUID();
   const { agentName, systemPrompt, tools, toolExecutors, objective, context } = opts;
   const { pessoaId, organizationId, serviceRole } = context;
   const maxIterations = opts.maxIterations ?? 20;
