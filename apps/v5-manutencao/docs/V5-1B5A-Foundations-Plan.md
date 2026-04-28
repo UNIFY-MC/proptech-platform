@@ -1,6 +1,33 @@
 # Sprint 1B.5A — Foundations Plan
 **Análise concluída:** 28 Abril 2026 · Branch `feat/1b5a-foundations-analysis`
-**Fase 2 (implementação):** aguarda aprovação de Mario
+**Fase 2 (implementação):** ✅ APROVADA — decisões D1-D5 confirmadas por Mario 28 Abr 23h
+
+---
+
+## Decisões aprovadas Mario (28 Abr 23h)
+
+| ID | Decisão | Aprovação |
+|----|---------|-----------|
+| D1 | npm workspaces | ✅ Mario 28 Abr |
+| D2 | @proptech/* naming | ✅ Mario 28 Abr |
+| D3 | Manter divergências React/supa, peer ranges largos | ✅ Mario 28 Abr |
+| D4 | Verificar @proptech disponível npm | ⏳ Fase 2 |
+| D5 | V2 scope: login mínimo | ✅ Mario 28 Abr |
+
+### Implicações da D3 (versions)
+
+- `packages/db` declara `"@supabase/supabase-js": "^2.45.0"` (aceita 2.45 → 2.103+)
+- `packages/auth` declara peer dep `"react": "^18 || ^19"`
+- V2 novo (`apps/v2-condominios`) arranca com React 19 (latest) + supabase-js 2.103+ (latest)
+- V5 fica em React 18 / supabase 2.45 **sem mexer** — produção intocável
+- Risco aceite: bug latente onde V5 pode comportar-se diferente de V2/V4. Mitigação: testes nos packages/* exercitam ambas as ranges
+
+### Sprint 1B.5B futura — Upgrade V5
+
+Quando V5 tiver testes E2E suficientes, upgrade para React 19 + supabase 2.103.
+- Pré-requisito: smoke test V5 manual cobrir paths críticos (auth, onboarding, uploads, GDPR)
+- Esforço estimado: 1-2 dias com cuidado
+- Branch dedicada; nunca no mesmo PR que a extracção dos packages
 
 ---
 
@@ -116,42 +143,24 @@ AuthContext em V5 é o componente mais crítico — toca em login, onboarding bl
 
 ---
 
-## 4. Decisões pendentes (Mario aprova antes da Fase 2)
+## 4. Decisões (aprovadas 28 Abr)
 
-**D1 — Workspace tooling: npm workspaces ou pnpm?**
+**D1 ✅ — npm workspaces** (built-in Node, zero deps novas, familiar)
 
-| | npm workspaces | pnpm workspaces |
-|--|--|--|
-| Deps adicionais | Nenhuma (built-in Node 16+) | Instalar pnpm globalmente |
-| Hoisting | Permissivo (pode mascarar missing deps) | Strict (mais correcto) |
-| Velocidade install | Lento | Rápido |
-| Familiaridade Mario | Alta (já usa npm) | Baixa |
-| Recomendação | ✅ Para este projecto | Overkill nesta fase |
+**D2 ✅ — Naming `@proptech/*`** (`@proptech/db` + `@proptech/auth`) — scope correcto para uso cross-vertical
 
-**Recomendação:** `npm workspaces` — sem deps novas, Mario já conhece npm.
+**D3 ✅ — Manter divergências de versão; peer ranges largos**
+- Não upgradar V5 antes da extracção
+- `packages/db` peer `"@supabase/supabase-js": "^2.45.0"`
+- `packages/auth` peer `"react": "^18 || ^19"`
+- V2 novo arranca com React 19 + supa 2.103; V5 fica intocável
+- Upgrade V5 adiado para Sprint 1B.5B (pré-requisito: E2E suficientes)
 
-**D2 — Naming dos packages: `@proptech/*` ou outro?**
+**D4 ⏳ — Verificar namespace @proptech no npm** (executar no início da Fase 2)
+- Comando: `npm info @proptech/db 2>&1 | head -5` — se 404, namespace livre; se 200, escolher alternativa
+- Alternativa de fallback: `@mariocarvalho/db` + `@mariocarvalho/auth` (namespace pessoal garantido)
 
-Opções:
-- `@proptech/db` + `@proptech/auth` — reflecte a plataforma
-- `@v5/db` + `@v5/auth` — reflecte a vertical (mas `db` é cross-vertical)
-- `packages/db` + `packages/auth` — sem scope (mais simples, sem npm publish)
-
-**Recomendação:** `@proptech/db` + `@proptech/auth` — scope correcto dado que ambos serão usados por V4, V5, futuras verticais.
-
-**D3 — Upgradar V5 React 18 → 19 antes ou depois da extracção?**
-
-**Recomendação:** ANTES. Evita package compilar com peer React 19 e ser consumido por V5 React 18. A upgrade é relativamente segura — V5 não usa Server Components nem features React 18-específicas que tenham mudado.
-
-**D4 — Upgradar V5 supabase-js 2.45 → 2.103 antes ou depois?**
-
-**Recomendação:** ANTES (mesma razão). 2.45 → 2.103 é semver minor; sem breaking changes na API pública JS. Confirmar em changelog se há mudanças no `onAuthStateChange` ou `signIn` que V5 usa.
-
-**D5 — Scope do scaffold V4?**
-
-V4 tem shell mínimo. Ao extrair `packages/auth`, faz sentido adicionar `AuthProvider` a V4 ao mesmo tempo?
-
-**Recomendação:** SIM — scaffolding mínimo (login screen + AuthProvider) com AuthContext partilhado valida que o package funciona em 2 apps reais.
+**D5 ✅ — V2 scope mínimo: login funcional apenas** (sem listagens, sem dashboard)
 
 ---
 
@@ -159,16 +168,15 @@ V4 tem shell mínimo. Ao extrair `packages/auth`, faz sentido adicionar `AuthPro
 
 | Step | Descrição | Estimativa |
 |------|-----------|-----------|
-| 2.0 | `package.json` raiz + workspace config | 15 min |
-| 2.1 | Upgrade V5: React 18→19 + supabase-js 2.45→2.103 | 30 min + smoke test |
-| 2.2 | Criar `packages/db`: URL/key + factories | 30 min |
-| 2.3 | Adaptar `supa.js` de V5 para usar `@proptech/db` | 20 min |
-| 2.4 | Adaptar `supa.js` de V4 para usar `@proptech/db` | 10 min |
-| 2.5 | Mover `AuthContext.jsx` para `packages/auth` (fase 1 — shim em V5) | 45 min |
-| 2.6 | Refactorizar `AuthProvider` para aceitar clients via props | 45 min |
-| 2.7 | Smoke test V5 completo (auth, uploads, onboarding, GDPR) | 30 min |
-| 2.8 | Scaffold AuthProvider em V4 (validação cross-app) | 20 min |
-| **Total** | | **~4h** |
+| 2.0 | Verificar D4 (`npm info @proptech/db`) + `package.json` raiz + workspace config | 20 min |
+| 2.1 | Criar `packages/db`: URL/key + factories (peer supa ^2.45.0) | 30 min |
+| 2.2 | Adaptar `supa.js` de V5 para usar `@proptech/db` | 20 min |
+| 2.3 | Adaptar `supa.js` de V4 para usar `@proptech/db` | 10 min |
+| 2.4 | Mover `AuthContext.jsx` para `packages/auth` (fase 1 — shim em V5) | 45 min |
+| 2.5 | Refactorizar `AuthProvider` para aceitar clients via props (peer react ^18\|\|^19) | 45 min |
+| 2.6 | Smoke test V5 completo (auth, uploads, onboarding, GDPR) | 30 min |
+| 2.7 | Scaffold login mínimo V2 com `@proptech/auth` (validação cross-app) | 20 min |
+| **Total** | | **~3h30** |
 
 ---
 
@@ -176,15 +184,14 @@ V4 tem shell mínimo. Ao extrair `packages/auth`, faz sentido adicionar `AuthPro
 
 ```
 chore(monorepo): add npm workspaces root package.json + packages/ scaffold
-chore(v5): upgrade react 18→19 + supabase-js 2.45→2.103
-feat(packages/db): @proptech/db — Supabase client factories
+feat(packages/db): @proptech/db — Supabase client factories (peer supa ^2.45.0)
 refactor(v5): supa.js → uses @proptech/db factory
 refactor(v4): supa.js → uses @proptech/db factory
 feat(packages/auth): @proptech/auth — AuthContext + useAuth extracted from V5
-refactor(v5): AuthContext → consumes @proptech/auth (shim)
-refactor(v5): AuthProvider accepts clients via props (generic)
-test(v5): smoke test auth + uploads post-extraction
-feat(v4): scaffold AuthProvider from @proptech/auth
+refactor(v5): AuthContext → consumes @proptech/auth (shim, no logic change)
+refactor(v5): AuthProvider accepts mainClient + coreClient via props
+test(v5): smoke test auth + uploads + onboarding post-extraction
+feat(v2): scaffold login mínimo using @proptech/auth (D5 validation)
 ```
 
 ---
