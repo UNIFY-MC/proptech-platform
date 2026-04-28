@@ -502,7 +502,7 @@ export default function CasaScreen({ equipamentos, authUser, onNavigate, onHambu
         })}
 
         <button
-          onClick={() => alert('Adicionar equipamento: câmara IA em 3.5 · formulário manual em 3.3')}
+          onClick={() => onNavigate?.('camera')}
           style={{
             width: '100%', background: '#fff',
             border: `1.5px dashed ${CASA.greenLt}`,
@@ -514,23 +514,6 @@ export default function CasaScreen({ equipamentos, authUser, onNavigate, onHambu
         </button>
       </div>
 
-      {/* POUPANÇAS MOCK — preservado da extracção (será dinâmico em 3.3) */}
-      {!loading && eqs.length > 0 && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, padding: '0 12px 12px' }}>
-          <button onClick={() => onNavigate?.('energia')} style={{ border: `1px solid ${CASA.greenLt}`, borderRadius: 11, padding: 10, background: CASA.greenXl, cursor: 'pointer', textAlign: 'left' }}>
-            <div style={{ fontSize: 9, background: CASA.greenLt, color: '#fff', padding: '2px 7px', borderRadius: 8, display: 'inline-block', marginBottom: 4, fontWeight: 600 }}>Troca rentável</div>
-            <div style={{ fontSize: 10, color: '#555', marginBottom: 2 }}>Caldeira Junkers</div>
-            <div style={{ fontSize: 18, fontWeight: 700, color: CASA.green }}>-28%</div>
-            <div style={{ fontSize: 10, color: '#555', marginTop: 2 }}>~10€/mês poupança</div>
-          </button>
-          <button onClick={() => onNavigate?.('energia')} style={{ border: `1px solid ${CASA.border}`, borderRadius: 11, padding: 10, cursor: 'pointer', textAlign: 'left', background: '#fff' }}>
-            <div style={{ fontSize: 9, background: '#FAC775', color: '#412402', padding: '2px 7px', borderRadius: 8, display: 'inline-block', marginBottom: 4, fontWeight: 600 }}>Revisão urgente</div>
-            <div style={{ fontSize: 10, color: '#555', marginBottom: 2 }}>AC Daikin sala</div>
-            <div style={{ fontSize: 18, fontWeight: 700 }}>-15%</div>
-            <div style={{ fontSize: 10, color: '#555', marginTop: 2 }}>Limpeza filtros imediata</div>
-          </button>
-        </div>
-      )}
 
       {/* HOME ASSESSMENT PENDENTE — só aparece se !assessment_completo */}
       {loc && !loc.assessment_completo && (

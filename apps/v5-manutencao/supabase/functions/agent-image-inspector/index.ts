@@ -242,7 +242,24 @@ Deno.serve(async (req: Request) => {
       sessionId,
     });
 
-    // ── 10. Resposta ──────────────────────────────────────────────────────────
+    // ── 10. Extrair equipamento_id do audit_log ───────────────────────────────
+    let equipamentoId: string | undefined;
+    if (agentResult.success) {
+      const { data: auditRow } = await serviceRole
+        .schema("core")
+        .from("agent_audit_log")
+        .select("tool_output")
+        .eq("session_id", sessionId)
+        .in("tool_name", ["equipamento_create", "equipamento_update"])
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      equipamentoId = auditRow?.tool_output?.created?.id
+        ?? auditRow?.tool_output?.updated?.id;
+    }
+
+    // ── 11. Resposta ──────────────────────────────────────────────────────────
     const response: ImageInspectorResponse = {
       success: agentResult.success,
       sessionId: agentResult.sessionId,
@@ -252,6 +269,7 @@ Deno.serve(async (req: Request) => {
       reason: agentResult.reason,
       totalCostEur: agentResult.totalCostEur,
       fotoPath,
+      equipamento_id: equipamentoId,
     };
     return json(response, agentResult.success ? 200 : 500);
 

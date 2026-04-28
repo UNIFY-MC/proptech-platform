@@ -11118,7 +11118,7 @@ export default function App() {
           {ecra==='prestadores_equipa' && <PrestadoresEquipaScreen onBack={()=>setEcra('home')} onNavigatePrestador={(p)=>{ setSelNav(v=>({...v,prestador:p})); setEcra('prestador_detail') }} />}
           {ecra==='poupancas_detalhe'  && <PoupancasDetalheScreen onBack={()=>setEcra('home')} onNavigateCombo={(cb)=>{ setSelNav(v=>({...v,combo:cb,comboBackFrom:'home'})); setEcra('combo_detail') }} />}
           {ecra==='ai_expert_fab'      && <AIExpertFabScreen onBack={()=>setEcra('home')} perguntaInicial={selNav?.aiExpertPergunta||null} />}
-          {ecra==='adicionar_camara'   && <AdicionarCamaraScreen onBack={()=>setEcra('home')} />}
+          {ecra==='adicionar_camara'   && <AdicionarCamaraScreen onBack={()=>setEcra('home')} localizacaoId={imovelAtivo?.id} />}
           {ecra==='adicionar_doc'      && <AdicionarDocScreen onBack={()=>setEcra('home')} />}
           {ecra==='adicionar_energia'  && <AdicionarEnergiaScreen onBack={()=>setEcra('home')} />}
           {ecra==='promocao_detail'    && <PromocaoDetailScreen promo={selNav?.promocao} onBack={()=>setEcra('home')} onNavigateServico={(s)=>{ setSelNav(p=>({...p,servico:s})); setEcra('servico_detail') }} />}
@@ -11179,7 +11179,7 @@ export default function App() {
                   if(target==='ficha' && payload){ setCasaActiveEq(payload); return }
                   if(target==='docs')    { setCasaSub('docs');    setCasaSubPayload(null); return }
                   if(target==='energia') { setCasaSub('energia'); setCasaSubPayload(null); return }
-                  if(target==='camera')  { setCasaSub('camera');  setCasaSubPayload(null); return }
+                  if(target==='camera')  { setEcra('adicionar_camara'); return }
                   if(target==='aiexpert'){ setCasaSub('aiexpert'); setCasaSubPayload(payload || null); return }
                   if(target==='locais')  { setCasaSub('locais');  setCasaSubPayload(null); return }
                 }}

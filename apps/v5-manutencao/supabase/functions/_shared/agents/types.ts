@@ -73,5 +73,6 @@ export interface ImageInspectorResponse {
   error?: string;
   reason?: string;
   totalCostEur?: number;
-  fotoPath?: string; // path no bucket após upload (para guardar na UI)
+  fotoPath?: string;        // path no bucket após upload
+  equipamento_id?: string;  // UUID do equipamento criado/actualizado (1B.2.3a)
 }
