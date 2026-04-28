@@ -39,6 +39,31 @@ App cliente está em ~80% das funcionalidades core. **Onda 1B em curso** com 4 s
 
 Centralizado em `src/config/branding.js` (já feito Sprint 3.5).
 
+### Ecossistema de agentes coordenados (Onda 2 — decisão 28 Abr 16:00)
+
+A plataforma Onda 2 é um ecossistema de agentes, não um conjunto de scrapers hardcoded:
+
+```
+image_inspector  →  identifica equipamento via foto
+       ↓
+equipamento_enricher  →  busca specs/manual/foto oficial na web e propõe
+       ↓
+docs_curator  →  indexa manual em pgvector (chunks semânticos)
+       ↓
+casa_advisor  →  responde com base em manuais oficiais + specs reais
+```
+
+**Princípio unificador:** cada agente tem system prompt próprio + tools próprias + audit log.
+Nenhum scraper hardcoded. Tudo observável, debuggable, resiliente a mudanças de site.
+Esta é a defensibilidade a longo prazo da plataforma.
+
+**Razão de usar agentes em vez de scrapers:**
+- Robusto a mudanças de site (não quebra quando bosch.pt reorganiza HTML)
+- Auditável via `agent_audit_log` (Regra AA)
+- User confirma findings antes de guardar (HITL para dados sensíveis)
+- Funciona para fabricantes não previstos (não há lista hardcoded)
+- Falhas são input para refinamento de prompt — aprende com uso
+
 ### Vision call vs Agent (importante)
 
 ```
@@ -354,6 +379,91 @@ Beta testing entre cada onda (3-10 pessoas próximas). Decisão go/no-go.
 - [ ] Free: OFF (apenas Home+)
 - [ ] Home+: 1 run/noite/casa
 
+### Sprint 2.1b — Agente `v5.equipamento_enricher` (NOVO — decisão arquitectural 28 Abr 16:00)
+
+> **Numeração provisória** — sprint numbers Onda 2 a rever quando planning for feito.
+> Dependências: Sprint 1B.5 (fundações) + schema catálogo (Onda 2.X).
+
+**Conceito:** dado um equipamento identificado pelo image_inspector, este agente busca na web specs completas, fotos oficiais, manual, preço médio, rating — e propõe ao user antes de guardar.
+
+**Custo estimado:**
+- web_search: ~€0.01-0.02
+- web_fetch: ~€0.005 por página
+- Extracção Sonnet 4.6 (HTML grande): ~€0.10-0.15
+- PDF download: bandwidth + Storage
+- **Total 1ª vez: €0.15-0.30/equipamento**
+- Match subsequente (catálogo já existente): €0.005 (lookup)
+
+**Rate limit:** free 1/dia (auto-suficiente) · Home+ 10/mês · Equipa Pro 100/mês
+
+#### Schema core.agent_policies
+```sql
+INSERT INTO core.agent_policies (
+  agent_key, model, max_iterations, max_tokens,
+  rate_limit_daily, rate_limit_monthly, enabled
+) VALUES (
+  'v5.equipamento_enricher',
+  'claude-sonnet-4-6',
+  15,        -- exploração + extracção são longas
+  16000,     -- páginas web são grandes
+  3,
+  30,
+  true
+);
+```
+
+#### Tools necessárias (a criar)
+- `equipamento.match_catalogo(marca, modelo, threshold)` — lookup antes de criar
+- `equipamento.save_to_catalogo(payload)` — guarda no catálogo partilhado
+- `equipamento.update_with_modelo_catalogo(equip_id, modelo_id)` — liga equipamento ao catálogo
+- `web.search(query)` — Anthropic tool (já existe no SDK)
+- `web.fetch(url)` — Anthropic tool (já existe no SDK)
+- `pdf.download_to_storage(url, path)` — descarrega manual para Storage
+- `present_to_user(preview_payload)` — **HITL**: mostra preview ao user e bloqueia para aprovação
+- `agent.report_findings(found, missing, confidence)` — relatório final
+
+#### Workflow ideal
+```
+1. Lookup catálogo — talvez já existe (skip se match > 0.8)
+2. web_search: "<marca> <modelo> manual oficial"
+3. web_fetch site oficial fabricante — extracção specs
+4. Extrair: fotos, manual PDF, specs técnicas, preço médio, rating
+5. Validação: specs batem com categoria esperada?
+6. present_to_user: "Encontrei isto. Confirmas?" — HITL obrigatório
+7. User aprova → save_to_catalogo + UPDATE equipamento com modelo_id
+8. Trigger docs_curator (Sprint 2.2) para indexar manual
+```
+
+#### Riscos
+- **Direitos imagem:** disclaimer automático + takedown rápido (never hotlink, sempre Storage)
+- **Match ambíguo:** SMV41D10EU vs SMV41D10EU/56 — agente reporta percentagem + user confirma se < 80%
+- **Cold start:** primeiros 100 users sem catálogo → custo 1ª vez maior, decresce com uso
+- **Confiança match:** agente inclui `confidence` numérico na resposta antes de guardar
+
+#### Schema catálogo (a criar em Onda 2.X)
+```sql
+CREATE TABLE v5_manutencao.equipamento_modelos_catalogo (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  marca text NOT NULL,
+  modelo text NOT NULL,
+  nome_display text,
+  categoria text NOT NULL,
+  subcategoria text,
+  specs jsonb,                    -- consumo, dimensoes, potencia, etc.
+  foto_url text,                  -- Storage bucket (não hotlink externo)
+  manual_url text,                -- caminho no bucket
+  preco_medio_eur numeric,
+  rating_medio numeric,
+  ano_lancamento integer,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now(),
+  fonte_url text,
+  confianca_dados text CHECK (confianca_dados IN ('alta','media','baixa'))
+);
+```
+
+---
+
 ### Sprint 2.2 — Agent `v5.docs_curator` (RAG) (5-7 dias)
 
 **Conceito:** OCR de qualquer documento + indexação vetorial para agents fazerem perguntas sobre eles.
@@ -379,8 +489,27 @@ Beta testing entre cada onda (3-10 pessoas próximas). Decisão go/no-go.
 - [ ] Embeddings via Voyage AI ou OpenAI text-embedding-3-small
 - [ ] INSERT em `documentos.conteudo_extraido` + `embedding`
 
+#### Schema chunks (decisão 28 Abr 16:00 — detalhado)
+```sql
+CREATE TABLE v5_manutencao.equipamento_modelo_doc_chunks (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  modelo_id uuid REFERENCES v5_manutencao.equipamento_modelos_catalogo(id),
+  doc_tipo text CHECK (doc_tipo IN ('manual', 'guia_rapido', 'dicas_resolucao', 'especificacoes')),
+  chunk_index integer NOT NULL,
+  content text NOT NULL,
+  embedding vector(1536),         -- OpenAI text-embedding-3-small
+  metadata jsonb,                 -- { section, page, source_url }
+  created_at timestamptz DEFAULT now()
+);
+
+CREATE INDEX ix_doc_chunks_embedding
+  ON v5_manutencao.equipamento_modelo_doc_chunks
+  USING hnsw (embedding vector_cosine_ops);
+```
+
 #### Tool agents
-- [ ] `docs.search_relevante(query, pessoa_id, top_k=3)` → vector search
+- [ ] `docs.search_dicas_resolucao(equipamento_id, query)` — embedding query → vector search top 5 → chunks com source citation
+- [ ] `docs.search_relevante(query, pessoa_id, top_k=3)` → vector search genérico
 - [ ] Disponível para `casa_advisor`, `image_inspector`, `scout`, `energy_analyst`
 
 #### UI
@@ -391,6 +520,45 @@ Beta testing entre cada onda (3-10 pessoas próximas). Decisão go/no-go.
 #### Rate limit
 - [ ] Free: 5 OCR/mês
 - [ ] Home+: ilimitado
+
+### Sprint 2.2b — `v5.casa_advisor` + docs (integração) (NOVO — decisão 28 Abr 16:00)
+
+> **Dependência:** Sprint 2.2 (docs_curator indexado) deve estar completo.
+
+**Conceito:** casa_advisor já existente (Sprint 1B.3) ganha acesso ao RAG de manuais. Custo incremental: ~€0.03/conversa (vector search barato). Valor enorme: responde com base em manuais reais do equipamento do user.
+
+#### Expansão do system prompt casa_advisor
+```
+Tool: docs.search_dicas_resolucao
+  → Quando user menciona problema com equipamento específico:
+    1. Identifica equipamento (contexto user ou pergunta)
+    2. docs.search_dicas_resolucao(equipamento_id, query)
+    3. Cita manual: "Segundo o manual Bosch SMV41D10EU, pág. 12..."
+    4. Sugere acção concreta
+    5. Opcional: "Quer agendar técnico?"
+
+Tool: equipamento.fetch_specs
+  → Puxa specs do catálogo (consumo, dimensões, potência)
+  → Para perguntas "quantos kWh consome a minha máquina de lavar?"
+```
+
+#### Exemplo de conversa com RAG
+```
+User: "Máquina lavar loiça deixa loiça com manchas. O que faço?"
+
+casa_advisor:
+1. Identifica: Bosch SMV41D10EU (da localização activa)
+2. docs.search_dicas_resolucao('manchas loiça')
+   → "Manual Bosch §4.2: Verificar nível sal regenerador.
+       Se nível baixo, as manchas brancas indicam calcário."
+3. Responde: "Segundo o manual da tua Bosch, precisas de verificar
+   o nível de sal regenerador. Quer que agende manutenção?"
+```
+
+#### Custo por conversa (estimado)
+- Vector search (embedding query): €0.0001
+- Sonnet 4.6 com contexto chunks: ~€0.02-0.03
+- **Total: €0.03/conversa** (vs €0.10 sem RAG — mais barato e mais preciso)
 
 ### Sprint 2.3 — Agent `v5.energy_analyst` + comparação tarifários (5-6 dias)
 
@@ -1000,6 +1168,6 @@ Próximo arranque:
 ---
 
 **Documento criado:** 27 Abril 2026
-**Última actualização:** 28 Abril 2026 (manhã) — pós-fecho 1B.1.x + 1B.2.x + decisões estratégicas V2 paralelo
+**Última actualização:** 28 Abril 2026 (tarde) — fecho 1B.2.3b + decisão arquitectural Onda 2 (equipamento_enricher + docs_curator schema + casa_advisor RAG integration + princípio ecossistema agentes)
 **Próxima revisão:** após fecho Sprint 1B.5 (fundações + V2 scaffold)
 **Autor:** Claude (chat) + Mario
