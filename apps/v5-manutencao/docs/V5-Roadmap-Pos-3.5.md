@@ -1,10 +1,10 @@
 # V5 Manutenção — Roadmap pós-3.5
 
-> **Status actual (28 Abr 2026, fim de dia):** Sprint 1B.2.3c fechada (commit `06d8091`). Onda 1B ~90% fechada. 9 sub-sprints concluídas hoje.
+> **Status actual (29 Abr 2026, fim de dia):** Sprint 1B.5A Foundations fechada (commits `df9a8f4` → `2e943bb`). Monorepo npm workspaces estabelecido. V2 scaffolded. V5 smoke test passou.
 >
-> **Marco do dia:** `EquipamentoFichaScreen` completa — edição + uploads fatura/fotos + delete. Ficha apresentável sem constrangimento a síndico ou prestador.
+> **Marco do dia:** Foundations multi-vertical completas — `@proptech/db` + `@proptech/auth` partilhados. V5 migrado (React 19, supa 2.103). V2 arranca sobre a mesma base. V63 isolado em produção.
 >
-> **Próximo (decisão Mario 29 Abr):** 1B.2.3d (fechar 1B.2 100%) · 1B.5A (foundations multi-vertical) · 1B.3 (casa_advisor) · ou 1B.5 (bug fixes massa).
+> **Próximo (decisão Mario):** A. 1B.3 casa_advisor · B. 1B.2.3d documentos equipamento · C. 1B.5 bug fixes UX massa.
 >
 > **Decisão estratégica consolidada (28 Abr):** V2 + V5 paralelos. Catálogo partilhado de modelos = defensibilidade longo prazo. Markdown IA persistido justifica €0.08/análise visualmente.
 
@@ -34,7 +34,7 @@
 | 1B.4 | ⏳ | — | IPMA + Score evolução |
 | **1B.4.5** | ⏳ | — | Inventário rico de divisões (especificações por divisão) |
 | 1B.5 | ⏳ | — | Bug fixes UX backlog (12 itens) |
-| **1B.5A** | ⏳ | — | Foundations packages/db + packages/auth + V2 scaffold |
+| **1B.5A** | ✅ | `2e943bb` | Foundations packages/db + packages/auth + V2 scaffold |
 
 ### Estado demonstrável hoje (localhost:5175)
 
@@ -408,30 +408,36 @@ CREATE TABLE v5_manutencao.equipamento_documentos (
 - [ ] UI gráfico Recharts (12 meses passado + 3 projecção)
 - [ ] Card em `CasaScreen.jsx`
 
-### ⭐ Sprint 1B.5A — Foundations multi-vertical (FORMALIZADA 28 Abr — 2-3 dias)
+### ✅ Sprint 1B.5A — Foundations multi-vertical (FECHADA 29 Abr 2026)
 
-**Razão:** V2 + V5 paralelos decidido. Foundations mínimas antes de V2 arrancar evita duplicação.
+**Commits:** `df9a8f4` (CLAUDE.md hierarchy) → `2e943bb` (packages + V2 scaffold)
 
-**Princípio:** fundações **mínimas suficientes**. Não fazer `packages/ui-*` nem `agent-runtime` ainda — adiar para quando 3+ apps existirem e a dor for real.
+#### Entregue
 
-#### Scope
-- [ ] Extrair `packages/db/` — clientes Supabase partilhados + tipos auto-gerados via `supabase gen types`
-- [ ] Extrair `packages/auth/` — AuthContext + useOrganization() + login/recover
-- [ ] V5 migra para consumir os packages (não duplica código)
-- [ ] Migrations com timestamp `YYYYMMDDHHMM_descricao.sql` (padrão já adoptado em 1B.2.4 + 1B.2.3c)
-- [ ] Scaffold mínimo `apps/v2-condominios/` com Login + Home vazia em `localhost:5174`
-- [ ] V2 lê de `packages/auth` + `packages/db`
+| Item | Estado |
+|---|---|
+| npm workspaces (root `package.json`) | ✅ |
+| `packages/db` — `@proptech/db` · `createMainClient` + `createCoreClient` · supa-js ^2.103 | ✅ |
+| `packages/auth` — `@proptech/auth` · `AuthProvider` (clients via props) + `useAuth` · peer react ^19 | ✅ |
+| V5 migrado: `src/lib/AuthContext.jsx` shim 13 linhas · 32 callers inalterados | ✅ |
+| V5 upgrades: React 18→19 · supa-js 2.45→2.103 | ✅ |
+| `apps/v2-condominios` scaffold: Vite + React 19 · Login funcional · porta 5176 | ✅ |
+| V63 (`apps/v63-prataowners`) isolado, intocável, produção viva | ✅ |
+| Builds: V5 7s · V2 5s · 0 erros · 0 vulnerabilidades | ✅ |
+| Smoke test V5 (5 cenários, 9 sprints cobertas) | ✅ |
 
-#### NÃO fazer ainda
-- `packages/ui` — cedo demais, padrões diferem (V5 usa Outfit/Fraunces inline; V2 usará design system diferente)
-- `packages/agent-runtime` — cedo demais, agentes ainda imaturos
-- Write features V2 — primeiro read-only v63, depois CRUD quando validado
+#### Não feito (decisão consciente)
+- `packages/ui` — cedo demais, padrões diferem entre V5 e V2
+- `packages/agent-runtime` — agentes ainda imaturos
+- Features V2 além do login — V2 começa com scaffold mínimo
 
-#### Critério de fecho 1B.5A
-- [ ] V5 ainda funciona (regression-free) consumindo packages/db + packages/auth
-- [ ] V2 corre em localhost:5174 com login a funcionar
-- [ ] 2-3 síndicos podem consultar dados v63 no V2 (read-only)
-- [ ] CLAUDE.md actualizado
+#### Próximas opções (decisão Mario)
+
+| # | Sprint | Esforço | Valor |
+|---|---|---|---|
+| A | **1B.3** — casa_advisor agente conversacional | 3-4 dias | Alto · diferenciador comercial |
+| B | **1B.2.3d** — documentos por equipamento + refactor Anexos | 4-5h | Médio · polish 1B.2 |
+| C | **1B.5** — bug fixes UX backlog (12 itens) | ~1 dia | Médio · qualidade |
 
 ### ⭐ Sprint 1B.5 — Bug fixes UX backlog (12 itens — ~1 dia)
 
@@ -1273,26 +1279,19 @@ Regras descobertas em produção, não teóricas:
 
 ---
 
-## Decisão 29 Abril — escolher próximo passo
+## Estado 29 Abril — pós 1B.5A
 
-Sprints 1B.2.5 + 1B.2.5b + 1B.2.5c + 1B.2.3 todas fechadas. Backlog limpo.
+1B.5A Foundations fechada. Monorepo npm workspaces + `@proptech/db` + `@proptech/auth` estabelecidos. V2 scaffolded. V5 smoke test passou.
 
-**Quatro caminhos disponíveis amanhã:**
+**Três caminhos disponíveis:**
 
 | Caminho | Sprint | Esforço | O que desbloqueia |
 |---|---|---|---|
-| A | 1B.2.3d — Documentos por equipamento | ~4h | Fecha 1B.2 a 100% |
-| **B** | **1B.5A — Foundations + V2 scaffold** | **2-3 dias** | **V2 paralelo limpo** |
-| C | 1B.3 — casa_advisor conversacional | 3-4 dias | Diferenciador comercial IA |
-| D | 1B.5 — Bug fixes UX (12 itens) | ~1 dia | Qualidade geral |
+| **A** | **1B.3 — casa_advisor conversacional** | **3-4 dias** | **Diferenciador comercial IA · ROI sobre €0.08/análise** |
+| B | 1B.2.3d — Documentos por equipamento | ~4-5h | Fecha 1B.2 a 100% |
+| C | 1B.5 — Bug fixes UX (12 itens) | ~1 dia | Qualidade geral |
 
-**Recomendação Claude:** B → C → A → D
-
-Decisões pendentes (se ainda abertas):
-- **B** (codename "Zelo"): confirmar para BRAND constants?
-- **C** (beta testers 3-5 pessoas): identificados?
-- **J** (tipo síndicos V2): profissionais / auto-síndicos / mix?
-- **J** (categoria prestadores V5): limpezas / canalização / mix?
+**Decisão Mario pendente.**
 
 ---
 
@@ -1329,6 +1328,6 @@ Decisões pendentes (se ainda abertas):
 ---
 
 **Documento criado:** 27 Abril 2026
-**Última actualização:** 28 Abril 2026 (fim de dia) — fecho 1B.2.3c (edição completa + uploads + delete) · tabela progresso Onda 1B · 7 decisões estratégicas · Sprint 1B.2.3d formalizada · 1B.5A formalizada · Backlog UX expandido (#11 + #12) · Regra DD adicionada
-**Próxima revisão:** após decisão Mario 29 Abr (caminho A/B/C/D)
+**Última actualização:** 29 Abril 2026 (fim de dia) — 1B.5A Foundations fechada · npm workspaces + @proptech/db + @proptech/auth · V5 migrado React 19 + supa 2.103 · V2 scaffolded · smoke test V5 passou · merge para main
+**Próxima revisão:** após decisão Mario (caminho A/B/C)
 **Autor:** Claude (chat) + Mario
