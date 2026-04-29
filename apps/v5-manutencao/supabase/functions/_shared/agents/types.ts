@@ -1,6 +1,12 @@
 // Tipos partilhados entre Edge Functions de agents V5
 // Importar com: import type { ... } from "../_shared/agents/types.ts";
 
+// Mensagem no formato Anthropic API (usado em multi-turn por agent-casa-advisor)
+export interface AnthropicMessage {
+  role: "user" | "assistant";
+  content: unknown; // string | ContentBlock[] | ToolResultBlock[]
+}
+
 export interface AgentTool {
   name: string;
   description: string;
@@ -24,7 +30,9 @@ export interface AgentRunOptions {
   systemPrompt: string;
   tools: AgentTool[];
   toolExecutors: Record<string, (input: any, ctx: AgentContext) => Promise<any>>;
-  objective: string | unknown[]; // string ou Vision content blocks
+  // Exactly one of {objective, messages} obrigatório — runtime guard em runAgent
+  objective?: string | unknown[]; // single-turn: string ou Vision content blocks
+  messages?: AnthropicMessage[];  // multi-turn: histórico completo pré-construído
   context: AgentContext;
   model?: string;          // override; default vem de core.agent_policies
   maxIterations?: number;  // default 20
@@ -39,6 +47,8 @@ export interface AgentRunResult {
   error?: string;
   reason?: "end_turn" | "max_iterations_reached" | "tool_error" | "rate_limited" | "auth_error";
   totalCostEur?: number;
+  totalInputTokens?: number;
+  totalOutputTokens?: number;
 }
 
 export interface AgentPolicy {

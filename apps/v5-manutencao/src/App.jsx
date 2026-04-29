@@ -65,6 +65,7 @@ import PoupancasDetalheScreen from './screens/PoupancasDetalheScreen.jsx'
 import AIExpertFabScreen from './screens/AIExpertFabScreen.jsx'
 import AdicionarCamaraScreen from './screens/AdicionarCamaraScreen.jsx'
 import EquipamentoFichaScreen from './screens/EquipamentoFichaScreen.jsx'
+import CasaAdvisorScreen from './screens/CasaAdvisorScreen.jsx'
 import AdicionarDocScreen from './screens/AdicionarDocScreen.jsx'
 import AdicionarEnergiaScreen from './screens/AdicionarEnergiaScreen.jsx'
 import OnboardingWizardScreen from './screens/OnboardingWizardScreen.jsx'
@@ -4901,7 +4902,6 @@ Responde APENAS com um objecto JSON neste formato, sem markdown nem texto extra:
   )
 }
 
-/* AIExpertScreen — chat com contexto completo da casa (Fase 3.5) */
 /* CasaLocais — CRUD das localizações + selecção da activa (Fase 3.5) */
 function CasaLocais({ authUser, onBack }){
   const { imoveis: localizacoes, imovelAtivoId: activeLocId, setImovelAtivoId: onPickActive, refetch: onRefresh } = useImovelAtivo()
@@ -5072,122 +5072,6 @@ function LocLine({ label, value, onChange, placeholder, type='text' }){
   )
 }
 
-function AIExpertScreen({ equipamentos, authUser, onBack, initialContext }){
-  const { imovelAtivo: localizacao } = useImovelAtivo()
-  const [msgs, setMsgs] = useState([])
-  const [input, setInput] = useState('')
-  const [loading, setLoading] = useState(false)
-  const eqs = (equipamentos || []).filter(e => !localizacao || e.localizacao_id === localizacao.id)
-
-  const systemPrompt = `És o AI Expert de manutenção doméstica do utilizador. Tens o contexto real da casa abaixo.
-
-Localização: ${localizacao?.nome || '—'} (${localizacao?.concelho || '—'}, construção ${localizacao?.ano_construcao || '—'}, ${localizacao?.tipologia || '—'})
-Home Score: ${localizacao?.home_score ?? '—'}/100
-
-Equipamentos activos:
-${eqs.map(e => `- ${e.nome} (${e.categoria}, classe ${e.classe_energetica || '—'}, ${e.potencia_kw ? e.potencia_kw+'kW' : '—'}, health ${e.health_score ?? '—'})`).join('\n') || '(sem equipamentos)'}
-
-Responde em português de Portugal, conciso, com dados concretos. Quando sugeres acções, referencia os modelos/equipamentos específicos acima. Se não tens dados suficientes, indica explicitamente.`
-
-  const quickChips = [
-    'Qual caldeira devo trocar primeiro?',
-    'Como reduzo consumo do AC?',
-    'Quais revisões estão atrasadas?',
-    'Vale a pena painel solar?',
-  ]
-
-  // Se entrou com contexto inicial (ex: alerta IPMA), pré-preenche primeira mensagem
-  useEffect(() => {
-    if(initialContext?.context){
-      const c = initialContext.context
-      setInput(`${c.titulo}. ${c.desc} — o que recomendas verificar nos equipamentos?`)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  const ask = async (text) => {
-    const q = (text || input).trim()
-    if(!q) return
-    setInput('')
-    const history = [...msgs, { role:'user', text:q }]
-    setMsgs(history)
-    setLoading(true)
-    const res = await callClaudeText(q, { system: systemPrompt })
-    setLoading(false)
-    if(res.error){
-      setMsgs(p => [...p, { role:'assistant', text:`Erro: ${res.error}`, error:true }])
-      return
-    }
-    setMsgs(p => [...p, { role:'assistant', text: res.text }])
-  }
-
-  return (
-    <div style={{ minHeight:'100vh', background:CASA.bg, display:'flex', flexDirection:'column', paddingBottom:88 }}>
-      <div style={{ background:CASA.green, padding:'11px 14px', color:'#fff', display:'flex', alignItems:'center', gap:10 }}>
-        <button onClick={onBack} style={{ background:'none', border:'none', color:'#fff', fontSize:20, cursor:'pointer' }}>←</button>
-        <div style={{ flex:1 }}>
-          <div style={{ fontSize:14, fontWeight:700 }}>AI Expert</div>
-          <div style={{ fontSize:10, opacity:0.75 }}>{eqs.length} equipamento{eqs.length===1?'':'s'} no contexto</div>
-        </div>
-      </div>
-
-      {!ANTHROPIC_KEY && (
-        <div style={{ padding:'12px 16px', background:'#7f1d1d', color:'#fff', fontSize:11.5, lineHeight:1.5 }}>
-          ⚠️ Falta <b>VITE_ANTHROPIC_API_KEY</b> em <code>.env.local</code>. O AI Expert só responde após configurar a chave e reiniciar o Vite.
-        </div>
-      )}
-
-      <div style={{ flex:1, padding:'14px 14px 0', overflowY:'auto' }}>
-        {msgs.length === 0 && (
-          <div style={{ marginBottom:10 }}>
-            <div style={{ background:'#fff', border:`1px solid ${CASA.border}`, borderRadius:12, padding:'12px 14px', fontSize:12.5, color:'#333', lineHeight:1.5 }}>
-              👋 Sou o AI Expert da sua casa. Posso ajudar com manutenção, substituições, consumos e prioridades. Experimente uma das sugestões abaixo ou escreva uma pergunta.
-            </div>
-            <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginTop:10 }}>
-              {quickChips.map(q => (
-                <button key={q} onClick={()=>ask(q)} disabled={loading || !ANTHROPIC_KEY} style={{
-                  background:'#fff', border:`1px solid ${CASA.border}`, borderRadius:14,
-                  padding:'6px 12px', fontSize:11, cursor:(loading||!ANTHROPIC_KEY)?'default':'pointer', color:'#555',
-                  opacity:(loading||!ANTHROPIC_KEY)?0.5:1,
-                }}>{q}</button>
-              ))}
-            </div>
-          </div>
-        )}
-        {msgs.map((m,i) => (
-          <div key={i} style={{
-            display:'flex', justifyContent: m.role==='user' ? 'flex-end' : 'flex-start',
-            marginBottom:8,
-          }}>
-            <div style={{
-              maxWidth:'82%', padding:'9px 12px', borderRadius:12,
-              background: m.role==='user' ? CASA.greenLt : (m.error ? '#FEE2E2' : '#fff'),
-              color: m.role==='user' ? '#fff' : (m.error ? '#991b1b' : '#111'),
-              border: m.role==='user' ? 'none' : `1px solid ${CASA.border}`,
-              fontSize:12.5, lineHeight:1.5, whiteSpace:'pre-wrap',
-            }}>{m.text}</div>
-          </div>
-        ))}
-        {loading && (
-          <div style={{ display:'flex', justifyContent:'flex-start', marginBottom:8 }}>
-            <div style={{ padding:'9px 12px', borderRadius:12, background:'#fff', border:`1px solid ${CASA.border}`, fontSize:12, color:'#999' }}>A pensar…</div>
-          </div>
-        )}
-      </div>
-
-      <div style={{ padding:'10px 14px', borderTop:`1px solid ${CASA.border}`, background:'#fff', display:'flex', gap:8 }}>
-        <input value={input} onChange={e=>setInput(e.target.value)} onKeyDown={e=>{ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); ask() } }}
-          placeholder="Escreva a sua pergunta…"
-          style={{ flex:1, padding:'10px 12px', borderRadius:9, border:`1px solid ${CASA.border}`, fontSize:13, outline:'none' }}/>
-        <button onClick={()=>ask()} disabled={loading || !input.trim() || !ANTHROPIC_KEY} style={{
-          background: (loading||!input.trim()||!ANTHROPIC_KEY)?'#ccc':CASA.greenLt, color:'#fff',
-          border:'none', borderRadius:9, padding:'10px 16px', fontSize:13, fontWeight:700,
-          cursor:(loading||!input.trim()||!ANTHROPIC_KEY)?'default':'pointer',
-        }}>Enviar</button>
-      </div>
-    </div>
-  )
-}
 
 
 function CNovaOrdem({ svcI, onBack, onOk, moradas=[], setMoradas }) {
@@ -11219,10 +11103,9 @@ export default function App() {
                   setCasaActiveEq(eq)
                 }}
               />}
-              {tab==='casa' && casaSub==='aiexpert' && <AIExpertScreen
-                equipamentos={casaEquipamentos}
-                authUser={authUser}
-                initialContext={casaSubPayload}
+              {tab==='casa' && casaSub==='aiexpert' && <CasaAdvisorScreen
+                localizacao={imovelAtivo}
+                localizacaoId={imovelAtivo?.id}
                 onBack={()=>{ setCasaSub(null); setCasaSubPayload(null) }}
               />}
               {tab==='casa' && casaSub==='locais' && <CasaLocais

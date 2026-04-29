@@ -9,13 +9,27 @@
 //   - Rows de tool executions: stop_reason = NULL (só tool_name/input/output/error)
 
 import { createMessage, calculateCostEur } from "./anthropic.ts";
-import type { AgentRunOptions, AgentRunResult } from "./types.ts";
+import type { AgentRunOptions, AgentRunResult, AnthropicMessage } from "./types.ts";
 
 export async function runAgent(opts: AgentRunOptions): Promise<AgentRunResult> {
   const sessionId = opts.sessionId ?? crypto.randomUUID();
-  const { agentName, systemPrompt, tools, toolExecutors, objective, context } = opts;
+  const { agentName, systemPrompt, tools, toolExecutors, context } = opts;
   const { pessoaId, organizationId, serviceRole } = context;
   const maxIterations = opts.maxIterations ?? 20;
+
+  // Guard: exactly one of {objective, messages}
+  if (opts.objective !== undefined && opts.messages !== undefined) {
+    throw new Error("runAgent: passar 'objective' OU 'messages', nunca ambos.");
+  }
+  if (opts.objective === undefined && opts.messages === undefined) {
+    throw new Error("runAgent: 'objective' ou 'messages' obrigatório.");
+  }
+
+  // Valor para audit (iteration 1) — objective ou última mensagem user do histórico
+  const auditTrigger = opts.objective
+    ?? (Array.isArray(opts.messages) && opts.messages.length > 0
+      ? opts.messages[opts.messages.length - 1]?.content
+      : null);
 
   // 1. Carregar policy — valida que agent existe e está activo para a org
   const { data: policy, error: policyError } = await serviceRole
@@ -50,9 +64,13 @@ export async function runAgent(opts: AgentRunOptions): Promise<AgentRunResult> {
   // Por agora ignorado — todas as tools executam sem aprovação manual
 
   const model = opts.model ?? policy.model;
-  const messages: any[] = [{ role: "user", content: objective }];
+  const messages: AnthropicMessage[] = opts.messages
+    ? [...opts.messages]
+    : [{ role: "user", content: opts.objective }];
   let iterations = 0;
   let totalCostEur = 0;
+  let totalInputTokens = 0;
+  let totalOutputTokens = 0;
 
   // 2. Tool use loop (max 20 iterations — anti loop infinito)
   while (iterations < maxIterations) {
@@ -92,6 +110,8 @@ export async function runAgent(opts: AgentRunOptions): Promise<AgentRunResult> {
     const outTok = resp.usage?.output_tokens ?? 0;
     const costEur = calculateCostEur(model, inTok, outTok);
     totalCostEur = Number((totalCostEur + costEur).toFixed(4));
+    totalInputTokens += inTok;
+    totalOutputTokens += outTok;
 
     // 2b. Audit da iteration (stop_reason = resp.stop_reason)
     await serviceRole.schema("core").from("agent_audit_log").insert({
@@ -100,7 +120,7 @@ export async function runAgent(opts: AgentRunOptions): Promise<AgentRunResult> {
       agent_name: agentName,
       session_id: sessionId,
       iteration: iterations,
-      objective: iterations === 1 ? objective : null,
+      objective: iterations === 1 ? auditTrigger : null,
       content: resp.content,
       stop_reason: resp.stop_reason,
       input_tokens: inTok,
@@ -110,7 +130,7 @@ export async function runAgent(opts: AgentRunOptions): Promise<AgentRunResult> {
     });
 
     if (resp.stop_reason === "end_turn") {
-      return { success: true, result: resp.content, iterations, sessionId, totalCostEur };
+      return { success: true, result: resp.content, iterations, sessionId, totalCostEur, totalInputTokens, totalOutputTokens };
     }
 
     if (resp.stop_reason !== "tool_use") {
@@ -178,5 +198,7 @@ export async function runAgent(opts: AgentRunOptions): Promise<AgentRunResult> {
     sessionId,
     reason: "max_iterations_reached",
     totalCostEur,
+    totalInputTokens,
+    totalOutputTokens,
   };
 }
