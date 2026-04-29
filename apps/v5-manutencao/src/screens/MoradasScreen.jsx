@@ -330,7 +330,7 @@ function FaturacaoBadge({ perfil, onClick }) {
     }}>
       <span style={{ fontSize: 11 }}>📋</span>
       <span style={{ fontSize: 10, fontWeight: 700 }}>
-        {isCustom ? `Faturação: ${perfil.nome || perfil.nome_facturacao}` : `Faturação: ${perfil?.nome_facturacao || 'dados pessoais'}`}
+        {`Faturação: ${perfil?.nome || perfil?.nome_facturacao || 'dados pessoais'}`}
       </span>
     </button>
   )

@@ -289,7 +289,8 @@ function Step4({ areas, descricao, fotos, formatos, onBack, onSubmit, enviando, 
 
 // ── Main wizard ───────────────────────────────────────────────────────────────
 export default function OrcamentoWizardScreen({ onBack, onConfirmado, localizacaoId, categoriaSlug, skipStep1, descricaoInicial }) {
-  const { pessoa_id } = useAuth()
+  const { pessoa_id, memberships } = useAuth()
+  const orgId = memberships?.[0]?.organization_id ?? null
   const [step,      setStep]      = useState(skipStep1 ? 2 : 1)
   const [areas,     setAreas]     = useState([])
   const [descricao, setDescricao] = useState(descricaoInicial || '')
@@ -305,7 +306,7 @@ export default function OrcamentoWizardScreen({ onBack, onConfirmado, localizaca
         .from('pedidos_orcamento')
         .insert({
           pessoa_id:              pessoa_id,
-          organization_id:        DEMO_ORGANIZATION_ID,
+          organization_id:        orgId,
           localizacao_id:         localizacaoId || null,
           areas,
           descricao,

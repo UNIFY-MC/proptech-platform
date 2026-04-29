@@ -43,7 +43,7 @@ function SectionLabel({ children, mt = 16 }) {
 }
 
 export default function ImovelWizard({ onClose, onSaved }) {
-  const { pessoa_id } = useAuth()
+  const { pessoa_id, memberships } = useAuth()
   const { refetch } = useImovelAtivo()
   const { perfis }  = usePerfisFiscais()
 
@@ -100,8 +100,28 @@ export default function ImovelWizard({ onClose, onSaved }) {
     if (!form.nome.trim()) return
     setSaving(true)
     try {
+      // Validar organização activa antes do INSERT
+      const orgIds = (memberships ?? [])
+        .map(m => m.organization_id)
+        .filter(Boolean)
+
+      if (orgIds.length === 0) {
+        console.error('[ImovelWizard] Sem memberships activos:', memberships)
+        alert('A tua conta ainda não está ligada a nenhuma organização. Contacta suporte.')
+        setSaving(false)
+        return
+      }
+
+      if (orgIds.length > 1) {
+        console.warn('[ImovelWizard] Multi-org detectado, usar 1ª por defeito:', orgIds)
+        // TODO(1B.5): adicionar selector de organização no wizard (backlog #1b)
+      }
+
+      const organizationId = orgIds[0]
+
       const payload = {
         pessoa_id:        pessoa_id,
+        organization_id:  organizationId,
         nome:             form.nome.trim(),
         categoria,
         tipo:             CATEGORIA_TO_TIPO[categoria] || 'habitacao',
@@ -149,8 +169,14 @@ export default function ImovelWizard({ onClose, onSaved }) {
       onSaved?.()
       onClose?.()
     } catch (e) {
-      console.error('Erro ao criar imóvel:', e)
-      alert('Erro ao guardar. Tenta novamente.')
+      console.error('[ImovelWizard] erro ao criar imóvel:', e)
+      if (e?.code === '42501') {
+        alert('Erro de permissões ao guardar. Contacta suporte.')
+      } else if (e?.code === '23505') {
+        alert('Já existe um imóvel com esses dados.')
+      } else {
+        alert('Erro ao guardar: ' + (e?.message || 'tenta novamente'))
+      }
     } finally {
       setSaving(false)
     }

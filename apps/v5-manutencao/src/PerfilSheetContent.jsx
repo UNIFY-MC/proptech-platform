@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { supaCore, supa } from './supa.js'
 import { useAuth } from './lib/AuthContext.jsx'
+import { BRAND } from './config/branding.js'
 import { nivelLabel } from './lib/labels.js'
 
 const V = {
@@ -128,7 +129,7 @@ export default function PerfilSheetContent({ authUser, onNavigate, onLogout }) {
           }}
         >Sair</button>
         <div style={{ fontSize:10, color:V.stone, letterSpacing:'0.04em', textAlign:'center', marginTop:10 }}>
-          v0.5.3 · build dev
+          v{BRAND.version} · {BRAND.buildEnv}
         </div>
       </div>
     </div>

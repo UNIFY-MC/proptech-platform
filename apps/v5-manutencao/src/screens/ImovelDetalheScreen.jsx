@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { supa } from '../supa.js'
 import { useImovelAtivo } from '../lib/ImovelAtivoContext.jsx'
+import { casaScoreLabel } from '../lib/scoreLabel.js'
 import { calcularCompletude, corCompletude } from '../lib/completude.js'
 import { usePerfisFiscais } from '../lib/PerfisFiscaisContext.jsx'
 import { moradaCurta, moradaCompleta, tipoImovelEmoji, tipoImovelLabel, categoriaEmoji, categoriaLabel, isReadOnly, isExternalUse, externalAppLabel, usoLabel } from '../lib/labels.js'
@@ -75,8 +76,8 @@ export default function ImovelDetalheScreen({ id, onBack, onNavigateScore }) {
     async function load() {
       const [imRes, ordRes, eqRes] = await Promise.all([
         supa.from('localizacoes').select('*').eq('id', id).maybeSingle(),
-        supa.from('ordens').select('id,numero,estado,created_at,descricao_personalizada,metadata')
-          .eq('localizacao_id', id).order('created_at', { ascending: false }).limit(5),
+        supa.from('ordens_trabalho').select('id,estado,created_at,notas_cliente,catalogo_servico:catalogo_servicos(nome)')
+          .eq('imovel_id', id).order('created_at', { ascending: false }).limit(5),
         supa.from('equipamentos').select('id', { count: 'exact', head: true }).eq('localizacao_id', id),
       ])
       if (!active) return
@@ -209,7 +210,7 @@ export default function ImovelDetalheScreen({ id, onBack, onNavigateScore }) {
             </div>
             <div>
               <div style={{ fontSize: 13, fontWeight: 700, color: C.ink }}>
-                {(imovel.home_score ?? 0) >= 70 ? 'Casa Saudável 🌱' : (imovel.home_score ?? 0) >= 40 ? 'A Melhorar ⚠️' : 'Em Risco 🚨'}
+                {casaScoreLabel(imovel.home_score)}
               </div>
               <div style={{ fontSize: 11, color: C.slate, marginTop: 2 }}>Score calculado automaticamente</div>
             </div>
@@ -391,7 +392,7 @@ export default function ImovelDetalheScreen({ id, onBack, onNavigateScore }) {
           }}>
             <div>
               <div style={{ fontSize: 12, fontWeight: 600, color: C.ink }}>
-                {o.metadata?.servico_nome || o.descricao_personalizada || `Ordem #${o.numero}`}
+                {o.catalogo_servico?.nome || o.notas_cliente || 'Ordem sem título'}
               </div>
               <div style={{ fontSize: 10, color: C.slate, marginTop: 2 }}>
                 {new Date(o.created_at).toLocaleDateString('pt-PT')}

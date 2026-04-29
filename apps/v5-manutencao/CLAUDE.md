@@ -1,7 +1,7 @@
 # v5-manutencao — Contexto para Claude Code
 
 Este ficheiro é lido automaticamente pelo Claude Code a cada invocação. Mantém-se curto e actual.
-**Última actualização:** 2026-04-27 · Sprint 3.4D **FECHADA** · Próximo: decidir 3.5 vs Fase 4
+**Última actualização:** 2026-04-29 · Sprint 1B.5A.0 CLAUDE.md hierarchy · Próximo: 1B.5A Fase 2 Foundations
 
 ---
 
@@ -30,10 +30,16 @@ Não esperar pelo fim do projecto. Cada commit que muda padrão estrutural deve 
 | **3.4C** | RLS em core (23 tabelas) + v5_manutencao (39 tabelas) · helpers SECURITY DEFINER · cross-tenant validado · REVOKE anon em RPCs públicas · empty states honestos · pre_auth_* eliminado |
 | **3.4D fix-ux #1** | primeiro_nome + apelidos em core.pessoas · wizard 2 campos · saudação usa primeiro_nome · PerfilDrawer actualizado |
 | **3.4D** | SMTP Resend (prataowners.pt) · email change in-app · password change in-app · GDPR via Edge Function · `is_staff()` + `core.staff_roles` · `.single()` audit (9 ficheiros) · StaffBanner · PasswordInput toggle · smoke test G completo |
+| **3.5** | branding.js · scoreLabel · empty states honestos · meta SEO · missões hierarquia · faturação labels · audit DEMO_ · favicon |
+| **1B.1.1** | Schema agents · agent_audit_log + agent_policies + api_usage · fn_can_use_api · regras W+X |
+| **1B.1.2** | Anthropic raw fetch + runAgent.ts + agent-test Edge Function · cost tracking + audit · smoke test B+C+D OK |
+| **1B.2.1** | image_inspector infra · bucket equipamentos-fotos · fn_match_existing_equipamento · 4 tool executors com validação · system prompt pt-PT · types.ts objective: string \| unknown[] |
+| **1B.2.2** | Edge Function image-inspector · Vision pipeline completo · imageCompression.js cliente · 4 deploys evolutivos · smoke test E2E PASSOU (Bosch SMV41D10EU) · custo real €0.08/análise · Regra CC |
+| **1B.5A.0** | CLAUDE.md hierarchy · sprint-notes.md criado · 60% redução de tamanho |
 
 ### Em curso
 
-- Nada · **Sprint 3.4D fechada** · aguardar decisão de próximo sprint (3.5 fix-ux vs Fase 4 backoffice)
+- **1B.5A** — Foundations Phase 2 (decisões D1-D5 aprovadas · migração schema a executar)
 
 ### Pendente
 
@@ -86,7 +92,16 @@ Funções SECURITY DEFINER em schema `public` (PostgREST expõe automaticamente)
 - `public.current_pessoa_id()` → UUID da pessoa logada (`auth.uid()` → `core.pessoas`)
 - `public.current_organization_ids()` → `uuid[]` das orgs do utilizador via memberships
 - `public.has_org_role(org_id uuid, roles text[])` → boolean
-- `public.is_staff()` → boolean (3.4D — a implementar)
+- `public.is_staff()` → boolean (3.4D — consulta `core.staff_roles`)
+
+### Agents (Onda 1B)
+
+- Agents correm SEMPRE em Edge Functions (server-side); API key Anthropic em Supabase secrets
+- Chamar Anthropic via **raw fetch** — `npm:@anthropic-ai/sdk` falha no Deno com "Connection error"
+- Naming: `v5.*` consumer · `admin.*` backoffice · tools snake_case sem dots
+- Model seeds: `claude-sonnet-4-6` para `v5.image_inspector` e `v5.casa_advisor`
+- Free tier: 3/dia + 10/mês por utilizador (2× `fn_can_use_api` por invocação)
+- Diagnóstico obrigatório antes de qualquer redeploy: ver **Regra AA** em `.claude/rules/anti-patterns.md`
 
 ### Capacitor (preparação Fase 7)
 
@@ -169,75 +184,19 @@ Princípio aplicado a partir de 3.4C — **zero como ponto de partida visível, 
 
 ### Anti-padrões PROIBIDOS
 
-Lições aprendidas em 3.4C/3.4D audit — nunca introduzir:
+> Regras completas em **`.claude/rules/anti-patterns.md`** (indexáveis via grep).
 
-- `DEMO_*`, `MOCK_*`, `FAKE_*`, `HARDCODED_*` fora de testes/storybook
-- Fallback arrays em renderização (`[90,65,80,50,68][i]` etc.)
-- `useState` com valor não-zero/não-null que pareça dado real
-- Mock data partilhado entre utilizadores (todos vêem os mesmos pedidos/poupanças)
-- `.single()` sem garantia de ≥1 row — usar `.maybeSingle()`
-- Funções RPC `SECURITY DEFINER` com `GRANT anon` sem guard interno (`auth.uid() IS NOT NULL`)
-- **RLS sem GRANT — bug silencioso (lição 3.4D)**:
+Regras em vigor:
+- **AA** — nunca redeploy sem ver audit log + Edge Function logs
+- **BB** — validação categórica de inputs de agentes com `Set<string>` hardcoded
+- **CC** — helpers DEV tolerantes a `string | object` (lição 1B.2.2)
+- **DD** — `supaPublic` não partilha JWT — nunca usar para RPCs com `auth.uid()` context; usar `useAuth()` ou `supa` (lição 1B.2.3c)
+- **W** — RLS sem GRANT devolve `null` silencioso — sempre GRANT antes de CREATE POLICY
+- **X** — SECURITY DEFINER sem GRANT EXECUTE lança 42501 — sempre GRANT EXECUTE explícito
+- **Y** — PostgREST embeds são literais às colunas reais — abrir schema antes de escrever
+- **Z** — Audit RLS checklist obrigatório antes de fechar qualquer fase com RLS
 
-```sql
--- PADRÃO OBRIGATÓRIO para toda tabela nova com RLS:
-ALTER TABLE schema.tabela ENABLE ROW LEVEL SECURITY;
-GRANT SELECT ON schema.tabela TO authenticated;  -- ← OBRIGATÓRIO antes da POLICY
-CREATE POLICY "..." ON schema.tabela FOR SELECT TO authenticated USING (...);
-```
-
-RLS sem GRANT = PostgREST devolve `data: null` silenciosamente (sem erro visível no console).
-Como ter fechadura sem maçaneta — ninguém entra mesmo com a chave certa.
-Efeito prático: queries JS devolvem `null`, estados ficam em `[]`/`false`, sem alerta.
-**Verificar sempre:** `GRANT` antes de `CREATE POLICY`, em todos os schemas (`core`, `v5_manutencao`, `public`).
-Diagnóstico rápido: `SELECT grantee, privilege_type FROM information_schema.role_table_grants WHERE table_schema='X' AND table_name='Y';`
-
-- **Embeds PostgREST são literais às colunas reais (lição 3.4D)**:
-
-Quando adicionas embed `tabela:nome_real(col1, col2)`, **abre o schema da tabela embedded primeiro**. Nunca infiras nomes de colunas pelo padrão de outras tabelas. Em particular:
-- `public.servicos` (V1 legacy) usa `categoria_id` (FK numérica)
-- `v5_manutencao.catalogo_servicos` (V5) usa `categoria` (string, sem `_id`)
-
-Não fazer copy-paste de embeds entre schemas diferentes. Se a query falha com 400, lê o campo `hint` na resposta PostgREST — indica a coluna correcta. Bug encontrado em 3.4D smoke test G (`App.jsx:10523`).
-
-- **SECURITY DEFINER sem GRANT EXECUTE = erro 42501 silencioso (lição 3.4D)**:
-
-Para qualquer função `SECURITY DEFINER`, declarar explicitamente quem pode executar:
-
-```sql
-CREATE OR REPLACE FUNCTION schema.fn_x(...) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER AS $$ ... $$;
-
--- OBRIGATÓRIO depois do CREATE:
-GRANT EXECUTE ON FUNCTION schema.fn_x(...) TO <role_específico>;
-REVOKE EXECUTE ON FUNCTION schema.fn_x(...) FROM PUBLIC;
-```
-
-Roles típicos: Edge Function via service_role key → `TO service_role`; RPC frontend → `TO authenticated`; Admin → `TO postgres`.
-Sintoma: `code: "42501", message: "permission denied for function X"`. Bug encontrado em 3.4D smoke test G T4 (`core.fn_anonymize_account`).
-
-- **`core.pessoas` usa `metadata` JSONB para soft-delete GDPR (não coluna `deleted_at`)**:
-
-```sql
-UPDATE core.pessoas SET
-  metadata = jsonb_build_object('deleted', true, 'deleted_at', now()::text),
-  nome = 'Conta eliminada', email = 'deleted+<uuid>@v5casa.pt',
-  primeiro_nome = NULL, apelidos = NULL, telemovel = NULL, nif = NULL
-WHERE id = <pessoa_id>;
-
--- Filtrar activas:
-WHERE COALESCE(metadata->>'deleted', 'false') != 'true'
-```
-
-Inconsistência conhecida e aceite: `core.memberships` usa coluna `deleted_at` dedicada; `core.pessoas` usa metadata. ADR a alinhar em Fase 7+.
-
-- **Naming consistency — colunas diferem entre schemas, não copiar (lição 3.4D)**:
-
-| Conceito | `core.pessoas` | `public.servicos` | `v5_manutencao.catalogo_servicos` |
-|---|---|---|---|
-| Telefone | `telemovel` | n/a | n/a |
-| Categoria | n/a | `categoria_id` (FK int) | `categoria` (string) |
-| Soft-delete | `metadata->>'deleted'` | n/a | n/a |
-| Soft-delete memberships | `deleted_at` (coluna) | n/a | n/a |
+Anti-padrões gerais: nunca introduzir `DEMO_*`/`MOCK_*`/`FAKE_*`, fallback arrays em render, `useState` com valor mock, `.single()` sem garantia de ≥1 row, `GRANT anon` em funções SECURITY DEFINER sem guard interno.
 
 ---
 
@@ -283,36 +242,17 @@ Princípio: **1 pessoa → 1 identidade** (`auth.users` + `core.pessoas`) → N 
 
 ## Pontos de atenção
 
-### RLS audit checklist obrigatório (lição 3.4C)
+### Regra Z — RLS audit checklist + Regra Y — PostgREST embeds
 
-ANTES de fechar qualquer fase que aplique/altere RLS:
+> Detalhes completos em `.claude/rules/anti-patterns.md` (Regra Z e Regra Y).
 
-1. `grep -rn "DEMO_\|MOCK_\|FAKE_\|HARDCODED_" src/` → deve dar 0 matches
-2. Auditar TODAS as views (regulares e materialized) sem RLS explícita
-3. Auditar TODAS as funções RPC SECURITY DEFINER:
-   ```sql
-   SELECT n.nspname, p.proname, p.prosecdef
-   FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
-   WHERE n.nspname IN ('core','v5_manutencao','public');
-   ```
-   → cada uma deve ter guard `auth.uid() IS NOT NULL` ou `is_staff()` interno
-4. Cross-tenant test: criar 2º utilizador, validar que NÃO vê dados do 1º (Network tab + Response inspection)
-5. Testar UI com utilizador novo (sem histórico) — não pode ver mocks
-6. `NOTIFY pgrst, 'reload schema';` após cada batch de policies
-7. **Inspecionar Network tab durante smoke test** — qualquer 400 indica embed PostgREST mal formado (coluna inexistente); qualquer 403 indica GRANT em falta na tabela
-8. **Para tabelas novas com RLS**, confirmar GRANT em `information_schema.role_table_grants` antes de fechar a fase
+Checklist rápido pré-fecho de fase com RLS:
+1. `grep -rn "DEMO_\|MOCK_\|FAKE_\|HARDCODED_" src/` → 0 matches
+2. `NOTIFY pgrst, 'reload schema';` após batch de policies
+3. Network tab: 400 = embed mal formado · 403 = GRANT em falta
+4. Cross-tenant test com 2º utilizador
 
-### Naming PostgREST embed (lição 3.4C bugs)
-
-Sintaxe correcta para foreign embed:
-
-```js
-// ERRADO — PostgREST procura tabela chamada "servico_id" (não existe):
-.select('ordem, servico:servico_id(id, nome)')
-
-// CORRECTO — embed por nome da tabela destino:
-.select('ordem, servico:catalogo_servicos(id, nome)')
-```
+PostgREST embed: usar nome da tabela destino, nunca o nome da FK. Se 400, ler campo `hint` da resposta.
 
 ### Race condition authUser bridge (lição 3.4D)
 
@@ -386,106 +326,7 @@ Colunas novas em `ordens_trabalho`:
 
 ---
 
-## Estado das fases (actualizado 2026-04-26)
-
-| Fase | Estado | Notas |
-|---|---|---|
-| 3.3.7 | ✅ fechada | 22 ecrãs visuais + reorg menus + selector de imóvel |
-| **3.3.8** | ✅ fechada | Schema BD (11 tabelas novas, 3 ALTERs) + seed multi-imóveis Maria |
-| **3.3.9** | ✅ fechada | Todas as screens ligadas à BD real; MOCK removido de App.jsx; States.jsx criado |
-| **3.3.10** | ✅ fechada | Hotfix pós 3.3.9 |
-| **3.3.11** | ✅ fechada | Perfis fiscais por imóvel + snapshot fiscal nas ordens |
-| **3.3.12** | ✅ fechada | Imóvel como entidade central: GPS + CRUD completo + ImovelDetalheScreen |
-| **3.3.13** | ✅ fechada | Orçamentos à medida (flow visual 4 steps) + CategoriaScreen enriquecida + AlertActions Shipshape |
-| **3.3.14** | ✅ fechada | Tab memory + EscolherImovelSheet + orcamentos BD real + SmartPromptsSheet + completude |
-| **3.3.14-fix-ux1** | ✅ fechada | Combos UI + HeroHeader + layout ServicosScreen |
-| **3.3.14-fix-ux2** | ✅ fechada | IniciaScreen hero redesign + smart shortcuts |
-| **3.3.14-fix-ux3** | ✅ fechada | Combos BD real + search bar debounce + 9ª cat Packs + 22 serviços novos (199 total) |
-| **3.3.14-fix-ux4** | ✅ fechada | ServicoDetailScreen redesign 15 secções + inclui/exclui BD + stats + imagens Unsplash + FAQ |
-| **3.3.14-fix-ux5** | ✅ fechada | Configurador variações + planos frequência + thumbnails CategoriaScreen |
-| **3.3.14-fix-ux6** | ✅ fechada | Packs banner dourado + combos ligados BD + urgência clickável + Plano Home+ MVP + MaisContratados fix |
-| **3.3.14-fix-ux7** | ✅ fechada | planos_subscricao + descontos_config BD · CombosScreen BD · ServicosListaScreen · desconto Home+ no CTA |
-| **3.3.14-fix-ux8** | ✅ fechada | Packs fonte única BD · nav back stack (router.js) · BottomNav universal · imagens pool+hash · combos imagem_url |
-| **3.3.14-fix-ux9** | ✅ fechada | FAB redesign (sem PEDIR) · FabSheet 5 secções · 5 novos ecrãs (Emergência, AIExpertFab, Câmara, Doc, Energia) |
-| **3.3.14-fix-ux10** | ✅ fechada | Home onClicks · serviços pop BD · equipa BD · missões · poupanças · AI Expert pergunta_inicial |
-| **3.3.14-fix-ux11** | ✅ fechada | Serviços populares HomeScreen · preco_base→preco · useState null robustness |
-| **3.3.14-fix-ux12** | ✅ fechada | Scroll-to-top universal · ServicosListaScreen error handling · 3 screens catch |
-| **Sprint 3.3** | ✅ **FECHADA** | 8 fases base + 12 fix-ux (ux1–ux12) · 199 serviços · 4 combos BD · subscrições · descontos |
-| **3.4A** | ✅ **fechada** | Auth core: LoginScreen + Signup + Recover + AuthContext + DEMO_PESSOA_ID → useAuth() |
-| **3.4B** | ✅ **fechada** | Onboarding wizard 5 steps · RPC fn_complete_onboarding · needsOnboarding bloqueante |
-| **3.4C** | ✅ **fechada** | RLS todas as tabelas (core 23 + v5_manutencao 39) · helpers SECURITY DEFINER · multi-org switcher · OrgLocBottomSheet · REVOKE anon RPCs · empty states honestos |
-| **3.4D fix-ux #1** | ✅ **fechada** | primeiro_nome+apelidos em core.pessoas · wizard 2 campos · saudação usa primeiro_nome · PerfilDrawer actualizado |
-| **3.4D** | ✅ **fechada** | SMTP Resend · email/password change in-app · GDPR delete · staff_roles + is_staff() · refactor nome split · 4 bug fixes (categoria_id, GRANT staff_roles, GRANT EXECUTE fn_anonymize, PasswordInput) |
-
----
-
-## Notas para 3.3.12
-
-- `localizacoes` tem: `num_quartos`, `num_wcs`, `num_pisos`, `foto_principal_url` (novos) + `coords` (point, já existia)
-- `coords` formato Postgres `point`: `"(lng,lat)"` — usar `pointToCoords()` e `coordsToPoint()` em `src/lib/geocoding.js`
-- Geocoding via Nominatim (gratuito, rate-limited) — TODO(mario): migrar para Google Maps API em volume
-- `ModalEditarImovel` exportado de `MoradasScreen.jsx` — usado também em `ImovelDetalheScreen.jsx`
-- `ImovelDetalheScreen` acessível via: header imóvel activo (IniciaScreen), card em MoradasScreen, ecra `imovel_detalhe`
-- `moradaCurta()` e `moradaCompleta()` adicionados a `src/lib/labels.js`
-- Seed 3 imóveis Maria: tipologia, área, quartos, WCs, pisos, GPS backfilled via migração `v5_3_3_12_imovel_rico`
-- `localizacoes.tipo` CHECK real: `habitacao | condominio | empresa | segunda_habitacao`
-- **Mapa visual removido** (react-leaflet incompatível React 18 — erro `render2 is not a function`): `MapaPicker` substituído por inputs lat/lng + GPS actual. `ImovelDetalheScreen` mostra coords + link Google Maps em vez de mapa embed.
-
-## Notas para 3.3.13
-
-- Screens novos: `OrcamentosLandingScreen`, `OrcamentoWizardScreen` (4 steps), `OrcamentoConfirmadoScreen`
-- Mock data em `src/data/mock.js`: `MOCK_ORCAMENTOS_AREAS`, `MOCK_ORCAMENTOS_FORMATOS`, `MOCK_ALERTAS_ENRIQUECIDOS`
-- `AlertaDetailScreen` reescrito: mostra lista completa MOCK_ALERTAS_ENRIQUECIDOS (Shipshape style) + acções 1-toque
-- `CategoriaScreen` enriquecida: hero + badges 2x2 + CTA orçamento + sobre + relacionados + reviews + FAQ
-
-## Notas para 3.3.14
-
-- `pedidos_orcamento.estado` CHECK: `aberto | em_cotacao | cotado | aceite | cancelado | expirado`
-- `pedidos_orcamento.organization_id` NOT NULL — usar `DEMO_ORGANIZATION_ID` nos seeds
-- `EscolherImovelSheet` + `useEscolherImovel` hook em `src/components/` e `src/lib/`
-- `SmartPromptsSheet` persiste respostas em `contexto_servico` (UNIQUE por localizacao+categoria)
-- `completude.js` calcula score 0-100% baseado em 10 campos com pesos; cor: verde ≥80%, âmbar ≥50%, vermelho <50%
-- `ImovelAtivoContext` agora tem: `imovelAtivoPorTab`, `setImovelAtivoForTab`, `onTabChange`, `resetParaPrincipal`
-
-## Notas para 3.3.14-fix-ux3
-
-- `v5_manutencao.combos` carregados da BD (não mock): `preco_combo`, `preco_normal`, `cor_hex`, `emoji`, `sub`, `desconto_pct`, `servicos_ids`, `descricao_longa`
-- `adaptCombo(bdRow)` → formato card; `adaptComboForDetail(bdRow)` → ComboDetailScreen
-- Search bar com debounce 300ms, dropdown com resultado + card rosa "Orçamento personalizado"
-- `ServicosScreen.jsx` migrado para ficheiro separado (~290 linhas)
-
-## Notas para 3.3.14-fix-ux6
-
-- **BD**: criada `v5_manutencao.combo_servicos` (combo_id UUID FK combos, servico_id UUID FK catalogo_servicos, ordem INT); `combos` ganhou `cor_texto TEXT DEFAULT '#1B4332'`
-- **`src/lib/descontos.js`**: `getDescontoAplicavel(pessoaId, valorBase)` — lê `subscricoes`, devolve `{ tipo, label, pct, credito_eur }`
-- **`src/screens/PlanoHomeDetalheScreen.jsx`**: ecrã full-screen Plano Home+; CTA desactivado (Stripe futuro)
-
-## Notas para 3.3.14-fix-ux8
-
-- **Nav back stack**: criado `src/lib/router.js` com `useNavStack()` hook
-- **BottomNav universal**: `BNav` e `FabPickerModal` fora do bloco `{!cliOver}`; renderizados condicionalmente com `ecra !== 'orcamento_wizard'`
-- **`src/lib/imagens.js`**: `POOL_POR_SUB_GRUPO` (28 sub-grupos) + `hashStr()` determinístico
-
-## Notas para 3.3.14-fix-ux9
-
-- **FabSheet**: `FabPickerModal` reescrito com 5 secções — Emergência + grid Pedir + AI Expert + Adicionar à casa + descrição livre
-- **Screens novos**: `EmergenciaScreen`, `AIExpertFabScreen`, `AdicionarCamaraScreen`, `AdicionarDocScreen`, `AdicionarEnergiaScreen`
-
-## Notas para 3.3.14-fix-ux10
-
-- **IniciaScreen**: `SERVICOS_POP` e `EQUIPA` hardcoded removidos; queries BD para serviços popular, equipa, combos
-- **BD**: `prestadores` ganhou `bio`, `especialidades` jsonb, `verificado`, `ordem`; criada `prestadores_equipa_cliente`
-- **SQL**: `sql/13_v5_3_3_14_ux10_equipa.sql`
-
-## Notas para 3.4A — Auth core Supabase
-
-- **`AuthProvider`** em `src/lib/AuthContext.jsx` — expõe `session`, `pessoa`, `pessoa_id`, `authenticated`, `loading`, `signOut`, `refreshPessoa`
-- **Auth screens** em `src/screens/auth/`: `LoginScreen`, `SignupScreen`, `ConfirmEmailPendingScreen`, `ConfirmEmailScreen`, `RecoverPasswordScreen`, `ResetPasswordScreen`
-- **`DEMO_PESSOA_ID`** deprecated: substituído por `useAuth().pessoa_id` em 26 ficheiros
-- **Bridge `useEffect`** em App.jsx: session real → `authUser` compatível (manter componentes que recebem `authUser` prop)
-- **`supa.js`**: `detectSessionInUrl: true`, `flowType: 'pkce'`
-- **SQL**: `sql/14_v5_3_4_auth.sql` — `core.pessoas.auth_user_id`, `email_verified`, `ultimo_login`
-- **Contas demo** (Login rápido de teste):
+## Contas de teste
 
 | Role | Email | Password | Notas |
 |---|---|---|---|
@@ -500,89 +341,10 @@ Colunas novas em `ordens_trabalho`:
 | **RESERVADO** | `mariocarvalho.biz@gmail.com` | — | uso real futuro · NÃO criar |
 | **TODO Fase 6** | `mariocarvalho.biz+v5prestador@gmail.com` | — | a criar com fluxo prestador |
 
-## Notas para 3.4B — Onboarding wizard
-
-- `OnboardingWizardScreen` em `src/screens/OnboardingWizardScreen.jsx`
-- 5 steps inline: Step1Tipo · Step2DadosPessoais · Step3Entidade · Step4Localizacao · Step5Welcome
-- Steps por tipo: individual=[1,2,4,5] · empresa/condo=[1,2,3,4,5] · gestor=[1,2,3,5]
-- `fn_complete_onboarding(payload jsonb)` em schema `core` — SECURITY DEFINER · atómica
-- RPC cria: `core.pessoas` + `core.organizations` + `core.memberships` + `v5_manutencao.perfis_fiscais` + `v5_manutencao.localizacoes`
-- `needsOnboarding = memberships.length === 0` em AuthContext — bloqueante, sem override
-- Logout no header do wizard NÃO limpa localStorage de onboarding (retoma no próximo login)
-- SQL: `sql/15_v5_3_4b_onboarding_rpc.sql`
-
-## Notas para 3.4C — RLS + multi-org switcher
-
-- **Helpers SECURITY DEFINER** em schema `public`:
-  - `public.current_pessoa_id()`, `public.current_organization_ids()`, `public.has_org_role()`
-  - `GRANT EXECUTE TO authenticated`; indexes em `core.memberships(pessoa_id)` e `core.pessoas(auth_user_id)`
-- **supaCore JWT sync** — `syncSupaCore(session)` em `AuthContext.jsx` chama `supaCore.auth.setSession()` a cada mudança. Crítico: supaCore tem `persistSession:false`
-- **RLS v5_manutencao** (39 tabelas): PER_ORG (12) · PER_ORG indirect (5) · PER_PESSOA (7) · PER_PESSOA indirect (2) · PUBLICO (12)
-- **OrgLocBottomSheet.jsx** — substitui `ImovelSelectorSheet`; mostra secção de org switching quando `organizations.length > 1`
-- **REVOKE anon** nas 5 core_get_* RPCs públicas: `sql/20_v5_3_4c_revoke_anon_rpc.sql`
-- SQL helpers: `sql/16_v5_3_4c_rls_helpers.sql`; SQL v5_manutencao: `sql/17_v5_3_4c_rls_v5_manutencao.sql`
-
-## Notas para 3.4D fix-ux #1 — Nome split
-
-- **BD**: `core.pessoas` ganhou `primeiro_nome text` + `apelidos text`; backfill automático via `split_part`
-- **`fn_complete_onboarding`**: aceita `primeiro_nome` + `apelidos` no payload; compõe `nome` internamente; backward-compat com `nome` legacy
-- **`OnboardingWizardScreen` Step 2**: campo único "Nome completo" substituído por grid 2 campos (Primeiro nome obrigatório · Apelido opcional)
-- **`IniciaScreen`**: saudação usa `authPessoa?.primeiro_nome` directo do `useAuth()` hook; fallback chain robusta sem `@` ou `+`
-- **App.jsx bridge**: segundo `useEffect` que actualiza `authUser.nome` quando `pessoa?.nome` carrega (fix race condition)
-- **`PerfilDrawerContent`**: `.single()` → `.maybeSingle()`; select inclui `primeiro_nome, apelidos`; header mostra `nomeDisplay` (primeiro nome) + `nomeLegal` como subtitle quando diferem; iniciais correctas
-- **SQL**: `sql/22_v5_3_4d_nome_split.sql`
-
-## Notas para 3.4D
-
-### Auth & segurança in-app
-- **EmailModal**: alteração email via `supa.auth.updateUser({email})` + banner pendente em `pessoas.metadata.email_pendente`
-- **PasswordModal**: re-auth + nova password ≥8 chars + match
-- **DeleteAccountModal**: danger modal · re-auth + checkbox confirmação · chama Edge Function `delete-account`
-- **PasswordInput** (`src/components/PasswordInput.jsx`): toggle eye show/hide · usado em todos os ecrãs auth + modais
-
-### GDPR delete
-- Edge Function `supabase/functions/delete-account/index.ts`: JWT verify → re-auth password → chama `core.fn_anonymize_account` → `supabase.auth.admin.deleteUser()`
-- RPC `core.fn_anonymize_account(p_auth_user_id uuid)`: SECURITY DEFINER · apenas `service_role` (GRANT EXECUTE explícito) · anonimiza `core.pessoas` via `metadata = jsonb_build_object('deleted', true, 'deleted_at', now())` + sets nome='Conta eliminada', email='deleted+<uuid>@v5casa.pt', primeiro_nome/apelidos/telemovel/nif/foto_url=NULL · marca `core.memberships.deleted_at = now()` · anonimiza `v5_manutencao.perfis_fiscais` · preserva `ordens_trabalho` (10 anos AT)
-- **Pattern soft-delete:** `core.pessoas` usa `metadata->>'deleted'`, NÃO coluna dedicada. `core.memberships` usa coluna `deleted_at`. Inconsistência aceite (pessoas é hot-path, memberships é metadata operacional).
-
-### Staff roles
-- Tabela `core.staff_roles`: `auth_user_id` (NÃO `pessoa_id`) · `role` (admin/support/operator) · `active` · `granted_by` · `revoked_at`
-- Helper `public.is_staff()`: SECURITY DEFINER · GRANT EXECUTE TO authenticated
-- RLS staff_roles: policy SELECT `auth_user_id = auth.uid()` (cada user vê os seus)
-- GRANT SELECT TO authenticated obrigatório (POLICY sem GRANT = 403)
-- StaffBanner componente: amarelo discreto fixed top · expansível · só renderiza se `isStaff===true`
-- AuthContext extended com `isStaff` + `staffRoles[]`
-- Gestão (INSERT/UPDATE/DELETE) reservada para Fase 4 backoffice via service_role
-
-### Refactor nome split
-- `core.pessoas` ganhou `primeiro_nome` + `apelidos` (mantém `nome` completo para fiscal)
-- Backfill de 70+ pessoas via split simples
-- `fn_complete_onboarding` actualizado para escrever os 3 campos
-- UI saudação usa `primeiro_nome` (fallback split de `nome`)
-- PerfilDrawer mostra display name + nome legal subtitle
-
-### SMTP Resend
-- Provider: Resend (`smtp.resend.com:465`) · domain `prataowners.pt` verificado
-- Sender: `info@prataowners.pt` (partilhado com V2 Condomínios — Fase 7 mudar para domínio dedicado)
-- API key `v5-dev-supabase` em Supabase Dashboard SMTP settings
-- Rate 30/h, min interval 60s
-
-### Bugs descobertos em smoke test G e fixados
-1. **App.jsx `categoria_id` vs `categoria`**: embed PostgREST de `catalogo_servicos` pedia coluna `categoria_id` (nome V1) mas tabela V5 usa `categoria` (string). Fix: `catalogo_servicos(nome, categoria)`.
-2. **staff_roles RLS sem GRANT**: policy SELECT correcta mas falta `GRANT SELECT ON core.staff_roles TO authenticated` → retorna null silencioso. Persistido em `sql/23_v5_3_4d_staff_roles.sql`.
-3. **fn_anonymize_account 42501**: SECURITY DEFINER sem GRANT EXECUTE a service_role. Persistido em `sql/24_v5_3_4d_rpc_guards.sql`.
-4. **fn_anonymize_account schema**: Edge Function chamava sem `db: { schema: 'core' }` → PostgREST procurava em public. Fix no `index.ts`.
-
-### SQL files 3.4D
-- `sql/22_*` — refactor nome split (primeiro_nome + apelidos)
-- `sql/23_*` — staff_roles + is_staff() + GRANT SELECT authenticated
-- `sql/24_*` — REVOKE anon fn_complete_onboarding · fn_anonymize_account · GRANT EXECUTE service_role · deleted_at em memberships
-
 ---
 
 ## Débitos abertos (3.4D+)
 
-- ~~**Smoke Test G concluído** (2026-04-27): staff banner ✅ · password change ✅ · GDPR delete ✅ · HomeScreen 400 fix ✅~~
 - **Moradas do cliente**: tabela `cliente_moradas` + selector no checkout; GPS + reverse geocoding Nominatim
 - **Configurador opções dinâmicas por serviço** (3.5 IA)
 - **Stripe checkout subscrição** — CTA desactivado em PlanoHomeDetalheScreen (Fase 5)
@@ -603,17 +365,6 @@ Colunas novas em `ordens_trabalho`:
 - Testar mode switcher cliente/prestador no header
 - Testar Sandra (cliente+prestador) cross-mode
 - Testar Sandra contrata Ricardo (sem comissão · regra registada 3.4D · ver "Modelo de identidade e papéis")
-- **Moradas do cliente**: tabela `cliente_moradas` + selector no checkout; GPS + reverse geocoding Nominatim
-- **Configurador opções dinâmicas por serviço** (3.5 IA)
-- **Stripe checkout subscrição** — CTA desactivado em PlanoHomeDetalheScreen (Fase 5)
-- **Reviews reais** por serviço e por categoria (3.5)
-- **FAQ seedado completo** — actualmente só 7 serviços em 199
-- **Mapa visual** — Leaflet incompatível React 18; avaliar MapLibre ou Google Maps iframe
-- **Imagens AI brand próprias** (Fase 5+) — actualmente Unsplash
-- **Aceitar/cancelar proposta** no OrcamentoDetalheScreen
-- **Pesquisa: preservar query state ao voltar** (Fase 5)
-- **Poupanças reais** — `fn_calc_poupancas(pessoa_id)` (Fase 5) · actualmente mostra 0€ com "Sobe a cada serviço"
-- **DEMO_PESSOA_ID em ServicoDetailScreen** → substituir por `useAuth().pessoa_id` (residual)
 
 ## Débito mapa visual
 
@@ -650,3 +401,11 @@ Contexto: `MapaPicker` em `MoradasScreen.jsx` e `ImovelWizard.jsx`; mapa estáti
 - Parar e esperar confirmação entre fases
 - Ao terminar, listar brevemente o que foi alterado e qual o impacto esperado
 - Mostrar `git diff` e esperar aprovação antes de `git commit`
+
+---
+
+## Referências
+
+- Antipatterns completos (W, X, Y, Z, AA, BB, CC, DD): `.claude/rules/anti-patterns.md`
+- Histórico de sprints (3.3 → 1B.2.2): `.claude/history/sprint-notes.md`
+- Plano Foundations 1B.5A: `docs/V5-1B5A-Foundations-Plan.md` (se existir)

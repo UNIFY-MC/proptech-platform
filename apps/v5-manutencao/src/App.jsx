@@ -4,6 +4,7 @@ import React, { useState, useMemo, useEffect, useRef } from 'react'
 import CWishlist from './CWishlist'
 // @deprecated 3.4A · usar useAuth().pessoa_id
 import { DEMO_PESSOA_ID, DEMO_ORGANIZATION_ID } from './lib/demo.js'
+import { BRAND } from './config/branding.js'
 import { useImovelAtivo } from './lib/ImovelAtivoContext.jsx'
 import { usePerfisFiscais } from './lib/PerfisFiscaisContext.jsx'
 import { useAuth } from './lib/AuthContext.jsx'
@@ -63,6 +64,7 @@ import PrestadoresEquipaScreen from './screens/PrestadoresEquipaScreen.jsx'
 import PoupancasDetalheScreen from './screens/PoupancasDetalheScreen.jsx'
 import AIExpertFabScreen from './screens/AIExpertFabScreen.jsx'
 import AdicionarCamaraScreen from './screens/AdicionarCamaraScreen.jsx'
+import EquipamentoFichaScreen from './screens/EquipamentoFichaScreen.jsx'
 import AdicionarDocScreen from './screens/AdicionarDocScreen.jsx'
 import AdicionarEnergiaScreen from './screens/AdicionarEnergiaScreen.jsx'
 import OnboardingWizardScreen from './screens/OnboardingWizardScreen.jsx'
@@ -953,8 +955,7 @@ function AuthScreen_REMOVED({ onAuth }) {
     <DarkScreen>
       <div style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',textAlign:'center',marginBottom:32}}>
         <Logo size={72}/>
-        {/* TODO(mario fix-ux): rever brand pública (V5/Property7/outra?) */}
-        <div style={{fontFamily:FONT,fontSize:28,fontWeight:900,color:'#fff',marginTop:20,letterSpacing:'-0.5px'}}>V5 Manutenção</div>
+        <div style={{fontFamily:FONT,fontSize:28,fontWeight:900,color:'#fff',marginTop:20,letterSpacing:'-0.5px'}}>{BRAND.name}</div>
         <div style={{fontFamily:FONT,fontSize:14,color:'rgba(255,255,255,0.65)',marginTop:6}}>Serviços domésticos de confiança</div>
       </div>
 
@@ -7234,7 +7235,7 @@ function AdminLogin({onLogin}){
         <div style={{textAlign:'center',marginBottom:28}}>
           <div style={{width:62,height:62,borderRadius:15,background:A.navy,display:'flex',alignItems:'center',justifyContent:'center',fontSize:28,margin:'0 auto 14px'}}>⚙️</div>
           <h1 style={{fontSize:20,fontWeight:800,color:A.navy,margin:'0 0 4px'}}>Painel de Administração</h1>
-          <p style={{fontSize:11,color:A.slate,margin:0}}>V5 Manutenção · v5-manutenção</p>
+          <p style={{fontSize:11,color:A.slate,margin:0}}>{BRAND.name} · v{BRAND.version}</p>
         </div>
         <label style={{display:'block',fontSize:10,fontWeight:700,color:A.slate,marginBottom:5,textTransform:'uppercase',letterSpacing:'0.04em'}}>Password</label>
         <input type='password' value={pw} onChange={e=>{setPw(e.target.value);setErr(false)}} onKeyDown={e=>e.key==='Enter'&&go()} placeholder='••••••••'
@@ -7253,8 +7254,8 @@ function AdminSidebar({active,set,onLogout}){
     <div style={{width:240,background:A.sidebar,height:'100vh',position:'fixed',left:0,top:0,display:'flex',flexDirection:'column',zIndex:20,boxShadow:'4px 0 20px rgba(0,0,0,0.25)'}}>
       <div style={{padding:'20px 18px 14px',borderBottom:'1px solid rgba(255,255,255,0.07)'}}>
         <div style={{display:'flex',alignItems:'center',gap:10}}>
-          <div style={{width:36,height:36,borderRadius:10,background:A.accent,display:'flex',alignItems:'center',justifyContent:'center',fontSize:18}}>🏠</div>
-          <div><div style={{color:'#fff',fontSize:14,fontWeight:800,letterSpacing:'-0.01em'}}>V5 Manutenção</div><div style={{color:A.muted,fontSize:9,fontWeight:700,letterSpacing:'0.08em',marginTop:1}}>ADMIN v5</div></div>
+          <div style={{width:36,height:36,borderRadius:10,background:A.accent,display:'flex',alignItems:'center',justifyContent:'center',fontSize:18}}>{BRAND.emoji}</div>
+          <div><div style={{color:'#fff',fontSize:14,fontWeight:800,letterSpacing:'-0.01em'}}>{BRAND.name}</div><div style={{color:A.muted,fontSize:9,fontWeight:700,letterSpacing:'0.08em',marginTop:1}}>ADMIN v{BRAND.version}</div></div>
         </div>
       </div>
       <nav style={{flex:1,padding:'8px 10px',overflowY:'auto'}}>
@@ -7270,7 +7271,7 @@ function AdminSidebar({active,set,onLogout}){
       <div style={{padding:'12px 12px 18px',borderTop:'1px solid rgba(255,255,255,0.07)'}}>
         <div style={{display:'flex',alignItems:'center',gap:9,marginBottom:10,padding:'8px 10px',borderRadius:9,background:'rgba(255,255,255,0.04)'}}>
           <div style={{width:32,height:32,borderRadius:'50%',background:A.accent,display:'flex',alignItems:'center',justifyContent:'center',fontSize:14,color:'#fff',fontWeight:800,flexShrink:0}}>A</div>
-          <div><div style={{color:'#fff',fontSize:12,fontWeight:700}}>Administrador</div><div style={{color:A.muted,fontSize:10}}>admin@servicopro.pt</div></div>
+          <div><div style={{color:'#fff',fontSize:12,fontWeight:700}}>Administrador</div><div style={{color:A.muted,fontSize:10}}>{BRAND.supportEmail}</div></div>
         </div>
         <button onClick={onLogout} style={{width:'100%',padding:'8px 12px',border:'none',borderRadius:8,background:'rgba(239,68,68,0.1)',color:'#fca5a5',fontSize:12,fontWeight:600,cursor:'pointer',textAlign:'left',fontFamily:'inherit'}}>🚪 Terminar sessão</button>
       </div>
@@ -8034,7 +8035,7 @@ function AdminPagamentos({prest}){
 
 // ══ AdminConfig ════════════════════════
 function AdminConfig(){
-  const [f,setF]=useState({empresa:'V5 Manutenção',nif:'502 000 000',email:'admin@servicopro.pt',tel:'+351 262 000 000',morada:'Caldas da Rainha, 2500',iban:'PT50 0035 0000 0000 0000 0000 0',swan:'https://api.servicopro.pt/swan/webhook',supabaseUrl:'https://hkmvszkpxjbxmnixzqbl.supabase.co',fotos:'2',prazo:'24',comissao:'22'})
+  const [f,setF]=useState({empresa:BRAND.companyName,nif:'502 000 000',email:BRAND.supportEmail,tel:'+351 262 000 000',morada:'Caldas da Rainha, 2500',iban:'PT50 0035 0000 0000 0000 0000 0',swan:`https://api.${BRAND.domain}/swan/webhook`,supabaseUrl:'https://hkmvszkpxjbxmnixzqbl.supabase.co',fotos:'2',prazo:'24',comissao:'22'})
   const [saved,setSaved]=useState(false), [saving,setSaving]=useState(false)
   const upd=(k,v)=>{setF(x=>({...x,[k]:v}));setSaved(false)}
   const saveAll=async()=>{setSaving(true);await new Promise(r=>setTimeout(r,600));setSaved(true);setSaving(false)}
@@ -8102,7 +8103,7 @@ function AdminDash({svcs,setSvcs,prestadores,setPrestadores,niveis,setNiveis,cli
    ASSISTENTE AI — Botão flutuante
 ══════════════════════════════════ */
 const AI_RESPOSTAS = {
-  default: 'Olá! Sou o assistente da V5 Manutenção. Posso ajudar com ordens de trabalho, dúvidas sobre pagamentos, escalões ou disponibilidade. Em que posso ajudar?',
+  default: `Olá! Sou o assistente da ${BRAND.name}. Posso ajudar com ordens de trabalho, dúvidas sobre pagamentos, escalões ou disponibilidade. Em que posso ajudar?`,
   carteira: 'A tua carteira tem saldo disponível para levantamento imediato. Podes levantar para o teu IBAN via Swan SEPA CT em D+1. Queres ajuda com isso?',
   nivel: 'Estás no nível Gold (18% taxa). Para atingir Elite precisas de mais 160 serviços e manter avaliação ≥ 4.8. Cada serviço conta!',
   ordem: 'Para concluir uma ordem: 1) Aceita, 2) Executa, 3) Tira mínimo 2 fotos, 4) Aguarda assinatura do cliente. O pagamento é creditado em 24h.',
@@ -8177,7 +8178,7 @@ function AIChat() {
           <div style={{ display:'flex', alignItems:'center', gap:10 }}>
             <div style={{ width:36, height:36, borderRadius:'50%', background:'rgba(255,255,255,0.15)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:18 }}>✨</div>
             <div>
-              <div style={{ color:'#fff', fontSize:13, fontWeight:700 }}>Assistente V5 Manutenção</div>
+              <div style={{ color:'#fff', fontSize:13, fontWeight:700 }}>Assistente {BRAND.name}</div>
               <div style={{ color:'#86efac', fontSize:10 }}>● Online · Resposta imediata</div>
             </div>
           </div>
@@ -10583,6 +10584,7 @@ export default function App() {
   // ── Módulo Casa (Fase 3) — localizações vêm do ImovelAtivoContext ──
   const [casaEquipamentos, setCasaEquipamentos] = useState(null)
   const [casaActiveEq,     setCasaActiveEq]     = useState(null)
+  const [equipamentoIdAtivo, setEquipamentoIdAtivo] = useState(null)
   const [casaSub,          setCasaSub]          = useState(null) // 'docs' | 'energia' | 'camera' | 'aiexpert' | 'locais'
   const [casaSubPayload,   setCasaSubPayload]   = useState(null) // contexto inicial p/ sub-ecrã (ex: alerta IPMA)
 
@@ -11118,7 +11120,8 @@ export default function App() {
           {ecra==='prestadores_equipa' && <PrestadoresEquipaScreen onBack={()=>setEcra('home')} onNavigatePrestador={(p)=>{ setSelNav(v=>({...v,prestador:p})); setEcra('prestador_detail') }} />}
           {ecra==='poupancas_detalhe'  && <PoupancasDetalheScreen onBack={()=>setEcra('home')} onNavigateCombo={(cb)=>{ setSelNav(v=>({...v,combo:cb,comboBackFrom:'home'})); setEcra('combo_detail') }} />}
           {ecra==='ai_expert_fab'      && <AIExpertFabScreen onBack={()=>setEcra('home')} perguntaInicial={selNav?.aiExpertPergunta||null} />}
-          {ecra==='adicionar_camara'   && <AdicionarCamaraScreen onBack={()=>setEcra('home')} />}
+          {ecra==='adicionar_camara'   && <AdicionarCamaraScreen onBack={()=>setEcra('home')} localizacaoId={imovelAtivo?.id} onSuccess={(id)=>{setEquipamentoIdAtivo(id);setEcra('equipamento_ficha')}} />}
+          {ecra==='equipamento_ficha'  && equipamentoIdAtivo && <EquipamentoFichaScreen equipamentoId={equipamentoIdAtivo} onBack={()=>{setEcra('home');setEquipamentoIdAtivo(null)}} />}
           {ecra==='adicionar_doc'      && <AdicionarDocScreen onBack={()=>setEcra('home')} />}
           {ecra==='adicionar_energia'  && <AdicionarEnergiaScreen onBack={()=>setEcra('home')} />}
           {ecra==='promocao_detail'    && <PromocaoDetailScreen promo={selNav?.promocao} onBack={()=>setEcra('home')} onNavigateServico={(s)=>{ setSelNav(p=>({...p,servico:s})); setEcra('servico_detail') }} />}
@@ -11165,7 +11168,7 @@ export default function App() {
               />
               {tab==='servicos' && <ServicosScreen authUser={authUser} onHamburguer={()=>setClienteDrawerOpen(true)} onAvatarClick={()=>setShowPerfilSheet(true)} notifCount={notifsNaoLidas} onNavigateNotificacoes={()=>setEcra('notificacoes')} onNavigateChatSuporte={()=>setEcra('chat_suporte')} onOpenImovelSelector={()=>setShowImovelSelector(true)} onNavigateOrcamentos={()=>setEcra('orcamentos_landing')} onNavigateReferral={()=>setEcra('referral')} onNavigateCategoria={(cat)=>{ setSelNav(p=>({...p,categoria:cat})); setEcra('categoria_detail') }} onNavigateCombo={(cb)=>{ setSelNav(p=>({...p,combo:cb,comboBackFrom:'home'})); setEcra('combo_detail') }} onNavigateServico={(s)=>{ setSelNav(p=>({...p,servico:s})); setEcra('servico_detail') }} onNavigatePacksLista={()=>setEcra('combos')} onNavigateMaisContratados={()=>{ setSelNav(p=>({...p,servicosListaFiltro:'populares',servicosListaTitulo:'Mais contratados'})); setEcra('servicos_lista') }} onNavigateOrcamentoPersonalizado={(desc)=>{ setSelNav(p=>({...p,wizardDescricao:desc,wizardSkipStep1:true,wizardCategoria:null,wizardBackTarget:'orcamentos_landing'})); setEcra('orcamento_wizard') }} onNavigatePlanoHome={()=>setEcra('plano_home_detalhe')} />}
               {tab==='inicio'   && <IniciaScreen authUser={authUser} onNavigateCasa={()=>{ setTab('casa'); setEcra('home') }} onNavigateServicos={()=>setTab('servicos')} onHamburguer={()=>setClienteDrawerOpen(true)} onAvatarClick={()=>setShowPerfilSheet(true)} onNavigateScore={()=>setEcra('score_detail')} onNavigateAlerta={(a)=>{ setSelAlerta(a); setEcra('alerta_detail') }} onNavigateOwnersClub={()=>setEcra('owners_club')} notifCount={notifsNaoLidas} onNavigateNotificacoes={()=>setEcra('notificacoes')} onNavigateChatSuporte={()=>setEcra('chat_suporte')} onOpenImovelSelector={()=>setShowImovelSelector(true)} onNavigateImovelDetalhe={(id)=>{ setSelNav(p=>({...p,imovelDetalheId:id})); setEcra('imovel_detalhe') }} onNavigateServico={(s)=>{ setSelNav(p=>({...p,servico:s,backFrom:'home'})); setEcra('servico_detail') }} onNavigateServicosLista={()=>{ setSelNav(p=>({...p,servicosListaFiltro:'populares',servicosListaTitulo:'Mais contratados'})); setEcra('servicos_lista') }} onNavigateCombo={(cb)=>{ setSelNav(p=>({...p,combo:cb,comboBackFrom:'home'})); setEcra('combo_detail') }} onNavigateAIExpert={(params)=>{ setSelNav(p=>({...p,aiExpertPergunta:params?.perguntaInicial||null})); setEcra('ai_expert_fab') }} onNavigateMissoes={()=>setEcra('missoes_semana')} onNavigatePrestador={(pr)=>{ setSelNav(p=>({...p,prestador:pr})); setEcra('prestador_detail') }} onNavigateEquipa={()=>setEcra('prestadores_equipa')} onNavigatePoupancas={()=>setEcra('poupancas_detalhe')} />}
-              {tab==='casa' && !casaActiveEq && !casaSub && <CasaScreen
+              {tab==='casa' && ecra==='home' && !casaActiveEq && !casaSub && <CasaScreen
                 equipamentos={casaEquipamentos}
                 authUser={authUser}
                 onHamburguer={()=>setClienteDrawerOpen(true)}
@@ -11176,10 +11179,10 @@ export default function App() {
                 onNavigateChatSuporte={()=>setEcra('chat_suporte')}
                 onOpenImovelSelector={()=>setShowImovelSelector(true)}
                 onNavigate={(target, payload)=>{
-                  if(target==='ficha' && payload){ setCasaActiveEq(payload); return }
+                  if(target==='ficha' && payload?.id){ setEquipamentoIdAtivo(payload.id); setEcra('equipamento_ficha'); return }
                   if(target==='docs')    { setCasaSub('docs');    setCasaSubPayload(null); return }
                   if(target==='energia') { setCasaSub('energia'); setCasaSubPayload(null); return }
-                  if(target==='camera')  { setCasaSub('camera');  setCasaSubPayload(null); return }
+                  if(target==='camera')  { setEcra('adicionar_camara'); return }
                   if(target==='aiexpert'){ setCasaSub('aiexpert'); setCasaSubPayload(payload || null); return }
                   if(target==='locais')  { setCasaSub('locais');  setCasaSubPayload(null); return }
                 }}
