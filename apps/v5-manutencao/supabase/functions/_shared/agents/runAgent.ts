@@ -9,13 +9,27 @@
 //   - Rows de tool executions: stop_reason = NULL (só tool_name/input/output/error)
 
 import { createMessage, calculateCostEur } from "./anthropic.ts";
-import type { AgentRunOptions, AgentRunResult } from "./types.ts";
+import type { AgentRunOptions, AgentRunResult, AnthropicMessage } from "./types.ts";
 
 export async function runAgent(opts: AgentRunOptions): Promise<AgentRunResult> {
   const sessionId = opts.sessionId ?? crypto.randomUUID();
-  const { agentName, systemPrompt, tools, toolExecutors, objective, context } = opts;
+  const { agentName, systemPrompt, tools, toolExecutors, context } = opts;
   const { pessoaId, organizationId, serviceRole } = context;
   const maxIterations = opts.maxIterations ?? 20;
+
+  // Guard: exactly one of {objective, messages}
+  if (opts.objective !== undefined && opts.messages !== undefined) {
+    throw new Error("runAgent: passar 'objective' OU 'messages', nunca ambos.");
+  }
+  if (opts.objective === undefined && opts.messages === undefined) {
+    throw new Error("runAgent: 'objective' ou 'messages' obrigatório.");
+  }
+
+  // Valor para audit (iteration 1) — objective ou última mensagem user do histórico
+  const auditTrigger = opts.objective
+    ?? (Array.isArray(opts.messages) && opts.messages.length > 0
+      ? opts.messages[opts.messages.length - 1]?.content
+      : null);
 
   // 1. Carregar policy — valida que agent existe e está activo para a org
   const { data: policy, error: policyError } = await serviceRole
@@ -50,7 +64,9 @@ export async function runAgent(opts: AgentRunOptions): Promise<AgentRunResult> {
   // Por agora ignorado — todas as tools executam sem aprovação manual
 
   const model = opts.model ?? policy.model;
-  const messages: any[] = [{ role: "user", content: objective }];
+  const messages: AnthropicMessage[] = opts.messages
+    ? [...opts.messages]
+    : [{ role: "user", content: opts.objective }];
   let iterations = 0;
   let totalCostEur = 0;
 
@@ -100,7 +116,7 @@ export async function runAgent(opts: AgentRunOptions): Promise<AgentRunResult> {
       agent_name: agentName,
       session_id: sessionId,
       iteration: iterations,
-      objective: iterations === 1 ? objective : null,
+      objective: iterations === 1 ? auditTrigger : null,
       content: resp.content,
       stop_reason: resp.stop_reason,
       input_tokens: inTok,
