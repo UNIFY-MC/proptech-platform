@@ -57,6 +57,39 @@ const config = typeof opts === 'string'
 
 ---
 
+## Regras de UI / Layout (série 1B)
+
+### Regra GG — Layout fixed-height vs scroll-down
+
+Antes de aplicar o pattern V5 padrão (`minHeight:100vh + paddingBottom:88`), classificar o screen:
+
+- **Scroll-down** (lista, ficha, formulário): conteúdo cresce verticalmente, `<body>` faz scroll. Pattern V5 padrão aplica.
+- **Fixed-height com scroll interno** (chat, kanban, mapa, video player): container tem altura limitada, scroll é interno numa zona específica. Usar `height:calc(100vh - X)` + flex column com `flex:1` na zona scrollable.
+
+Símbolo de mismatch: input/footer/controlo invisível ou tapado pela bottom nav após poucas iterações de uso.
+
+```jsx
+// PADRÃO chat / fixed-height:
+<div style={{ display:'flex', flexDirection:'column',
+  height:'calc(100vh - 88px - env(safe-area-inset-bottom, 0px))' }}>
+  <div style={{ flex:1, overflowY:'auto' }}>  {/* zona de mensagens */}
+    {messages.map(...)}
+  </div>
+  <div style={{ flexShrink:0 }}>  {/* input fixo — nunca sai do viewport */}
+    <input ... />
+  </div>
+</div>
+
+// PADRÃO scroll-down (listas, fichas):
+<div style={{ minHeight:'100vh', paddingBottom:88 }}>
+  {items.map(...)}
+</div>
+```
+
+**Lição 1B.3:** `CasaAdvisorScreen` usava `height:'100vh'` → input ficava exatamente atrás da BNav fixa. Fix: `calc(100vh - 88px - env(safe-area-inset-bottom, 0px))`.
+
+---
+
 ## Regras de BD / RLS (série 3.4)
 
 ### Regra W — RLS sem GRANT (bug silencioso)
@@ -132,6 +165,29 @@ ANTES de fechar qualquer fase que aplique/altere RLS:
 6. `NOTIFY pgrst, 'reload schema';` após cada batch de policies
 7. **Inspecionar Network tab durante smoke test** — qualquer 400 indica embed PostgREST mal formado; qualquer 403 indica GRANT em falta
 8. **Para tabelas novas com RLS**, confirmar GRANT em `information_schema.role_table_grants` antes de fechar a fase
+
+### Regra FF — CREATE POLICY service_role sem GRANT correspondente
+
+Sempre que se cria `CREATE POLICY ... TO service_role`, verificar imediatamente se existe `GRANT ... TO service_role` na mesma tabela.
+
+```sql
+-- PADRÃO OBRIGATÓRIO quando policy é para service_role:
+GRANT SELECT, INSERT, UPDATE, DELETE ON schema.tabela TO service_role;
+CREATE POLICY "service_role acesso total" ON schema.tabela TO service_role USING (true);
+```
+
+Policy sem GRANT = Edge Function recebe `permission denied` mesmo com JWT de service_role key. Difícil de diagnosticar porque a policy existe e parece correcta no Dashboard.
+
+**Diagnóstico rápido:**
+```sql
+SELECT grantee, privilege_type
+FROM information_schema.role_table_grants
+WHERE table_schema = 'core' AND table_name = '<tabela>' AND grantee = 'service_role';
+```
+
+**Auditoria recomendada antes de merge:** confirmar que toda tabela com policy `TO service_role` tem GRANT correspondente. Candidato a check de CI.
+
+**Lição 1B.3:** 16 tabelas em `core` tinham políticas service_role criadas em sprints 3.x mas sem GRANT. `agent-casa-advisor` falhava com `permission denied core.pessoas`. Fix sistémico: `sql/202604291800_fix_core_service_role_grants.sql`.
 
 ---
 

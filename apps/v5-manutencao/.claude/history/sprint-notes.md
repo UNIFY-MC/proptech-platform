@@ -453,28 +453,42 @@ Dois endpoints separados: `'agent.image_inspector'` (daily) e `'agent.image_insp
 
 ---
 
-## Onda 1B.3
+## Onda 1B.3 — casa_advisor (FECHADA 29 Abr 2026)
 
-### Notas para 1B.3 — debug casa_advisor + CasaAdvisorScreen
+### Objectivo
+Substituir AIExpertScreen client-side (chave API exposta + nunca funcionou) por agente conversacional production-grade ligado a Edge Function com multi-turn, sessões persistidas, e tool para acesso estruturado a equipamentos.
 
-#### Ficheiros criados / alterados
-- `supabase/functions/_shared/agents/tools/casa.ts` — removido `.eq("ativo", true)` e coluna `ativo` do select; adicionados `estado`, `data_proxima_revisao`, `health_score`
-- `supabase/functions/_shared/agents/types.ts` — `AgentRunResult` ganhou `totalInputTokens?` e `totalOutputTokens?`
-- `supabase/functions/_shared/agents/runAgent.ts` — acumula `totalInputTokens`/`totalOutputTokens` por iteration; ambos os return paths expõem os valores
-- `supabase/functions/agent-casa-advisor/index.ts` — INSERT advisor_sessoes com `idioma`; INSERT advisor_mensagens com `tokens_input`/`tokens_output`; UPDATE sessão com totais acumulados; resposta JSON expõe `tokens: { input, output }`
-- `sql/202604291800_fix_core_service_role_grants.sql` — GRANT/REVOKE programático para service_role em tabelas core
-- `sql/202604291900_advisor_sessoes_add_idioma.sql` — `ALTER TABLE v5_manutencao.advisor_sessoes ADD COLUMN IF NOT EXISTS idioma text NOT NULL DEFAULT 'pt-PT'`
-- `src/screens/CasaAdvisorScreen.jsx` — novo ecrã chat (204 linhas); remove `AIExpertScreen` inline do App.jsx (~116 linhas)
-- `src/App.jsx` — import CasaAdvisorScreen; render substituído; AIExpertScreen apagado
+### Resultado
+- E2E funcional: user pergunta sobre casa, agente responde em PT-PT com contexto real (equipamentos, idade, issues IA, marca, modelo).
+- Multi-turn: sessão mantém contexto entre mensagens (limite 20 msgs no histórico carregado por chamada).
+- Persistência: advisor_sessoes + advisor_mensagens em v5_manutencao.
+- Custo médio: ~$0.013 / mensagem (≈ 1 cêntimo €).
+- Segurança: chave Anthropic só no servidor, JWT no cliente.
 
-#### Bug raiz: coluna `ativo` não existe
-`v5_manutencao.equipamentos` tem `estado` (text), não `ativo` (boolean). Tool executava `.eq("ativo", true)` → PostgREST erro silencioso → runAgent retornava `is_error: true` → Claude dizia "problema técnico" ao user.
+### Commits
+- b85d43c — Fase 1A (schema + tool + system prompt)
+- 2fc6d84 — runAgent refactor multi-turn + auditTrigger fix
+- 39339ff — Edge Function + GRANT fix + idioma column
+- c6d0a78 — UI extraction (CasaAdvisorScreen) + sprint-notes
+- 70de3ce — Merge para main
 
-#### Layout chat
-Chat usa `height: calc(100vh - 88px - env(safe-area-inset-bottom, 0px))` para input fixo acima da BNav. Padrão scroll-screen (`minHeight:100vh + paddingBottom`) não funciona para chat porque o input pode sair do viewport com mensagens longas.
+### Bugs apanhados pela Regra AA
+1. runAgent ReferenceError 'objective' fora de scope (refactor incompleto)
+2. CORS preflight (causa: deploy não tinha acontecido — silenciosa)
+3. permission denied core.pessoas → causa raiz sistémica: 16 tabelas core com POLICY service_role mas SEM GRANT (Regra W em violação histórica desde Sprint 3.x). Fix sistémico aplicado. Originou **REGRA FF** — ver anti-patterns.md.
+4. Tool casa.ts coluna 'ativo' inexistente (schema desalinhado de Fase 1A)
+5. advisor_sessoes coluna 'idioma' inexistente (Fase 1A incompleta)
 
-#### Cursor jump fix
-`useEffect` com `[messages, loading]` disparava scroll quando `loading` mudava, roubando foco ao input. Fix: `[messages.length]` + `block: 'end'`.
+Originou **REGRA GG** (layout fixed-height) — ver anti-patterns.md.
+
+### Métricas de processo
+- Estimativa inicial: 3-4h (Fase 1B)
+- Tempo real: ~7h
+- Razão do overrun: 4 bugs latentes apanhados (todos production-bound se não fosse Regra AA). Custo curto-prazo, valor longo-prazo.
+
+### Backlog imediato gerado
+- SPRINT-1B.4 — Campos contexto pessoal em equipamentos (~2-3h): notas_user, prestador_recomendado, frequencia_revisao
+- SPRINT-1B.5 — Lista conversas + gestão histórico advisor (~4-6h): inclui quick-fix continuação última sessão (30min isolado)
 
 ---
 

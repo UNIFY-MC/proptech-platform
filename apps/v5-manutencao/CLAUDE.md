@@ -191,6 +191,8 @@ Regras em vigor:
 - **BB** — validação categórica de inputs de agentes com `Set<string>` hardcoded
 - **CC** — helpers DEV tolerantes a `string | object` (lição 1B.2.2)
 - **DD** — `supaPublic` não partilha JWT — nunca usar para RPCs com `auth.uid()` context; usar `useAuth()` ou `supa` (lição 1B.2.3c)
+- **FF** — auditar GRANT após CREATE POLICY service_role; policy sem GRANT é silenciosa (lição 1B.3)
+- **GG** — chat/kanban/mapa usam `height:calc(100vh - X)` + `flex:1` interno; scroll-down screens usam `minHeight:100vh + paddingBottom` (lição 1B.3)
 - **W** — RLS sem GRANT devolve `null` silencioso — sempre GRANT antes de CREATE POLICY
 - **X** — SECURITY DEFINER sem GRANT EXECUTE lança 42501 — sempre GRANT EXECUTE explícito
 - **Y** — PostgREST embeds são literais às colunas reais — abrir schema antes de escrever
@@ -406,6 +408,6 @@ Contexto: `MapaPicker` em `MoradasScreen.jsx` e `ImovelWizard.jsx`; mapa estáti
 
 ## Referências
 
-- Antipatterns completos (W, X, Y, Z, AA, BB, CC, DD): `.claude/rules/anti-patterns.md`
+- Antipatterns completos (W, X, Y, Z, AA, BB, CC, DD, FF, GG): `.claude/rules/anti-patterns.md`
 - Histórico de sprints (3.3 → 1B.2.2): `.claude/history/sprint-notes.md`
 - Plano Foundations 1B.5A: `docs/V5-1B5A-Foundations-Plan.md` (se existir)
