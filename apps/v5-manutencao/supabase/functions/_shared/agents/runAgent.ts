@@ -69,6 +69,8 @@ export async function runAgent(opts: AgentRunOptions): Promise<AgentRunResult> {
     : [{ role: "user", content: opts.objective }];
   let iterations = 0;
   let totalCostEur = 0;
+  let totalInputTokens = 0;
+  let totalOutputTokens = 0;
 
   // 2. Tool use loop (max 20 iterations — anti loop infinito)
   while (iterations < maxIterations) {
@@ -108,6 +110,8 @@ export async function runAgent(opts: AgentRunOptions): Promise<AgentRunResult> {
     const outTok = resp.usage?.output_tokens ?? 0;
     const costEur = calculateCostEur(model, inTok, outTok);
     totalCostEur = Number((totalCostEur + costEur).toFixed(4));
+    totalInputTokens += inTok;
+    totalOutputTokens += outTok;
 
     // 2b. Audit da iteration (stop_reason = resp.stop_reason)
     await serviceRole.schema("core").from("agent_audit_log").insert({
@@ -126,7 +130,7 @@ export async function runAgent(opts: AgentRunOptions): Promise<AgentRunResult> {
     });
 
     if (resp.stop_reason === "end_turn") {
-      return { success: true, result: resp.content, iterations, sessionId, totalCostEur };
+      return { success: true, result: resp.content, iterations, sessionId, totalCostEur, totalInputTokens, totalOutputTokens };
     }
 
     if (resp.stop_reason !== "tool_use") {
@@ -194,5 +198,7 @@ export async function runAgent(opts: AgentRunOptions): Promise<AgentRunResult> {
     sessionId,
     reason: "max_iterations_reached",
     totalCostEur,
+    totalInputTokens,
+    totalOutputTokens,
   };
 }

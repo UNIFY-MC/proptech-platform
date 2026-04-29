@@ -57,16 +57,17 @@ async function casa_list_equipamentos(
     throw new Error("Sem acesso a esta localização.");
   }
 
-  // 2. Buscar equipamentos da localização (sem ai_resumo_markdown)
+  // 2. Buscar equipamentos da localização
+  // NOTE: equipamentos não têm soft delete. Lista todos da localização.
+  // Se vier soft delete no futuro, adicionar coluna deleted_at e filtrar aqui.
   const { data: equipamentos, error: eqErr } = await ctx.serviceRole
     .schema("v5_manutencao")
     .from("equipamentos")
     .select(
-      "id, nome, marca, modelo, categoria, localizacao_imovel, " +
-      "data_instalacao, dados_ia, ai_resumo_markdown, ativo",
+      "id, nome, marca, modelo, categoria, estado, localizacao_imovel, " +
+      "data_instalacao, data_proxima_revisao, health_score, dados_ia, ai_resumo_markdown",
     )
     .eq("localizacao_id", input.localizacao_id)
-    .eq("ativo", true)
     .order("categoria");
 
   if (eqErr) throw new Error(`Erro ao listar equipamentos: ${eqErr.message}`);
@@ -100,8 +101,11 @@ async function casa_list_equipamentos(
       marca: eq.marca ?? null,
       modelo: eq.modelo ?? null,
       categoria: eq.categoria,
+      estado: eq.estado ?? null,
       divisao: eq.localizacao_imovel ?? null,
       idade_anos: idadeAnos,
+      data_proxima_revisao: eq.data_proxima_revisao ?? null,
+      health_score: eq.health_score ?? null,
       confianca_ia: dadosIA.confianca_identificacao ?? null,
       issues_count: issues.length,
       issues: issues,

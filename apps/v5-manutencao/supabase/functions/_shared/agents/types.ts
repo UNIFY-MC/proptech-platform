@@ -47,6 +47,8 @@ export interface AgentRunResult {
   error?: string;
   reason?: "end_turn" | "max_iterations_reached" | "tool_error" | "rate_limited" | "auth_error";
   totalCostEur?: number;
+  totalInputTokens?: number;
+  totalOutputTokens?: number;
 }
 
 export interface AgentPolicy {
