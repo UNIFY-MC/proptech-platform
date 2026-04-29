@@ -26,6 +26,9 @@
 - [Onda 1B.2](#onda-1b2) — image_inspector + Vision
   - [1B.2.1](#notas-para-1b21--image_inspector-infra) — Infra bucket + fn_match + pg_trgm
   - [1B.2.2](#notas-para-1b22--edge-function-image-inspector-vision) — Vision E2E · €0.08/análise · smoke test ✅
+- [Onda 1B.3 (fechada)](#onda-1b3) — casa_advisor debug + CasaAdvisorScreen UI
+- [SPRINT-1B.4 (backlog)](#sprint-1b4) — Campos de contexto pessoal em equipamentos
+- [SPRINT-1B.5 (backlog)](#sprint-1b5) — Lista de conversas + gestão histórico advisor
 
 ---
 
@@ -64,6 +67,9 @@
 | **1B.1.2** | ✅ **fechada** | Anthropic raw fetch + runAgent.ts + Edge Function agent-test · cost tracking + audit · smoke test B+C+D OK |
 | **1B.2.1** | ✅ **fechada** | image_inspector infra · bucket equipamentos-fotos · fn_match_existing_equipamento · 4 tool executors com validação · system prompt pt-PT (74 linhas) · types.ts objective: string \| unknown[] |
 | **1B.2.2** | ✅ **fechada** | Edge Function image-inspector com Vision · 4 deploys (3 fixes evolutivos) · smoke test E2E PASSOU com Bosch SMV41D10EU · custo real €0.08/análise · prompt_cache adiado p/ Onda 2 |
+| **1B.3** | ✅ **fechada** | casa_advisor debug (ativo→estado) · token tracking em runAgent · idioma migration · CasaAdvisorScreen substitui AIExpertScreen inline |
+| **1B.4** | 📋 backlog | Campos de contexto pessoal em equipamentos (notas_user, prestador_recomendado, frequencia_revisao) |
+| **1B.5** | 📋 backlog | Lista de conversas + gestão histórico advisor (continuar sessão, archive, nova conversa) |
 
 ---
 
@@ -444,3 +450,78 @@ O `sessionId` é gerado em `index.ts` antes do upload, passado ao `runAgent` via
 
 #### Rate limit duplo sem double-count
 Dois endpoints separados: `'agent.image_inspector'` (daily) e `'agent.image_inspector.monthly'` (monthly). Contadores independentes — sem interferência entre si.
+
+---
+
+## Onda 1B.3
+
+### Notas para 1B.3 — debug casa_advisor + CasaAdvisorScreen
+
+#### Ficheiros criados / alterados
+- `supabase/functions/_shared/agents/tools/casa.ts` — removido `.eq("ativo", true)` e coluna `ativo` do select; adicionados `estado`, `data_proxima_revisao`, `health_score`
+- `supabase/functions/_shared/agents/types.ts` — `AgentRunResult` ganhou `totalInputTokens?` e `totalOutputTokens?`
+- `supabase/functions/_shared/agents/runAgent.ts` — acumula `totalInputTokens`/`totalOutputTokens` por iteration; ambos os return paths expõem os valores
+- `supabase/functions/agent-casa-advisor/index.ts` — INSERT advisor_sessoes com `idioma`; INSERT advisor_mensagens com `tokens_input`/`tokens_output`; UPDATE sessão com totais acumulados; resposta JSON expõe `tokens: { input, output }`
+- `sql/202604291800_fix_core_service_role_grants.sql` — GRANT/REVOKE programático para service_role em tabelas core
+- `sql/202604291900_advisor_sessoes_add_idioma.sql` — `ALTER TABLE v5_manutencao.advisor_sessoes ADD COLUMN IF NOT EXISTS idioma text NOT NULL DEFAULT 'pt-PT'`
+- `src/screens/CasaAdvisorScreen.jsx` — novo ecrã chat (204 linhas); remove `AIExpertScreen` inline do App.jsx (~116 linhas)
+- `src/App.jsx` — import CasaAdvisorScreen; render substituído; AIExpertScreen apagado
+
+#### Bug raiz: coluna `ativo` não existe
+`v5_manutencao.equipamentos` tem `estado` (text), não `ativo` (boolean). Tool executava `.eq("ativo", true)` → PostgREST erro silencioso → runAgent retornava `is_error: true` → Claude dizia "problema técnico" ao user.
+
+#### Layout chat
+Chat usa `height: calc(100vh - 88px - env(safe-area-inset-bottom, 0px))` para input fixo acima da BNav. Padrão scroll-screen (`minHeight:100vh + paddingBottom`) não funciona para chat porque o input pode sair do viewport com mensagens longas.
+
+#### Cursor jump fix
+`useEffect` com `[messages, loading]` disparava scroll quando `loading` mudava, roubando foco ao input. Fix: `[messages.length]` + `block: 'end'`.
+
+---
+
+## SPRINT-1B.4 (proposta) — Campos de contexto pessoal em equipamentos
+
+**Problema:** User tem informação não-estruturada sobre cada equipamento que hoje não cabe no schema (prestador, hábitos, observações, custos). Esta info é exactamente o que diferencia uma manutenção genérica de manutenção pessoal.
+
+**Campos a considerar (escolher 3-4 para MVP):**
+- `notas_user` (text) — observações livres
+- `prestador_recomendado` (text) — nome + contacto formato livre
+- `frequencia_revisao` (text) — ex "anual em Outubro"
+- `custo_ultima_revisao_eur` (numeric)
+- `garantia_extendida_ate` (date)
+- `observacoes_compra` (text)
+- `prioridade_user` (smallint 1-5)
+
+**Estratégia recomendada (Nível 1 — free text):**
+1. Adicionar 3-4 campos free text via migration SQL
+2. UI: secção colapsável "Notas pessoais" em EquipamentoFichaScreen
+3. Tool `casa_list_equipamentos` passa a devolver os novos campos
+4. System prompt do advisor: instrução para priorizar info do user sobre conhecimento genérico
+
+**Decisões em aberto antes do kickoff:**
+- Quais campos no MVP? (sugestão: `notas_user` + `prestador_recomendado` + `frequencia_revisao`)
+- UI inline na ficha vs secção dedicada?
+
+**Estimativa:** 2-3h. Fora de scope: prestadores normalizados (Sprint 2.x), extracção conversacional (Sprint 2.x), lembretes automáticos.
+
+---
+
+## SPRINT-1B.5 (proposta) — Lista de conversas + gestão histórico advisor
+
+**Problema actual:** cada vez que o user abre o advisor, conversa anterior desaparece da UI. Backend persiste tudo (`advisor_sessoes` + `advisor_mensagens`), mas frontend ignora. Decisão E da Fase 1B foi deliberada (reduzir scope), mas cria UX confuso ("AI esquecida").
+
+**Inclui:**
+- Ecrã "As tuas conversas" (lista cronológica por `localizacao_id`)
+- Preview da última mensagem + título auto-gerado da primeira pergunta
+- Coluna `titulo` em `advisor_sessoes` — popular automaticamente no primeiro user message de cada sessão (slice 60 chars)
+- Swipe-to-archive (campo `ativa=false` já existe em `advisor_sessoes`)
+- "Nova conversa" como acção explícita no advisor
+- Quick-fix temporário (30min): continuar última sessão das últimas 24h ao reabrir advisor — ponte até lista completa estar pronta
+
+**Pré-requisito:** SPRINT-1B.4 idealmente antes — notas user dão mais contexto às conversas, faz sentido começar pela base.
+
+**Tools/endpoints novos:**
+- `GET /functions/v1/agent-casa-advisor-history` (lista sessões)
+- `GET /functions/v1/agent-casa-advisor-session/:id` (carrega mensagens)
+- `PATCH .../session/:id` (archive)
+
+**Estimativa:** 4-6h
