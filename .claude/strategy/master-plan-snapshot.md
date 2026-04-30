@@ -56,6 +56,7 @@ Plataforma horizontal multi-vertical PropTech em Portugal. Solo founder Mário C
 | 21 | ~~Sprint A commit em feat/1b5a-foundations-analysis~~ **SUPERSEDED por #22** | 2026-04-30 | Branch foi merged antes desta decisão; trabalho commit directo em main |
 | 22 | **Sprint A commit directo em main** (branch `feat/1b5a-foundations-analysis` estava merged via `f9fea5c`) | 2026-04-30 | Diagnostic Claude Code descobriu branch fechada; commits atómicos = melhor git hygiene |
 | 23 | **Atomic commits**: Sprint A (`.claude/`) e 1B.5A Phase 2 (SQLs Supabase) commits separados, mesmo sendo na mesma sessão | 2026-04-30 | Concerns diferentes (agents infra vs database schema); revert independente possível |
+| 24 | **Competitive monitoring** com 4-tier structure: Tier 1 weekly (5 critical), Tier 2 bi-weekly (5 direct + 2 inspirations), Tier 3 monthly deep-dive (5 inspirations rotativas), Tier 4 quarterly mention-only (8) | 2026-05-01 | CMO v3 spec output após context expansion (Notion analysis); FIXO escalated CRÍTICO devido Fidelidade backing |
 
 ---
 
@@ -172,6 +173,51 @@ Plataforma horizontal multi-vertical PropTech em Portugal. Solo founder Mário C
   - 7 C-suite agents (manual ad-hoc): ~€10/mês
   - 6 watcher agents (scheduled, Sprint B): ~€5/mês
   - **Total estimado: €15/mês**
+
+---
+
+## Competitive landscape (referência rápida)
+
+> Fonte completa: `.claude/strategy/competitive-references-context.md`
+> Notion: `https://www.notion.so/34c84147fa60817ba602c03201873e31`
+> Monitor spec: `.claude/strategy/competitor-monitor-spec.md` (v3)
+
+### Bucket A — Direct Competitors
+
+| Entidade | Threat | Nota |
+|---|---|---|
+| **FIXO** | CRÍTICO | B2C PT on-demand, Fidelidade-owned. Capital + base clientes seguros + bundling potential = ameaça existencial PT |
+| **Jobber** | CRÍTICO | SaaS SMB EU-funded, expansão EU activa — ameaça supply side |
+| OSCAR | ALTO (PT/ES) | Benchmark de clareza operacional; standard de pricing WTP |
+| ServiceTitan | ALTO long-term | Define envelope de features; telegrafeia roadmap de players menores |
+| Fixando | ALTO local | Único player PT com tráfego real hoje |
+| Samba | MÉDIO (US) | Não Europa ainda; tracking de ICP language pivot (identity vs outcome) |
+| Housecall Pro | MÉDIO long-term | US; funding + EU HQ = janela 6 meses |
+| TaskRabbit | MÉDIO (PT activo) | IKEA scope actual; escalation trigger: non-IKEA PT partnership |
+| ZasFácil | MÉDIO (ES) | Home services ES; expansão ibérica possível |
+| Timpla | MÉDIO local | PT, orçamentos online |
+
+### Bucket B — Inspirations (feature mining ofensivo)
+
+AppFolio Realm-X · Shipshape.ai · InstaService · pinto-app · MRI PMX · HomeTend · Hippo Insurance
+
+Features já adoptadas: Home Health Score (Shipshape), RFQ 4 passos (InstaService), gamification streak (pinto-app), meteorologia trigger (HomeTend).
+
+### Bucket C — Long-range watch (quarterly only)
+
+Buildium · Yardi · Property Meld · Opendoor · Rocket Homes · Betterview · BH HomeServices PT · Fixa Aí (BR)
+
+### Out of scope
+
+Lisbeyond — rentals scope diferente (future B2B partner candidate V8)
+
+### Gaps competitivos (oportunidade)
+
+1. Única plataforma B2B condomínio (V2) + B2C individual (V5)
+2. Agentic AI em ptPT (todos os players em inglês)
+3. Integração Moloni/InvoiceXpress nativa
+4. IPMA como data source meteorologia (vantagem local)
+5. Câmaras Municipais sync (licenças, RGEU)
 
 ---
 

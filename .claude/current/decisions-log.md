@@ -99,6 +99,26 @@
 
 ---
 
+| Campo | Valor |
+|---|---|
+| **Data** | 2026-05-01 |
+| **Owner** | CMO v3 |
+| **Decisão** | Competitor monitoring 4-tier structure aprovado (25 entidades, custo ~€0.76/mês) |
+| **Racional** | Context expansion via Notion analysis revelou FIXO como threat CRÍTICO (Fidelidade-owned); TaskRabbit activo em PT desde 2017; coverage completa exige 4 cadências distintas |
+| **Status** | ✅ Approved |
+
+---
+
+| Campo | Valor |
+|---|---|
+| **Data** | 2026-05-01 |
+| **Owner** | Mário |
+| **Decisão** | Lisbeyond removido de competitor scope (rentals diferente do owner maintenance) |
+| **Racional** | Scope rentals/Airbnb não compete com V5 owner maintenance; future B2B partner candidate para V8 Imobiliário ou partnership rental managers |
+| **Status** | ✅ Approved |
+
+---
+
 ## Template para novas entradas
 
 ```
