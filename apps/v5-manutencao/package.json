@@ -5,7 +5,9 @@
   "scripts": {
     "dev": "vite --port 5175",
     "build": "vite build",
-    "preview": "vite preview --port 5175"
+    "preview": "vite preview --port 5175",
+    "seed:cp": "tsx scripts/seed-codigos-postais.ts",
+    "seed:cp:force": "tsx scripts/seed-codigos-postais.ts --force"
   },
   "dependencies": {
     "@proptech/auth": "*",
@@ -19,6 +21,8 @@
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.4",
+    "dotenv": "^16.4.0",
+    "tsx": "^4.19.2",
     "vite": "^6.0.1"
   }
 }

@@ -492,6 +492,82 @@ Originou **REGRA GG** (layout fixed-height) — ver anti-patterns.md.
 
 ---
 
+## 2026-04-30 — Sprint 1B.4 decisões arquitecturais
+
+### [DECISION] Open-Meteo em vez de IPMA
+- IPMA: limitado a ~30 capitais de distrito (Caldas da Rainha NÃO está listada)
+- Open-Meteo: lat/lng directo, resolução 1-11km, sem API key, CORS
+- Licença: free non-commercial em dev → plano comercial (€29/mês) quando monetizar
+- Schema desenhado vendor-neutral (`weather_forecast_cache`) facilita troca futura
+
+### [DECISION] Schema multi-país desde o início
+- Alternativa descartada: importar V2 PT-only e migrar quando expandir
+- Decidido schema universal já: `pais` + `admin1/2/3` + `source` + `precisao`
+- Trabalho extra hoje: ~15 min. Trabalho poupado quando expandir: dias.
+- `source` field permite auditoria de proveniência por row
+
+### [DECISION] V2 CSV hoje + GeoNames depois (rejeitada Geoapify)
+- Avaliada Geoapify Postcode API (3k credits/dia free)
+- Rejeitada: postal codes não mudam frequentemente, autocomplete por keystroke
+  consumiria 5k requests/dia rapidamente, dependência operacional externa, +1 vendor
+- Caminho escolhido: tabela local (free, <5ms, 100% disponível offline)
+- Sub-sprint 1B.4.x criada no roadmap para enrichment GeoNames + multi-país
+
+### [TECH-DEBT-005] CPs portugueses sem coords
+- V2 CSV não tem lat/lng
+- Resolução PRATA Lisboa via CP funciona: CP → localidade → Open-Meteo geocoding
+- Negrelho via localidade='Caldas da Rainha' funciona directamente
+- Enrichment GeoNames em 1B.4.x resolve coords para todo o PT
+
+---
+
+## 2026-04-30 — Sprint 1B.4 Fase 2 (weather UI)
+
+### [COMPLETED] Edge Function weather-forecast (Fase 2A)
+- 2 modos: localizacao_id (casa) ou lat/lng (browser geo)
+- Cascade resolver: coords → localidade → cidade → concelho → CP
+- Cache TTL 6h (loc) / 1h (geo)
+- 4 alerts manutenção: chuva_forte, vento_forte, geada, calor_extremo
+- WMO codes traduzidos PT
+- Reverse geocoding via BigDataCloud (Modo A label)
+- 5/5 smokes ✅
+
+### [COMPLETED] UI hooks + integração (Fase 2B + 2B-fix)
+- Hook useWeatherForecast em src/hooks/
+- Cache em memória (TTL por modo)
+- HeroHeader.jsx integrado (auto-detect modo via ImovelAtivoContext)
+- 3 screens beneficiam automaticamente: CasaScreen, PedidosScreen, ServicosScreen
+- IniciaScreen weather inline removido (consolidado em HeroHeader)
+- Banner manutenção condicional (só aparece com alert manutencao_relevant)
+- Hardcoded "21° céu limpo" eliminado
+
+### [DECISION] BigDataCloud para reverse geocoding
+- Free, sem API key, CORS support, cobertura mundial
+- Avaliada Open-Meteo Geocoding (não tem reverse)
+- Avaliada Geoapify (custo + dependência)
+
+### [PAUSED] Fase 3-4-5
+- Fase 3 (tool agente casa.get_weather_forecast)
+- Fase 4 (browser geo capture UI nos forms)
+- Fase 5 (smoke E2E completo)
+
+Razão pausa: review de architecture app v2 (Início+Casa duplicação
+identificada). Sub-sprints aguardam decisão Mario sobre redesign.
+
+### [INCIDENT] JWT exposed em conversa Claude
+- Durante smoke testing, JWT foi colado por engano
+- Imediatamente invalidado via logout/login
+- Risco real: baixo (expira em 1h, não é service_role)
+- Lição: REGRA HH adicionada (nunca colar secrets em conversas)
+
+### [BUG-IDENTIFIED] "Todos os imóveis" mostra weather de casa
+- Quando user selecciona "Todos" no imóvel switcher, espera-se Modo A (geo browser)
+- Mas mostra "Caldas da Rainha" do imóvel
+- Causa provável: useImovelAtivo() retorna 1ª casa em vez de null
+- Fix em sprint architecture v2
+
+---
+
 ## SPRINT-1B.4 (proposta) — Campos de contexto pessoal em equipamentos
 
 **Problema:** User tem informação não-estruturada sobre cada equipamento que hoje não cabe no schema (prestador, hábitos, observações, custos). Esta info é exactamente o que diferencia uma manutenção genérica de manutenção pessoal.

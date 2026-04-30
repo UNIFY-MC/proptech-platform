@@ -8,6 +8,7 @@ import { calcularCreditoMes } from './lib/subscription.js'
 import { calcularNivel } from './lib/gamification.js'
 import HeroHeader from './HeroHeader.jsx'
 import { moradaCurta } from './lib/labels.js'
+import { useWeatherForecast, getMostSevereAlert } from './hooks/useWeatherForecast'
 
 const NIVEL_ORDEM  = ['bronze', 'silver', 'gold', 'platinum', 'diamond']
 const NIVEL_LABELS = { bronze: 'Bronze', silver: 'Prata', gold: 'Ouro', platinum: 'Platina', diamond: 'Diamante' }
@@ -162,6 +163,26 @@ export default function IniciaScreen({ authUser, onNavigateCasa, onNavigateServi
 
   const locationLbl = loc ? (moradaCurta(loc) || loc.nome) : 'A MINHA CASA'
 
+  // Weather: usado para banner (header consolidado em HeroHeader)
+  const { weather: weatherData } = useWeatherForecast(
+    imovelAtivo?.id
+      ? { localizacao_id: imovelAtivo.id }
+      : { geo: true }
+  )
+  const weatherLabel = weatherData?.location?.label ?? null
+  const weatherAlert = getMostSevereAlert(weatherData?.alerts, { manutencaoOnly: true })
+
+  function weatherIconForAlert(alert) {
+    if (!alert) return ''
+    switch (alert.id) {
+      case 'chuva_forte':   return '🌧️'
+      case 'vento_forte':   return '💨'
+      case 'geada':         return '❄️'
+      case 'calor_extremo': return '🔥'
+      default:              return '⚠️'
+    }
+  }
+
   function adaptComboSimple(c) {
     if (!c) return null
     const p = parseFloat(c.preco_combo), o = parseFloat(c.preco_normal)
@@ -208,28 +229,15 @@ export default function IniciaScreen({ authUser, onNavigateCasa, onNavigateServi
           onAvatarClick={onAvatarClick}
           onImovelClick={handleLocationClick}
           authUser={authUser}
-          hideTemp
           notifCount={notifCount}
           onNotifClick={onNavigateNotificacoes}
           onChatClick={onNavigateChatSuporte}
         />
 
-        {/* Linha 2: saudação + nome | temperatura à direita (ref. linha 84-96) */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 }}>
-          <div>
-            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.75)', marginBottom: 2 }}>{saudacao}</div>
-            <div style={{ fontSize: 26, fontWeight: 700, lineHeight: 1.1, fontFamily: 'Georgia,serif' }}>{primeiroNome} 👋</div>
-          </div>
-          {/* Temperatura — TODO(mario): IPMA real na Fase 3.5 */}
-          <div style={{ textAlign: 'right' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 4, justifyContent: 'flex-end' }}>
-              <span style={{ fontSize: 18 }}>🌤️</span>
-              <span style={{ fontSize: 22, fontWeight: 700, color: '#fff' }}>21°</span>
-            </div>
-            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.65)' }}>
-              céu limpo{localidade ? ' · ' + localidade : ''}
-            </div>
-          </div>
+        {/* Linha 2: saudação + nome */}
+        <div style={{ marginBottom: 14 }}>
+          <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.75)', marginBottom: 2 }}>{saudacao}</div>
+          <div style={{ fontSize: 26, fontWeight: 700, lineHeight: 1.1, fontFamily: 'Georgia,serif' }}>{primeiroNome} 👋</div>
         </div>
 
         {/* Score card — dentro do hero, overlay escuro */}
@@ -307,29 +315,36 @@ export default function IniciaScreen({ authUser, onNavigateCasa, onNavigateServi
       {/* ── CORPO ─────────────────────────────────────────────────── */}
       <div style={{ paddingBottom: 28 }}>
 
-        {/* Alerta meteo contextual */}
-        <div
-          onClick={() => onNavigateAlerta?.({ ic:'🌧️', titulo:'Chuva forte próximas 48h', descricao:'Acumulado esperado: 35–50mm · Vento 40 km/h', local:'COIMBRA' })}
-          style={{
-          margin: '10px 12px 0',
-          background: 'linear-gradient(90deg,#E6F1FB,#F4F9FE)',
-          border: '1px solid #85B7EB', borderRadius: 12,
-          padding: '11px 13px', cursor: 'pointer',
-          display: 'flex', gap: 11, alignItems: 'center',
-        }}>
-          <span style={{ fontSize: 26, flexShrink: 0 }}>🌧️</span>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: '#0C447C' }}>
-              Chuva forte prevista — próximas 48h
+        {/* Alerta meteo contextual — só aparece quando há alert manutencao_relevant */}
+        {weatherAlert && (
+          <div
+            onClick={() => onNavigateAlerta?.({
+              ic: weatherIconForAlert(weatherAlert),
+              titulo: weatherAlert.title + ' — ' + weatherAlert.window,
+              descricao: weatherAlert.detail,
+              local: weatherLabel ?? '',
+            })}
+            style={{
+              margin: '10px 12px 0',
+              background: 'linear-gradient(90deg,#E6F1FB,#F4F9FE)',
+              border: '1px solid #85B7EB', borderRadius: 12,
+              padding: '11px 13px', cursor: 'pointer',
+              display: 'flex', gap: 11, alignItems: 'center',
+            }}>
+            <span style={{ fontSize: 26, flexShrink: 0 }}>{weatherIconForAlert(weatherAlert)}</span>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: '#0C447C' }}>
+                {weatherAlert.title} — {weatherAlert.window}
+              </div>
+              <div style={{ fontSize: 10.5, color: V.slate, marginTop: 2, lineHeight: 1.4 }}>
+                {weatherAlert.detail}
+              </div>
             </div>
-            <div style={{ fontSize: 10.5, color: V.slate, marginTop: 2, lineHeight: 1.4 }}>
-              3 sugestões de manutenção preventiva · +200 pts se concluíres
+            <div style={{ background: '#185FA5', color: '#fff', borderRadius: 8, padding: '5px 10px', fontSize: 11, fontWeight: 700 }}>
+              Ver
             </div>
           </div>
-          <div style={{ background: '#185FA5', color: '#fff', borderRadius: 8, padding: '5px 10px', fontSize: 11, fontWeight: 700 }}>
-            Ver
-          </div>
-        </div>
+        )}
 
         {/* Promo carousel */}
         <div style={{

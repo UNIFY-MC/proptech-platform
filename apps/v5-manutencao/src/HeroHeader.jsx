@@ -1,16 +1,25 @@
 import React from 'react'
 import { useImovelAtivo } from './lib/ImovelAtivoContext.jsx'
 import { categoriaEmoji, moradaCurta } from './lib/labels.js'
+import { useWeatherForecast } from './hooks/useWeatherForecast'
 
 /* HeroHeader — barra de topo partilhada por todos os ecrãs principais.
    Lê imovelAtivo / isGlobal / imoveis directamente do context.
    onImovelClick: abre ImovelSelectorSheet.
-   hideTemp: IniciaScreen gere a temperatura na sua própria linha 2. */
+   Weather: Modo B (casa) se imovelAtivo, Modo A (geo) senão. */
 export default function HeroHeader({
   onHamburguer, onAvatarClick, authUser, notifCount = 0,
-  hideTemp = false, onNotifClick, onChatClick, onImovelClick,
+  onNotifClick, onChatClick, onImovelClick,
 }) {
   const { imovelAtivo, imoveis, isGlobal } = useImovelAtivo()
+
+  const { weather } = useWeatherForecast(
+    imovelAtivo?.id
+      ? { localizacao_id: imovelAtivo.id }
+      : { geo: true }
+  )
+  const weatherCurrent = weather?.current ?? null
+  const weatherLabel   = weather?.location?.label ?? null
 
   const nome    = authUser?.nome || ''
   const iniciais = nome.split(' ').filter(Boolean).map(w => w[0]).slice(0, 2).join('').toUpperCase() || 'MC'
@@ -90,11 +99,11 @@ export default function HeroHeader({
       {/* Cluster direito */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
 
-        {/* Temperatura — ocultável via hideTemp */}
-        {!hideTemp && (
+        {/* Temperatura — Open-Meteo via weather-forecast Edge Function */}
+        {weatherCurrent && (
           <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: '#fff', lineHeight: 1.2 }}>🌤️ 21°</div>
-            <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.6)' }}>céu limpo</div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: '#fff', lineHeight: 1.2 }}>{weatherCurrent.weather_icon} {Math.round(weatherCurrent.temperature)}°</div>
+            <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.6)' }}>{weatherCurrent.weather_label}{weatherLabel ? ' · ' + weatherLabel : ''}</div>
           </div>
         )}
 

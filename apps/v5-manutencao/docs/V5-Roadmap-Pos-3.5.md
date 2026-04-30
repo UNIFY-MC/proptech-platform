@@ -31,7 +31,7 @@
 | **1B.2.3d** | ⏳ | — | Documentos por equipamento + refactor Anexos unified |
 | 1B.2.6 | ⏳ | — | Polish image_inspector prompt (subcategorias em PT) |
 | 1B.3 | ⏳ | — | casa_advisor agente conversacional |
-| 1B.4 | ⏳ | — | IPMA + Score evolução |
+| 1B.4 | 🔶 | — | Weather Open-Meteo (Fase 2A+2B ✅ · Fase 3-5 adiadas) |
 | **1B.4.5** | ⏳ | — | Inventário rico de divisões (especificações por divisão) |
 | 1B.5 | ⏳ | — | Bug fixes UX backlog (12 itens) |
 | **1B.5A** | ✅ | `2e943bb` | Foundations packages/db + packages/auth + V2 scaffold |
@@ -393,20 +393,92 @@ CREATE TABLE v5_manutencao.equipamento_documentos (
 - [ ] Free: 3 turns/dia · 1ª conversa/mês +20pts
 - [ ] Home+: ilimitado · agendar via chat +75pts
 
-### Sprint 1B.4 — IPMA + Score evolução (1-2 dias)
+### Sprint 1B.4 — Weather + geo infrastructure [PARCIAL]
 
-#### IPMA
-- [ ] `src/lib/ipma.js` — wrapper api.ipma.pt
-- [ ] Cache 12h em `localStorage` (request reduz custo)
-- [ ] Helper `getMeteoLocation(lat, lon, days=7)`
-- [ ] Usado por `casa_advisor` (tool) + UI alerta meteo
-- [ ] Fallback se API down: dados do dia anterior em cache
+**Estado:** Fase 2A + 2B completas. Fase 3-5 adiadas (architecture v2).
 
-#### Score evolução
-- [ ] Tabela `casa.score_history` (snapshot mensal)
-- [ ] Cron mensal calcula snapshot
-- [ ] UI gráfico Recharts (12 meses passado + 3 projecção)
-- [ ] Card em `CasaScreen.jsx`
+#### ✅ Concluído (2026-04-30)
+- Edge Function weather-forecast (Open-Meteo, 2 modos, cache TTL)
+- Cascade resolver 5 níveis + reverse geocoding BigDataCloud
+- 4 alerts manutenção (chuva, vento, geada, calor)
+- WMO codes PT + useWeatherForecast hook
+- HeroHeader integrado (IniciaScreen + CasaScreen + Pedidos + Serviços)
+- Banner condicional manutenção em IniciaScreen
+- Schema core.codigos_postais multi-país + weather_forecast_cache
+
+#### ⏳ Adiado para sprint 1C / 1B.5
+- Fase 3: tool agente `casa.get_weather_forecast`
+- Fase 4: browser geo capture UI nos forms
+- Fase 5: smoke E2E completo
+- Score evolução (snapshot mensal + gráfico Recharts)
+- Bug "Todos os imóveis" → weather de casa em vez de geo
+
+---
+
+### Sprint 1C — App Architecture v2 [PROPOSTA]
+
+**Estado:** PROPOSTA — aguarda decisão Mario
+
+**Objectivo:** Eliminar duplicação Início+Casa, redefinir identidade de cada tab, mover Owners Club para tab dedicada.
+
+**Issues identificados em 1B.4:**
+1. Início + Casa duplicam conteúdo (score, etc.)
+2. Selector de imóvel global cria confusão (weather mostra "Todos")
+3. IniciaScreen sem identidade clara
+4. Owners Club enterrado como secção em vez de feature
+
+**Tarefas (estimativa após decisão):**
+1. Mata IniciaScreen, funde com CasaScreen
+2. Owners Club promovido a tab
+3. Selector imóvel só em Casa tab
+4. Quando user pede serviço, escolhe casa em bottom-sheet
+5. Weather Modo A em tabs sem casa context
+
+**Pré-requisito:** Mario aprova proposta de Claude.
+
+---
+
+### Sprint 1B.4.x — GeoNames enrichment + multi-país readiness
+
+**Estado:** PENDENTE (após 1B.4 e quando produto começar a abrir para Espanha/outros)
+
+**Objectivo:** Enriquecer codigos_postais portugueses com coords + admin1/2 do GeoNames, e validar pipeline para adicionar novo país.
+
+**Pré-requisitos:**
+- 1B.4 completa (schema multi-país aplicado, V2 PT importado)
+- Decisão de quais países a abrir
+
+**Tarefas:**
+
+1. **Enrichment PT via GeoNames**
+   - Download https://download.geonames.org/export/zip/PT.zip
+   - Parse formato GeoNames (TSV: `country\tpostal\tplace\tadmin1\t...\tlat\tlng\taccuracy`)
+   - UPDATE em `codigos_postais` matching por `(pais='PT', cp_completo, localidade)`
+   - Popular: `admin1` (distrito), `admin2` (concelho), `coords`, `precisao`
+   - `source` actualizado para `'geonames-pt-{date}'`
+   - ~30 min trabalho
+
+2. **Pipeline multi-país validado**
+   - Adaptar script seed para aceitar qualquer GeoNames country file
+   - Testar com 1 país pequeno (ex: AD — Andorra, ~100 CPs)
+   - Documentar processo onboarding novo país
+
+3. **Reverse geocoding local**
+   - Função SQL: `find_cp_for_coords(lat, lng, max_distance_m)`
+   - Usa GIST index em `coords`
+   - Suporte para "qual CP mais próximo deste GPS?"
+   - Útil Onda 2: routing prestadores
+
+**Estimativa:** 3-4h
+**Prioridade:** Média (apenas necessário antes de abrir Espanha ou coords precisas em CPs)
+
+**Notas:**
+- GeoNames tem ~150 países com cobertura (CC BY 4.0)
+- PT tem cobertura completa
+- Limitações conhecidas: Canadá só 3 letras, Brasil só -000, Índia precisão variável
+- Adicionar attribution "Data from GeoNames" onde apropriado
+
+---
 
 ### ✅ Sprint 1B.5A — Foundations multi-vertical (FECHADA 29 Abr 2026)
 
