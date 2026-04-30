@@ -1,0 +1,8 @@
+_temp/
+outputs/daily-briefs/*.md
+outputs/weekly-recaps/*.md
+outputs/competitor-watches/*.md
+outputs/incidents/*.md
+outputs/audits/*.md
+settings.local.json
+scheduled_tasks.lock

@@ -1,0 +1,2 @@
+- [V4 Energia — Schema e Edge Function](project_v4_energia_schema.md) — Schema v4_energia aplicado + Edge Function v4-energia-lead criada (não deployada) em 2026-04-19
+- [Edge Functions — Convenções e Estado](project_edge_functions.md) — Naming (dashes), estrutura de pastas, 7 funções activas + v4-energia-lead a deployar

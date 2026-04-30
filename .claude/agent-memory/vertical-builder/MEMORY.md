@@ -1,0 +1,2 @@
+- [User Profile](user_mario.md) — Mário Carvalho, solo founder, TOC, não programador profissional, prefere opiniões directas em PT-PT
+- [V4 Energia Scaffold](project_v4_energia.md) — V4 scaffold criado em 2026-04-19, estado e decisões de arquitectura
