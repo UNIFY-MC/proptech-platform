@@ -67,6 +67,38 @@
 
 ---
 
+## 2026-05-01
+
+| Campo | Valor |
+|---|---|
+| **Data** | 2026-05-01 |
+| **Owner** | Mário |
+| **Decisão** | 1B.5A Phase 2 Path A: NÃO re-aplicar SQLs (já aplicados via dashboard, IF NOT EXISTS protege mas risk > benefit) |
+| **Racional** | SQLs descobertos como already-applied via Supabase MCP diagnostic — re-aplicar seria inócuo mas introduz risco desnecessário |
+| **Status** | ✅ Approved |
+
+---
+
+| Campo | Valor |
+|---|---|
+| **Data** | 2026-05-01 |
+| **Owner** | Mário |
+| **Decisão** | Pricing alignment 2.B: master plan correcto (€6.90/€12.90), DB tinha valores antigos (€9.99/€24.99). UPDATE aplicado |
+| **Racional** | Master plan = source of truth para pricing estratégico; DB estava desalinhado por ter sido seedado antes da decisão de pricing final |
+| **Status** | ✅ Approved & Applied |
+
+---
+
+| Campo | Valor |
+|---|---|
+| **Data** | 2026-05-01 |
+| **Owner** | CTO |
+| **Decisão** | Migration tracking gap reconhecido: SQL 1 (equipamento_extras) aplicado via Supabase dashboard sem registo em `schema_migrations` |
+| **Racional** | Aceitar gap e documentar; futuro: usar sempre `apply_migration` MCP em vez de SQL editor manual |
+| **Status** | ✅ Acknowledged |
+
+---
+
 ## Template para novas entradas
 
 ```

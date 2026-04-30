@@ -1,30 +1,13 @@
 # Current Sprint — PropTech Platform
 
-> Actualizado: 2026-04-30
-> Branch activa: `main` (feat/1b5a-foundations-analysis merged via f9fea5c)
+> Actualizado: 2026-05-01
+> Branch activa: `main`
 
 ---
 
-## Sprint Activa: 1B.5A — Foundations Phase 2
+## Sprint Activa: 1C — Architecture v2 V5
 
-**Estado:** Em curso  
-**Fase 1 (análise + decisões D1-D5):** ✅ APROVADA (commit `1b4e7da`)  
-**Fase 2 (migração schema):** ⏳ A executar
-
-### Decisões aprovadas na Fase 1
-
-| Decisão | Conteúdo |
-|---|---|
-| D1 | Schema `ordens_trabalho`: normalizar campos metadata |
-| D2 | Tabela `equipamentos`: adicionar campos extras (202604281530 SQL) |
-| D3 | V63 isolado; V5+V2 usam latest schema |
-| D4 | Planos subscrição: nova tabela `v5_manutencao.planos` (11_v5_3_3_14 SQL) |
-| D5 | Arquitectura foundations confirmada (ver docs/V5-1B5A-Foundations-Plan.md) |
-
-### SQLs pendentes de aplicar
-
-- `sql/202604281530_v5_1b_2_3c_equipamento_extras.sql`
-- `sql/11_v5_3_3_14_ux7_planos.sql`
+**Estado:** Pendente kickoff (CPO escreve spec)
 
 ---
 
@@ -36,7 +19,7 @@
 | **1B.4 Fase 2B** | ✅ | useWeatherForecast hook + HeroHeader + IniciaScreen + reverse geocoding |
 | **1B.5A Fase 1** | ✅ | Análise foundations + decisões D1-D5 aprovadas |
 | **Sprint A** | ✅ | C-Suite agents setup (7 agents + master-plan-snapshot) |
-| **1B.5A Fase 2** | 🟡 | Migração schema (SQLs pendentes) |
+| **1B.5A Fase 2** | ✅ | SQL foundations (já aplicados via dashboard, commit `bcad675` como docs) |
 
 ---
 
@@ -44,11 +27,10 @@
 
 | # | Sprint | Âmbito | Prioridade |
 |---|---|---|---|
-| 1 | **1B.5A Fase 2** | Aplicar SQLs foundations pendentes | AGORA |
-| 2 | **1C** | Architecture v2 (Casa=Início+Casa, Owners Club tab) | ALTA |
-| 3 | **1D** | Receipt Trojan Horse MVP (build directo + alpha 5 owners) | ALTA |
-| 4 | **Fase 4** | Backoffice staff panel | MÉDIA |
-| 5 | **Fase 5** | IA features (poupanças reais, score Home Intelligence) | MÉDIA |
+| 1 | **1C** | Architecture v2 (Casa=Início+Casa, Owners Club tab) | AGORA |
+| 2 | **1D** | Receipt Trojan Horse MVP (build directo + alpha 5 owners) | ALTA |
+| 3 | **Fase 4** | Backoffice staff panel | MÉDIA |
+| 4 | **Fase 5** | IA features (poupanças reais, score Home Intelligence) | MÉDIA |
 
 ---
 
@@ -68,7 +50,7 @@ Nenhum actualmente.
 
 ## Links rápidos
 
-- Branch: `feat/1b5a-foundations-analysis`
+- Branch: `main`
 - V5 CLAUDE.md: `apps/v5-manutencao/CLAUDE.md`
 - Anti-padrões: `apps/v5-manutencao/.claude/rules/anti-patterns.md`
 - Sprint notes: `apps/v5-manutencao/.claude/history/sprint-notes.md`
