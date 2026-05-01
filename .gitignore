@@ -40,3 +40,6 @@ desktop.ini
 *.pem
 *.key
 .mcp.json
+# Runtime state (lives in ../proptech-state, junctioned)
+.claude/state/
+
