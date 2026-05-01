@@ -5,6 +5,38 @@
 
 ---
 
+## 2026-05-01
+
+| Campo | Valor |
+|---|---|
+| **Data** | 2026-05-01 |
+| **Owner** | CTO |
+| **Decisão** | Day 5 SHIPPED — UI owner-side "Registar trabalho" + reposicionamento above-fold |
+| **Racional** | Camada 1 funnel 100% UI-driven sem curl needed. Owner pode gerar magic link directamente do app, partilhar via WhatsApp, ver lista de trabalhos recentes acima do fold. |
+| **Status** | ✅ Done |
+
+---
+
+| Campo | Valor |
+|---|---|
+| **Data** | 2026-05-01 |
+| **Owner** | CTO + Mário |
+| **Decisão** | Day 5.5 SHIPPED — Linkagem equipamento_id em magic_links + recibos_servico |
+| **Racional** | Owner pode linkar trabalho a equipamento existente. Schema discovery revelou equipamentos (13 rows) + intervencoes_equipamento (HomeHealth Record) já ricos. Foundation Sprint 1E muito mais pronta que esperado. |
+| **Status** | ✅ Done |
+
+---
+
+| Campo | Valor |
+|---|---|
+| **Data** | 2026-05-01 |
+| **Owner** | Mário |
+| **Decisão** | Day 5.6 — Naming pivot: "registar trabalho" ≠ "emitir recibo fiscal" |
+| **Racional** | Camada 1 (V5 actual) = trust ledger documentado, sem implicação fiscal. Camada 2 (Sprint 1E) = recibo fiscal real com NIF, IVA, Stripe Connect + Moloni. UI strings renomeadas; schema rename recibos_servico → trabalhos_documentados diferido para Sprint 1E (com outras migrations em voo). |
+| **Status** | ✅ Done |
+
+---
+
 ## 2026-04-30
 
 | Campo | Valor |

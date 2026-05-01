@@ -471,7 +471,7 @@ export default function CasaScreen({ equipamentos, authUser, onNavigate, onHambu
               fontSize: 11.5, fontWeight: 700, cursor: 'pointer',
             }}
           >
-            + Emitir recibo
+            + Registar trabalho
           </button>
         </div>
 
@@ -487,7 +487,7 @@ export default function CasaScreen({ equipamentos, authUser, onNavigate, onHambu
                 Regista trabalhos feitos em casa
               </div>
               <div style={{ fontSize: 11.5, color: '#555', lineHeight: 1.5, marginBottom: 10 }}>
-                Envia um link ao prestador — ele preenche o recibo, fica tudo guardado.
+                Envia um link ao prestador — ele preenche os dados, fica tudo registado.
               </div>
               <button
                 onClick={() => setConvidarOpen(true)}
@@ -496,7 +496,7 @@ export default function CasaScreen({ equipamentos, authUser, onNavigate, onHambu
                   borderRadius: 8, padding: '8px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer',
                 }}
               >
-                Emitir primeiro recibo →
+                Registar primeiro trabalho →
               </button>
             </div>
           </div>
@@ -790,7 +790,7 @@ export default function CasaScreen({ equipamentos, authUser, onNavigate, onHambu
                     {copied ? '✓ Copiado!' : '📋 Copiar link'}
                   </button>
                   <a
-                    href={`https://wa.me/?text=${encodeURIComponent('Olá! Segue o link para preencheres o recibo do trabalho: ' + convidarResult.url)}`}
+                    href={`https://wa.me/?text=${encodeURIComponent('Olá! Segue o link para registares o trabalho que fizeste: ' + convidarResult.url)}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     style={{ display: 'block', width: '100%', padding: '12px', borderRadius: 10, background: '#25D366', color: '#fff', fontSize: 14, fontWeight: 700, textAlign: 'center', textDecoration: 'none', boxSizing: 'border-box' }}
@@ -808,7 +808,7 @@ export default function CasaScreen({ equipamentos, authUser, onNavigate, onHambu
             ) : (
               <>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
-                  <div style={{ fontSize: 15, fontWeight: 700 }}>Emitir recibo</div>
+                  <div style={{ fontSize: 15, fontWeight: 700 }}>Registar trabalho</div>
                   <button onClick={handleConvidarClose} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: '#999', padding: '0 4px' }}>✕</button>
                 </div>
 
@@ -890,7 +890,7 @@ export default function CasaScreen({ equipamentos, authUser, onNavigate, onHambu
                   </button>
 
                   <div style={{ fontSize: 11, color: '#888', textAlign: 'center', lineHeight: 1.5 }}>
-                    O link expira em 48h · O prestador preenche os dados · Recibo guardado automaticamente
+                    O link expira em 48h · O prestador preenche os dados · Trabalho registado automaticamente
                   </div>
                 </div>
               </>
