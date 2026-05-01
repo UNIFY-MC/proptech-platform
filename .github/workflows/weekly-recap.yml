@@ -1,0 +1,67 @@
+name: Weekly Recap
+
+on:
+  workflow_dispatch:
+  # schedule:
+  #   - cron: '0 16 * * 5'  # Friday 16h UTC = 17h Lisbon (summer) — uncomment after validation
+
+permissions:
+  issues: write
+  contents: read
+  actions: read
+
+jobs:
+  recap:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 200  # week of history
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install --quiet "anthropic>=0.50.0" "httpx<0.28"
+
+      - name: Run weekly recap
+        id: recap
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: python scripts/watchers/weekly_recap.py
+
+      - name: Upload recap artifact
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: weekly-recap-${{ steps.recap.outputs.week_id }}
+          path: ${{ steps.recap.outputs.recap_path }}
+          retention-days: 90
+
+      - name: Create issue
+        if: success()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_TITLE: ${{ steps.recap.outputs.issue_title }}
+          COST: ${{ steps.recap.outputs.cost_usd }}
+          TOKENS_IN: ${{ steps.recap.outputs.tokens_in }}
+          TOKENS_OUT: ${{ steps.recap.outputs.tokens_out }}
+        run: |
+          cat >> /tmp/issue_body.md << EOF
+
+          ---
+          *Run: [${{ github.run_id }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) · Tokens: $TOKENS_IN in / $TOKENS_OUT out · Cost: \$$COST · [Artifact](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}#artifacts)*
+          EOF
+          gh issue create --title "$ISSUE_TITLE" --body-file /tmp/issue_body.md --label "weekly-recap,automated" --repo ${{ github.repository }}
+
+      - name: Create failure issue
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          DATE=$(date -u +"%Y-%m-%d %H:%M UTC")
+          gh issue create --title "🔴 weekly-recap FAIL $DATE" --body "Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" --label "weekly-recap,incident,automated" --repo ${{ github.repository }}

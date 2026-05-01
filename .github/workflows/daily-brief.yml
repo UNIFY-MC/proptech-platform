@@ -1,0 +1,59 @@
+name: Daily Brief
+
+on:
+  workflow_dispatch:
+  # schedule:
+  #   - cron: '0 8 * * *'  # daily 8h UTC = 9h Lisbon — uncomment after manual run validates
+
+permissions:
+  issues: write
+  contents: read
+  actions: read
+
+jobs:
+  brief:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 50  # need history for git log --since
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install --quiet "anthropic>=0.50.0" "httpx<0.28"
+
+      - name: Run daily brief
+        id: brief
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: python scripts/watchers/daily_brief.py
+
+      - name: Create issue
+        if: success()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_TITLE: ${{ steps.brief.outputs.issue_title }}
+          COST: ${{ steps.brief.outputs.cost_usd }}
+          TOKENS_IN: ${{ steps.brief.outputs.tokens_in }}
+          TOKENS_OUT: ${{ steps.brief.outputs.tokens_out }}
+        run: |
+          cat >> /tmp/issue_body.md << EOF
+
+          ---
+          *Run: [${{ github.run_id }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) · Tokens: $TOKENS_IN in / $TOKENS_OUT out · Cost: \$$COST*
+          EOF
+          gh issue create --title "$ISSUE_TITLE" --body-file /tmp/issue_body.md --label "daily-brief,automated" --repo ${{ github.repository }}
+
+      - name: Create failure issue
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          DATE=$(date -u +"%Y-%m-%d %H:%M UTC")
+          gh issue create --title "🔴 daily-brief FAIL $DATE" --body "Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" --label "daily-brief,incident,automated" --repo ${{ github.repository }}
