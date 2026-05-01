@@ -1,0 +1,90 @@
+name: Healthcheck Watchers
+
+on:
+  workflow_dispatch:
+  # schedule:
+  #   - cron: '0 8 * * *'  # daily 8h UTC = 9h Lisboa — uncomment após validação manual passar
+
+permissions:
+  issues: write
+  actions: read
+  contents: read
+
+jobs:
+  smoke-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Verify ANTHROPIC_API_KEY presence and format
+        env:
+          KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          if [ -z "$KEY" ]; then
+            echo "::error::ANTHROPIC_API_KEY secret não configurado em GitHub"
+            exit 1
+          fi
+          if [[ ! "$KEY" =~ ^sk-ant- ]]; then
+            echo "::error::ANTHROPIC_API_KEY formato inválido (esperado sk-ant-...)"
+            exit 1
+          fi
+          echo "✓ ANTHROPIC_API_KEY presente, formato válido"
+
+      - name: Test Anthropic API reachability (minimal Haiku call)
+        env:
+          KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          RESPONSE=$(curl -sS -w "\n%{http_code}" \
+            https://api.anthropic.com/v1/messages \
+            -H "x-api-key: $KEY" \
+            -H "anthropic-version: 2023-06-01" \
+            -H "content-type: application/json" \
+            -d '{"model":"claude-haiku-4-5-20251001","max_tokens":10,"messages":[{"role":"user","content":"reply OK"}]}')
+
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+          BODY=$(echo "$RESPONSE" | sed '$d')
+
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "::error::Anthropic API retornou HTTP $HTTP_CODE"
+            echo "Response body:"
+            echo "$BODY"
+            exit 1
+          fi
+          echo "✓ Anthropic API reachable (HTTP 200, ~\$0.0001)"
+
+      - name: Create success issue
+        if: success()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          DATE=$(date -u +"%Y-%m-%d %H:%M UTC")
+          gh issue create \
+            --title "🟢 healthcheck-OK $DATE" \
+            --body "Healthcheck passed.
+
+          - ANTHROPIC_API_KEY: presente, formato sk-ant-...
+          - Anthropic API: reachable (HTTP 200)
+          - Cost: ~\$0.0001 (Haiku 10 tokens)
+
+          Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            --label "healthcheck,automated" \
+            --repo ${{ github.repository }}
+
+      - name: Create failure issue
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          DATE=$(date -u +"%Y-%m-%d %H:%M UTC")
+          gh issue create \
+            --title "🔴 healthcheck-FAIL $DATE" \
+            --body "Healthcheck failed. Investigation required.
+
+          Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+          Causas comuns:
+          - ANTHROPIC_API_KEY rotated/expirada
+          - Anthropic API outage (status.anthropic.com)
+          - Workspace credits exhausted (top-up Anthropic Console)
+          - GitHub Actions permission issue (.github/workflows perms)" \
+            --label "healthcheck,incident" \
+            --repo ${{ github.repository }}
