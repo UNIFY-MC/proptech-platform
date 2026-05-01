@@ -283,6 +283,18 @@
 
 ---
 
+## 2026-05-02 (Sprint 1D Day 2)
+
+| Campo | Valor |
+|---|---|
+| **Data** | 2026-05-02 |
+| **Owner** | CTO |
+| **Decisão** | RPC `create_prestador_and_recibo_atomic` deployed + 4/4 smoke tests PASS |
+| **Racional** | Day 2 gate cleared, edge functions live |
+| **Status** | ✅ Done |
+
+---
+
 ## Template para novas entradas
 
 ```

@@ -1,31 +1,33 @@
 # Current Sprint — PropTech Platform
 
-> Actualizado: 2026-05-01
+> Actualizado: 2026-05-02
 > Branch activa: `main`
 
 ---
 
 ## Sprint Activa: 1D — Receipt Trojan Horse Alpha
 
-**Estado:** Day 0 — charter approved 2026-05-01. Reconciliações obrigatórias antes de Day 1.
+**Estado:** Day 2 ✅ shipped — schema + edge functions em produção. Day 3 desbloqueado.
 **Sprint window:** 2026-05-01 → 2026-05-15 (14 dias)
 **Docs:** `.claude/sprints/1D-receipt-trojan-horse/`
 
-### Day 0 checklist (AGORA — antes de começar código)
+### Progress
 
-- [ ] R1 — Mário confirma schema decisions (core.servicos_ativos criada Day 1, recibos eliminada do scope)
-- [ ] R2 — `tasks/alpha-owners.md` com 7-8 nomes reais (5 com score ≥7)
-- [ ] R3 — confirm-receipt mergida em prestador-onboarding (sem 3ª edge function)
-- [ ] R4 — onboarding antecipado: Owner E (Mário) Day 8, A-D Days 9-12
+| Day | Estado | Entregável |
+|-----|--------|-----------|
+| Day 0 | ✅ | Charter approved, reconciliações fechadas |
+| Day 1 | ✅ | Schema migration applied (3 tabelas + RLS + indexes), 4/4 smoke tests |
+| Day 2 | ✅ | RPC atomic + 2 edge functions deployed (gerar-magic-link, prestador-onboarding), 4/4 smoke tests |
+| Day 3 | 🔜 | `/join/:token` route + PrestadorOnboardingScreen (React) |
 
 ### Gates
 
-| Gate | Data | Critério GO |
-|------|------|------------|
-| Day 3 | 2026-05-03 | Schema + 2 edge functions em staging |
-| Day 7 | 2026-05-07 | ≥1 owner externo aceitou; flow funciona no telefone |
-| Day 11 | 2026-05-11 | ≥1 flow end-to-end owner real completo |
-| Day 14 | 2026-05-15 | 5/5 success criteria avaliados; decisão 1E |
+| Gate | Data | Critério GO | Estado |
+|------|------|------------|--------|
+| Day 3 | 2026-05-03 | Schema + 2 edge functions em produção | ✅ CLEARED (Day 2) |
+| Day 7 | 2026-05-07 | ≥1 owner externo aceitou; flow funciona no telefone | 🔜 |
+| Day 11 | 2026-05-11 | ≥1 flow end-to-end owner real completo | 🔜 |
+| Day 14 | 2026-05-15 | 5/5 success criteria avaliados; decisão 1E | 🔜 |
 
 ---
 
