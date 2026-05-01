@@ -7,7 +7,7 @@
 
 ## Sprint Activa: 1D — Receipt Trojan Horse Alpha
 
-**Estado:** Day 4 ✅ shipped — Trabalhos recentes + realtime channel (2 recibos visíveis, Mário confirmou). Day 5 a seguir.
+**Estado:** Day 5 ✅ shipped — UI owner-side "Emitir recibo" + modal + above-the-fold. Day 6-7 = outreach alpha owners.
 **Sprint window:** 2026-05-01 → 2026-05-15 (14 dias)
 **Docs:** `.claude/sprints/1D-receipt-trojan-horse/`
 
@@ -20,7 +20,9 @@
 | Day 2 | ✅ | RPC atomic + 2 edge functions deployed (gerar-magic-link, prestador-onboarding), 4/4 smoke tests |
 | Day 3 | ✅ | `/r/join/:token` route + PrestadorOnboardingFlow + 6 sub-components + E2E PASS |
 | Day 4 | ✅ | Trabalhos recentes secção + realtime channel + useAuth bug fix + visual PASS Mário |
-| Day 5 | 🔜 | Polish: posição above-the-fold + Casa screen layout |
+| Day 5 | ✅ | UI owner-side: botão "Emitir recibo" + modal form + link WhatsApp + above-the-fold |
+| Day 6 | 🔜 | Outreach 5 alpha owners — partilha magic link manual |
+| Day 7 | 🔜 | Gate: ≥1 owner externo aceitou; flow funciona no telefone |
 
 ### Gates
 

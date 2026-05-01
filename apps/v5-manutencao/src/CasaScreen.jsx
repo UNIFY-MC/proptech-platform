@@ -143,6 +143,8 @@ export default function CasaScreen({ equipamentos, authUser, onNavigate, onHambu
   const [convidarLoading, setConvidarLoading] = useState(false)
   const [convidarError, setConvidarError]     = useState('')
   const [copied, setCopied]                   = useState(false)
+  const [eqsModal, setEqsModal]                           = useState([])
+  const [selectedEquipamentoId, setSelectedEquipamentoId] = useState(null)
 
   // IPMA — preservado da versão inline; MASTER.md a actualizar (3.5 → já implementado)
   useEffect(() => {
@@ -179,7 +181,7 @@ export default function CasaScreen({ equipamentos, authUser, onNavigate, onHambu
     let active = true
     supa.schema('v5_manutencao')
       .from('recibos_servico')
-      .select('id, tipo_servico, valor_eur, data_servico, status, created_at, prestador:prestadores_parceiros(nome_completo, nif)')
+      .select('id, tipo_servico, valor_eur, data_servico, status, created_at, prestador:prestadores_parceiros(nome_completo, nif), equipamento:equipamentos(nome, marca)')
       .eq('owner_pessoa_id', pessoa_id)
       .order('created_at', { ascending: false })
       .limit(5)
@@ -209,7 +211,7 @@ export default function CasaScreen({ equipamentos, authUser, onNavigate, onHambu
           console.log('[realtime] new recibo received:', payload.new.id)
           supa.schema('v5_manutencao')
             .from('recibos_servico')
-            .select('id, tipo_servico, valor_eur, data_servico, status, created_at, prestador:prestadores_parceiros(nome_completo, nif)')
+            .select('id, tipo_servico, valor_eur, data_servico, status, created_at, prestador:prestadores_parceiros(nome_completo, nif), equipamento:equipamentos(nome, marca)')
             .eq('owner_pessoa_id', pessoa_id)
             .order('created_at', { ascending: false })
             .limit(5)
@@ -225,6 +227,18 @@ export default function CasaScreen({ equipamentos, authUser, onNavigate, onHambu
     return () => { supa.removeChannel(channel) }
   }, [pessoa_id])
 
+  // Fetch equipamentos da localização activa quando modal abre (Sprint 1D Day 5.5)
+  useEffect(() => {
+    if (!convidarOpen || !loc?.id) { setEqsModal([]); return }
+    supa.schema('v5_manutencao')
+      .from('equipamentos')
+      .select('id, nome, marca, categoria')
+      .eq('localizacao_id', loc.id)
+      .order('categoria')
+      .order('nome')
+      .then(({ data }) => setEqsModal(data || []))
+  }, [convidarOpen, loc?.id])
+
   async function handleEmitirRecibo() {
     setConvidarError('')
     const valorStr = convidarForm.valor_eur.toString().replace(',', '.')
@@ -239,6 +253,7 @@ export default function CasaScreen({ equipamentos, authUser, onNavigate, onHambu
           tipo_servico: convidarForm.tipo_servico.trim(),
           valor_eur: valor,
           data_servico: convidarForm.data_servico,
+          ...(selectedEquipamentoId ? { equipamento_id: selectedEquipamentoId } : {}),
         }
       })
       if (error) throw new Error(error.message || String(error))
@@ -257,6 +272,8 @@ export default function CasaScreen({ equipamentos, authUser, onNavigate, onHambu
     setConvidarError('')
     setConvidarForm({ tipo_servico: '', valor_eur: '', data_servico: new Date().toISOString().slice(0, 10) })
     setCopied(false)
+    setSelectedEquipamentoId(null)
+    setEqsModal([])
   }
 
   async function handleCopiar() {
@@ -506,6 +523,11 @@ export default function CasaScreen({ equipamentos, authUser, onNavigate, onHambu
                   <div style={{ fontSize: 12.5, fontWeight: 600, color: '#18160F', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {r.tipo_servico}
                   </div>
+                  {r.equipamento && (
+                    <div style={{ fontSize: 10.5, color: CASA.greenMid, marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      📦 {r.equipamento.nome}{r.equipamento.marca ? ` · ${r.equipamento.marca}` : ''}
+                    </div>
+                  )}
                   <div style={{ fontSize: 11, color: '#6B7685', marginTop: 2 }}>
                     {r.prestador?.nome_completo || 'Prestador'} · {new Date(r.data_servico).toLocaleDateString('pt-PT', { day: 'numeric', month: 'short' })}
                   </div>
@@ -832,6 +854,26 @@ export default function CasaScreen({ equipamentos, authUser, onNavigate, onHambu
                       />
                     </div>
                   </div>
+
+                  {eqsModal.length > 0 && (
+                    <div>
+                      <label style={{ fontSize: 11, fontWeight: 700, color: '#555', textTransform: 'uppercase', letterSpacing: 0.3, display: 'block', marginBottom: 5 }}>
+                        Equipamento (opcional)
+                      </label>
+                      <select
+                        value={selectedEquipamentoId || ''}
+                        onChange={e => setSelectedEquipamentoId(e.target.value || null)}
+                        style={{ width: '100%', padding: '11px 12px', borderRadius: 9, border: '1.5px solid #ddd', fontSize: 13, boxSizing: 'border-box', outline: 'none', fontFamily: 'inherit', background: '#fff', color: '#333' }}
+                      >
+                        <option value="">— Sem equipamento associado —</option>
+                        {eqsModal.map(eq => (
+                          <option key={eq.id} value={eq.id}>
+                            {eq.nome}{eq.marca ? ` · ${eq.marca}` : ''}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
 
                   {convidarError && (
                     <div style={{ background: '#FFEAEA', border: '1px solid #F9BABA', borderRadius: 8, padding: '9px 12px', fontSize: 12, color: '#A32D2D', fontWeight: 600 }}>
