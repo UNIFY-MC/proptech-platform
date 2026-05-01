@@ -41,10 +41,39 @@ Audience: solo founder (Mário), reads on mobile, ~30s scan.
 
 Return ONLY valid JSON. No preamble. No markdown fences.
 
+CRITICAL token budget:
+- issue_body ≤ 800 chars (mobile readability)
+- full_digest ≤ 1500 tokens (snapshot, NOT full report)
+
+For full_digest baseline run, do NOT enumerate all spec sections.
+Format compact:
+
+# Competitor watch baseline — week {week_id}
+
+**Tier 1 (5):** OSCAR, Jobber, ServiceTitan, Fixando, FIXO
+**Tier 2A bi-weekly (5):** Samba, Housecall Pro, ZasFácil, Timpla, TaskRabbit
+**Tier 2B inspirations (2):** AppFolio, Shipshape
+
+## Strategic state (4-6 lines max)
+[concise narrative of competitive landscape, key threats, key opportunities]
+
+## Per-tier baselines (max 60 tokens each, 1 line per entity)
+- OSCAR: [1-line state]
+- Jobber: [1-line state]
+[...]
+
+## Recommended actions (max 3, table format)
+| Priority | Action | Deadline |
+
+## Fetch backlog (W{week_id} first run)
+URLs/sources to verify next run.
+
+Output format:
+
 {{
   "issue_title": "🔍 Competitor watch — week {week_id} (baseline)",
-  "issue_body": "Mobile-readable summary. Max 800 chars. Markdown allowed. Lead with top 3 strategic implications. End with 1 recommended action.",
-  "full_digest": "Full markdown digest per spec format. Structure: state-of-play per Tier 1 entity, strategic implications, recommended actions for CMO/CEO."
+  "issue_body": "Mobile-readable, ≤800 chars, 3 implications + 1 action",
+  "full_digest": "Compact baseline per format above, ≤1500 tokens"
 }}
 
 ## Run metadata
@@ -60,7 +89,7 @@ def call_anthropic(user_msg: str):
 
     response = client.messages.create(
         model="claude-sonnet-4-6",
-        max_tokens=4096,
+        max_tokens=8192,
         system=(
             "You are the CMO agent of PropTech Platform. "
             "When invoked as competitor-monitor watcher, you produce concise weekly "
@@ -81,20 +110,27 @@ def call_anthropic(user_msg: str):
     if text.endswith("```"):
         text = text[:-3]
 
-    return text.strip(), response.usage
+    return text.strip(), response.usage, response.stop_reason
 
 
 def main():
     user_msg = build_user_message()
     print(f"[info] User message size: {len(user_msg)} chars", file=sys.stderr)
 
-    text, usage = call_anthropic(user_msg)
+    text, usage, stop_reason = call_anthropic(user_msg)
     cost_usd = (usage.input_tokens * 3 + usage.output_tokens * 15) / 1_000_000
     print(
         f"[info] Tokens in={usage.input_tokens} out={usage.output_tokens} "
-        f"cost=${cost_usd:.4f}",
+        f"stop={stop_reason} cost=${cost_usd:.4f}",
         file=sys.stderr,
     )
+
+    if stop_reason == "max_tokens":
+        print(
+            f"::warning::LLM hit max_tokens limit. Output likely truncated. "
+            f"Consider shorter prompt or higher max_tokens.",
+            file=sys.stderr,
+        )
 
     try:
         data = json.loads(text)
