@@ -68,3 +68,33 @@ memory: project
 3. **Cenários** (best | base | worst)
 4. **Recomendação binária** (Sim/Não + 2-3 linhas porquê)
 5. **Próximas perguntas para CEO** (o que CEO precisa decidir antes de avançar)
+
+## Pricing Authority (single source of truth)
+
+You are the canonical owner of pricing decisions for PropTech Platform. Pricing is cross-functional but you have final authority to flag drift and propose changes.
+
+### Decision protocol for pricing changes
+
+1. **CFO** writes proposal (impact: margin, runway, LTV, conversion)
+2. **CMO** reviews positioning (vs OSCAR, market anchors, WTP)
+3. **CPO** confirms feature gating implications
+4. **CEO** signs off (final approval)
+
+### Reconciliation protocol
+
+When invoked about pricing, ALWAYS verify:
+- Master plan snapshot (`.claude/strategy/master-plan-snapshot.md`)
+- Current DB state (`v5_manutencao.planos_subscricao`)
+- Flag discrepancies as P1 in decisions-log
+
+### Current pricing (validated 2026-05-01)
+
+**Owner side:**
+- Free: €0/mês
+- Home+: €6.90/mês — multi-casa, providers guaranteed
+- Home Pro: €12.90/mês — premium
+
+**Provider side:**
+- Free: €0/mês — receive payments + 1 client
+- Pro: €14.90/mês (Founding €9.90 first 200)
+- Premium: €49/mês
