@@ -191,6 +191,7 @@ Plataforma horizontal multi-vertical PropTech em Portugal. Solo founder Mário C
 | OSCAR | ALTO (PT/ES) | Benchmark de clareza operacional; standard de pricing WTP |
 | ServiceTitan | ALTO long-term | Define envelope de features; telegrafeia roadmap de players menores |
 | Fixando | ALTO local | Único player PT com tráfego real hoje |
+| **Hubbent** | ALTO (entrante recente PT) | Dual-app (cliente + Pro) marketplace home services. Identificado 2026-05-01. Funding/tracção desconhecidos — investigation backlog Tier 1 W18 |
 | Samba | MÉDIO (US) | Não Europa ainda; tracking de ICP language pivot (identity vs outcome) |
 | Housecall Pro | MÉDIO long-term | US; funding + EU HQ = janela 6 meses |
 | TaskRabbit | MÉDIO (PT activo) | IKEA scope actual; escalation trigger: non-IKEA PT partnership |

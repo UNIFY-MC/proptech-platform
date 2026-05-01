@@ -21,6 +21,7 @@ Signal: pricing changes, market expansion, novos features competitivos, funding.
 | Fixando | PT | Comparador orçamentos online | ALTO local |
 | Timpla | PT | Orçamentos online | MÉDIO local |
 | Fixo | PT | TBD — Mário clarifica scope | ? |
+| Hubbent | PT | Marketplace dual-app on-demand home services (Hubbent + Hubbent Pro) | ALTO (entrante recente PT) |
 | TaskRabbit | Global (IKEA) | Handyman/odd jobs marketplace | MÉDIO (presença PT?) |
 | Fixa Aí | BR | Home services | BAIXO (Brasil only) |
 | ZasFácil | ES | Home services | MÉDIO (vizinho PT) |

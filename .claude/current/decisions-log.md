@@ -179,6 +179,26 @@
 
 ---
 
+| Campo | Valor |
+|---|---|
+| **Data** | 2026-05-01 |
+| **Owner** | Mário |
+| **Decisão** | Hubbent (hubbent.com) added Tier 1 weekly competitor monitoring |
+| **Racional** | Identificado em rodapé observação Mário; entrante recente PT, dual-app architecture |
+| **Status** | ✅ Approved |
+
+---
+
+| Campo | Valor |
+|---|---|
+| **Data** | 2026-05-01 |
+| **Owner** | CMO |
+| **Decisão** | Hubbent threat=ALTO classification provisional pending W18 investigation (founders, capital, tracção) |
+| **Racional** | Insufficient public data hoje, but dual-app + "maior plataforma" claim warrants Tier 1 |
+| **Status** | ⚠️ Reassess W18 |
+
+---
+
 ## Template para novas entradas
 
 ```

@@ -18,7 +18,7 @@
 - **ZasFácil** confirmado Tier 2A com URL `zasfacil.com` (watcher valida na 1ª run)
 - **AppFolio + Shipshape** confirmados em Tier 2B bi-weekly (Mário aprovou proposta CMO)
 - **Fixa Aí** mantido Tier 4 (Brasil only confirmado)
-- Tier 1 passa de 4 para **5 entidades**
+- Tier 1 passa de 4 para **5 entidades** (v3); **6 entidades** após adição de Hubbent (2026-05-01)
 - Tier 2A passa de 4 para **5 entidades**
 - Open Questions secção 7: todas resolvidas → substituída por "Entidades resolvidas"
 - Cost estimate actualizado para 5 entidades Tier 1
@@ -29,7 +29,7 @@
 
 ### Tier 1 — Weekly (every Monday run)
 
-5 entities. All from Bucket A with threat level ALTO or CRÍTICO.
+6 entities. All from Bucket A with threat level ALTO or CRÍTICO.
 
 | # | Competitor | Bucket A Threat | Why Tier 1 |
 |---|---|---|---|
@@ -38,8 +38,40 @@
 | 3 | **ServiceTitan** | ALTO long-term | Define o tecto de features e o chão de pricing no enterprise field service. O roadmap deles telegrafeia o que Jobber e Housecall Pro vão lançar em 12-18 meses. |
 | 4 | **Fixando** | ALTO local | Player PT activo, comparador de orçamentos. Se adicionarem subscrição ou produto owner-facing, sobreposição directa. Único player PT com tráfego real hoje. |
 | 5 | **FIXO** | CRÍTICO | B2C on-demand home services PT. Owned by Fidelidade (#1 seguradora PT). Preços fixos upfront — modelo mais próximo do nosso do que Fixando. Capital ilimitado + base clientes seguros + bundling potential (seguro+serviço) é a combinação mais perigosa no mercado PT. |
+| 6 | **Hubbent** | ALTO (entrante recente PT) | Marketplace dual-app PT home services (Hubbent + Hubbent Pro). Tagline "A maior plataforma de serviços e profissionais em Portugal" — claim agressivo para entrante recente. Dual-app architecture sinaliza investimento sério. Funding, founders e tracção real não confirmados — W18 deep-dive. |
 
-Rationale Tier 1: OSCAR é o benchmark de posicionamento. Jobber é a ameaça EU mais imediata ao lado prestador. ServiceTitan define o envelope de features a 18 meses. Fixando é o único player PT com tráfego real hoje. FIXO é a ameaça existencial PT — Fidelidade tem capital, distribuição e cross-sell que nenhum startup pode replicar. Os 5 cobrem: (1) PT local duplo (Fixando + FIXO), (2) EU expansion risk (Jobber), (3) feature roadmap benchmarking (ServiceTitan), (4) pricing WTP benchmark (OSCAR).
+Rationale Tier 1: OSCAR é o benchmark de posicionamento. Jobber é a ameaça EU mais imediata ao lado prestador. ServiceTitan define o envelope de features a 18 meses. Fixando é o único player PT com tráfego real hoje. FIXO é a ameaça existencial PT — Fidelidade tem capital, distribuição e cross-sell que nenhum startup pode replicar. Hubbent é entrante recente PT com claim agressivo e arquitectura dual-app — investigation priority W18. Os 6 cobrem: (1) PT local triplo (Fixando + FIXO + Hubbent), (2) EU expansion risk (Jobber), (3) feature roadmap benchmarking (ServiceTitan), (4) pricing WTP benchmark (OSCAR).
+
+### Hubbent (PT) — entrante recente
+
+**Threat level:** ALTO (provisional — reassess W18 após deep-dive)
+**Strategic note:** "A maior plataforma de serviços e profissionais em Portugal" claim agressivo apesar de não aparecer em listings 2023-2025. Dual-app (cliente + Hubbent Pro) sinaliza investimento sério. Não confirmados: funding, founders, tracção real.
+
+**Watch signals (semanais):**
+- Funding announcements (especialmente corporate-backed)
+- Cobertura PT tech press (Observador, ECO, Eco Sapo)
+- LinkedIn hiring (PT/ES — escalação?)
+- App Store ratings/reviews count (proxy para tracção)
+- Categorias adicionadas (vertical creep para condomínios?)
+- Pricing model leaks (comissão? subscrição?)
+
+**Sources registadas:**
+
+| Source | URL | Signal type | Auth needed |
+|---|---|---|---|
+| Homepage | `https://hubbent.com` | Positioning, pricing, serviços | Nenhuma |
+| App Store | Search "Hubbent" | Rating, reviews, categorias | Nenhuma |
+| Google Play | Search "Hubbent" + "Hubbent Pro" | Rating, reviews, downloads | Nenhuma |
+| LinkedIn | Search "Hubbent Portugal" | Hiring, team size, announcements | Auth-limited |
+| Crunchbase | Search "Hubbent" (slug a confirmar W18) | Funding, investors | Nenhuma (public) |
+| Google News | `"Hubbent" Portugal` | Press, funding, partnerships | Nenhuma |
+
+**Investigation backlog (W18 deep-dive):**
+- Identificar founders + capital structure (corporate-backed?)
+- Confirmar geografia operacional (só Lisboa? nacional?)
+- Comparar feature set vs Fixando/OSCAR/FIXO
+- Avaliar diferenciação product real (model: comissão vs subscrição?)
+- Verificar App Store reviews volume (proxy para tracção real)
 
 Samba descido de Tier 1 para Tier 2: operam em US (Boston), não Europa; threat level MÉDIO. Continua monitorizado bi-weekly para tracking de ICP language pivot.
 
@@ -485,12 +517,12 @@ Todas as 5 questions abertas em v2 foram respondidas por Mário em 2026-05-01:
 
 | Step | Acção | Tokens estimados |
 |---|---|---|
-| Fetch 5x homepages | WebFetch, ~3k chars cada | ~15k input |
-| Fetch 5x pricing/blog/press | WebFetch, ~2k chars cada | ~10k input |
-| Fetch 5x Crunchbase/imprensa | WebFetch, ~1k chars cada | ~5k input |
+| Fetch 6x homepages | WebFetch, ~3k chars cada | ~18k input |
+| Fetch 6x pricing/blog/press | WebFetch, ~2k chars cada | ~12k input |
+| Fetch 6x Crunchbase/imprensa | WebFetch, ~1k chars cada | ~6k input |
 | Prior run context | Read último ficheiro MD | ~2k input |
-| Output (MD report) | ~1.8k words | ~2.5k output |
-| **Total Tier 1 only** | | **~34.5k tokens** |
+| Output (MD report) | ~2k words | ~2.7k output |
+| **Total Tier 1 only** | | **~40.7k tokens** |
 
 ### Por run — Tier 1 + Tier 2 (semanas 1 e 3, bi-weekly)
 
@@ -516,10 +548,10 @@ Todas as 5 questions abertas em v2 foram respondidas por Mário em 2026-05-01:
 
 | Run type | Cadência | Tokens/run | Custo/run | Runs/mês | Custo/mês |
 |---|---|---|---|---|---|
-| Tier 1 only (weekly-only weeks) | Semanas 2 e 4 | ~34.5k | ~$0.11 | 2 | ~$0.22 |
-| Tier 1 + Tier 2 (bi-weekly weeks) | Semanas 1 e 3 | ~78k | ~$0.25 | 2 | ~$0.50 |
+| Tier 1 only (weekly-only weeks) | Semanas 2 e 4 | ~40.7k | ~$0.13 | 2 | ~$0.26 |
+| Tier 1 + Tier 2 (bi-weekly weeks) | Semanas 1 e 3 | ~84k | ~$0.27 | 2 | ~$0.54 |
 | Tier 3 deep-dive | 1/mês | ~33k | ~$0.11 | 1 | ~$0.11 |
-| **Total mensal** | | | | | **~$0.83 (~€0.76)** |
+| **Total mensal** | | | | | **~$0.91 (~€0.84)** |
 
 ### Projecção anual
 
@@ -559,4 +591,4 @@ Notion source: `https://www.notion.so/34c84147fa60817ba602c03201873e31`
 
 ---
 
-*Spec v3 final. Open questions resolvidas. Tier structure: 5 Tier 1 · 7 Tier 2 (5A+2B) · 5 Tier 3 rotativos · 9+ Tier 4. Pronto para build do agent `.claude/agents/competitor-monitor.md`.*
+*Spec v3 final. Hubbent adicionado 2026-05-01. Tier structure: 6 Tier 1 · 7 Tier 2 (5A+2B) · 5 Tier 3 rotativos · 9+ Tier 4. Pronto para build do agent `.claude/agents/competitor-monitor.md`.*
