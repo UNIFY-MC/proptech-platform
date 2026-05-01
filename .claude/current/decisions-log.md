@@ -341,6 +341,28 @@
 
 ---
 
+## 2026-05-01 (Sprint 1D Day 4 — Owner-side UX PASS)
+
+| Campo | Valor |
+|---|---|
+| **Data** | 2026-05-01 |
+| **Owner** | CTO |
+| **Decisão** | Day 4 SHIPPED — Trabalhos recentes secção + realtime channel + 2 recibos visíveis |
+| **Racional** | Camada 1 owner-side complete: owner vê em tempo real quando prestador completa magic-link onboarding. Bug fix documented (authUser.pessoa_id → useAuth() hook). |
+| **Status** | ✅ Done |
+
+---
+
+| Campo | Valor |
+|---|---|
+| **Data** | 2026-05-01 |
+| **Owner** | Mário |
+| **Decisão** | Feedback Day 4: posicionamento "Trabalhos recentes" deve ser above-the-fold (não no final) + linkagem trabalho ↔ equipamento |
+| **Racional** | Defer to Day 5 polish (mover posição) + Sprint 1E (equipamento_id FK). Captado em camada-2-prestador-app-spec-v2-delta.md. |
+| **Status** | ✅ Approved |
+
+---
+
 ## Template para novas entradas
 
 ```

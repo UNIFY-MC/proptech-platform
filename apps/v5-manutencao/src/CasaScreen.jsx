@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { supa } from './supa.js'
 
 import HeroHeader from './HeroHeader.jsx'
+import { useAuth } from './lib/AuthContext'
 import { useImovelAtivo } from './lib/ImovelAtivoContext.jsx'
 import { moradaCurta, categoriaEmoji } from './lib/labels.js'
 import { scoreLabelShort } from './lib/scoreLabel.js'
@@ -123,6 +124,7 @@ function nextLabel(eq) {
    Fases 3.3–3.5 substituirão os alerts placeholder por ecrãs reais.
 ══════════════════════════════════ */
 export default function CasaScreen({ equipamentos, authUser, onNavigate, onHamburguer, onAvatarClick, onNavigateScore, onNavigateNotificacoes, onNavigateChatSuporte, notifCount = 0, onOpenImovelSelector }) {
+  const { pessoa_id } = useAuth()
   const { imovelAtivo, imoveis, isGlobal, setImovelAtivoId, loading: ctxLoading } = useImovelAtivo()
   const loc   = imovelAtivo
   const nLocs = imoveis.length
@@ -133,6 +135,8 @@ export default function CasaScreen({ equipamentos, authUser, onNavigate, onHambu
 
   const [alertasMeteo, setAlertasMeteo] = useState([])
   const [faturas, setFaturas]           = useState(null)
+  const [recibos, setRecibos]           = useState([])
+  const [recibosNovos, setRecibosNovos] = useState(0)
 
   // IPMA — preservado da versão inline; MASTER.md a actualizar (3.5 → já implementado)
   useEffect(() => {
@@ -163,6 +167,58 @@ export default function CasaScreen({ equipamentos, authUser, onNavigate, onHambu
     return () => { active = false }
   }, [loc?.id])
 
+  // Fetch top-5 recibos do owner (Sprint 1D Day 4)
+  useEffect(() => {
+    if (!pessoa_id) return
+    let active = true
+    supa.schema('v5_manutencao')
+      .from('recibos_servico')
+      .select('id, tipo_servico, valor_eur, data_servico, status, created_at, prestador:prestadores_parceiros(nome_completo, nif)')
+      .eq('owner_pessoa_id', pessoa_id)
+      .order('created_at', { ascending: false })
+      .limit(5)
+      .then(({ data, error }) => {
+        if (!active) return
+        if (error) { console.error('[recibos fetch]', error); return }
+        setRecibos(data || [])
+        const since = new Date(Date.now() - 24 * 60 * 60 * 1000)
+        setRecibosNovos((data || []).filter(r => new Date(r.created_at) > since).length)
+      })
+    return () => { active = false }
+  }, [pessoa_id])
+
+  // Realtime subscribe — primeiro canal realtime V5 (Sprint 1D Day 4)
+  useEffect(() => {
+    if (!pessoa_id) return
+    const channel = supa.channel(`recibos:owner:${pessoa_id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'v5_manutencao',
+          table: 'recibos_servico',
+          filter: `owner_pessoa_id=eq.${pessoa_id}`,
+        },
+        (payload) => {
+          console.log('[realtime] new recibo received:', payload.new.id)
+          supa.schema('v5_manutencao')
+            .from('recibos_servico')
+            .select('id, tipo_servico, valor_eur, data_servico, status, created_at, prestador:prestadores_parceiros(nome_completo, nif)')
+            .eq('owner_pessoa_id', pessoa_id)
+            .order('created_at', { ascending: false })
+            .limit(5)
+            .then(({ data }) => {
+              if (data) {
+                setRecibos(data)
+                setRecibosNovos(prev => prev + 1)
+              }
+            })
+        }
+      )
+      .subscribe()
+    return () => { supa.removeChannel(channel) }
+  }, [pessoa_id])
+
   const scores = loc ? [
     ['🔥', 'AVAC',      loc.score_avac      ?? 0],
     ['🚿', 'Canaliz.',  loc.score_canaliz   ?? 0],
@@ -187,6 +243,7 @@ export default function CasaScreen({ equipamentos, authUser, onNavigate, onHambu
 
       {/* HEADER + HERO */}
       <div style={{ background: CASA.green, padding: '14px 16px 22px' }}>
+        {/* TODO Day 5: lift recibosNovos to App.jsx and merge with global notifCount */}
         <HeroHeader
           onHamburguer={onHamburguer}
           onAvatarClick={onAvatarClick}
@@ -538,6 +595,61 @@ export default function CasaScreen({ equipamentos, authUser, onNavigate, onHambu
             </div>
           </div>
         </div>
+      )}
+
+      {/* TRABALHOS RECENTES — Camada 1 Receipt Trojan Horse (Sprint 1D Day 4) */}
+      {recibos.length > 0 && (
+        <section style={{ marginTop: 24, padding: '0 12px', marginBottom: 8 }}>
+          <header style={{ display: 'flex', alignItems: 'center', marginBottom: 10 }}>
+            <div style={{ fontSize: 14, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
+              Trabalhos recentes
+              {recibosNovos > 0 && (
+                <span style={{
+                  background: CASA.green, color: '#fff',
+                  borderRadius: 12, padding: '2px 8px',
+                  fontSize: 11, fontFamily: 'Outfit, sans-serif', fontWeight: 600,
+                }}>
+                  {recibosNovos} novo{recibosNovos > 1 ? 's' : ''}
+                </span>
+              )}
+            </div>
+          </header>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+            {recibos.map(r => (
+              <button
+                key={r.id}
+                onClick={() => onNavigate?.('recibo-detail', { reciboId: r.id })}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 10,
+                  background: '#fff', border: `1px solid ${CASA.border}`,
+                  borderRadius: 11, padding: '10px 12px',
+                  cursor: 'pointer', width: '100%', textAlign: 'left',
+                }}
+              >
+                <span style={{
+                  width: 38, height: 38, borderRadius: 19, flexShrink: 0,
+                  background: CASA.greenXl,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 17,
+                }}>
+                  🔧
+                </span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 12.5, fontWeight: 600, color: '#18160F', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {r.tipo_servico}
+                  </div>
+                  <div style={{ fontSize: 11, color: '#6B7685', marginTop: 2 }}>
+                    {r.prestador?.nome_completo || 'Prestador'} · {new Date(r.data_servico).toLocaleDateString('pt-PT', { day: 'numeric', month: 'short' })}
+                  </div>
+                </div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: CASA.green, fontFamily: "'JetBrains Mono', monospace", flexShrink: 0 }}>
+                  €{Number(r.valor_eur).toFixed(2).replace('.', ',')}
+                </div>
+              </button>
+            ))}
+          </div>
+        </section>
       )}
 
       </>} {/* fim modo individual */}
