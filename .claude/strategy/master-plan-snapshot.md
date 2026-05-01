@@ -57,6 +57,7 @@ Plataforma horizontal multi-vertical PropTech em Portugal. Solo founder Mário C
 | 22 | **Sprint A commit directo em main** (branch `feat/1b5a-foundations-analysis` estava merged via `f9fea5c`) | 2026-04-30 | Diagnostic Claude Code descobriu branch fechada; commits atómicos = melhor git hygiene |
 | 23 | **Atomic commits**: Sprint A (`.claude/`) e 1B.5A Phase 2 (SQLs Supabase) commits separados, mesmo sendo na mesma sessão | 2026-04-30 | Concerns diferentes (agents infra vs database schema); revert independente possível |
 | 24 | **Competitive monitoring** com 4-tier structure: Tier 1 weekly (5 critical), Tier 2 bi-weekly (5 direct + 2 inspirations), Tier 3 monthly deep-dive (5 inspirations rotativas), Tier 4 quarterly mention-only (8) | 2026-05-01 | CMO v3 spec output após context expansion (Notion analysis); FIXO escalated CRÍTICO devido Fidelidade backing |
+| 25 | **Live Dashboard HTML via GitHub Pages** + 2 gstack-style files (qa-flow + review-pr). Skip gstack inteiro install. | 2026-05-01 | Mário pediu dashboard concentrado; gstack adoption durante Sprint 1D = scope creep risk; rouba 20% que dá 80% valor |
 
 ---
 

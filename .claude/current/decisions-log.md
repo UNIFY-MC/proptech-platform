@@ -251,6 +251,38 @@
 
 ---
 
+## 2026-05-01 (Sprint 1D Day 0.5)
+
+| Campo | Valor |
+|---|---|
+| **Data** | 2026-05-01 |
+| **Owner** | Mário |
+| **Decisão** | Live Dashboard HTML em `docs/dashboard/` via GitHub Pages |
+| **Racional** | Auto-refresh 5min, GitHub API client-side, zero backend, mobile-friendly. Setup one-time: repo Settings → Pages → /docs |
+| **Status** | ✅ Approved |
+
+---
+
+| Campo | Valor |
+|---|---|
+| **Data** | 2026-05-01 |
+| **Owner** | CTO |
+| **Decisão** | Skip gstack full install durante Sprint 1D |
+| **Racional** | Scope creep risk num sprint de 14 dias; conflito potencial com `.claude/agents/` existentes; muitos commands para apps deployed que não se aplicam |
+| **Status** | ✅ Approved |
+
+---
+
+| Campo | Valor |
+|---|---|
+| **Data** | 2026-05-01 |
+| **Owner** | CTO |
+| **Decisão** | Adoptar 2 gstack-style files: `qa-flow.md` + `review-pr.md` em `.claude/workflows/` |
+| **Racional** | 80% do valor de gstack com 5% do setup overhead; checklists adaptadas ao contexto Sprint 1D (magic links, RLS, VITE_ anti-pattern) |
+| **Status** | ✅ Approved |
+
+---
+
 ## Template para novas entradas
 
 ```
