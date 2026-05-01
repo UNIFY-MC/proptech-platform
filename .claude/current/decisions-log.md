@@ -307,6 +307,18 @@
 
 ---
 
+## 2026-05-02 (Sprint 1D Day 3)
+
+| Campo | Valor |
+|---|---|
+| **Data** | 2026-05-02 |
+| **Owner** | CTO |
+| **Decisão** | Day 3 `PrestadorOnboardingFlow` + 6 sub-components + RPC pública `get_magic_link_public_info` aplicada via Supabase MCP |
+| **Racional** | Frontend prestador onboard end-to-end pronto; `/join/:token` routing state-based (sem react-router); RPC SECURITY DEFINER com GRANT anon — landing mostra owner_primeiro_nome + tipo_servico + valor antes do submit |
+| **Status** | ✅ Done |
+
+---
+
 ## Template para novas entradas
 
 ```

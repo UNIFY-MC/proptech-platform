@@ -69,6 +69,7 @@ import CasaAdvisorScreen from './screens/CasaAdvisorScreen.jsx'
 import AdicionarDocScreen from './screens/AdicionarDocScreen.jsx'
 import AdicionarEnergiaScreen from './screens/AdicionarEnergiaScreen.jsx'
 import OnboardingWizardScreen from './screens/OnboardingWizardScreen.jsx'
+import PrestadorOnboardingFlow from './screens/PrestadorOnboardingFlow.jsx'
 import StaffBanner from './components/StaffBanner.jsx'
 import {
   ArrowLeft, X, Check, Camera, Clock, Plus, MapPin, ChevronRight,
@@ -10351,6 +10352,14 @@ function AuthRouter({ onDemoLogin, onDemoAuth }) {
    ROOT
 ══════════════════════════════════ */
 export default function App() {
+  // ── Magic link detection — Sprint 1D Receipt Trojan Horse ────────────────
+  // Lido antes de qualquer hook (é uma const estática, não um hook).
+  // Pattern: /join/{64hex} gerado por gerar-magic-link edge function.
+  const _mlPath = typeof window !== 'undefined' ? window.location.pathname : ''
+  const _mlMatch = _mlPath.match(/^\/join\/([0-9a-f]{64})$/)
+  const isPrestadorOnboarding = !!_mlMatch
+  const magicLinkToken = _mlMatch?.[1] || null
+
   // ── Auth ──────────────────────────────────
   const [authUser,  setAuthUser]  = useState(null) // {user, token, role, nome, perfil}
   const [role,      setRole]      = useState('prestador')
@@ -10809,6 +10818,11 @@ export default function App() {
   const onLogout = async () => {
     await authSignOut()
     setAuthUser(null); setRole('prestador'); setAdminAuth(false)
+  }
+
+  // ── Magic link bypass — prestador anónimo, sem auth ────────────────────
+  if (isPrestadorOnboarding) {
+    return <PrestadorOnboardingFlow token={magicLinkToken} />
   }
 
   // ── Routing de auth ──────────────────────────────────────
