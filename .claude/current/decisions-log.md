@@ -199,6 +199,58 @@
 
 ---
 
+## 2026-05-01 (Sprint 1D debate)
+
+| Campo | Valor |
+|---|---|
+| **Data** | 2026-05-01 |
+| **Owner** | CEO via debate multi-agent |
+| **Decisão** | Sprint 1D charter approved: Receipt Trojan Horse Alpha owner-first 14-day MVP |
+| **Racional** | Hubbent+FIXO+Jobber pressure forces validation-first; CEO weekly-recap #8 "shift energy from building to recruiting 5 alpha owners" |
+| **Status** | ✅ Approved |
+
+---
+
+| Campo | Valor |
+|---|---|
+| **Data** | 2026-05-01 |
+| **Owner** | CTO |
+| **Decisão** | No Stripe Connect MVP iteration 1 — info/contacto flow only |
+| **Racional** | KYC PT compliance 2-3 weeks dilui sprint focus; validate demand first; Stripe process initiated Day 10 para eliminar lead time para 1E |
+| **Status** | ✅ Approved |
+
+---
+
+| Campo | Valor |
+|---|---|
+| **Data** | 2026-05-01 |
+| **Owner** | CPO |
+| **Decisão** | UX 1C-lite scope: Casa+Início merge + Receipt flow inline only |
+| **Racional** | Other 1C items (Owners Club tab, weather bug) adiados — focus discipline; 8 screens definidos com reuse inventory |
+| **Status** | ✅ Approved |
+
+---
+
+| Campo | Valor |
+|---|---|
+| **Data** | 2026-05-01 |
+| **Owner** | Auditor |
+| **Decisão** | Top 3 risks P×I: (1) Schema mismatch CPO vs CTO — tabela recibos não existe P×I=25; (2) Entrevistas Day 15-17 fora do sprint P×I=20; (3) Edge fn confirm-receipt ausente no CTO plan P×I=20 — todos resolvidos em 06-final-plan.md |
+| **Racional** | Pre-mortem standard practice; CONDITIONAL GO → GO após Day 0 reconciliações |
+| **Status** | ⚠️ Mitigations approved via 06-final-plan.md Decisions 1-7 |
+
+---
+
+| Campo | Valor |
+|---|---|
+| **Data** | 2026-05-01 |
+| **Owner** | COO |
+| **Decisão** | Alpha recruitment: 5 owners (Mário + 4 rede pessoal) + prestador outreach manual (fora-app) |
+| **Racional** | Demand-pulls-supply Receipt Trojan Horse strategy; prestador real diferido para 1E por Auditor recommendation |
+| **Status** | ✅ Approved |
+
+---
+
 ## Template para novas entradas
 
 ```

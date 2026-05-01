@@ -5,22 +5,27 @@
 
 ---
 
-## Sprint Activa: TBD — 1C ou 1D?
+## Sprint Activa: 1D — Receipt Trojan Horse Alpha
 
-**Estado:** Decisão pendente Mário.
+**Estado:** Day 0 — charter approved 2026-05-01. Reconciliações obrigatórias antes de Day 1.
+**Sprint window:** 2026-05-01 → 2026-05-15 (14 dias)
+**Docs:** `.claude/sprints/1D-receipt-trojan-horse/`
 
-**CEO weekly-recap #8 strategic note:**
-> "Platform is technically strong but has zero real users — W18 must
-> shift energy from building to recruiting 5 alpha owners."
+### Day 0 checklist (AGORA — antes de começar código)
 
-**Opção A — Sprint 1C primeiro (Architecture v2 V5):** 13-19h, melhora UX antes de
-alpha test. Risk: building > validating.
+- [ ] R1 — Mário confirma schema decisions (core.servicos_ativos criada Day 1, recibos eliminada do scope)
+- [ ] R2 — `tasks/alpha-owners.md` com 7-8 nomes reais (5 com score ≥7)
+- [ ] R3 — confirm-receipt mergida em prestador-onboarding (sem 3ª edge function)
+- [ ] R4 — onboarding antecipado: Owner E (Mário) Day 8, A-D Days 9-12
 
-**Opção B — Sprint 1D primeiro (Receipt Trojan Horse alpha):** 2-3 sem, recruta 5
-alpha owners. Risk: UX actual pode ser limitação para alpha quality feedback.
+### Gates
 
-**Opção C — Híbrido:** mini-1C (só fix weather bug + Casa+Início merge, ~5h) +
-arrancar 1D em paralelo.
+| Gate | Data | Critério GO |
+|------|------|------------|
+| Day 3 | 2026-05-03 | Schema + 2 edge functions em staging |
+| Day 7 | 2026-05-07 | ≥1 owner externo aceitou; flow funciona no telefone |
+| Day 11 | 2026-05-11 | ≥1 flow end-to-end owner real completo |
+| Day 14 | 2026-05-15 | 5/5 success criteria avaliados; decisão 1E |
 
 ---
 
@@ -34,6 +39,7 @@ arrancar 1D em paralelo.
 | **Sprint A** | ✅ | C-Suite agents setup (7 agents + master-plan-snapshot) |
 | **1B.5A Fase 2** | ✅ | SQL foundations (já aplicados via dashboard, commit `bcad675` como docs) |
 | **Sprint B Lite** | ✅ | 3 watchers + healthcheck active (commits `a6909b5`...`2124d55`) |
+| **Sprint 1C lite** | 🔀 | Casa+Início merge + Receipt flow inline — INCLUSO em 1D scope |
 
 ---
 
