@@ -2,8 +2,8 @@ name: Competitor Monitor
 
 on:
   workflow_dispatch:
-  # schedule:
-  #   - cron: '0 8 * * 1'  # Monday 8h UTC = 9h Lisbon (summer) — uncomment after manual run validates
+  schedule:
+    - cron: '0 8 * * 1'  # Monday 8h UTC = 9h Lisbon (summer)
 
 permissions:
   issues: write

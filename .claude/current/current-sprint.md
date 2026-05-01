@@ -5,9 +5,22 @@
 
 ---
 
-## Sprint Activa: 1C — Architecture v2 V5
+## Sprint Activa: TBD — 1C ou 1D?
 
-**Estado:** Pendente kickoff (CPO escreve spec)
+**Estado:** Decisão pendente Mário.
+
+**CEO weekly-recap #8 strategic note:**
+> "Platform is technically strong but has zero real users — W18 must
+> shift energy from building to recruiting 5 alpha owners."
+
+**Opção A — Sprint 1C primeiro (Architecture v2 V5):** 13-19h, melhora UX antes de
+alpha test. Risk: building > validating.
+
+**Opção B — Sprint 1D primeiro (Receipt Trojan Horse alpha):** 2-3 sem, recruta 5
+alpha owners. Risk: UX actual pode ser limitação para alpha quality feedback.
+
+**Opção C — Híbrido:** mini-1C (só fix weather bug + Casa+Início merge, ~5h) +
+arrancar 1D em paralelo.
 
 ---
 
@@ -20,6 +33,7 @@
 | **1B.5A Fase 1** | ✅ | Análise foundations + decisões D1-D5 aprovadas |
 | **Sprint A** | ✅ | C-Suite agents setup (7 agents + master-plan-snapshot) |
 | **1B.5A Fase 2** | ✅ | SQL foundations (já aplicados via dashboard, commit `bcad675` como docs) |
+| **Sprint B Lite** | ✅ | 3 watchers + healthcheck active (commits `a6909b5`...`2124d55`) |
 
 ---
 

@@ -2,8 +2,8 @@ name: Weekly Recap
 
 on:
   workflow_dispatch:
-  # schedule:
-  #   - cron: '0 16 * * 5'  # Friday 16h UTC = 17h Lisbon (summer) — uncomment after validation
+  schedule:
+    - cron: '0 16 * * 5'  # Friday 16h UTC = 17h Lisbon (summer)
 
 permissions:
   issues: write

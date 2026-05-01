@@ -149,6 +149,36 @@
 
 ---
 
+| Campo | Valor |
+|---|---|
+| **Data** | 2026-05-01 |
+| **Owner** | Mário |
+| **Decisão** | Sprint B Lite COMPLETE: 3 watchers (competitor-monitor weekly, daily-brief, weekly-recap) + healthcheck activos, todos crons ON |
+| **Racional** | Validated end-to-end: 4 issues criadas, outputs CMO-grade quality |
+| **Status** | ✅ Done |
+
+---
+
+| Campo | Valor |
+|---|---|
+| **Data** | 2026-05-01 |
+| **Owner** | Mário |
+| **Decisão** | Token economics validated: $0.60/mês total (cap €5/mês = 8x margin) |
+| **Racional** | Cost discipline preserved |
+| **Status** | ✅ Approved |
+
+---
+
+| Campo | Valor |
+|---|---|
+| **Data** | 2026-05-01 |
+| **Owner** | CEO via weekly-recap #8 |
+| **Decisão** | "W18 must shift energy from building to recruiting 5 alpha owners" — strategic priority Sprint 1D > Sprint 1C |
+| **Racional** | Platform technically strong, zero real users = validation gap dominates |
+| **Status** | ⚠️ Decisão Mário pendente |
+
+---
+
 ## Template para novas entradas
 
 ```
