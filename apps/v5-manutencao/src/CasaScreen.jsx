@@ -137,6 +137,12 @@ export default function CasaScreen({ equipamentos, authUser, onNavigate, onHambu
   const [faturas, setFaturas]           = useState(null)
   const [recibos, setRecibos]           = useState([])
   const [recibosNovos, setRecibosNovos] = useState(0)
+  const [convidarOpen, setConvidarOpen]       = useState(false)
+  const [convidarForm, setConvidarForm]       = useState({ tipo_servico: '', valor_eur: '', data_servico: new Date().toISOString().slice(0, 10) })
+  const [convidarResult, setConvidarResult]   = useState(null)
+  const [convidarLoading, setConvidarLoading] = useState(false)
+  const [convidarError, setConvidarError]     = useState('')
+  const [copied, setCopied]                   = useState(false)
 
   // IPMA — preservado da versão inline; MASTER.md a actualizar (3.5 → já implementado)
   useEffect(() => {
@@ -219,6 +225,51 @@ export default function CasaScreen({ equipamentos, authUser, onNavigate, onHambu
     return () => { supa.removeChannel(channel) }
   }, [pessoa_id])
 
+  async function handleEmitirRecibo() {
+    setConvidarError('')
+    const valorStr = convidarForm.valor_eur.toString().replace(',', '.')
+    const valor = parseFloat(valorStr)
+    if (!convidarForm.tipo_servico.trim()) { setConvidarError('Indica o tipo de trabalho.'); return }
+    if (!valorStr || isNaN(valor) || valor <= 0) { setConvidarError('Indica um valor válido.'); return }
+    if (!convidarForm.data_servico) { setConvidarError('Indica a data do serviço.'); return }
+    setConvidarLoading(true)
+    try {
+      const { data, error } = await supa.functions.invoke('gerar-magic-link', {
+        body: {
+          tipo_servico: convidarForm.tipo_servico.trim(),
+          valor_eur: valor,
+          data_servico: convidarForm.data_servico,
+        }
+      })
+      if (error) throw new Error(error.message || String(error))
+      if (!data?.ok) throw new Error(data?.error || 'Erro desconhecido')
+      setConvidarResult({ url: data.url, expires_at: data.expires_at })
+    } catch (err) {
+      setConvidarError(err.message || 'Erro ao gerar link. Tenta novamente.')
+    } finally {
+      setConvidarLoading(false)
+    }
+  }
+
+  function handleConvidarClose() {
+    setConvidarOpen(false)
+    setConvidarResult(null)
+    setConvidarError('')
+    setConvidarForm({ tipo_servico: '', valor_eur: '', data_servico: new Date().toISOString().slice(0, 10) })
+    setCopied(false)
+  }
+
+  async function handleCopiar() {
+    if (!convidarResult?.url) return
+    try {
+      await navigator.clipboard.writeText(convidarResult.url)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2500)
+    } catch {
+      setConvidarError('Copia manualmente: ' + convidarResult.url)
+    }
+  }
+
   const scores = loc ? [
     ['🔥', 'AVAC',      loc.score_avac      ?? 0],
     ['🚿', 'Canaliz.',  loc.score_canaliz   ?? 0],
@@ -243,7 +294,6 @@ export default function CasaScreen({ equipamentos, authUser, onNavigate, onHambu
 
       {/* HEADER + HERO */}
       <div style={{ background: CASA.green, padding: '14px 16px 22px' }}>
-        {/* TODO Day 5: lift recibosNovos to App.jsx and merge with global notifCount */}
         <HeroHeader
           onHamburguer={onHamburguer}
           onAvatarClick={onAvatarClick}
@@ -380,6 +430,94 @@ export default function CasaScreen({ equipamentos, authUser, onNavigate, onHambu
           </button>
         ))}
       </div>
+
+      {/* TRABALHOS RECENTES — Camada 1 Receipt Trojan Horse (Sprint 1D Day 5) */}
+      <section style={{ margin: '10px 12px 0' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+          <div style={{ fontSize: 14, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
+            Trabalhos recentes
+            {recibosNovos > 0 && (
+              <span style={{
+                background: CASA.green, color: '#fff',
+                borderRadius: 12, padding: '2px 8px',
+                fontSize: 11, fontWeight: 600,
+              }}>
+                {recibosNovos} novo{recibosNovos > 1 ? 's' : ''}
+              </span>
+            )}
+          </div>
+          <button
+            onClick={() => setConvidarOpen(true)}
+            style={{
+              background: CASA.green, color: '#fff', border: 'none',
+              borderRadius: 8, padding: '5px 11px',
+              fontSize: 11.5, fontWeight: 700, cursor: 'pointer',
+            }}
+          >
+            + Emitir recibo
+          </button>
+        </div>
+
+        {recibos.length === 0 ? (
+          <div style={{
+            background: '#fff', border: `1.5px dashed ${CASA.greenLt}`,
+            borderRadius: 12, padding: '16px 14px',
+            display: 'flex', gap: 12, alignItems: 'flex-start',
+          }}>
+            <span style={{ fontSize: 26, flexShrink: 0 }}>🧾</span>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: '#111', marginBottom: 4 }}>
+                Regista trabalhos feitos em casa
+              </div>
+              <div style={{ fontSize: 11.5, color: '#555', lineHeight: 1.5, marginBottom: 10 }}>
+                Envia um link ao prestador — ele preenche o recibo, fica tudo guardado.
+              </div>
+              <button
+                onClick={() => setConvidarOpen(true)}
+                style={{
+                  background: CASA.green, color: '#fff', border: 'none',
+                  borderRadius: 8, padding: '8px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer',
+                }}
+              >
+                Emitir primeiro recibo →
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+            {recibos.map(r => (
+              <button
+                key={r.id}
+                onClick={() => onNavigate?.('recibo-detail', { reciboId: r.id })}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 10,
+                  background: '#fff', border: `1px solid ${CASA.border}`,
+                  borderRadius: 11, padding: '10px 12px',
+                  cursor: 'pointer', width: '100%', textAlign: 'left',
+                }}
+              >
+                <span style={{
+                  width: 38, height: 38, borderRadius: 19, flexShrink: 0,
+                  background: CASA.greenXl,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 17,
+                }}>🔧</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 12.5, fontWeight: 600, color: '#18160F', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {r.tipo_servico}
+                  </div>
+                  <div style={{ fontSize: 11, color: '#6B7685', marginTop: 2 }}>
+                    {r.prestador?.nome_completo || 'Prestador'} · {new Date(r.data_servico).toLocaleDateString('pt-PT', { day: 'numeric', month: 'short' })}
+                  </div>
+                </div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: CASA.green, fontFamily: "'JetBrains Mono', monospace", flexShrink: 0 }}>
+                  €{Number(r.valor_eur).toFixed(2).replace('.', ',')}
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+      </section>
 
       {/* AI EXPERT CARD */}
       <div style={{ margin: '10px 12px 0' }}>
@@ -597,62 +735,127 @@ export default function CasaScreen({ equipamentos, authUser, onNavigate, onHambu
         </div>
       )}
 
-      {/* TRABALHOS RECENTES — Camada 1 Receipt Trojan Horse (Sprint 1D Day 4) */}
-      {recibos.length > 0 && (
-        <section style={{ marginTop: 24, padding: '0 12px', marginBottom: 8 }}>
-          <header style={{ display: 'flex', alignItems: 'center', marginBottom: 10 }}>
-            <div style={{ fontSize: 14, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
-              Trabalhos recentes
-              {recibosNovos > 0 && (
-                <span style={{
-                  background: CASA.green, color: '#fff',
-                  borderRadius: 12, padding: '2px 8px',
-                  fontSize: 11, fontFamily: 'Outfit, sans-serif', fontWeight: 600,
-                }}>
-                  {recibosNovos} novo{recibosNovos > 1 ? 's' : ''}
-                </span>
-              )}
-            </div>
-          </header>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-            {recibos.map(r => (
-              <button
-                key={r.id}
-                onClick={() => onNavigate?.('recibo-detail', { reciboId: r.id })}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 10,
-                  background: '#fff', border: `1px solid ${CASA.border}`,
-                  borderRadius: 11, padding: '10px 12px',
-                  cursor: 'pointer', width: '100%', textAlign: 'left',
-                }}
-              >
-                <span style={{
-                  width: 38, height: 38, borderRadius: 19, flexShrink: 0,
-                  background: CASA.greenXl,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 17,
-                }}>
-                  🔧
-                </span>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 12.5, fontWeight: 600, color: '#18160F', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {r.tipo_servico}
-                  </div>
-                  <div style={{ fontSize: 11, color: '#6B7685', marginTop: 2 }}>
-                    {r.prestador?.nome_completo || 'Prestador'} · {new Date(r.data_servico).toLocaleDateString('pt-PT', { day: 'numeric', month: 'short' })}
-                  </div>
-                </div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: CASA.green, fontFamily: "'JetBrains Mono', monospace", flexShrink: 0 }}>
-                  €{Number(r.valor_eur).toFixed(2).replace('.', ',')}
-                </div>
-              </button>
-            ))}
-          </div>
-        </section>
-      )}
-
       </>} {/* fim modo individual */}
+
+      {/* MODAL EMITIR RECIBO — bottom sheet */}
+      {convidarOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          onClick={e => { if (e.target === e.currentTarget) handleConvidarClose() }}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 900, display: 'flex', alignItems: 'flex-end' }}
+        >
+          <div style={{ background: '#fff', borderRadius: '16px 16px 0 0', width: '100%', padding: '20px 20px', paddingBottom: 'calc(28px + env(safe-area-inset-bottom, 0px))', maxHeight: '90vh', overflowY: 'auto' }}>
+            {convidarResult ? (
+              <>
+                <div style={{ textAlign: 'center', marginBottom: 16 }}>
+                  <div style={{ fontSize: 40 }}>✅</div>
+                  <div style={{ fontSize: 15, fontWeight: 700, marginTop: 8 }}>Link gerado com sucesso</div>
+                  <div style={{ fontSize: 12, color: '#555', marginTop: 4 }}>
+                    Válido até {new Date(convidarResult.expires_at).toLocaleString('pt-PT', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}
+                  </div>
+                </div>
+
+                <div style={{ background: CASA.greenXl, borderRadius: 10, padding: '10px 12px', marginBottom: 14, wordBreak: 'break-all', fontSize: 11.5, color: CASA.green, fontWeight: 600, lineHeight: 1.5 }}>
+                  {convidarResult.url}
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
+                  <button
+                    onClick={handleCopiar}
+                    style={{ width: '100%', padding: '13px', borderRadius: 10, border: 'none', background: copied ? '#2D6A4F' : CASA.green, color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}
+                  >
+                    {copied ? '✓ Copiado!' : '📋 Copiar link'}
+                  </button>
+                  <a
+                    href={`https://wa.me/?text=${encodeURIComponent('Olá! Segue o link para preencheres o recibo do trabalho: ' + convidarResult.url)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ display: 'block', width: '100%', padding: '12px', borderRadius: 10, background: '#25D366', color: '#fff', fontSize: 14, fontWeight: 700, textAlign: 'center', textDecoration: 'none', boxSizing: 'border-box' }}
+                  >
+                    📲 Partilhar via WhatsApp
+                  </a>
+                  <button
+                    onClick={handleConvidarClose}
+                    style={{ width: '100%', padding: '11px', borderRadius: 10, border: `1px solid ${CASA.border}`, background: '#fff', color: '#555', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+                  >
+                    Fechar
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
+                  <div style={{ fontSize: 15, fontWeight: 700 }}>Emitir recibo</div>
+                  <button onClick={handleConvidarClose} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: '#999', padding: '0 4px' }}>✕</button>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                  <div>
+                    <label style={{ fontSize: 11, fontWeight: 700, color: '#555', textTransform: 'uppercase', letterSpacing: 0.3, display: 'block', marginBottom: 5 }}>
+                      Tipo de trabalho
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Ex: Reparação caldeira, Pintura sala, Canalização..."
+                      value={convidarForm.tipo_servico}
+                      onChange={e => setConvidarForm(f => ({ ...f, tipo_servico: e.target.value }))}
+                      maxLength={100}
+                      style={{ width: '100%', padding: '11px 12px', borderRadius: 9, border: '1.5px solid #ddd', fontSize: 13.5, boxSizing: 'border-box', outline: 'none', fontFamily: 'inherit' }}
+                    />
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                    <div>
+                      <label style={{ fontSize: 11, fontWeight: 700, color: '#555', textTransform: 'uppercase', letterSpacing: 0.3, display: 'block', marginBottom: 5 }}>
+                        Valor (€)
+                      </label>
+                      <input
+                        type="text"
+                        inputMode="decimal"
+                        placeholder="150,00"
+                        value={convidarForm.valor_eur}
+                        onChange={e => setConvidarForm(f => ({ ...f, valor_eur: e.target.value }))}
+                        style={{ width: '100%', padding: '11px 12px', borderRadius: 9, border: '1.5px solid #ddd', fontSize: 13.5, boxSizing: 'border-box', outline: 'none', fontFamily: "'JetBrains Mono', monospace" }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: 11, fontWeight: 700, color: '#555', textTransform: 'uppercase', letterSpacing: 0.3, display: 'block', marginBottom: 5 }}>
+                        Data do serviço
+                      </label>
+                      <input
+                        type="date"
+                        max={new Date().toISOString().slice(0, 10)}
+                        value={convidarForm.data_servico}
+                        onChange={e => setConvidarForm(f => ({ ...f, data_servico: e.target.value }))}
+                        style={{ width: '100%', padding: '11px 8px', borderRadius: 9, border: '1.5px solid #ddd', fontSize: 13, boxSizing: 'border-box', outline: 'none', fontFamily: 'inherit' }}
+                      />
+                    </div>
+                  </div>
+
+                  {convidarError && (
+                    <div style={{ background: '#FFEAEA', border: '1px solid #F9BABA', borderRadius: 8, padding: '9px 12px', fontSize: 12, color: '#A32D2D', fontWeight: 600 }}>
+                      {convidarError}
+                    </div>
+                  )}
+
+                  <button
+                    onClick={handleEmitirRecibo}
+                    disabled={convidarLoading}
+                    style={{ width: '100%', padding: '14px', borderRadius: 10, border: 'none', background: convidarLoading ? '#aaa' : CASA.green, color: '#fff', fontSize: 14, fontWeight: 700, cursor: convidarLoading ? 'wait' : 'pointer' }}
+                  >
+                    {convidarLoading ? 'A gerar link…' : 'Gerar link para prestador →'}
+                  </button>
+
+                  <div style={{ fontSize: 11, color: '#888', textAlign: 'center', lineHeight: 1.5 }}>
+                    O link expira em 48h · O prestador preenche os dados · Recibo guardado automaticamente
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
     </div>
   )
