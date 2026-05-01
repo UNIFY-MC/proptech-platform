@@ -2,8 +2,8 @@ name: Healthcheck Watchers
 
 on:
   workflow_dispatch:
-  # schedule:
-  #   - cron: '0 8 * * *'  # daily 8h UTC = 9h Lisboa — uncomment após validação manual passar
+  schedule:
+    - cron: '0 8 * * *'  # daily 8h UTC = 9h Lisboa
 
 permissions:
   issues: write
