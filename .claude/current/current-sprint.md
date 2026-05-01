@@ -7,7 +7,7 @@
 
 ## Sprint Activa: 1D — Receipt Trojan Horse Alpha
 
-**Estado:** Day 2 ✅ shipped — schema + edge functions em produção. Day 3 desbloqueado.
+**Estado:** Day 3 ✅ shipped — E2E PASS (recibo a0869efc, browser modo anónimo). Day 4 a seguir.
 **Sprint window:** 2026-05-01 → 2026-05-15 (14 dias)
 **Docs:** `.claude/sprints/1D-receipt-trojan-horse/`
 
@@ -18,7 +18,8 @@
 | Day 0 | ✅ | Charter approved, reconciliações fechadas |
 | Day 1 | ✅ | Schema migration applied (3 tabelas + RLS + indexes), 4/4 smoke tests |
 | Day 2 | ✅ | RPC atomic + 2 edge functions deployed (gerar-magic-link, prestador-onboarding), 4/4 smoke tests |
-| Day 3 | 🔜 | `/join/:token` route + PrestadorOnboardingScreen (React) |
+| Day 3 | ✅ | `/r/join/:token` route + PrestadorOnboardingFlow + 6 sub-components + E2E PASS |
+| Day 4 | 🔜 | Casa screen receipt card + realtime subscribe owner-side |
 
 ### Gates
 

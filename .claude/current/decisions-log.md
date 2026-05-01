@@ -319,6 +319,28 @@
 
 ---
 
+## 2026-05-01 (Sprint 1D Day 3 — E2E PASS)
+
+| Campo | Valor |
+|---|---|
+| **Data** | 2026-05-01 |
+| **Owner** | CTO |
+| **Decisão** | Day 3 SHIPPED — E2E PASS browser modo anónimo, recibo a0869efc emitido, IP capturado |
+| **Racional** | Camada 1 Receipt Trojan Horse functionally complete end-to-end. Backend + edge fns + frontend + RPC pública all green. |
+| **Status** | ✅ Done |
+
+---
+
+| Campo | Valor |
+|---|---|
+| **Data** | 2026-05-01 |
+| **Owner** | Mário |
+| **Decisão** | Princípio Sprint 1E "consolidar máximo funções para revisão" + reuso magic-link como ponte permanente owner↔prestador |
+| **Racional** | Defer to Sprint 1E charter; captado em camada-2-prestador-app-spec-v2-delta.md |
+| **Status** | ✅ Approved |
+
+---
+
 ## Template para novas entradas
 
 ```

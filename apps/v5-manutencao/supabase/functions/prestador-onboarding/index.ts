@@ -287,9 +287,9 @@ Deno.serve(async (req: Request) => {
   }
 
   // ── 4. Transacção atómica via RPC ────────────────────────────────────────
-  const { data: rpcData, error: rpcErr } = await sb.rpc(
-    "create_prestador_and_recibo_atomic",
-    {
+  const { data: rpcData, error: rpcErr } = await sb
+    .schema("v5_manutencao")
+    .rpc("create_prestador_and_recibo_atomic", {
       p_magic_link_id: link.id,
       p_prestador_data: {
         nome: prestador_data.nome_completo,
@@ -302,9 +302,7 @@ Deno.serve(async (req: Request) => {
       p_recibo_data: {},
       p_ip_origem: ip === "unknown" ? null : ip,
       p_user_agent: userAgent || null,
-    },
-    { schema: "v5_manutencao" },
-  );
+    });
 
   if (rpcErr) {
     console.error(JSON.stringify({
