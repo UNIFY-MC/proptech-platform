@@ -57,6 +57,16 @@ Por que AGORA, não daqui a 4 semanas:
 
 ---
 
+## Emenda — Tese 2-camadas (2026-05-01)
+
+> Adicionado após clarificação estratégica de Mário. O charter mantém-se inalterado.
+
+Sprint 1D constrói a **Camada 1** (owner envia magic link → prestador confirma → recibo arquivado). A **Camada 2** (dashboard Jobber-style para o prestador: clientes, agenda, facturas, Stripe Connect, Moloni/InvoiceXpress) é **Sprint 1E** — fora de scope aqui.
+
+Soft CTA pós-confirmação "Criar conta gratuita" adicionado ao spec UX (post-Day 3 review): aparece no ecrã de confirmação do prestador após emissão do recibo, com copy "Quer gerir todos os seus clientes e recibos num só lugar?". É um CTA não-bloqueante — o recibo é emitido independentemente. O `status` do prestador permanece `'onboarded'`; só passa a `'conta_criada'` em 1E quando o prestador completa onboarding completo.
+
+---
+
 ## Out of scope (explicit)
 
 Lista do que **não se constrói nem se discute** durante este sprint. Qualquer item desta lista que apareça em PR ou planeamento é motivo para Auditor flag.

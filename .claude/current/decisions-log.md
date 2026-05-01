@@ -283,6 +283,18 @@
 
 ---
 
+## 2026-05-01 (Tese estratégica)
+
+| Campo | Valor |
+|---|---|
+| **Data** | 2026-05-01 |
+| **Owner** | Mário |
+| **Decisão** | Tese 2-camadas clarificada: V5 owner-side + V5-pro prestador-side, magic-link como ponte |
+| **Racional** | Diferenciação vs Hubbent/OSCAR (single-side marketplaces) — cada owner activo é funil de supply; aquisição prestadores custo €0 |
+| **Status** | ✅ Approved |
+
+---
+
 ## 2026-05-02 (Sprint 1D Day 2)
 
 | Campo | Valor |

@@ -18,6 +18,36 @@ Plataforma horizontal multi-vertical PropTech em Portugal. Solo founder Mário C
 
 ---
 
+## Tese estratégica 2-camadas
+
+> Clarificada por Mário 2026-05-01. Diferenciação estrutural vs concorrentes.
+
+### Camada 1 — Owner organiza a sua casa (V5 actual)
+
+À semelhança do Shipshape.ai: owner regista imóveis, serviços, histórico, poupanças. Receipt Trojan Horse é o ponto de entrada: magic link de 3 minutos que o owner envia ao prestador após um serviço. Prestador confirma o valor e emite o recibo — sem conta, sem instalação, com fricção zero. O prestador fica registado em `prestadores_parceiros` com `status = 'onboarded'`.
+
+**Sprint 1D** fecha esta camada com flow end-to-end owner → prestador → recibo arquivado em Casa.
+
+### Camada 2 — Prestador organiza o seu negócio (Sprint 1E / Q3 2026)
+
+Jobber-style dashboard para o prestador: clientes, agenda, recibos, facturas, relatórios. Stripe Connect para pagamentos in-app. Integração com Moloni ou InvoiceXpress para facturação AT-compliant. O prestador converte a conta `'onboarded'` em `'conta_criada'` com perfil completo + IBAN + subscrição Prestador Pro (€14.90/mês · €9.90 Founding).
+
+**Magic link = ponte entre as 2 camadas.** Cada recibo emitido na Camada 1 é um lead qualificado para a Camada 2.
+
+### Diferenciação vs concorrentes
+
+| Player | Modelo | Gap |
+|---|---|---|
+| OSCAR / Fixando / Habitissimo | Marketplace público — 1 camada (matching) | Sem ownership do histórico do owner; sem ferramenta pro prestador |
+| Hubbent | Dual-app cliente + Pro — 1 camada por lado | Sem magic-link bridge; aquisição prestador via marketing, não via demand-pull |
+| FIXO (Fidelidade) | On-demand B2C — 1 camada | Sem SaaS prestador; modelo fee-per-job, não recorrente |
+| Jobber | SaaS prestador puro — 1 camada | Sem owner-side; não capta o recibo do trabalho fora-app |
+| **V5 Manutenção** | **2 camadas** — owner + prestador, bridge via magic link | Owner traz prestador → prestador converte conta → rede cresce por demand-pull |
+
+**Princípio:** A aquisição de prestadores custa €0 porque vem do owner, não de marketing pago. Cada owner activo é um funil de supply.
+
+---
+
 ## Decisões Estratégicas Tomadas (12 + decisões arquitecturais)
 
 ### Decisões de Negócio
