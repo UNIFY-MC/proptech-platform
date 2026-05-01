@@ -1,71 +1,78 @@
-# .claude/hooks/subagent-stop.ps1
+# .claude/hooks/subagent-stop.ps1 (V3 — non-blocking stdin)
 # Hook: SubagentStop
-# Quando dispara: sempre que um sub-agente termina o seu trabalho
-# Acção: appenda 1 linha ao recent-activity.md (estado partilhado), corta para 20 entradas
+# Quando dispara: sub-agente termina o trabalho
+# Accao: appenda 1 linha ao recent-activity.md, corta para 20 entradas
 #
-# Recebe via stdin: JSON com info do sub-agent que terminou
-# Output: nenhum (este hook não injecta context, só regista)
+# V3 changes:
+# - IsInputRedirected check (V2 bloqueava em invocacao manual)
 
 $ErrorActionPreference = 'Stop'
 
 try {
-    # 1. Ler payload do stdin
-    $stdin = [Console]::In.ReadToEnd()
-    $payload = if ($stdin) { $stdin | ConvertFrom-Json -ErrorAction SilentlyContinue } else { $null }
+    # 1. Ler stdin SO se redirecionado
+    $payload = $null
+    if ([Console]::IsInputRedirected) {
+        try {
+            $stdin = [Console]::In.ReadToEnd()
+            if ($stdin) {
+                $payload = $stdin | ConvertFrom-Json -ErrorAction Stop
+            }
+        } catch {}
+    }
 
-    # 2. Extrair info útil (best-effort — o schema pode mudar entre versões)
-    $agentName = if ($payload.subagent_type) { $payload.subagent_type }
-                 elseif ($payload.agent_type) { $payload.agent_type }
-                 elseif ($payload.subagent) { $payload.subagent }
-                 else { 'subagent' }
+    # 2. Extrair info util
+    $agentName = 'subagent'
+    if ($payload) {
+        if ($payload.subagent_type) { $agentName = $payload.subagent_type }
+        elseif ($payload.agent_type) { $agentName = $payload.agent_type }
+        elseif ($payload.subagent) { $agentName = $payload.subagent }
+    }
 
-    $sessionId = if ($payload.session_id) { $payload.session_id.Substring(0, [Math]::Min(8, $payload.session_id.Length)) } else { 'unknown' }
+    $sessionId = 'unknown'
+    if ($payload -and $payload.session_id) {
+        $len = [Math]::Min(8, $payload.session_id.Length)
+        $sessionId = $payload.session_id.Substring(0, $len)
+    }
 
-    # 3. Identificar worktree (último segmento do CLAUDE_PROJECT_DIR)
+    # 3. Worktree
     $projectDir = if ($env:CLAUDE_PROJECT_DIR) { $env:CLAUDE_PROJECT_DIR } else { (Get-Location).Path }
     $worktree = Split-Path $projectDir -Leaf
 
     # 4. Timestamp ISO UTC
     $ts = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mmZ")
 
-    # 5. Compor linha
-    $line = "[$ts] $agentName @ $worktree: subagent stopped [session:$sessionId]"
+    # 5. Linha
+    $line = "[$ts] $agentName @ $worktree`: subagent stopped [session:$sessionId]"
 
-    # 6. Caminho do ficheiro de actividade (junction → estado partilhado)
+    # 6. Caminho
     $activityFile = Join-Path $projectDir ".claude\state\recent-activity.md"
+    if (-not (Test-Path $activityFile)) { exit 0 }
 
-    if (-not (Test-Path $activityFile)) {
-        # Se ainda não existe, sair silencioso (estado não inicializado)
-        exit 0
-    }
-
-    # 7. Ler conteúdo, separar header de entradas
-    $content = Get-Content $activityFile -Raw
+    # 7. Ler com UTF-8
+    $content = Get-Content $activityFile -Raw -Encoding UTF8
     $parts = $content -split '(?m)^---\s*$', 2
 
     if ($parts.Count -ne 2) {
-        # Formato inesperado, fazer append simples
-        Add-Content -Path $activityFile -Value $line
+        Add-Content -Path $activityFile -Value $line -Encoding UTF8
         exit 0
     }
 
-    $header = $parts[0].TrimEnd() + "`n`n---`n`n"
-    $entries = $parts[1].Trim() -split "`r?`n" | Where-Object { $_ -match '^\[' }
+    $header = $parts[0].TrimEnd() + "`r`n`r`n---`r`n`r`n"
+    $entries = @($parts[1].Trim() -split "`r?`n" | Where-Object { $_ -match '^\[' })
 
-    # 8. Inserir nova linha no topo, manter máx 20
+    # 8. Insert no topo, max 20
     $newEntries = @($line) + $entries
     if ($newEntries.Count -gt 20) {
         $newEntries = $newEntries[0..19]
     }
 
-    # 9. Reescrever ficheiro
-    $output = $header + ($newEntries -join "`n") + "`n"
-    Set-Content -Path $activityFile -Value $output -NoNewline
+    # 9. Reescrever (UTF-8 sem BOM)
+    $output = $header + ($newEntries -join "`r`n") + "`r`n"
+    [System.IO.File]::WriteAllText($activityFile, $output, [System.Text.UTF8Encoding]::new($false))
 
     exit 0
 }
 catch {
-    # Não-blocking: erros aqui não devem impedir o trabalho do Claude
-    Write-Error "subagent-stop hook error: $_"
+    Write-Error ("subagent-stop hook error: {0}" -f $_.Exception.Message)
     exit 1
 }
