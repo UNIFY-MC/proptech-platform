@@ -119,6 +119,36 @@
 
 ---
 
+| Campo | Valor |
+|---|---|
+| **Data** | 2026-05-01 |
+| **Owner** | CTO |
+| **Decisão** | P0 security audit: `VITE_ANTHROPIC_API_KEY` em `App.jsx` (browser-side) viola ADR-004. Risk actual LOW (não deployed), risk futuro CRITICAL |
+| **Racional** | Audit pre-Sprint B build revelou 7 referências a direct Anthropic fetch do browser em `apps/v5-manutencao/src/App.jsx`. Key value não está em git. |
+| **Status** | ⚠️ TODO pre-launch — blocker para V5 production deploy |
+
+---
+
+| Campo | Valor |
+|---|---|
+| **Data** | 2026-05-01 |
+| **Owner** | Mário |
+| **Decisão** | Sprint B build aprovado: usa workspace key `ci-watchers` separada (sem `VITE_` prefix), zero overlap com `App.jsx` |
+| **Racional** | `App.jsx` refactor é pre-launch concern, não bloqueia Sprint B — os watchers correm em CI server-side, não no browser |
+| **Status** | ✅ Approved |
+
+---
+
+| Campo | Valor |
+|---|---|
+| **Data** | 2026-05-01 |
+| **Owner** | CTO |
+| **Decisão** | 7 architecture decisions Sprint B aprovadas: 3 workflows separados, healthcheck 4º, hybrid output (artifact + Issue), `ANTHROPIC_API_KEY` sem `VITE_` |
+| **Racional** | Ver `.claude/strategy/sprint-b-architecture.md` — matrix não suporta crons mistos; hybrid output resolve mobile sync sem poluir git history |
+| **Status** | ✅ Approved |
+
+---
+
 ## Template para novas entradas
 
 ```

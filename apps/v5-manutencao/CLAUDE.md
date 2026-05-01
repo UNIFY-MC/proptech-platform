@@ -264,6 +264,32 @@ Para saudações e display, usar sempre `useAuth().pessoa.primeiro_nome` directa
 
 ---
 
+## Pre-launch security checklist (BLOCKER)
+
+### P0 — Anthropic API key exposure (CTO audit 2026-05-01)
+
+**Status:** OPEN. **Blocker para deploy production.**
+
+**Descoberto em:** `App.jsx` linhas 4206, 4210, 4221, 4481, 4525, 4825, 4827 fazem `import.meta.env.VITE_ANTHROPIC_API_KEY` e fetch directo Anthropic do browser. Viola ADR-004 ("Anthropic API calls em Edge Functions, nunca no browser").
+
+**Risk actual:** LOW (V5 não deployed)
+**Risk se deployed:** CRITICAL (key visível em DevTools de qualquer visitor)
+
+**Action plan obrigatório antes de deploy V5:**
+
+1. Refactor `App.jsx` (linhas ~4206-4230 + 5 outras refs):
+   - Substituir direct fetch Anthropic por chamada à Edge Function
+   - Reuse pattern existente (`casa_advisor`, `image_inspector` já usam Edge Functions)
+2. Remover `const ANTHROPIC_KEY` e todas as refs de `App.jsx`
+3. Remover `VITE_ANTHROPIC_API_KEY` de `apps/v5-manutencao/.env.local`
+4. Audit final: `grep "VITE_ANTHROPIC" apps/v5-manutencao/src/` deve retornar zero matches
+
+**Não rotacionar key:** valor nunca foi exposto em git nem em production.
+
+**Tracked:** `.claude/current/decisions-log.md` 2026-05-01 + `.claude/strategy/sprint-b-architecture.md`
+
+---
+
 ## Pre-launch checklist (antes do primeiro cliente real)
 
 - [x] ~~Implementar auth real~~ ✅ 3.4A
