@@ -7,7 +7,7 @@
 
 ## Sprint Activa: 1D — Receipt Trojan Horse Alpha
 
-**Estado:** Day 5/5.5/5.6 ✅ shipped — "Registar trabalho" UI + equipamento dropdown + naming pivot. Day 6-7 = R2 outreach alpha owners.
+**Estado:** Day 5/5.5/5.6/5.7 ✅ shipped — mixed feed lifecycle pending+completed+expired + 2 realtime channels. Day 6-7 = R2 outreach alpha owners.
 **Sprint window:** 2026-05-01 → 2026-05-15 (14 dias)
 **Docs:** `.claude/sprints/1D-receipt-trojan-horse/`
 
@@ -23,6 +23,7 @@
 | Day 5 | ✅ | UI owner-side: "Registar trabalho" + modal 3 campos + link WhatsApp + above-fold |
 | Day 5.5 | ✅ | Linkagem equipamento_id — dropdown modal + edge fn v2 + card embed |
 | Day 5.6 | ✅ | Naming pivot UI: "registar trabalho" (Camada 1) vs "recibo fiscal" (Camada 2) |
+| Day 5.7 | ✅ | Mixed feed lifecycle — pending (🟡) + completed (🟢) + expired (🔴) + realtime 2 canais |
 | Day 6 | 🔜 | R2 outreach 5 alpha owners — partilha magic link + CMO naming background |
 | Day 7 | 🔜 | Gate: ≥1 owner externo aceitou; flow funciona no telefone |
 

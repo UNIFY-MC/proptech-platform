@@ -37,6 +37,16 @@
 
 ---
 
+| Campo | Valor |
+|---|---|
+| **Data** | 2026-05-01 |
+| **Owner** | Mário + CTO |
+| **Decisão** | Day 5.7 — Mixed feed lifecycle (pending + completed) à Jobber/Shipshape |
+| **Racional** | Owner vê magic_links pending + recibos completed num único feed cronológico com badges. Badges: 🟡 "Aguardando prestador · há X min", 🔴 "Expirado", 🟢 "Concluído". Realtime 2 canais (recibos_servico INSERT + magic_links INSERT/UPDATE). Header counter: N pendentes (amber) > N novos 24h (green). Action buttons em pending (Cancelar/Reenviar) diferidos Sprint 1E. |
+| **Status** | ✅ Done |
+
+---
+
 ## 2026-04-30
 
 | Campo | Valor |

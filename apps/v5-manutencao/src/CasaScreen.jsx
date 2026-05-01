@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { supa } from './supa.js'
 
 import HeroHeader from './HeroHeader.jsx'
@@ -135,8 +135,9 @@ export default function CasaScreen({ equipamentos, authUser, onNavigate, onHambu
 
   const [alertasMeteo, setAlertasMeteo] = useState([])
   const [faturas, setFaturas]           = useState(null)
-  const [recibos, setRecibos]           = useState([])
-  const [recibosNovos, setRecibosNovos] = useState(0)
+  const [recibos, setRecibos]                   = useState([])
+  const [recibosNovos, setRecibosNovos]         = useState(0)
+  const [magicLinksPending, setMagicLinksPending] = useState([])
   const [convidarOpen, setConvidarOpen]       = useState(false)
   const [convidarForm, setConvidarForm]       = useState({ tipo_servico: '', valor_eur: '', data_servico: new Date().toISOString().slice(0, 10) })
   const [convidarResult, setConvidarResult]   = useState(null)
@@ -175,56 +176,70 @@ export default function CasaScreen({ equipamentos, authUser, onNavigate, onHambu
     return () => { active = false }
   }, [loc?.id])
 
-  // Fetch top-5 recibos do owner (Sprint 1D Day 4)
-  useEffect(() => {
-    if (!pessoa_id) return
-    let active = true
-    supa.schema('v5_manutencao')
+  // Fetch functions nomeadas para reutilizar no realtime (Sprint 1D Day 5.7)
+  const fetchRecibos = async () => {
+    const { data, error } = await supa.schema('v5_manutencao')
       .from('recibos_servico')
       .select('id, tipo_servico, valor_eur, data_servico, status, created_at, prestador:prestadores_parceiros(nome_completo, nif), equipamento:equipamentos(nome, marca)')
       .eq('owner_pessoa_id', pessoa_id)
       .order('created_at', { ascending: false })
       .limit(5)
-      .then(({ data, error }) => {
-        if (!active) return
-        if (error) { console.error('[recibos fetch]', error); return }
-        setRecibos(data || [])
-        const since = new Date(Date.now() - 24 * 60 * 60 * 1000)
-        setRecibosNovos((data || []).filter(r => new Date(r.created_at) > since).length)
-      })
-    return () => { active = false }
+    if (error) { console.error('[recibos fetch]', error); return }
+    setRecibos(data || [])
+    const since = new Date(Date.now() - 24 * 60 * 60 * 1000)
+    setRecibosNovos((data || []).filter(r => new Date(r.created_at) > since).length)
+  }
+
+  const fetchPendingLinks = async () => {
+    const { data } = await supa.schema('v5_manutencao')
+      .from('magic_links')
+      .select('id, tipo_servico, valor_eur, data_servico, equipamento_id, created_at, expires_at, used_at, equipamento:equipamentos(nome, marca)')
+      .eq('owner_pessoa_id', pessoa_id)
+      .is('used_at', null)
+      .order('created_at', { ascending: false })
+      .limit(5)
+    setMagicLinksPending(data || [])
+  }
+
+  // Mount: fetch recibos + magic_links pending em paralelo (Sprint 1D Day 4 + 5.7)
+  useEffect(() => {
+    if (!pessoa_id) return
+    fetchRecibos()
+    fetchPendingLinks()
   }, [pessoa_id])
 
-  // Realtime subscribe — primeiro canal realtime V5 (Sprint 1D Day 4)
+  // Realtime canal 1 — recibos_servico INSERT (Sprint 1D Day 4)
   useEffect(() => {
     if (!pessoa_id) return
     const channel = supa.channel(`recibos:owner:${pessoa_id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'v5_manutencao',
-          table: 'recibos_servico',
-          filter: `owner_pessoa_id=eq.${pessoa_id}`,
-        },
-        (payload) => {
-          console.log('[realtime] new recibo received:', payload.new.id)
-          supa.schema('v5_manutencao')
-            .from('recibos_servico')
-            .select('id, tipo_servico, valor_eur, data_servico, status, created_at, prestador:prestadores_parceiros(nome_completo, nif), equipamento:equipamentos(nome, marca)')
-            .eq('owner_pessoa_id', pessoa_id)
-            .order('created_at', { ascending: false })
-            .limit(5)
-            .then(({ data }) => {
-              if (data) {
-                setRecibos(data)
-                setRecibosNovos(prev => prev + 1)
-              }
-            })
-        }
-      )
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'v5_manutencao',
+        table: 'recibos_servico',
+        filter: `owner_pessoa_id=eq.${pessoa_id}`,
+      }, () => {
+        fetchRecibos()
+        fetchPendingLinks()
+      })
       .subscribe()
     return () => { supa.removeChannel(channel) }
+  }, [pessoa_id])
+
+  // Realtime canal 2 — magic_links INSERT + UPDATE (Sprint 1D Day 5.7)
+  useEffect(() => {
+    if (!pessoa_id) return
+    const ch = supa.channel(`magic_links:owner:${pessoa_id}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'v5_manutencao',
+        table: 'magic_links',
+        filter: `owner_pessoa_id=eq.${pessoa_id}`,
+      }, () => {
+        fetchPendingLinks()
+        fetchRecibos()
+      })
+      .subscribe()
+    return () => { supa.removeChannel(ch) }
   }, [pessoa_id])
 
   // Fetch equipamentos da localização activa quando modal abre (Sprint 1D Day 5.5)
@@ -286,6 +301,40 @@ export default function CasaScreen({ equipamentos, authUser, onNavigate, onHambu
       setConvidarError('Copia manualmente: ' + convidarResult.url)
     }
   }
+
+  const formatRelative = (ts) => {
+    const min = Math.floor((Date.now() - new Date(ts)) / 60000)
+    if (min < 1) return 'agora'
+    if (min < 60) return `há ${min} min`
+    const h = Math.floor(min / 60)
+    if (h < 24) return `há ${h}h`
+    return `há ${Math.floor(h / 24)}d`
+  }
+
+  const trabalhosUnified = useMemo(() => {
+    const pendentes = magicLinksPending.map(ml => ({
+      type: 'pending',
+      id: `ml-${ml.id}`,
+      tipo_servico: ml.tipo_servico,
+      valor_eur: ml.valor_eur,
+      data_servico: ml.data_servico,
+      equipamento: ml.equipamento,
+      created_at: ml.created_at,
+      isExpired: new Date(ml.expires_at) <= new Date(),
+    }))
+    const completos = recibos.map(r => ({
+      type: 'completed',
+      id: `r-${r.id}`,
+      tipo_servico: r.tipo_servico,
+      valor_eur: r.valor_eur,
+      data_servico: r.data_servico,
+      equipamento: r.equipamento,
+      prestador: r.prestador,
+      created_at: r.created_at,
+    }))
+    return [...pendentes, ...completos]
+      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+  }, [magicLinksPending, recibos])
 
   const scores = loc ? [
     ['🔥', 'AVAC',      loc.score_avac      ?? 0],
@@ -448,12 +497,20 @@ export default function CasaScreen({ equipamentos, authUser, onNavigate, onHambu
         ))}
       </div>
 
-      {/* TRABALHOS RECENTES — Camada 1 Receipt Trojan Horse (Sprint 1D Day 5) */}
+      {/* TRABALHOS RECENTES — mixed feed lifecycle (Sprint 1D Day 5 + 5.7) */}
       <section style={{ margin: '10px 12px 0' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
           <div style={{ fontSize: 14, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
             Trabalhos recentes
-            {recibosNovos > 0 && (
+            {magicLinksPending.length > 0 ? (
+              <span style={{
+                background: '#854F0B', color: '#fff',
+                borderRadius: 12, padding: '2px 8px',
+                fontSize: 11, fontWeight: 600,
+              }}>
+                {magicLinksPending.length} pendente{magicLinksPending.length > 1 ? 's' : ''}
+              </span>
+            ) : recibosNovos > 0 ? (
               <span style={{
                 background: CASA.green, color: '#fff',
                 borderRadius: 12, padding: '2px 8px',
@@ -461,7 +518,7 @@ export default function CasaScreen({ equipamentos, authUser, onNavigate, onHambu
               }}>
                 {recibosNovos} novo{recibosNovos > 1 ? 's' : ''}
               </span>
-            )}
+            ) : null}
           </div>
           <button
             onClick={() => setConvidarOpen(true)}
@@ -475,7 +532,7 @@ export default function CasaScreen({ equipamentos, authUser, onNavigate, onHambu
           </button>
         </div>
 
-        {recibos.length === 0 ? (
+        {trabalhosUnified.length === 0 ? (
           <div style={{
             background: '#fff', border: `1.5px dashed ${CASA.greenLt}`,
             borderRadius: 12, padding: '16px 14px',
@@ -502,41 +559,66 @@ export default function CasaScreen({ equipamentos, authUser, onNavigate, onHambu
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-            {recibos.map(r => (
-              <button
-                key={r.id}
-                onClick={() => onNavigate?.('recibo-detail', { reciboId: r.id })}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 10,
-                  background: '#fff', border: `1px solid ${CASA.border}`,
-                  borderRadius: 11, padding: '10px 12px',
-                  cursor: 'pointer', width: '100%', textAlign: 'left',
-                }}
-              >
-                <span style={{
-                  width: 38, height: 38, borderRadius: 19, flexShrink: 0,
-                  background: CASA.greenXl,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 17,
-                }}>🔧</span>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 12.5, fontWeight: 600, color: '#18160F', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {r.tipo_servico}
-                  </div>
-                  {r.equipamento && (
-                    <div style={{ fontSize: 10.5, color: CASA.greenMid, marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      📦 {r.equipamento.nome}{r.equipamento.marca ? ` · ${r.equipamento.marca}` : ''}
+            {trabalhosUnified.map(item => {
+              const isPending   = item.type === 'pending'
+              const isExpired   = isPending && item.isExpired
+              const badgeBg     = isExpired ? CASA.red : isPending ? '#854F0B' : CASA.greenMid
+              const badgeLabel  = isExpired
+                ? '🔴 Expirado'
+                : isPending
+                  ? `🟡 Aguardando prestador · ${formatRelative(item.created_at)}`
+                  : '🟢 Concluído'
+              const iconBg      = isExpired ? CASA.redLt : isPending ? CASA.amberLt : CASA.greenXl
+              const iconEmoji   = isExpired ? '⏰' : isPending ? '⏳' : '🔧'
+
+              return (
+                <div
+                  key={item.id}
+                  style={{
+                    background: '#fff', border: `1px solid ${CASA.border}`,
+                    borderRadius: 11, padding: '10px 12px',
+                    opacity: isExpired ? 0.72 : 1,
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span style={{
+                      width: 38, height: 38, borderRadius: 19, flexShrink: 0,
+                      background: iconBg,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: 17,
+                    }}>{iconEmoji}</span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 12.5, fontWeight: 600, color: '#18160F', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {item.tipo_servico}
+                      </div>
+                      {item.equipamento && (
+                        <div style={{ fontSize: 10.5, color: CASA.greenMid, marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          📦 {item.equipamento.nome}{item.equipamento.marca ? ` · ${item.equipamento.marca}` : ''}
+                        </div>
+                      )}
+                      <div style={{ fontSize: 11, color: '#6B7685', marginTop: 2 }}>
+                        {isPending
+                          ? new Date(item.data_servico).toLocaleDateString('pt-PT', { day: 'numeric', month: 'short' })
+                          : `${item.prestador?.nome_completo || 'Prestador'} · ${new Date(item.data_servico).toLocaleDateString('pt-PT', { day: 'numeric', month: 'short' })}`
+                        }
+                      </div>
                     </div>
-                  )}
-                  <div style={{ fontSize: 11, color: '#6B7685', marginTop: 2 }}>
-                    {r.prestador?.nome_completo || 'Prestador'} · {new Date(r.data_servico).toLocaleDateString('pt-PT', { day: 'numeric', month: 'short' })}
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: CASA.green, fontFamily: "'JetBrains Mono', monospace" }}>
+                        €{Number(item.valor_eur).toFixed(2).replace('.', ',')}
+                      </span>
+                      <span style={{
+                        background: badgeBg, color: '#fff',
+                        borderRadius: 8, padding: '2px 6px',
+                        fontSize: 9.5, fontWeight: 600, whiteSpace: 'nowrap',
+                      }}>
+                        {badgeLabel}
+                      </span>
+                    </div>
                   </div>
                 </div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: CASA.green, fontFamily: "'JetBrains Mono', monospace", flexShrink: 0 }}>
-                  €{Number(r.valor_eur).toFixed(2).replace('.', ',')}
-                </div>
-              </button>
-            ))}
+              )
+            })}
           </div>
         )}
       </section>
