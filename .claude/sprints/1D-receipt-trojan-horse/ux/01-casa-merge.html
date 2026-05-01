@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mockup 01 — CasaScreen (Casa+Início merge)</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f4f3f0; --surface: #fff; --surface2: #f0eeeb;
+    --border: rgba(0,0,0,0.08); --text: #18160f; --muted: #6b6458;
+    --blue: #1a5296; --green: #2d6a4f; --gold: #8c6508;
+    --red: #8b1a1a; --purple: #6b4fa0;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #e8e6e2; display: flex; justify-content: center; padding: 32px 16px; font-family: Inter, sans-serif; }
+  .phone {
+    width: 390px; background: var(--bg); border-radius: 40px;
+    box-shadow: 0 24px 64px rgba(0,0,0,.25); overflow: hidden;
+    display: flex; flex-direction: column; min-height: 844px;
+  }
+  .status-bar { height: 44px; background: var(--surface); display: flex; align-items: center; justify-content: space-between; padding: 0 20px; font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 600; color: var(--text); }
+  .screen { flex: 1; overflow-y: auto; background: var(--bg); padding-bottom: 80px; }
+  /* Header */
+  .hero { background: var(--surface); padding: 16px 20px 12px; border-bottom: 1px solid var(--border); }
+  .hero-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  .greeting { font-size: 18px; font-weight: 700; color: var(--text); }
+  .settings-btn { width: 32px; height: 32px; border-radius: 8px; background: var(--surface2); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 16px; }
+  /* Imovel selector */
+  .imovel-selector { display: flex; align-items: center; gap: 8px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; cursor: pointer; }
+  .imovel-selector-icon { font-size: 16px; }
+  .imovel-selector-name { font-size: 13px; font-weight: 600; color: var(--text); flex: 1; }
+  .imovel-selector-arrow { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--muted); }
+  /* Score card */
+  .score-card { margin: 12px 20px 0; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; }
+  .score-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  .score-label { font-size: 10px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-family: 'JetBrains Mono', monospace; }
+  .score-value { font-size: 28px; font-weight: 700; color: var(--green); font-family: 'JetBrains Mono', monospace; }
+  .score-sub { font-size: 11px; color: var(--muted); }
+  .score-bar-bg { height: 6px; background: var(--surface2); border-radius: 3px; }
+  .score-bar-fill { height: 6px; background: var(--green); border-radius: 3px; width: 78%; }
+  /* Alerta */
+  .alerta { margin: 10px 20px 0; background: #fff8e7; border: 1px solid rgba(140,101,8,.2); border-radius: 8px; padding: 10px 12px; display: flex; align-items: flex-start; gap: 8px; }
+  .alerta-icon { font-size: 14px; flex-shrink: 0; margin-top: 1px; }
+  .alerta-text { font-size: 12px; color: var(--gold); font-weight: 500; line-height: 1.4; }
+  /* Weather */
+  .weather { margin: 10px 20px 0; background: linear-gradient(135deg, #e8f4fd 0%, #dceeff 100%); border: 1px solid rgba(26,82,150,.12); border-radius: 8px; padding: 10px 14px; display: flex; align-items: center; gap: 10px; }
+  .weather-icon { font-size: 22px; }
+  .weather-info { flex: 1; }
+  .weather-loc { font-size: 11px; color: var(--blue); font-weight: 600; text-transform: uppercase; font-family: 'JetBrains Mono', monospace; letter-spacing: .06em; }
+  .weather-temp { font-size: 20px; font-weight: 700; color: var(--blue); font-family: 'JetBrains Mono', monospace; }
+  .weather-desc { font-size: 11px; color: var(--muted); }
+  /* Section divider */
+  .section-divider { margin: 16px 20px 8px; display: flex; align-items: center; gap: 10px; }
+  .section-divider-line { flex: 1; height: 1px; background: var(--border); }
+  .section-divider-label { font-size: 9px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); font-family: 'JetBrains Mono', monospace; white-space: nowrap; }
+  /* Meus Prestadores */
+  .cta-card { margin: 0 20px 8px; background: var(--surface); border: 1.5px dashed var(--border); border-radius: 10px; padding: 14px 16px; display: flex; align-items: center; gap: 12px; cursor: pointer; transition: border-color .15s; }
+  .cta-card:hover { border-color: var(--blue); }
+  .cta-card-icon { width: 36px; height: 36px; background: rgba(26,82,150,.08); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+  .cta-card-text .title { font-size: 13px; font-weight: 600; color: var(--blue); }
+  .cta-card-text .sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  /* Prestador card */
+  .prestador-card { margin: 0 20px 8px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px 16px; display: flex; align-items: center; gap: 12px; }
+  .prestador-avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--surface2); display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; color: var(--muted); flex-shrink: 0; }
+  .prestador-info { flex: 1; }
+  .prestador-name { font-size: 13px; font-weight: 600; color: var(--text); }
+  .prestador-meta { font-size: 11px; color: var(--muted); font-family: 'JetBrains Mono', monospace; margin-top: 2px; }
+  .badge { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 4px; font-size: 9px; font-weight: 600; font-family: 'JetBrains Mono', monospace; text-transform: uppercase; letter-spacing: .06em; }
+  .badge-green { background: rgba(45,106,79,.1); color: var(--green); }
+  .wa-btn { background: #25D366; color: #fff; border: none; border-radius: 6px; padding: 6px 10px; font-size: 11px; font-weight: 600; cursor: pointer; flex-shrink: 0; }
+  /* Casa section */
+  .casa-row { margin: 0 20px 8px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 13px 16px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; }
+  .casa-row-left { display: flex; align-items: center; gap: 10px; }
+  .casa-row-icon { font-size: 18px; }
+  .casa-row-title { font-size: 13px; font-weight: 600; color: var(--text); }
+  .casa-row-count { font-size: 11px; font-family: 'JetBrains Mono', monospace; color: var(--muted); background: var(--surface2); padding: 2px 7px; border-radius: 4px; }
+  .casa-row-arrow { color: var(--muted); font-size: 14px; }
+  /* Bottom nav */
+  .bottom-nav { position: sticky; bottom: 0; background: var(--surface); border-top: 1px solid var(--border); display: flex; padding: 8px 0 20px; z-index: 10; }
+  .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 4px 0; cursor: pointer; }
+  .nav-icon { font-size: 20px; }
+  .nav-label { font-size: 9px; font-weight: 500; color: var(--muted); font-family: 'JetBrains Mono', monospace; text-transform: uppercase; letter-spacing: .06em; }
+  .nav-item.active .nav-label { color: var(--blue); }
+  .nav-item.active .nav-icon { filter: sepia(1) hue-rotate(190deg) saturate(3); }
+  /* Annotation */
+  .annotation { position: relative; }
+  .annotation::after { content: attr(data-note); position: absolute; right: -140px; top: 50%; transform: translateY(-50%); background: #fffbe6; border: 1px solid #e8d800; border-radius: 6px; padding: 4px 8px; font-size: 10px; color: #666; width: 130px; line-height: 1.3; white-space: normal; pointer-events: none; }
+  .label { background: #f0f4ff; border: 1px solid #b3c8ff; border-radius: 6px; padding: 3px 8px; font-size: 9px; color: #1a5296; font-weight: 600; margin: 4px 20px 0; display: inline-block; font-family: 'JetBrains Mono', monospace; text-transform: uppercase; letter-spacing: .06em; }
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="status-bar">
+    <span>9:41</span>
+    <span>●●●</span>
+  </div>
+  <div class="screen">
+    <!-- Hero header (from IniciaScreen) -->
+    <div class="hero">
+      <div class="hero-top">
+        <span class="greeting">Bom dia, Amélia ☀️</span>
+        <button class="settings-btn">⚙</button>
+      </div>
+      <div class="imovel-selector">
+        <span class="imovel-selector-icon">🏠</span>
+        <span class="imovel-selector-name">Apartamento Almada</span>
+        <span class="imovel-selector-arrow">▼</span>
+      </div>
+    </div>
+
+    <!-- Score card (from IniciaScreen) -->
+    <span class="label" style="margin-top:12px">← de IniciaScreen</span>
+    <div class="score-card">
+      <div class="score-row">
+        <span class="score-label">Score da casa</span>
+        <span class="score-value">78</span>
+      </div>
+      <div class="score-row" style="margin-bottom:6px">
+        <span class="score-sub">Bom estado — 3 alertas activos</span>
+        <span class="score-sub" style="color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:10px">/100</span>
+      </div>
+      <div class="score-bar-bg"><div class="score-bar-fill"></div></div>
+    </div>
+
+    <!-- Alerta predictivo (from IniciaScreen) -->
+    <div class="alerta">
+      <span class="alerta-icon">⚠️</span>
+      <span class="alerta-text">Caldeira sem revisão há 14 meses. Avaria em Fev prevista com 78% confiança.</span>
+    </div>
+
+    <!-- Weather (from IniciaScreen) -->
+    <div class="weather">
+      <span class="weather-icon">🌤</span>
+      <div class="weather-info">
+        <div class="weather-loc">Lisboa · Almada</div>
+        <div class="weather-temp">22°C</div>
+        <div class="weather-desc">Sem chuva prevista · Vento 14km/h</div>
+      </div>
+    </div>
+
+    <!-- SECÇÃO NOVA: Meus Prestadores (Receipt Trojan Horse) -->
+    <span class="label" style="color:#2d6a4f;border-color:#a3d4b8;background:#f0fff4">← NOVO (Sprint 1D)</span>
+    <div class="section-divider">
+      <div class="section-divider-line"></div>
+      <span class="section-divider-label">Meus Prestadores</span>
+      <div class="section-divider-line"></div>
+    </div>
+
+    <!-- CTA card: registar serviço -->
+    <div class="cta-card">
+      <div class="cta-card-icon">+</div>
+      <div class="cta-card-text">
+        <div class="title">Registar serviço pago</div>
+        <div class="sub">Envie link ao prestador para emitir recibo</div>
+      </div>
+    </div>
+
+    <!-- Prestador confirmado (estado após onboarding) -->
+    <div class="prestador-card">
+      <div class="prestador-avatar">ZC</div>
+      <div class="prestador-info">
+        <div class="prestador-name">Zé Canaliz</div>
+        <div class="prestador-meta">Canalização · 28 Abr · <span style="color:var(--green)">€80</span></div>
+        <span class="badge badge-green" style="margin-top:4px">✓ Recibo arquivado</span>
+      </div>
+      <button class="wa-btn">WA</button>
+    </div>
+
+    <div class="prestador-card">
+      <div class="prestador-avatar">JE</div>
+      <div class="prestador-info">
+        <div class="prestador-name">João Elect.</div>
+        <div class="prestador-meta">Electricidade · 12 Mar · <span style="color:var(--green)">€120</span></div>
+        <span class="badge badge-green" style="margin-top:4px">✓ Recibo arquivado</span>
+      </div>
+      <button class="wa-btn">WA</button>
+    </div>
+
+    <!-- SECÇÃO EXISTENTE: A Sua Casa (from CasaScreen) -->
+    <span class="label" style="margin-top:4px">← de CasaScreen</span>
+    <div class="section-divider" style="margin-top:12px">
+      <div class="section-divider-line"></div>
+      <span class="section-divider-label">A Sua Casa</span>
+      <div class="section-divider-line"></div>
+    </div>
+
+    <div class="casa-row">
+      <div class="casa-row-left">
+        <span class="casa-row-icon">🔧</span>
+        <span class="casa-row-title">Equipamentos</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="casa-row-count">3</span>
+        <span class="casa-row-arrow">›</span>
+      </div>
+    </div>
+    <div class="casa-row">
+      <div class="casa-row-left">
+        <span class="casa-row-icon">📄</span>
+        <span class="casa-row-title">Documentos</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="casa-row-count">7</span>
+        <span class="casa-row-arrow">›</span>
+      </div>
+    </div>
+    <div class="casa-row">
+      <div class="casa-row-left">
+        <span class="casa-row-icon">📋</span>
+        <span class="casa-row-title">Histórico de serviços</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="casa-row-count">12</span>
+        <span class="casa-row-arrow">›</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom nav — tab Casa activa (tab Início removida) -->
+  <div class="bottom-nav">
+    <div class="nav-item active">
+      <span class="nav-icon">🏠</span>
+      <span class="nav-label">Casa</span>
+    </div>
+    <div class="nav-item">
+      <span class="nav-icon">🔧</span>
+      <span class="nav-label">Pedidos</span>
+    </div>
+    <div class="nav-item">
+      <span class="nav-icon">🔔</span>
+      <span class="nav-label">Alertas</span>
+    </div>
+    <div class="nav-item">
+      <span class="nav-icon">👤</span>
+      <span class="nav-label">Perfil</span>
+    </div>
+  </div>
+</div>
+</body>
+</html>

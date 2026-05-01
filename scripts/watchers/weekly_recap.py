@@ -3,14 +3,19 @@
 Weekly-recap watcher (Sprint B Lite).
 Friday 17h Lisboa run. Aggregates week activity + KR delta.
 Model: Sonnet (strategic analysis, ~$0.05/run = $0.20/month).
+Auto-syncs issue_body to Notion dashboard as a comment when NOTION_API_KEY is set.
 """
 import os
 import sys
 import json
 import subprocess
+import urllib.request
+import urllib.error
 from datetime import datetime, timezone
 from pathlib import Path
 import anthropic
+
+NOTION_PAGE_ID = "35384147-fa60-812c-8ffd-c2908ce22ef8"
 
 REPO_ROOT = Path(__file__).parent.parent.parent
 
@@ -61,6 +66,46 @@ Return ONLY valid JSON. No preamble. No markdown fences.
   "full_recap": "≤1500 tokens. Detailed weekly summary with: shipped breakdown, KR analysis, blocker investigation, next week tactical plan, strategic narrative."
 }}
 """
+
+
+def post_notion_comment(text: str) -> bool:
+    """POST recap summary as a comment on the Notion dashboard page. Returns True on success."""
+    api_key = os.environ.get("NOTION_API_KEY")
+    if not api_key:
+        print("[notion] NOTION_API_KEY not set — skipping Notion sync", file=sys.stderr)
+        return False
+
+    # Notion rich_text blocks have a 2000-char limit per block; split if needed
+    chunks = [text[i:i+2000] for i in range(0, len(text), 2000)]
+    rich_text = [{"type": "text", "text": {"content": chunk}} for chunk in chunks]
+
+    payload = json.dumps({
+        "parent": {"page_id": NOTION_PAGE_ID},
+        "rich_text": rich_text,
+    }).encode("utf-8")
+
+    req = urllib.request.Request(
+        "https://api.notion.com/v1/comments",
+        data=payload,
+        headers={
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+            "Notion-Version": "2022-06-28",
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            status = resp.status
+            print(f"[notion] Comment posted — HTTP {status}", file=sys.stderr)
+            return status == 200
+    except urllib.error.HTTPError as e:
+        body = e.read().decode("utf-8", errors="replace")
+        print(f"[notion] HTTPError {e.code}: {body}", file=sys.stderr)
+        return False
+    except Exception as e:
+        print(f"[notion] Error: {e}", file=sys.stderr)
+        return False
 
 
 def call_anthropic(user_msg: str):
@@ -125,6 +170,9 @@ def main():
 
     print(f"[ok] Recap: {recap_path}", file=sys.stderr)
     print(f"[ok] Issue body: /tmp/issue_body.md", file=sys.stderr)
+
+    notion_text = f"**{data['issue_title']}**\n\n{data['issue_body']}"
+    post_notion_comment(notion_text)
 
 
 if __name__ == "__main__":

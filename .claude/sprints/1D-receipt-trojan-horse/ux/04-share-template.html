@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mockup 04 — ReceiptConfirmadoScreen + WhatsApp share template</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f4f3f0; --surface: #fff; --surface2: #f0eeeb;
+    --border: rgba(0,0,0,0.08); --text: #18160f; --muted: #6b6458;
+    --blue: #1a5296; --green: #2d6a4f;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #e8e6e2; display: flex; gap: 32px; justify-content: center; padding: 32px; flex-wrap: wrap; font-family: Inter, sans-serif; align-items: flex-start; }
+  .col { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .phone {
+    width: 360px; background: var(--bg); border-radius: 36px;
+    box-shadow: 0 20px 56px rgba(0,0,0,.2); overflow: hidden;
+    display: flex; flex-direction: column;
+  }
+  .status-bar { height: 44px; background: var(--surface); display: flex; align-items: center; justify-content: space-between; padding: 0 20px; font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 600; color: var(--text); }
+  .screen { flex: 1; background: var(--bg); }
+  .phone-label { text-align: center; font-size: 11px; font-family: 'JetBrains Mono', monospace; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
+
+  /* ── CONFIRMATION SCREEN ── */
+  .confirm-screen { display: flex; flex-direction: column; min-height: 640px; }
+  .confirm-header { background: var(--green); padding: 28px 20px 20px; color: #fff; text-align: center; }
+  .confirm-check { width: 56px; height: 56px; border-radius: 50%; background: rgba(255,255,255,.2); display: flex; align-items: center; justify-content: center; margin: 0 auto 14px; font-size: 26px; }
+  .confirm-title { font-size: 20px; font-weight: 700; margin-bottom: 6px; }
+  .confirm-sub { font-size: 13px; opacity: .85; line-height: 1.4; }
+  .confirm-body { flex: 1; padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+  .receipt-card { background: var(--surface); border-radius: 10px; border: 1px solid var(--border); overflow: hidden; }
+  .receipt-card-header { background: var(--surface2); padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; }
+  .receipt-card-header .title { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; font-family: 'JetBrains Mono', monospace; color: var(--muted); }
+  .receipt-card-header .badge { font-size: 9px; font-weight: 600; font-family: 'JetBrains Mono', monospace; padding: 2px 8px; border-radius: 4px; background: rgba(45,106,79,.1); color: var(--green); text-transform: uppercase; letter-spacing: .05em; }
+  .receipt-rows { padding: 12px 14px; }
+  .receipt-row { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; font-size: 13px; }
+  .receipt-row:not(:last-child) { border-bottom: 1px solid var(--border); }
+  .receipt-row .lbl { color: var(--muted); font-size: 12px; }
+  .receipt-row .val { font-family: 'JetBrains Mono', monospace; font-weight: 600; font-size: 12px; }
+  .receipt-row.total .val { font-size: 18px; color: var(--green); }
+  .receipt-row.total .lbl { font-weight: 600; color: var(--text); font-size: 13px; }
+  .action-row { display: flex; gap: 10px; }
+  .btn-wa { flex: 1; background: #25D366; color: #fff; border: none; border-radius: 8px; padding: 13px; font-size: 14px; font-weight: 600; cursor: pointer; }
+  .btn-pdf { flex: 1; background: var(--surface2); color: var(--text); border: 1px solid var(--border); border-radius: 8px; padding: 13px; font-size: 13px; font-weight: 600; cursor: pointer; }
+  .info-note { background: var(--surface2); border-radius: 8px; padding: 12px 14px; font-size: 12px; color: var(--muted); line-height: 1.5; text-align: center; }
+  .info-note strong { color: var(--text); }
+
+  /* ── WHATSAPP BUBBLE MOCKUP ── */
+  .wa-box { width: 360px; }
+  .wa-header { background: #075E54; border-radius: 16px 16px 0 0; padding: 14px 16px; display: flex; align-items: center; gap: 10px; }
+  .wa-avatar { width: 38px; height: 38px; border-radius: 50%; background: #25D366; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700; color: #fff; flex-shrink: 0; }
+  .wa-contact { color: #fff; }
+  .wa-contact .name { font-size: 14px; font-weight: 600; }
+  .wa-contact .status { font-size: 11px; opacity: .7; }
+  .wa-body { background: #ECE5DD; padding: 14px 12px; min-height: 220px; border-radius: 0 0 16px 16px; }
+  .wa-bubble { background: #fff; border-radius: 0 10px 10px 10px; padding: 10px 12px; max-width: 290px; box-shadow: 0 1px 3px rgba(0,0,0,.1); margin-bottom: 6px; }
+  .wa-bubble .sender { font-size: 11px; font-weight: 700; color: #075E54; margin-bottom: 5px; }
+  .wa-bubble .msg { font-size: 13px; line-height: 1.5; color: #111; }
+  .wa-bubble .msg a { color: #075E54; text-decoration: underline; font-family: 'JetBrains Mono', monospace; font-size: 11px; word-break: break-all; }
+  .wa-bubble .time { font-size: 10px; color: #888; text-align: right; margin-top: 4px; }
+  .wa-note { background: rgba(255,255,255,.6); border-radius: 8px; padding: 8px 10px; font-size: 10px; color: #555; margin-top: 8px; font-style: italic; text-align: center; }
+  .wa-label { text-align: center; font-size: 11px; font-family: 'JetBrains Mono', monospace; color: var(--muted); margin-top: 8px; text-transform: uppercase; letter-spacing: .08em; }
+
+  /* ── OWNER SIDE — confirmed card update ── */
+  .owner-box { width: 360px; background: #fff; border-radius: 16px; box-shadow: 0 4px 16px rgba(0,0,0,.1); padding: 20px; }
+  .owner-label-bar { font-size: 9px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); font-family: 'JetBrains Mono', monospace; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+  .realtime-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 9px; font-family: 'JetBrains Mono', monospace; color: var(--green); font-weight: 600; }
+  .realtime-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: pulse 1.5s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1}50%{opacity:.3} }
+  .confirmed-card { border: 1px solid rgba(45,106,79,.3); border-radius: 10px; padding: 12px 16px; background: #f8fff9; display: flex; align-items: flex-start; gap: 12px; }
+  .confirmed-avatar { width: 40px; height: 40px; border-radius: 50%; background: rgba(45,106,79,.1); display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; color: var(--green); flex-shrink: 0; }
+  .confirmed-info { flex: 1; }
+  .confirmed-info .t { font-size: 13px; font-weight: 600; color: var(--text); }
+  .confirmed-info .m { font-size: 11px; color: var(--muted); font-family: 'JetBrains Mono', monospace; margin-top: 2px; }
+  .badge-green { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 4px; font-size: 9px; font-weight: 600; font-family: 'JetBrains Mono', monospace; text-transform: uppercase; letter-spacing: .05em; background: rgba(45,106,79,.1); color: var(--green); margin-top: 5px; }
+  .confirmed-actions { display: flex; gap: 6px; margin-top: 8px; }
+  .btn-sm { padding: 5px 10px; border-radius: 5px; font-size: 11px; font-weight: 600; cursor: pointer; border: 1px solid var(--border); background: var(--surface2); color: var(--text); }
+  .notif-strip { background: rgba(45,106,79,.07); border: 1px solid rgba(45,106,79,.2); border-radius: 8px; padding: 10px 12px; margin-top: 10px; display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--green); font-weight: 500; }
+  .owner-label { text-align: center; font-size: 11px; font-family: 'JetBrains Mono', monospace; color: var(--muted); margin-top: 8px; text-transform: uppercase; letter-spacing: .08em; }
+</style>
+</head>
+<body>
+
+<!-- SCREEN: Prestador — ReceiptConfirmadoScreen -->
+<div class="col">
+<div class="phone">
+  <div class="status-bar"><span>9:45</span><span>●●●</span></div>
+  <div class="screen">
+    <div class="confirm-screen">
+      <div class="confirm-header">
+        <div class="confirm-check">✓</div>
+        <div class="confirm-title">Recibo emitido!</div>
+        <div class="confirm-sub">O recibo foi enviado à Amélia e arquivado automaticamente.</div>
+      </div>
+      <div class="confirm-body">
+        <div class="receipt-card">
+          <div class="receipt-card-header">
+            <span class="title">Recibo Digital</span>
+            <span class="badge">✓ Arquivado</span>
+          </div>
+          <div class="receipt-rows">
+            <div class="receipt-row">
+              <span class="lbl">Prestador</span>
+              <span class="val">José Silva</span>
+            </div>
+            <div class="receipt-row">
+              <span class="lbl">NIF</span>
+              <span class="val">123 456 789</span>
+            </div>
+            <div class="receipt-row">
+              <span class="lbl">Serviço</span>
+              <span class="val">Canalização</span>
+            </div>
+            <div class="receipt-row">
+              <span class="lbl">Data</span>
+              <span class="val">28 Abr 2026</span>
+            </div>
+            <div class="receipt-row total">
+              <span class="lbl">Total recebido</span>
+              <span class="val">€ 80,00</span>
+            </div>
+          </div>
+        </div>
+        <div class="action-row">
+          <button class="btn-wa">📲 Enviar por WA</button>
+          <button class="btn-pdf">⬇ PDF</button>
+        </div>
+        <div class="info-note">
+          Os seus dados ficam guardados para <strong>a próxima vez</strong> que a Amélia o contactar.<br>Sem app a instalar.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="phone-label">Screen 5/5 — ReceiptConfirmadoScreen (prestador)</div>
+</div>
+
+<!-- WhatsApp share template (owner → prestador) -->
+<div class="col">
+  <div class="wa-box">
+    <div class="wa-header">
+      <div class="wa-avatar">ZC</div>
+      <div class="wa-contact">
+        <div class="name">Zé Canaliz</div>
+        <div class="status">online</div>
+      </div>
+    </div>
+    <div class="wa-body">
+      <div class="wa-bubble">
+        <div class="sender">Amélia (prataowners.pt)</div>
+        <div class="msg">
+          Olá Zé! Precisava de te pedir o recibo do serviço de canalização de hoje (€80).
+          Preenches aqui em 3 min? 👇<br><br>
+          <a href="#">prataowners.pt/join/a3f7c2</a><br><br>
+          Fica arquivado automaticamente, sem app a instalar.
+        </div>
+        <div class="time">9:32 ✓✓</div>
+      </div>
+      <div class="wa-note">
+        Template gerado pela app · owner cola e envia manualmente via WhatsApp
+      </div>
+    </div>
+  </div>
+  <div class="wa-label">WhatsApp share template (owner → prestador)</div>
+</div>
+
+<!-- Owner side — realtime update após prestador confirmar -->
+<div class="col">
+  <div class="owner-box">
+    <div class="owner-label-bar">
+      CasaScreen · Meus Prestadores
+      <span class="realtime-badge" style="float:right"><span class="realtime-dot"></span> Realtime</span>
+    </div>
+    <div class="confirmed-card">
+      <div class="confirmed-avatar">ZC</div>
+      <div class="confirmed-info">
+        <div class="t">Zé Canaliz · Canalização</div>
+        <div class="m">28 Abr · €80 · NIF 123456789</div>
+        <span class="badge-green">✓ Recibo arquivado</span>
+        <div class="confirmed-actions">
+          <button class="btn-sm">Ver recibo</button>
+          <button class="btn-sm" style="background:#25D366;color:#fff;border-color:#25D366">WA</button>
+        </div>
+      </div>
+    </div>
+    <div class="notif-strip">
+      🔔 Zé Canaliz confirmou o recibo — sem acção necessária
+    </div>
+  </div>
+  <div class="owner-label">Owner view — Realtime update automático</div>
+</div>
+
+</body>
+</html>

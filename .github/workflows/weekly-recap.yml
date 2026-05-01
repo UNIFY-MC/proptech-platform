@@ -32,6 +32,7 @@ jobs:
         id: recap
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          NOTION_API_KEY: ${{ secrets.NOTION_API_KEY }}
         run: python scripts/watchers/weekly_recap.py
 
       - name: Upload recap artifact
