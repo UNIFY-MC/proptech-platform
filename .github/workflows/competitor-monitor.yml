@@ -1,0 +1,82 @@
+name: Competitor Monitor
+
+on:
+  workflow_dispatch:
+  # schedule:
+  #   - cron: '0 8 * * 1'  # Monday 8h UTC = 9h Lisbon (summer) — uncomment after manual run validates
+
+permissions:
+  issues: write
+  contents: read
+  actions: read
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install --quiet anthropic==0.39.0
+
+      - name: Run competitor monitor
+        id: monitor
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: python scripts/watchers/competitor_monitor.py
+
+      - name: Upload digest as artifact
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: competitor-watch-${{ steps.monitor.outputs.week_id }}
+          path: ${{ steps.monitor.outputs.digest_path }}
+          retention-days: 90
+
+      - name: Create success issue
+        if: success()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_TITLE: ${{ steps.monitor.outputs.issue_title }}
+          COST: ${{ steps.monitor.outputs.cost_usd }}
+          TOKENS_IN: ${{ steps.monitor.outputs.tokens_in }}
+          TOKENS_OUT: ${{ steps.monitor.outputs.tokens_out }}
+        run: |
+          cat >> /tmp/issue_body.md << EOF
+
+          ---
+          *Run: [${{ github.run_id }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) · Tokens: $TOKENS_IN in / $TOKENS_OUT out · Cost: \$$COST · [Artifact](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}#artifacts)*
+          EOF
+
+          gh issue create \
+            --title "$ISSUE_TITLE" \
+            --body-file /tmp/issue_body.md \
+            --label "competitor-monitor,automated" \
+            --repo ${{ github.repository }}
+
+      - name: Create failure issue
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          DATE=$(date -u +"%Y-%m-%d %H:%M UTC")
+          gh issue create \
+            --title "🔴 competitor-monitor FAIL $DATE" \
+            --body "Watcher run failed.
+
+          Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+          Likely causes:
+          - ANTHROPIC_API_KEY rotated or workspace credits exhausted
+          - LLM returned invalid JSON (check logs)
+          - Strategy files moved/deleted (.claude/strategy/)
+          - Anthropic API outage (status.anthropic.com)" \
+            --label "competitor-monitor,incident,automated" \
+            --repo ${{ github.repository }}
