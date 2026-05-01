@@ -10354,9 +10354,9 @@ function AuthRouter({ onDemoLogin, onDemoAuth }) {
 export default function App() {
   // ── Magic link detection — Sprint 1D Receipt Trojan Horse ────────────────
   // Lido antes de qualquer hook (é uma const estática, não um hook).
-  // Pattern: /join/{64hex} gerado por gerar-magic-link edge function.
+  // Pattern: /r/join/{64hex} — SHARE_BASE_URL inclui /r, edge fn appende /join/{token}
   const _mlPath = typeof window !== 'undefined' ? window.location.pathname : ''
-  const _mlMatch = _mlPath.match(/^\/join\/([0-9a-f]{64})$/)
+  const _mlMatch = _mlPath.match(/^\/r\/join\/([0-9a-f]{64})$/)
   const isPrestadorOnboarding = !!_mlMatch
   const magicLinkToken = _mlMatch?.[1] || null
 
