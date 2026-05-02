@@ -31,6 +31,42 @@
 
 ---
 
+## 2026-05-02 (16h) — V5 alpha + Dashboard live em Vercel
+
+**URLs em produção:**
+- V5 alpha: https://proptech-v5-alpha.vercel.app
+- Dashboard agentic-ops: https://proptech-agentic-ops.vercel.app
+
+**Configuração V5 (Vercel):**
+- Framework: Vite 6 + React 19
+- Root: apps/v5-manutencao
+- Install: `cd ../.. && npm install` (monorepo workspaces)
+- Env vars: VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY
+- Auto-deploy: activo (push main → rebuild)
+
+**Configuração Dashboard (Vercel):**
+- Framework: Other (HTML estático)
+- Root: docs/dashboard
+- Sem build, sem env vars
+
+**Configuração Supabase V1 (auth/url-configuration):**
+- Site URL: https://proptech-v5-alpha.vercel.app (anterior: Netlify URL)
+- Redirect URLs adicionados: localhost:5175 (DEV) + Vercel paths
+- V4 Energia confirmado standby → URL produção V4 não adicionado (será futuro deploy separado)
+
+**Findings importantes:**
+- V5 SignupScreen usa `window.location.origin` para emailRedirectTo (boa prática — funciona em DEV e prod sem env var)
+- V2 produção (prataowners.pt) NÃO afectada — Supabase diferente
+- V4 fica em standby, deploy próprio quando reactivado
+
+**Próximos passos:**
+- Smoke test mobile V5 (sessão futura)
+- @supabase-designer revê RLS policies V5
+- Edge function /inspect-image (substituir VITE_ANTHROPIC_API_KEY exposta)
+- Dashboard com dados vivos (sessão dedicada, ~3h)
+
+---
+
 ## 2026-05-02 (15h) — Rotação SUPABASE_SERVICE_ROLE_KEY V1 adiada
 
 **Contexto:** Durante configuração inicial Vercel, a `SUPABASE_SERVICE_ROLE_KEY` do projecto V1 (`hkmvszkpxjbxmnixzqbl`) apareceu inadvertidamente em chat Anthropic ao colar conteúdo de `.env.local`.
