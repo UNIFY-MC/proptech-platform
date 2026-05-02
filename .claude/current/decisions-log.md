@@ -5,6 +5,32 @@
 
 ---
 
+## 2026-05-02 — R2 Alpha Outreach adiado indefinidamente
+
+**Decisão:** Adiar o R2 alpha outreach (gate original 2026-05-04, Day 7 da Sprint 1D) até infra estar pronta.
+
+**Razões (Mário, 2026-05-02 ~13h):**
+1. App V5 nunca foi testada end-to-end em mobile real (apenas localhost desktop)
+2. Vercel deploy V5 alpha não está executado (URL público inexistente)
+3. Risco de má primeira impressão com alpha owners reais se algo falhar no onboarding
+
+**Triggers para reagendar R2:**
+1. Vercel deploy V5 alpha completo + URL público funcional
+2. Self-test E2E em iOS Safari + Android Chrome com sucesso (magic-link arrives, deep-link opens, recibo upload, share-back)
+
+**Bloqueio actual:** Sprint 1E P0 (commercial stack + deploy split) ainda não iniciado.
+
+**Self-deadline auto-imposto:** Vercel deploy + mobile E2E até [DEFINIR]. R2 outreach até [DEFINIR depois do deploy].
+
+**Risco assumido:** sem novo prazo concreto, esta decisão pode prolongar-se indefinidamente. Próxima sessão de planeamento (até 2026-05-04, decisão CPO ou solo) tem que definir os 2 prazos acima.
+
+**Refs:**
+- verticals-state.md (V5 Decisão pendente P0)
+- current-sprint-state.md (Sprint 1D actual)
+- ADR pendente: Sprint 1E P0 charter
+
+---
+
 ## 2026-05-01
 
 | Campo | Valor |
