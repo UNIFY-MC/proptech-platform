@@ -67,6 +67,80 @@
 
 ---
 
+## 2026-05-02 (17h30) — Visão estratégica e prioridades para semana 18-19
+
+Mário fez brainstorm de 6 pontos durante setup Vercel. Esta entrada captura visão e calendariza para sessões futuras.
+
+### Insight crítico nº 1 — Aplicação V5 é DUAL
+
+Owner-side sem prestador-side = sem flow. Prestador-side sem owners = sem demanda.
+Lançamento alpha tem de ser SIMULTÂNEO ou produto morre.
+R2 outreach a owners isolados (sem prestador-app pronto) = fail mode.
+
+**Implicação:** Sprint 1E P1 (Camada 2 prestador-app) é dependência crítica, não nice-to-have.
+
+### Insight crítico nº 2 — Cross-vertical V4-V5 (parqueado)
+
+Owner faz upload fatura electricidade em V5 → V4 corre comparação ERSE.
+Implementação só quando V4 reactivar (Sprint 2A).
+ADR-001 (V4 Energia React scope) precisa considerar este link.
+
+### Insight crítico nº 3 — Central de comando vivo é VIABILIZADOR
+
+Sem dashboard com dados frescos, gerir 6 verticais + prestador-app + GTM = impossível.
+Re-prioritizado de [P3] para [P1] — primeira sessão útil.
+
+### Plano calendarizado próximas 2 semanas
+
+**Próxima sessão (~3h) — Dashboard com dados vivos**
+- @vertical-builder cria scripts/dashboard-data-build.js (parsa state files → data.json)
+- Modifica docs/dashboard/index.html para fetch('data.json')
+- Hook SubagentStop estendido (auto-update + commit + push)
+- Resultado: dashboard mobile sempre fresco
+
+**Sessão N+2 (~2h) — Charter prestador-app**
+- @cpo-agent + @architect-proptech encadeados
+- Input: screens HTML existentes + features Jobber referência
+- Output: ADR-006 + Sprint 1E P1 charter detalhado
+- 5-7 ecrãs identificados, sequência implementação, acceptance criteria
+
+**Sessão N+3 (~3h) — Prestador-app Wave 1**
+- @vertical-builder implementa 2-3 ecrãs prioritários
+- Tu revês a cada 1h
+
+**Sessão N+4 (~3h) — Prestador-app Wave 2 + integração**
+- @vertical-builder restantes ecrãs + integração magic-link
+- @auditor-agent revê
+
+**Sessão N+5 (~2h) — Smoke test dual + fixes**
+- Mobile test owner + prestador
+- Bugs identificados → fixes
+
+**Semana 2 — Skills gap + R2 dual outreach**
+- @cto-agent gap analysis (1h)
+- @cmo-agent R2 outreach plan refinado para lançamento dual (1h)
+- Eventualmente: experimentação Cowork (1h, opcional)
+
+### Tarefas adiadas (parking lot, com triggers)
+
+- **Mapping verticais master** — sessão dedicada 2h, semana 19+, @cpo-agent + @architect-proptech
+- **Skills gap analysis** — 30 min @cto-agent, próxima sessão se Mário pedir
+- **Automação anúncios (Fase 4)** — trigger: pós-prestador-app live + 1+ owner + 1+ prestador real
+- **V4-V5 cross-feature fatura** — trigger: V4 reactivar (Sprint 2A)
+
+### Sobre Cowork (resposta a expectativa)
+
+Mário esperava multi-agent totalmente autónomo. Esclarecido: não é viável hoje com Claude Code. Cowork beta talvez ajude, mas para o volume actual é overkill.
+Decisão: continuar Claude Code + agentes orquestrados manualmente. Cowork experimentar quando necessidade for clara (semana 2+).
+
+### Refs
+- decisions-log entradas: R2 deferred, V5+dashboard live, rotação SUPABASE_SERVICE_ROLE_KEY adiada
+- opportunities.md (P1 a P3 itens)
+- current-sprint-state.md (Sprint 1D pausado)
+- verticals-state.md (V1-V10 estado)
+
+---
+
 ## 2026-05-02 (15h) — Rotação SUPABASE_SERVICE_ROLE_KEY V1 adiada
 
 **Contexto:** Durante configuração inicial Vercel, a `SUPABASE_SERVICE_ROLE_KEY` do projecto V1 (`hkmvszkpxjbxmnixzqbl`) apareceu inadvertidamente em chat Anthropic ao colar conteúdo de `.env.local`.
