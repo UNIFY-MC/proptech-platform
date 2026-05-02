@@ -31,6 +31,37 @@
 
 ---
 
+## 2026-05-02 (15h) — Rotação SUPABASE_SERVICE_ROLE_KEY V1 adiada
+
+**Contexto:** Durante configuração inicial Vercel, a `SUPABASE_SERVICE_ROLE_KEY` do projecto V1 (`hkmvszkpxjbxmnixzqbl`) apareceu inadvertidamente em chat Anthropic ao colar conteúdo de `.env.local`.
+
+**Estado actual:**
+- Chave NÃO está em git (gitignore confirmado, nunca commited)
+- Chave NÃO está hardcoded em código (todas as edge functions lêem de `Deno.env.get()`)
+- Chave está em uso em 11 ficheiros: 7 edge functions V5 + 3 edge functions raiz + 1 script seed
+- Supabase está em transição para novo formato (Publishable + Secret API keys), legacy keys deprecated
+- Não há botão "Regenerate" individual para legacy service_role; única opção é "Reset JWT secret" que invalida TODAS as chaves + sessões
+
+**Decisão:** Adiar rotação para evitar refactor durante setup Vercel. Manter chave actual.
+
+**Risco assumido:** chave passou por logs Anthropic (enterprise, baixa probabilidade de abuso, retenção ~30 dias). V5 ainda não tem produção real, V2 está em Supabase diferente (não afectado).
+
+**Trigger para acção (rotação obrigatória):**
+1. Antes do primeiro alpha owner real testar V5 (sessão pré-R2 outreach)
+2. OU antes de migrar V5 de DEV para produção real
+3. OU se vires queries anómalas em Supabase logs / billing spike
+
+**Plano de rotação quando vier o tempo:**
+- Opção A (cirúrgica): Reset JWT secret em V1 → atualizar `.env.local` + Supabase secrets → testar 11 ficheiros (~15 min)
+- Opção B (refactor): Migrar para novo formato Publishable+Secret API keys → mudar 11 ficheiros para usar `SUPABASE_SECRET_KEY` em vez de `SUPABASE_SERVICE_ROLE_KEY` → ~1h
+
+**Refs:**
+- Edge Functions affected: `apps/v5-manutencao/supabase/functions/{agent-casa-advisor, agent-image-inspector, agent-test, delete-account, gerar-magic-link, prestador-onboarding, weather-forecast}` + `supabase/functions/{delete-account, gerar-magic-link, v4-energia-lead}`
+- Script affected: `apps/v5-manutencao/scripts/seed-codigos-postais.ts`
+- Supabase URL página API Keys: https://supabase.com/dashboard/project/hkmvszkpxjbxmnixzqbl/settings/api-keys
+
+---
+
 ## 2026-05-01
 
 | Campo | Valor |
