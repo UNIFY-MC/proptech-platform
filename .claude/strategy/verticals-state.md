@@ -96,7 +96,7 @@
 |-----|--------|
 | Day 0–5.7 | ✅ Completo |
 | Day 6 | Em curso — outreach aos 5 alpha owners |
-| Day 7 (gate) | 2026-05-07 — ≥1 owner externo aceitou + flow funciona no telefone |
+| Day 7 (gate) | ⚠️ ADIADO — gate original 2026-05-04; decisão Mário 2026-05-02: R2 outreach adiado indefinidamente até infra pronta (Vercel deploy + mobile E2E). Novo prazo: **TBD** |
 
 **Pricing actual:** Free / Home+ €6.90 / Home Pro €12.90 / Prestador Pro €14.90 (€9.90 Founding — 200 primeiros)
 **MRR actual:** €0 (pré-receita, 0 clientes pagantes)
@@ -105,6 +105,8 @@
 **Próximo sprint (1E):** Camada 2 prestador-side — dashboard Jobber-style, Stripe Connect KYC PT, Moloni/InvoiceXpress, rename `recibos_servico → trabalhos_documentados`, Owners Club tab dedicada
 
 **Blocker pre-launch (P0):** `VITE_ANTHROPIC_API_KEY` em `App.jsx` browser-side — viola ADR-004. Resolve em Sprint 1E antes de deploy production.
+
+**Decisão pendente (P0):** Definir novo prazo para R2 alpha outreach. Trigger: quando Vercel deploy V5 alpha estiver done + mobile test E2E completo. Bloqueio actual: Sprint 1E P0 (deploy) ainda não iniciado.
 
 **Última actividade:** 2026-05-02 — Day 5.7 SHIPPED — mixed feed lifecycle (pending + completed + expired) + realtime 2 canais + header counter dinâmico
 
@@ -196,4 +198,4 @@ V1 Core Hub (pessoas + imoveis + CRM)
 - `.claude/agent-memory/supabase-designer/project_v4_energia_schema.md` — schema V4 aplicado
 - `apps/v5-manutencao/CLAUDE.md` — estado técnico V5
 
-**Próxima revisão sugerida:** quando Sprint 1D fechar (gate Day 7 em 2026-05-07) ou quando Sprint 1E iniciar.
+**Próxima revisão sugerida:** quando R2 outreach gate for redefinido (Vercel deploy + mobile E2E done) ou quando Sprint 1E iniciar.
