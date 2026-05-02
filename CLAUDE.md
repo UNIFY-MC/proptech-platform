@@ -83,6 +83,69 @@ proptech-platform/
 8. **SEMPRE commits convencionais**: `feat:`, `fix:`, `chore:`, `refactor:`, `docs:`
 
 ---
+## 🛰️ Protocolo inter-agentes (vinculativo)
+
+Aplica-se a **todos os sub-agentes e workers** invocados em qualquer worktree (`proptech-platform`, `proptech-v5-1b3`, `proptech-v4-scaffold`, `proptech-docs`). O estado partilhado vive em `.claude/state/` (junction → `C:\Users\mario\dev\proptech-state\`, fora de git).
+
+### Regra 1 — Antes de agir
+
+Antes de executar qualquer trabalho substantivo, ler:
+
+1. `.claude/state/recent-activity.md` — últimas 5 entradas (o que outros agentes fizeram recentemente)
+2. `.claude/state/agents/<self>.md` — o teu próprio estado (última task, próximo sugerido)
+3. `.claude/state/triggers.md` secção **Activos** — se aparecer linha `TO <self>`, **trata primeiro** (a menos que o pedido directo do Mário a sobreponha)
+
+O hook `SessionStart` já injecta resumo destes ficheiros no início de cada sessão. Mesmo assim, reler antes de agir é obrigatório porque outros agentes podem ter escrito desde o arranque.
+
+### Regra 2 — Depois de agir
+
+Actualizar `.claude/state/agents/<self>.md` no formato 5-linhas (ver `_template.md`):
+
+​```
+Last run: <ISO timestamp UTC>
+Worktree: <nome do worktree onde correu>
+Last task: <uma linha — o que foi feito>
+Outputs: <ficheiros tocados, PRs, ADRs, refs>
+Next suggested: <uma linha — proactividade>
+​```
+
+E acrescentar entrada ao topo do `## Histórico` do mesmo ficheiro (manter últimas 5).
+
+**Sem actualizar = trabalho não terminado.** O `code-reviewer` recusa rever PRs cujo agente não actualizou o seu state file.
+
+### Regra 3 — Trigger entre agentes
+
+Se o teu trabalho cria obrigação para outro agente, escrever linha em `.claude/state/triggers.md` secção `## Activos`:
+
+​```
+[YYYY-MM-DDTHH:mmZ] FROM <self> → TO <target>: <pedido em uma linha> [refs]
+​```
+
+Exemplo real: `architect-proptech` decide criar nova tabela em V1 → escreve trigger para `supabase-designer` ("criar migration para core.<tabela> conforme ADR-XYZ"). E também para `notion-librarian` ("documentar decisão na página Arquitectura V1").
+
+Quando o trigger é concluído, mover linha para `## Done` com prefixo `[DONE YYYY-MM-DD]`.
+
+### Regra 4 — Oportunidade fora-de-scope
+
+Se descobrires melhoria/bug/débito que **não** é o que estavas a fazer, **NÃO** abras nova frente. Adiciona a `.claude/state/opportunities.md` com prioridade (H/M/L) e segue a tarefa original. Mário decide em planning mensal.
+
+### Proactive triggers (despoletamento sem pedido directo)
+
+Estas regras são executadas pelo **CEO orchestrator** ao arrancar e a cada `/status`. Cada agente nomeado deve agir sem esperar pedido explícito do Mário:
+
+| Quando acontece | Agente proactivo | Acção |
+|---|---|---|
+| Migration aplicada em Supabase | `notion-librarian` | Propõe ADR draft + actualiza página Arquitectura |
+| Novo componente em `apps/*/src/components/` | `code-reviewer` | Revê não-pedido (lint + padrões CLAUDE.md) |
+| 7 dias sem sync Notion | `notion-librarian` | Propõe weekly digest |
+| Nova entrada em `.claude/current/decisions-log.md` | `architect-proptech` | Análise de impacto cross-vertical |
+| Sprint fechado (commit `feat(*-day*.*)` ou `chore: close sprint`) | `journey-storyteller` (Fase 4) | Rascunho de post |
+| Erro 500 em prataowners.pt nas últimas 24h | `ops-builder` | RCA draft |
+| 14 dias sem auditoria stack-health | `ops-builder` | Auditoria completa, actualiza `stack-health.md` |
+
+**Limite:** proactivo significa **propor**, nunca executar mudanças irreversíveis (push, deploy, INSERT em produção V2) sem aprovação do Mário.
+
+---
 
 ## 💾 Supabase
 
