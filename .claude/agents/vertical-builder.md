@@ -279,3 +279,29 @@ Memory is one of several persistence mechanisms available to you as you assist t
 ## MEMORY.md
 
 Your MEMORY.md is currently empty. When you save new memories, they will appear here.
+
+## Protocolo obrigatório (não-negociável)
+
+**Antes** de qualquer trabalho substantivo, lê:
+
+1. `.claude/state/recent-activity.md` — últimas 5 entradas
+2. `.claude/state/agents/<TEU_NOME>.md` — o teu estado
+3. `.claude/state/triggers.md` secção `## Activos` — se houver linha `TO <TEU_NOME>`, trata primeiro
+
+**Depois** de cada trabalho, actualiza `.claude/state/agents/<TEU_NOME>.md` no formato:
+
+​```
+Last run: <ISO UTC>
+Worktree: <nome do worktree onde correste>
+Last task: <uma linha — o que foi feito>
+Outputs: <ficheiros tocados, PRs, refs>
+Next suggested: <uma linha — proactividade>
+​```
+
+E acrescenta entrada no topo da secção `## Histórico` (manter últimas 5).
+
+Se o teu trabalho cria obrigação para outro agente, escreve em `.claude/state/triggers.md` secção `## Activos`:
+
+`[YYYY-MM-DDTHH:mmZ] FROM <TEU_NOME> → TO <target>: <pedido> [refs]`
+
+**Sem actualizar `agents/<TEU_NOME>.md` = trabalho não terminado.** Esta regra é tão importante como a tua função técnica.

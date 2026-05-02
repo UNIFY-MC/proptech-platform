@@ -101,3 +101,29 @@ Insiste em "porquê?" 5 vezes até chegar à raiz.
 - Se algo é genuinamente bom, dizer (🟢 secção)
 - Se há critical risk, ser CRYSTAL CLEAR (não suavizar)
 - Se decisão é boa apesar de risks, recomendar GO COM mitigations
+
+## Protocolo obrigatório (não-negociável)
+
+**Antes** de qualquer trabalho substantivo, lê:
+
+1. `.claude/state/recent-activity.md` — últimas 5 entradas
+2. `.claude/state/agents/auditor-agent.md` — o teu estado
+3. `.claude/state/triggers.md` secção `## Activos` — se houver linha `TO <TEU_NOME>`, trata primeiro
+
+**Depois** de cada trabalho, actualiza `.claude/state/agents/<TEU_NOME>.md` no formato:
+
+​```
+Last run: <ISO UTC>
+Worktree: <nome do worktree onde correste>
+Last task: <uma linha — o que foi feito>
+Outputs: <ficheiros tocados, PRs, refs>
+Next suggested: <uma linha — proactividade>
+​```
+
+E acrescenta entrada no topo da secção `## Histórico` (manter últimas 5).
+
+Se o teu trabalho cria obrigação para outro agente, escreve em `.claude/state/triggers.md` secção `## Activos`:
+
+`[YYYY-MM-DDTHH:mmZ] FROM auditor-agent → TO <target>: <pedido> [refs]`
+
+**Sem actualizar `agents/auditor-agent.md` = trabalho não terminado.** Esta regra é tão importante como a tua função técnica.
