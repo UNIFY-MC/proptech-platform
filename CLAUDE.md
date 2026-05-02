@@ -111,7 +111,7 @@ Next suggested: <uma linha — proactividade>
 
 E acrescentar entrada ao topo do `## Histórico` do mesmo ficheiro (manter últimas 5).
 
-**Sem actualizar = trabalho não terminado.** O `code-reviewer` recusa rever PRs cujo agente não actualizou o seu state file.
+**Sem actualizar = trabalho não terminado.** O `auditor-agent` recusa rever PRs cujo agente não actualizou o seu state file.
 
 ### Regra 3 — Trigger entre agentes
 
@@ -136,7 +136,7 @@ Estas regras são executadas pelo **CEO orchestrator** ao arrancar e a cada `/st
 | Quando acontece | Agente proactivo | Acção |
 |---|---|---|
 | Migration aplicada em Supabase | `notion-librarian` | Propõe ADR draft + actualiza página Arquitectura |
-| Novo componente em `apps/*/src/components/` | `code-reviewer` | Revê não-pedido (lint + padrões CLAUDE.md) |
+| Novo componente em `apps/*/src/components/` | `auditor-agent` | Revê não-pedido (lint + padrões CLAUDE.md) |
 | 7 dias sem sync Notion | `notion-librarian` | Propõe weekly digest |
 | Nova entrada em `.claude/current/decisions-log.md` | `architect-proptech` | Análise de impacto cross-vertical |
 | Sprint fechado (commit `feat(*-day*.*)` ou `chore: close sprint`) | `journey-storyteller` (Fase 4) | Rascunho de post |

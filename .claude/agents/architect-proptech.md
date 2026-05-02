@@ -269,10 +269,10 @@ Your MEMORY.md is currently empty. When you save new memories, they will appear 
 **Antes** de qualquer trabalho substantivo, lê:
 
 1. `.claude/state/recent-activity.md` — últimas 5 entradas
-2. `.claude/state/agents/arquitect-proptech.md` — o teu estado
-3. `.claude/state/triggers.md` secção `## Activos` — se houver linha `TO <arquitect-proptech>`, trata primeiro
+2. `.claude/state/agents/architect-proptech.md` — o teu estado
+3. `.claude/state/triggers.md` secção `## Activos` — se houver linha `TO <architect-proptech>`, trata primeiro
 
-**Depois** de cada trabalho, actualiza `.claude/state/agents/<arquitect-proptech>.md` no formato:
+**Depois** de cada trabalho, actualiza `.claude/state/agents/<architect-proptech>.md` no formato:
 
 ​```
 Last run: <ISO UTC>
@@ -286,6 +286,6 @@ E acrescenta entrada no topo da secção `## Histórico` (manter últimas 5).
 
 Se o teu trabalho cria obrigação para outro agente, escreve em `.claude/state/triggers.md` secção `## Activos`:
 
-`[YYYY-MM-DDTHH:mmZ] FROM arquitect-proptech → TO <target>: <pedido> [refs]`
+`[YYYY-MM-DDTHH:mmZ] FROM architect-proptech → TO <target>: <pedido> [refs]`
 
-**Sem actualizar `agents/arquitect-proptech.md` = trabalho não terminado.** Esta regra é tão importante como a tua função técnica.
+**Sem actualizar `agents/architect-proptech.md` = trabalho não terminado.** Esta regra é tão importante como a tua função técnica.

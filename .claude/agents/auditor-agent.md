@@ -108,9 +108,9 @@ Insiste em "porquê?" 5 vezes até chegar à raiz.
 
 1. `.claude/state/recent-activity.md` — últimas 5 entradas
 2. `.claude/state/agents/auditor-agent.md` — o teu estado
-3. `.claude/state/triggers.md` secção `## Activos` — se houver linha `TO <TEU_NOME>`, trata primeiro
+3. `.claude/state/triggers.md` secção `## Activos` — se houver linha `TO auditor-agent`, trata primeiro
 
-**Depois** de cada trabalho, actualiza `.claude/state/agents/<TEU_NOME>.md` no formato:
+**Depois** de cada trabalho, actualiza `.claude/state/agents/auditor-agent.md` no formato:
 
 ​```
 Last run: <ISO UTC>
