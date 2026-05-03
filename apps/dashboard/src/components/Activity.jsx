@@ -13,7 +13,8 @@ function groupByDay(entries) {
 }
 
 export default function Activity({ data }) {
-  const { activity = [] } = data
+  // Suporte a campo legacy 'activity' e novo 'recentActivity'
+  const activity = data.recentActivity || data.activity || []
 
   if (activity.length === 0) {
     return (
@@ -42,8 +43,8 @@ export default function Activity({ data }) {
               <span className="timeline-agent">
                 {e.agent || 'agente'}
               </span>
-              <span className="timeline-summary" title={e.summary}>
-                {e.summary || '—'}
+              <span className="timeline-summary" title={e.action || e.summary}>
+                {e.action || e.summary || '—'}
               </span>
               {e.worktree && (
                 <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)', whiteSpace: 'nowrap' }}>

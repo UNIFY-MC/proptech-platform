@@ -1,8 +1,8 @@
 {
   "meta": {
-    "schemaVersion": "1.0",
-    "lastSync": "2026-05-03T14:13:56.043Z",
-    "generatedAt": "2026-05-03T14:13:56.043Z",
+    "schemaVersion": "2.0",
+    "lastSync": "2026-05-03T14:47:39.138Z",
+    "generatedAt": "2026-05-03T14:47:39.138Z",
     "branch": "sprint/v5-1b3",
     "worktree": "proptech-v5-1b3",
     "generator": "scripts/dashboard-data-build.js"
@@ -15,7 +15,10 @@
     "startDate": "2026-05-01",
     "endDate": "2026-05-15",
     "hypothesis": "Owner→link→prestador 48h",
-    "status": "ACTIVO",
+    "status": "active",
+    "progress": 14,
+    "daysToGate": 4,
+    "gateName": "Day 7 — 1 owner externo aceitou convite",
     "gates": [
       {
         "id": "day7",
@@ -113,393 +116,1004 @@
     {
       "id": "trigger-architect-proptech-vertical-builder-0",
       "level": "warning",
-      "message": "architect-proptech → vertical-builder: implementar apps/dashboard/ React+Vite conforme ADR-005. Schema data.json canonico em .claude/current/ADR-005-dashboard-react.md. HTML aprovado (design tokens) em docs/dashboard/index.html. Fases 2-6 do brief original: criar app React 5 tabs (Overview/Activity/Agents/Roadmap/Watchers), script Node scripts/dashboard-data-build.js, vite.config.js porta 5180, package.json, vercel.json em apps/dashboard/.",
-      "since": "2026-05-03T14:30Z",
+      "message": "architect-proptech → vertical-builder: completar apps/dashboard/ com schema v2.0 conforme ADR-005 actualizado. Implementar: Drawer.jsx, TechStack.jsx, Decision",
+      "since": "2026-05-03T15:30Z",
       "source": "triggers.md"
     }
   ],
-  "actions": [],
+  "nextActions": [],
+  "techStack": [
+    {
+      "name": "Anthropic",
+      "role": "LLM core",
+      "host": "Anthropic",
+      "status": "ok",
+      "cost": "~$15/mês",
+      "sprint": "1D"
+    },
+    {
+      "name": "Supabase V1",
+      "role": "Database V5",
+      "host": "Supabase",
+      "status": "ok",
+      "cost": "free tier",
+      "sprint": "—"
+    },
+    {
+      "name": "Supabase V2",
+      "role": "Database V2 prod",
+      "host": "Supabase",
+      "status": "ok",
+      "cost": "~€25/mês",
+      "sprint": "—"
+    },
+    {
+      "name": "Netlify",
+      "role": "Legacy deploy",
+      "host": "Netlify",
+      "status": "ok",
+      "cost": "free tier",
+      "sprint": "—"
+    },
+    {
+      "name": "Vercel",
+      "role": "V5 + dashboard",
+      "host": "Vercel",
+      "status": "ok",
+      "cost": "free tier",
+      "sprint": "1D"
+    },
+    {
+      "name": "GitHub",
+      "role": "Repo + CI/CD",
+      "host": "GitHub",
+      "status": "ok",
+      "cost": "free tier",
+      "sprint": "—"
+    },
+    {
+      "name": "Stripe",
+      "role": "Pagamentos",
+      "host": "Stripe",
+      "status": "planned",
+      "cost": "0.25%+29¢",
+      "sprint": "1E"
+    },
+    {
+      "name": "Moloni",
+      "role": "Faturação PT",
+      "host": "Moloni",
+      "status": "planned",
+      "cost": "€15/mês",
+      "sprint": "1E"
+    },
+    {
+      "name": "Sentry",
+      "role": "Error tracking",
+      "host": "Sentry",
+      "status": "deferred",
+      "cost": "free tier",
+      "sprint": "2A"
+    },
+    {
+      "name": "PostHog",
+      "role": "Analytics",
+      "host": "PostHog",
+      "status": "deferred",
+      "cost": "free tier",
+      "sprint": "2A"
+    },
+    {
+      "name": "Resend",
+      "role": "Email transac.",
+      "host": "Resend",
+      "status": "ok",
+      "cost": "free tier",
+      "sprint": "1B"
+    },
+    {
+      "name": "Upstash",
+      "role": "Redis/queue",
+      "host": "Upstash",
+      "status": "deferred",
+      "cost": "free tier",
+      "sprint": "1E"
+    },
+    {
+      "name": "Twilio",
+      "role": "SMS",
+      "host": "Twilio",
+      "status": "deferred",
+      "cost": "~$0.10/SMS",
+      "sprint": "1E"
+    }
+  ],
+  "stackHealth": [
+    {
+      "service": "Supabase V1",
+      "usage": 25,
+      "label": "2/8 GB",
+      "status": "ok"
+    },
+    {
+      "service": "Supabase V2",
+      "usage": 59,
+      "label": "4.7/8 GB",
+      "status": "warn"
+    },
+    {
+      "service": "Netlify build",
+      "usage": 87,
+      "label": "261/300 min",
+      "status": "critical"
+    },
+    {
+      "service": "GitHub Actions",
+      "usage": 18,
+      "label": "720/4k min",
+      "status": "ok"
+    }
+  ],
   "watchers": [
     {
       "id": "competitor-monitor",
-      "name": "Competitor Monitor",
-      "lastRun": "",
-      "status": "unknown",
-      "summary": "Aguarda primeira execução",
-      "source": "GitHub Issues"
+      "name": "competitor-monitor",
+      "cadence": "Seg 9h",
+      "last": "",
+      "next": "2026-05-04T09:00Z",
+      "status": "never",
+      "link": "",
+      "output": "Aguarda primeira execução completa.",
+      "outputFull": "\nWatcher configurado em Sprint B Lite (2026-05-01). Monitoriza: Hubbent, FIXO, Fixando, Jobber, AppFolio, Shipshape, OSCAR.\n\nCadência: todas as segundas-feiras às 9h UTC.\nWorkflow: `.github/workflows/competitor-monitor.yml`\n\nPrimeira execução programada para 2026-05-04T09:00Z."
     },
     {
       "id": "daily-brief",
-      "name": "Daily Brief",
-      "lastRun": "",
-      "status": "unknown",
-      "summary": "Aguarda primeira execução",
-      "source": "GitHub Issues"
+      "name": "daily-brief",
+      "cadence": "diário 8h",
+      "last": "",
+      "next": "2026-05-04T08:00Z",
+      "status": "never",
+      "link": "",
+      "output": "Aguarda primeira execução completa.",
+      "outputFull": "\nWatcher configurado em Sprint B Lite (2026-05-01). Gera briefing diário com: estado do sprint actual, gates pendentes, alertas activos, próximas acções P0/P1.\n\nCadência: todos os dias às 8h UTC.\nWorkflow: `.github/workflows/daily-brief.yml`\n\nPrimeira execução programada para 2026-05-04T08:00Z."
     },
     {
       "id": "weekly-recap",
-      "name": "Weekly Recap",
-      "lastRun": "",
-      "status": "unknown",
-      "summary": "Aguarda primeira execução",
-      "source": "GitHub Issues"
+      "name": "weekly-recap",
+      "cadence": "Sex 17h",
+      "last": "",
+      "next": "2026-05-09T17:00Z",
+      "status": "never",
+      "link": "",
+      "output": "Aguarda primeira execução completa.",
+      "outputFull": "\nWatcher configurado em Sprint B Lite (2026-05-01). Gera recap semanal com: progressos da semana, gates atingidos/falhados, decisões tomadas, oportunidades registadas, próxima semana.\n\nCadência: todas as sextas-feiras às 17h UTC.\nWorkflow: `.github/workflows/weekly-recap.yml`\n\nPrimeira execução programada para 2026-05-09T17:00Z."
     },
     {
       "id": "healthcheck",
-      "name": "Stack Healthcheck",
-      "lastRun": "",
-      "status": "unknown",
-      "summary": "Aguarda primeira execução",
-      "source": "stack-health.md"
+      "name": "healthcheck",
+      "cadence": "diário 6h30",
+      "last": "",
+      "next": "2026-05-04T06:30Z",
+      "status": "never",
+      "link": "",
+      "output": "Aguarda primeira execução completa.",
+      "outputFull": "\nWatcher configurado em Sprint B Lite (2026-05-01). Verifica: V5 alpha Vercel (HTTP 200), V2 prataowners.pt (HTTP 200), Supabase V1 Edge Functions (gerar-magic-link ACTIVE), GitHub Actions (workflows activos).\n\nCadência: todos os dias às 6h30 UTC.\nWorkflow: `.github/workflows/healthcheck.yml`\n\nPrimeira execução programada para 2026-05-04T06:30Z."
     }
   ],
   "agents": [
     {
       "id": "architect-proptech",
       "name": "architect-proptech",
-      "lastTask": "",
-      "lastRun": "",
-      "nextSuggested": "",
-      "worktree": "",
-      "status": "idle"
+      "type": "technical",
+      "desc": "Decisões arquitecturais, ADRs, consulta Notion, valida impactos cross-vertical.",
+      "tools": [
+        "Read",
+        "Write",
+        "Grep",
+        "WebFetch",
+        "mcp__notion"
+      ],
+      "promptPath": ".claude/agents/architect-proptech.md",
+      "task": "ADR-005 v2.0 — schema data.json completo com todos os tipos exactos, techStack 13 servicos hardcoded, stackHealth 4 gauges, competitors 7 entidades mapeadas. Trigger criado para vertical-builder.",
+      "last": "2026-05-03T15:30Z",
+      "nextSuggested": "vertical-builder implementar componentes v2.0 (Drawer, TechStack, Decisions, Competitors, Roadmap full) + estender dashboard-data-build.js",
+      "worktree": "proptech-v5-1b3",
+      "state": "idle"
     },
     {
       "id": "auditor-agent",
       "name": "auditor-agent",
-      "lastTask": "",
-      "lastRun": "",
-      "nextSuggested": "",
-      "worktree": "",
-      "status": "idle"
+      "type": "technical",
+      "desc": "Revê código, lint, padrões CLAUDE.md, segurança.",
+      "tools": [
+        "Read",
+        "Grep",
+        "Glob"
+      ],
+      "promptPath": ".claude/agents/auditor-agent.md",
+      "task": "Auditoria do commit 61573e0 (inter-agent protocol injection) — encontrados 5 RISK CRÍTICOS (typo arquitect, placeholders <TEU_NOME>, state files corrompidos, code-reviewer fictício, ausência de enforcement)",
+      "last": "2026-05-02T12:15Z",
+      "nextSuggested": "aguardar decisão do Mário sobre revert vs fix-forward; se fix-forward, criar trigger TO architect-proptech para corrigir typo e centralizar protocolo no CLAUDE.md",
+      "worktree": "proptech-v5-1b3",
+      "state": "idle"
     },
     {
       "id": "ceo-agent",
       "name": "ceo-agent",
-      "lastTask": "",
-      "lastRun": "",
-      "nextSuggested": "",
-      "worktree": "",
-      "status": "idle"
+      "type": "csuite",
+      "desc": "Visão, prioridades, GTM, decisões estratégicas.",
+      "tools": [],
+      "promptPath": ".claude/agents/csuite/ceo-agent.md",
+      "task": "_n/a_",
+      "last": "_never_",
+      "nextSuggested": "_aguardar primeiro trigger_",
+      "worktree": "_n/a_",
+      "state": "idle"
     },
     {
       "id": "cfo-agent",
       "name": "cfo-agent",
-      "lastTask": "",
-      "lastRun": "",
-      "nextSuggested": "",
-      "worktree": "",
-      "status": "idle"
+      "type": "csuite",
+      "desc": "Controlo de custos, runway, financeiro.",
+      "tools": [],
+      "promptPath": ".claude/agents/csuite/cfo-agent.md",
+      "task": "_n/a_",
+      "last": "_never_",
+      "nextSuggested": "_aguardar primeiro trigger_",
+      "worktree": "_n/a_",
+      "state": "idle"
     },
     {
       "id": "cmo-agent",
       "name": "cmo-agent",
-      "lastTask": "",
-      "lastRun": "",
-      "nextSuggested": "",
-      "worktree": "",
-      "status": "idle"
+      "type": "csuite",
+      "desc": "Posicionamento, mensagem, canais de aquisição.",
+      "tools": [],
+      "promptPath": ".claude/agents/csuite/cmo-agent.md",
+      "task": "_n/a_",
+      "last": "_never_",
+      "nextSuggested": "_aguardar primeiro trigger_",
+      "worktree": "_n/a_",
+      "state": "idle"
     },
     {
       "id": "coo-agent",
       "name": "coo-agent",
-      "lastTask": "",
-      "lastRun": "",
-      "nextSuggested": "",
-      "worktree": "",
-      "status": "idle"
+      "type": "csuite",
+      "desc": "Operações, processos, qualidade entrega.",
+      "tools": [],
+      "promptPath": ".claude/agents/csuite/coo-agent.md",
+      "task": "_n/a_",
+      "last": "_never_",
+      "nextSuggested": "_aguardar primeiro trigger_",
+      "worktree": "_n/a_",
+      "state": "idle"
     },
     {
       "id": "cpo-agent",
       "name": "cpo-agent",
-      "lastTask": "",
-      "lastRun": "",
-      "nextSuggested": "",
-      "worktree": "",
-      "status": "idle"
+      "type": "csuite",
+      "desc": "Produto, roadmap, specs de features, user research.",
+      "tools": [],
+      "promptPath": ".claude/agents/csuite/cpo-agent.md",
+      "task": "_n/a_",
+      "last": "_never_",
+      "nextSuggested": "_aguardar primeiro trigger_",
+      "worktree": "_n/a_",
+      "state": "idle"
     },
     {
       "id": "cto-agent",
       "name": "cto-agent",
-      "lastTask": "",
-      "lastRun": "",
-      "nextSuggested": "",
-      "worktree": "",
-      "status": "idle"
+      "type": "csuite",
+      "desc": "Stack, segurança, débito técnico, decisões de infra.",
+      "tools": [],
+      "promptPath": ".claude/agents/csuite/cto-agent.md",
+      "task": "_n/a_",
+      "last": "_never_",
+      "nextSuggested": "_aguardar primeiro trigger_",
+      "worktree": "_n/a_",
+      "state": "idle"
     },
     {
       "id": "notion-librarian",
       "name": "notion-librarian",
-      "lastTask": "",
-      "lastRun": "",
-      "nextSuggested": "",
-      "worktree": "",
-      "status": "idle"
+      "type": "technical",
+      "desc": "Sincroniza decisões com Notion, gera ADR drafts, weekly digests.",
+      "tools": [
+        "mcp__notion",
+        "Read",
+        "Write"
+      ],
+      "promptPath": ".claude/agents/notion-librarian.md",
+      "task": "_n/a_",
+      "last": "_never_",
+      "nextSuggested": "_aguardar primeiro trigger ou pedido directo do Mário_",
+      "worktree": "_n/a_",
+      "state": "idle"
     },
     {
       "id": "ops-builder",
       "name": "ops-builder",
-      "lastTask": "",
-      "lastRun": "",
-      "nextSuggested": "",
-      "worktree": "",
-      "status": "idle"
+      "type": "technical",
+      "desc": "RCA drafts, auditoria stack-health, infra scripts.",
+      "tools": [
+        "Bash",
+        "Read",
+        "Write",
+        "mcp__supabase"
+      ],
+      "promptPath": ".claude/agents/ops-builder.md",
+      "task": "_n/a_",
+      "last": "_never_",
+      "nextSuggested": "_aguardar primeiro trigger ou pedido directo do Mário_",
+      "worktree": "_n/a_",
+      "state": "idle"
     },
     {
       "id": "supabase-designer",
       "name": "supabase-designer",
-      "lastTask": "",
-      "lastRun": "",
-      "nextSuggested": "",
-      "worktree": "",
-      "status": "idle"
+      "type": "technical",
+      "desc": "Schemas Supabase, migrations, RLS policies, Edge Functions via MCP.",
+      "tools": [
+        "mcp__supabase",
+        "Read",
+        "Write"
+      ],
+      "promptPath": ".claude/agents/supabase-designer.md",
+      "task": "_n/a_",
+      "last": "_never_",
+      "nextSuggested": "_aguardar primeiro trigger ou pedido directo do Mário_",
+      "worktree": "_n/a_",
+      "state": "idle"
     },
     {
       "id": "vertical-builder",
       "name": "vertical-builder",
-      "lastTask": "",
-      "lastRun": "",
-      "nextSuggested": "",
-      "worktree": "",
-      "status": "idle"
+      "type": "technical",
+      "desc": "Constrói verticais React em apps/vN-nome/. Reutiliza design system V1-core.",
+      "tools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash",
+        "Glob"
+      ],
+      "promptPath": ".claude/agents/vertical-builder.md",
+      "task": "feat(dashboard) — React app 5 tabs + parser Node + hook V4 + commit a33d844 + push sprint/v5-1b3",
+      "last": "2026-05-03T14:20Z",
+      "nextSuggested": "Mário mudar Vercel root de docs/dashboard → apps/dashboard no painel Vercel (projecto proptech-agentic-ops)",
+      "worktree": "proptech-v5-1b3",
+      "state": "idle"
     }
   ],
-  "activity": [
+  "recentActivity": [
+    {
+      "ts": "2026-05-03T14:40Z",
+      "agent": "architect-proptech",
+      "worktree": "proptech-v5-1b3",
+      "action": "subagent stopped [session:aff6d186]",
+      "refs": []
+    },
+    {
+      "ts": "2026-05-03T14:29Z",
+      "agent": "subagent",
+      "worktree": "proptech-v5-1b3",
+      "action": "subagent stopped [session:aff6d186]",
+      "refs": []
+    },
+    {
+      "ts": "2026-05-03T14:24Z",
+      "agent": "subagent",
+      "worktree": "proptech-v5-1b3",
+      "action": "subagent stopped [session:aff6d186]",
+      "refs": []
+    },
+    {
+      "ts": "2026-05-03T14:21Z",
+      "agent": "vertical-builder",
+      "worktree": "proptech-v5-1b3",
+      "action": "subagent stopped [session:aff6d186]",
+      "refs": []
+    },
     {
       "ts": "2026-05-03T14:08Z",
       "agent": "subagent",
       "worktree": "proptech-v5-1b3",
-      "summary": "subagent stopped [session:d2eca88a]",
+      "action": "subagent stopped [session:d2eca88a]",
       "refs": []
     },
     {
       "ts": "2026-05-03T14:06Z",
       "agent": "architect-proptech",
       "worktree": "proptech-v5-1b3",
-      "summary": "subagent stopped [session:aff6d186]",
+      "action": "subagent stopped [session:aff6d186]",
       "refs": []
     },
     {
       "ts": "2026-05-03T13:58Z",
       "agent": "subagent",
       "worktree": "proptech-v5-1b3",
-      "summary": "subagent stopped [session:d2eca88a]",
+      "action": "subagent stopped [session:d2eca88a]",
       "refs": []
     },
     {
       "ts": "2026-05-03T13:44Z",
       "agent": "subagent",
       "worktree": "proptech-v5-1b3",
-      "summary": "subagent stopped [session:3c01eeb3]",
+      "action": "subagent stopped [session:3c01eeb3]",
       "refs": []
     },
     {
       "ts": "2026-05-03T13:14Z",
       "agent": "subagent",
       "worktree": "proptech-v5-1b3",
-      "summary": "subagent stopped [session:d2eca88a]",
+      "action": "subagent stopped [session:d2eca88a]",
       "refs": []
     },
     {
       "ts": "2026-05-03T12:57Z",
       "agent": "subagent",
       "worktree": "proptech-v5-1b3",
-      "summary": "subagent stopped [session:3c01eeb3]",
+      "action": "subagent stopped [session:3c01eeb3]",
       "refs": []
     },
     {
       "ts": "2026-05-03T10:32Z",
       "agent": "subagent",
       "worktree": "proptech-v5-1b3",
-      "summary": "subagent stopped [session:d2eca88a]",
+      "action": "subagent stopped [session:d2eca88a]",
       "refs": []
     },
     {
       "ts": "2026-05-03T10:24Z",
       "agent": "architect-proptech",
       "worktree": "proptech-v5-1b3",
-      "summary": "subagent stopped [session:d2eca88a]",
+      "action": "subagent stopped [session:d2eca88a]",
       "refs": []
     },
     {
       "ts": "2026-05-03T10:20Z",
       "agent": "architect-proptech",
       "worktree": "proptech-v5-1b3",
-      "summary": "subagent stopped [session:d2eca88a]",
+      "action": "subagent stopped [session:d2eca88a]",
       "refs": []
     },
     {
       "ts": "2026-05-03T10:09Z",
       "agent": "subagent",
       "worktree": "proptech-v5-1b3",
-      "summary": "subagent stopped [session:d2eca88a]",
+      "action": "subagent stopped [session:d2eca88a]",
       "refs": []
     },
     {
       "ts": "2026-05-03T10:02Z",
       "agent": "vertical-builder",
       "worktree": "proptech-v5-1b3",
-      "summary": "subagent stopped [session:d2eca88a]",
+      "action": "subagent stopped [session:d2eca88a]",
       "refs": []
     },
     {
       "ts": "2026-05-02T23:10Z",
       "agent": "subagent",
       "worktree": "proptech-v5-1b3",
-      "summary": "subagent stopped [session:d2eca88a]",
+      "action": "subagent stopped [session:d2eca88a]",
       "refs": []
     },
     {
       "ts": "2026-05-02T22:19Z",
       "agent": "subagent",
       "worktree": "proptech-v5-1b3",
-      "summary": "subagent stopped [session:d2eca88a]",
+      "action": "subagent stopped [session:d2eca88a]",
       "refs": []
     },
     {
       "ts": "2026-05-02T15:51Z",
       "agent": "subagent",
       "worktree": "proptech-v5-1b3",
-      "summary": "subagent stopped [session:d2eca88a]",
+      "action": "subagent stopped [session:d2eca88a]",
       "refs": []
     },
     {
       "ts": "2026-05-02T15:38Z",
       "agent": "architect-proptech",
       "worktree": "proptech-v5-1b3",
-      "summary": "subagent stopped [session:d2eca88a]",
+      "action": "subagent stopped [session:d2eca88a]",
       "refs": []
     },
     {
       "ts": "2026-05-02T15:33Z",
       "agent": "architect-proptech",
       "worktree": "proptech-v5-1b3",
-      "summary": "subagent stopped [session:d2eca88a]",
-      "refs": []
-    },
-    {
-      "ts": "2026-05-02T15:26Z",
-      "agent": "architect-proptech",
-      "worktree": "proptech-v5-1b3",
-      "summary": "subagent stopped [session:d2eca88a]",
-      "refs": []
-    },
-    {
-      "ts": "2026-05-02T15:14Z",
-      "agent": "subagent",
-      "worktree": "proptech-v5-1b3",
-      "summary": "subagent stopped [session:d2eca88a]",
-      "refs": []
-    },
-    {
-      "ts": "2026-05-02T11:58Z",
-      "agent": "subagent",
-      "worktree": "proptech-v5-1b3",
-      "summary": "subagent stopped [session:d2eca88a]",
-      "refs": []
-    },
-    {
-      "ts": "2026-05-02T11:41Z",
-      "agent": "architect-proptech",
-      "worktree": "proptech-v5-1b3",
-      "summary": "subagent stopped [session:d2eca88a]",
+      "action": "subagent stopped [session:d2eca88a]",
       "refs": []
     }
   ],
-  "decisions": [],
-  "techStack": [
+  "decisions": [
     {
-      "name": "Supabase V1",
-      "type": "database",
-      "cost": "free tier",
-      "status": "ok",
-      "projectId": "hkmvszkpxjbxmnixzqbl"
+      "id": "2026-05-03-—-magic-link-url-fix:-getbaseurl(req)-+",
+      "text": "Magic-link URL fix: getBaseUrl(req) + path /r/join/",
+      "meta": "2026-05-03",
+      "detail": "**Decisão:** Substituir constante `SHARE_BASE_URL` (hardcoded fallback `prataowners.pt`) por função `getBaseUrl(req)` que deriva o domínio do request origin em runtime.\r\n\r\n**Causa do bug (confirmado Mário mobile test 2026-05-02 19h):**\r\n1. `SHARE_BASE_URL` não estava definida como Supabase secret → ",
+      "urgency": "low"
     },
     {
-      "name": "Supabase V2",
-      "type": "database",
-      "cost": "pro",
-      "status": "ok (PRODUÇÃO)",
-      "projectId": "eozklslwfaqujaijvdnl"
+      "id": "2026-05-02-—-r2-alpha-outreach-adiado-indefinidame",
+      "text": "R2 Alpha Outreach adiado indefinidamente",
+      "meta": "2026-05-02",
+      "detail": "**Decisão:** Adiar o R2 alpha outreach (gate original 2026-05-04, Day 7 da Sprint 1D) até infra estar pronta.\r\n\r\n**Razões (Mário, 2026-05-02 ~13h):**\r\n1. App V5 nunca foi testada end-to-end em mobile real (apenas localhost desktop)\r\n2. Vercel deploy V5 alpha não está executado (URL público inexisten",
+      "urgency": "low"
     },
     {
-      "name": "Vercel V5 alpha",
-      "type": "hosting",
-      "cost": "free tier",
-      "status": "ok",
-      "url": "https://proptech-v5-alpha.vercel.app"
+      "id": "2026-05-02-(16h)-—-v5-alpha-+-dashboard-live-em-ve",
+      "text": "(16h) — V5 alpha + Dashboard live em Vercel",
+      "meta": "2026-05-02",
+      "detail": "**URLs em produção:**\r\n- V5 alpha: https://proptech-v5-alpha.vercel.app\r\n- Dashboard agentic-ops: https://proptech-agentic-ops.vercel.app\r\n\r\n**Configuração V5 (Vercel):**\r\n- Framework: Vite 6 + React 19\r\n- Root: apps/v5-manutencao\r\n- Install: `cd ../.. && npm install` (monorepo workspaces)\r\n- Env va",
+      "urgency": "low"
     },
     {
-      "name": "Vercel Dashboard",
-      "type": "hosting",
-      "cost": "free tier",
-      "status": "ok",
-      "url": "https://proptech-agentic-ops.vercel.app"
+      "id": "2026-05-02-(17h30)-—-visão-estratégica-e-prioridad",
+      "text": "(17h30) — Visão estratégica e prioridades para semana 18-19",
+      "meta": "2026-05-02",
+      "detail": "Mário fez brainstorm de 6 pontos durante setup Vercel. Esta entrada captura visão e calendariza para sessões futuras.\r\n\r\n### Insight crítico nº 1 — Aplicação V5 é DUAL\r\n\r\nOwner-side sem prestador-side = sem flow. Prestador-side sem owners = sem demanda.\r\nLançamento alpha tem de ser SIMULTÂNEO ou pro",
+      "urgency": "low"
     },
     {
-      "name": "Resend SMTP",
-      "type": "email",
-      "cost": "free tier",
-      "status": "ok"
+      "id": "2026-05-02-(15h)-—-rotação-supabase_service_role_k",
+      "text": "(15h) — Rotação SUPABASE_SERVICE_ROLE_KEY V1 adiada",
+      "meta": "2026-05-02",
+      "detail": "**Contexto:** Durante configuração inicial Vercel, a `SUPABASE_SERVICE_ROLE_KEY` do projecto V1 (`hkmvszkpxjbxmnixzqbl`) apareceu inadvertidamente em chat Anthropic ao colar conteúdo de `.env.local`.\r\n\r\n**Estado actual:**\r\n- Chave NÃO está em git (gitignore confirmado, nunca commited)\r\n- Chave NÃO e",
+      "urgency": "low"
     },
     {
-      "name": "GitHub Actions watchers",
-      "type": "automation",
-      "cost": "~€0.60/mês",
-      "status": "ok"
+      "id": "2026-05-01",
+      "text": "2026-05-01",
+      "meta": "2026-05-01",
+      "detail": "| Campo | Valor |\r\n|---|---|\r\n| **Data** | 2026-05-01 |\r\n| **Owner** | CTO |\r\n| **Decisão** | Day 5 SHIPPED — UI owner-side \"Registar trabalho\" + reposicionamento above-fold |\r\n| **Racional** | Camada 1 funnel 100% UI-driven sem curl needed. Owner pode gerar magic link directamente do app, partilhar",
+      "urgency": "low"
+    },
+    {
+      "id": "2026-04-30",
+      "text": "2026-04-30",
+      "meta": "2026-04-30",
+      "detail": "| Campo | Valor |\r\n|---|---|\r\n| **Data** | 2026-04-30 |\r\n| **Owner** | CEO (Mário) |\r\n| **Decisão** | V5 Architecture v2: Casa tab = Início+Casa fundidos; Owners Club = tab dedicada |\r\n| **Racional** | Duplicação Início/Casa cria confusão em UX; owners precisam de um \"comando central\" claro. Owners ",
+      "urgency": "low"
+    },
+    {
+      "id": "2026-05-01",
+      "text": "2026-05-01",
+      "meta": "2026-05-01",
+      "detail": "| Campo | Valor |\r\n|---|---|\r\n| **Data** | 2026-05-01 |\r\n| **Owner** | Mário |\r\n| **Decisão** | 1B.5A Phase 2 Path A: NÃO re-aplicar SQLs (já aplicados via dashboard, IF NOT EXISTS protege mas risk > benefit) |\r\n| **Racional** | SQLs descobertos como already-applied via Supabase MCP diagnostic — re-",
+      "urgency": "low"
+    },
+    {
+      "id": "2026-05-01-(sprint-1d-debate)",
+      "text": "(Sprint 1D debate)",
+      "meta": "2026-05-01",
+      "detail": "| Campo | Valor |\r\n|---|---|\r\n| **Data** | 2026-05-01 |\r\n| **Owner** | CEO via debate multi-agent |\r\n| **Decisão** | Sprint 1D charter approved: Receipt Trojan Horse Alpha owner-first 14-day MVP |\r\n| **Racional** | Hubbent+FIXO+Jobber pressure forces validation-first; CEO weekly-recap #8 \"shift ener",
+      "urgency": "low"
+    },
+    {
+      "id": "2026-05-01-(sprint-1d-day-0.5)",
+      "text": "(Sprint 1D Day 0.5)",
+      "meta": "2026-05-01",
+      "detail": "| Campo | Valor |\r\n|---|---|\r\n| **Data** | 2026-05-01 |\r\n| **Owner** | Mário |\r\n| **Decisão** | Live Dashboard HTML em `docs/dashboard/` via GitHub Pages |\r\n| **Racional** | Auto-refresh 5min, GitHub API client-side, zero backend, mobile-friendly. Setup one-time: repo Settings → Pages → /docs |\r\n| *",
+      "urgency": "low"
     }
   ],
-  "stackHealth": {
-    "score": 85,
-    "lastCheck": "2026-05-03T14:13:56.068Z",
-    "checks": []
-  },
-  "roadmap": {
-    "currentWave": "1D",
-    "waves": [
-      {
-        "id": "1D",
-        "name": "Receipt Trojan Horse Alpha",
-        "status": "active",
-        "period": "2026-05-01 / 2026-05-15"
-      },
-      {
-        "id": "1E",
-        "name": "Camada 2 Prestador-side",
-        "status": "planned",
-        "period": "pós 2026-05-15"
-      },
-      {
-        "id": "2A",
-        "name": "V4 Energia reactivar",
-        "status": "planned",
-        "period": "Q3 2026"
-      },
-      {
-        "id": "3A",
-        "name": "V3 Seguros arranque",
-        "status": "planned",
-        "period": "Q1 2027"
-      }
-    ]
-  },
+  "roadmap": [
+    {
+      "wave": "1A",
+      "name": "Foundation",
+      "status": "done",
+      "sprints": [
+        {
+          "id": "0",
+          "name": "Reset estrutural",
+          "status": "done",
+          "date": "Pre-2026",
+          "tasks": []
+        },
+        {
+          "id": "3.3",
+          "name": "UI catálogo + wizard",
+          "status": "done",
+          "date": "Pre-2026",
+          "tasks": []
+        },
+        {
+          "id": "3.4",
+          "name": "Auth + RLS + onboarding",
+          "status": "done",
+          "date": "Pre-2026",
+          "tasks": []
+        }
+      ]
+    },
+    {
+      "wave": "1B",
+      "name": "V5 Agentic Foundation",
+      "status": "active",
+      "sprints": [
+        {
+          "id": "1B.1",
+          "name": "Agent infra + Vision",
+          "status": "done",
+          "date": "2026-04-20",
+          "tasks": []
+        },
+        {
+          "id": "1B.4",
+          "name": "Weather + HeroHeader",
+          "status": "done",
+          "date": "2026-04-29",
+          "tasks": []
+        },
+        {
+          "id": "1B.5A",
+          "name": "SQL foundations + pricing",
+          "status": "done",
+          "date": "2026-04-30",
+          "tasks": []
+        },
+        {
+          "id": "A",
+          "name": "C-Suite agents (7 personas)",
+          "status": "done",
+          "date": "2026-04-30",
+          "tasks": []
+        },
+        {
+          "id": "B",
+          "name": "Watchers + crons",
+          "status": "done",
+          "date": "2026-05-01",
+          "tasks": []
+        }
+      ]
+    },
+    {
+      "wave": "1D",
+      "name": "V5 Receipt Trojan Horse",
+      "status": "active",
+      "sprints": [
+        {
+          "id": "1D",
+          "name": "Receipt Alpha — owner-first 14d",
+          "status": "active",
+          "date": "2026-05-01→15",
+          "tasks": [
+            "Magic-link flow owner→prestador",
+            "5 alpha owners recrutados",
+            "Recibo digital gerado end-to-end",
+            "Gate Day 7: 1 owner externo",
+            "Gate Day 14: 5/5 criteria + decisão 1E"
+          ]
+        }
+      ]
+    },
+    {
+      "wave": "1E",
+      "name": "V5 Production Grade",
+      "status": "planned",
+      "sprints": [
+        {
+          "id": "1E",
+          "name": "Camada 2: prestador-side",
+          "status": "planned",
+          "date": "pós 2026-05-15",
+          "tasks": [
+            "Dashboard prestador",
+            "Stripe Connect",
+            "Moloni integração",
+            "Schema rename recibos_servico→trabalhos_documentados"
+          ]
+        }
+      ]
+    },
+    {
+      "wave": "2A",
+      "name": "V4 Energia reactivação",
+      "status": "planned",
+      "sprints": [
+        {
+          "id": "2A",
+          "name": "V4 Energia construção",
+          "status": "planned",
+          "date": "Q3 2026",
+          "tasks": []
+        }
+      ]
+    },
+    {
+      "wave": "2B",
+      "name": "V3 Seguros + V6+",
+      "status": "planned",
+      "sprints": [
+        {
+          "id": "2B",
+          "name": "V3 Seguros arranque",
+          "status": "planned",
+          "date": "Q1 2027",
+          "tasks": []
+        }
+      ]
+    }
+  ],
   "competitors": [
     {
+      "id": "hubbent",
       "name": "Hubbent",
-      "category": "maintenance",
-      "threat": "ALTO",
-      "notes": "Dual-app PT, Tier 1"
+      "tier": 1,
+      "signal": "medium",
+      "country": "PT",
+      "founded": "2022",
+      "funding": "desconhecido",
+      "lastUpdate": "2026-05-01",
+      "threatLevel": "alto",
+      "desc": "Marketplace dual-app on-demand home services PT. App consumer (Hubbent) + app prestador (Hubbent Pro). Entrante recente com expansão rápida no mercado português. Classificação provisional — rever após investigação W18 (founders, capital, tracção).",
+      "strengths": [
+        "Dual-app nativa PT (consumer + prestador)",
+        "On-demand sem contrato anual",
+        "App prestador dedicada (Hubbent Pro)",
+        "Foco exclusivo mercado português"
+      ],
+      "weaknesses": [
+        "Sem gestão de contratos recorrentes",
+        "Sem integrações fiscais PT (Moloni/InvoiceXpress)",
+        "Sem componente B2B condomínio",
+        "Modelo marketplace dependente de volume de prestadores",
+        "Sem AI advisor"
+      ],
+      "features": {
+        "magicLink": false,
+        "fiscalPT": false,
+        "stripe": true,
+        "mobile": true,
+        "multiVertical": false,
+        "aiAdvisor": false,
+        "b2b": false
+      }
     },
     {
-      "name": "FIXO (Fidelidade)",
-      "category": "maintenance",
-      "threat": "CRÍTICO",
-      "notes": "Fidelidade-owned, escala imediata"
+      "id": "fixo",
+      "name": "FIXO",
+      "tier": 1,
+      "signal": "medium",
+      "country": "PT",
+      "founded": "desconhecido",
+      "funding": "Fidelidade-backed",
+      "lastUpdate": "2026-05-01",
+      "threatLevel": "critico",
+      "desc": "Plataforma home services owned pelo grupo Fidelidade (maior seguradora PT). Acesso imediato à base de clientes Fidelidade (~1M segurados). Scope exacto a clarificar — Mário a investigar. Threat level crítico pela escala potencial, não pela maturidade actual.",
+      "strengths": [
+        "Backing grupo Fidelidade (capital + base de clientes massiva)",
+        "Cross-sell natural com seguros habitação (V3 Seguros relevante)",
+        "Distribuição imediata via rede agentes Fidelidade",
+        "Marca reconhecida em PT"
+      ],
+      "weaknesses": [
+        "Provavelmente não nativo-digital (legado de seguradora)",
+        "Sem foco em agentic AI",
+        "Modelo B2C sem componente prestador-empowerment",
+        "Scope real ainda não confirmado publicamente"
+      ],
+      "features": {
+        "magicLink": false,
+        "fiscalPT": false,
+        "stripe": false,
+        "mobile": true,
+        "multiVertical": false,
+        "aiAdvisor": false,
+        "b2b": true
+      }
     },
     {
+      "id": "fixando",
+      "name": "Fixando",
+      "tier": 2,
+      "signal": "weak",
+      "country": "PT",
+      "founded": "2016",
+      "funding": "bootstrapped",
+      "lastUpdate": "2026-05-01",
+      "threatLevel": "medio",
+      "desc": "Plataforma portuguesa de comparação de orçamentos online. Owner publica pedido, prestadores submetem propostas. Modelo marketplace de leads. Estabelecida em PT mas sem evolução significativa nos últimos anos.",
+      "strengths": [
+        "Estabelecida em PT (brand recognition)",
+        "Base de prestadores activa",
+        "SEO forte em queries home services PT"
+      ],
+      "weaknesses": [
+        "Modelo lead-gen sem gestão pós-contratação",
+        "Sem app mobile nativa",
+        "Sem integrações fiscais",
+        "Sem AI ou features inteligentes",
+        "Experiência datada (sem investimento significativo recente)"
+      ],
+      "features": {
+        "magicLink": false,
+        "fiscalPT": false,
+        "stripe": false,
+        "mobile": false,
+        "multiVertical": false,
+        "aiAdvisor": false,
+        "b2b": false
+      }
+    },
+    {
+      "id": "jobber",
       "name": "Jobber",
-      "category": "prestador-tools",
-      "threat": "MÉDIO",
-      "notes": "Referência UX prestador-side"
+      "tier": 3,
+      "signal": "reference",
+      "country": "CAN",
+      "founded": "2011",
+      "funding": "Series C+ $100M+ USD",
+      "lastUpdate": "2026-05-01",
+      "threatLevel": "medio",
+      "desc": "SaaS líder para prestadores de serviços SMB (field service management). Forte em CA/US, expansão EU em curso com funding EU. Referência de UX para o dashboard prestador-side que construiremos no Sprint 1E. Threat real se entrar PT com localização.",
+      "strengths": [
+        "UX prestador best-in-class (scheduling, invoicing, CRM)",
+        "Funding sólido para expansão EU",
+        "Mobile first (app prestador completa)",
+        "Integrações contabilidade (QuickBooks, Xero)",
+        "Marca forte no segmento SMB"
+      ],
+      "weaknesses": [
+        "Sem versão PT/ptPT (localização inexistente)",
+        "Sem integração fiscal PT (Moloni/InvoiceXpress/AT)",
+        "Focado em prestador — sem componente owner/condomínio",
+        "Pricing USD/CAD fora de alcance para prestadores PT pequenos",
+        "Sem AI advisor nativo"
+      ],
+      "features": {
+        "magicLink": false,
+        "fiscalPT": false,
+        "stripe": true,
+        "mobile": true,
+        "multiVertical": false,
+        "aiAdvisor": false,
+        "b2b": true
+      }
+    },
+    {
+      "id": "appfolio",
+      "name": "AppFolio",
+      "tier": 3,
+      "signal": "reference",
+      "country": "US",
+      "founded": "2006",
+      "funding": "Public (APPF NASDAQ)",
+      "lastUpdate": "2026-05-01",
+      "threatLevel": "baixo",
+      "desc": "Software B2B property management líder nos EUA. Lançou Realm-X (agentic AI) em 2024 — primeiro do segmento a ter AI dispatcher real com natural language. Referência para o V5 Matchmaker e V10 Dispatcher. Sem presença PT/EU, sem B2C.",
+      "strengths": [
+        "Agentic AI real (Realm-X) — dispatcher + auditing",
+        "Escala enterprise (10M+ unidades geridas)",
+        "Integração completa property management → maintenance",
+        "API aberta para integrações"
+      ],
+      "weaknesses": [
+        "B2B only — sem componente owner/resident B2C",
+        "US-centric (sem localização PT/EU)",
+        "Pricing enterprise fora do segmento PT PME",
+        "Sem foco em prestadores individuais"
+      ],
+      "features": {
+        "magicLink": false,
+        "fiscalPT": false,
+        "stripe": true,
+        "mobile": true,
+        "multiVertical": true,
+        "aiAdvisor": true,
+        "b2b": true
+      }
+    },
+    {
+      "id": "shipshape",
+      "name": "Shipshape",
+      "tier": 3,
+      "signal": "reference",
+      "country": "US",
+      "founded": "2019",
+      "funding": "Series A ~$8M USD",
+      "lastUpdate": "2026-05-01",
+      "threatLevel": "baixo",
+      "desc": "App B2C para homeowners com Home Health Score — score da saúde da casa baseado em manutenções preventivas. Já adoptámos o conceito de score no V5. Sem componente prestador ou B2B. Referência de UX owner-side e gamificação.",
+      "strengths": [
+        "Home Health Score (já adoptado V5)",
+        "UX owner-side clean e mobile-first",
+        "Gamificação de manutenção preventiva",
+        "Integrações meteorologia (similar ao nosso IPMA)"
+      ],
+      "weaknesses": [
+        "B2C only — sem prestador ou B2B",
+        "US-centric (sem localização PT/EU)",
+        "Sem integrações fiscais",
+        "Sem componente recibo/fatura"
+      ],
+      "features": {
+        "magicLink": false,
+        "fiscalPT": false,
+        "stripe": false,
+        "mobile": true,
+        "multiVertical": false,
+        "aiAdvisor": false,
+        "b2b": false
+      }
+    },
+    {
+      "id": "oscar",
+      "name": "OSCAR",
+      "tier": 4,
+      "signal": "silent",
+      "country": "ES",
+      "founded": "2018",
+      "funding": "desconhecido",
+      "lastUpdate": "2026-05-01",
+      "threatLevel": "baixo",
+      "desc": "Plataforma on-demand home services com presença em LATAM e Espanha. Modelo B2C sem gestão de contratos. Silent — sem actividade significativa detectada nos últimos 6 meses. Monitorização quarterly suficiente.",
+      "strengths": [
+        "Presença ES (mercado vizinho)",
+        "On-demand estabelecido"
+      ],
+      "weaknesses": [
+        "Sem presença PT",
+        "Sem AI",
+        "Sem integrações fiscais locais",
+        "Sem componente B2B"
+      ],
+      "features": {
+        "magicLink": false,
+        "fiscalPT": false,
+        "stripe": false,
+        "mobile": true,
+        "multiVertical": false,
+        "aiAdvisor": false,
+        "b2b": false
+      }
+    }
+  ],
+  "ourProduct": {
+    "name": "V5 Manutenção",
+    "features": {
+      "magicLink": true,
+      "fiscalPT": true,
+      "stripe": "partial",
+      "mobile": true,
+      "multiVertical": true,
+      "aiAdvisor": true,
+      "b2b": "partial"
+    }
+  },
+  "featureMatrix": [
+    {
+      "key": "magicLink",
+      "label": "Magic-link"
+    },
+    {
+      "key": "fiscalPT",
+      "label": "Fiscal PT (Moloni)"
+    },
+    {
+      "key": "stripe",
+      "label": "Stripe / Pagamentos"
+    },
+    {
+      "key": "mobile",
+      "label": "Mobile App"
+    },
+    {
+      "key": "multiVertical",
+      "label": "Multi-vertical"
+    },
+    {
+      "key": "aiAdvisor",
+      "label": "AI Advisor"
+    },
+    {
+      "key": "b2b",
+      "label": "B2B Condomínio"
     }
   ]
 }

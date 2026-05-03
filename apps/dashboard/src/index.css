@@ -15,6 +15,16 @@
   --info: #3b82f6;
 }
 
+body[data-theme="light"] {
+  --bg: #f4f3f0;
+  --bg-card: #ffffff;
+  --bg-elevated: #f0eeeb;
+  --border: rgba(0,0,0,0.08);
+  --text: #18160f;
+  --text-dim: #6b6458;
+  --primary: #534AB7;
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -200,6 +210,12 @@ body {
 .badge.production { background: rgba(16, 185, 129, 0.15); color: var(--success); }
 .badge.foundation { background: rgba(83, 74, 183, 0.15); color: var(--primary); }
 .badge.planned { background: rgba(139, 146, 168, 0.1); color: var(--text-dim); }
+.badge.dim { background: rgba(139, 146, 168, 0.15); color: var(--text-dim); }
+.badge.deferred { background: rgba(139, 146, 168, 0.1); color: var(--text-dim); }
+.badge.never { background: rgba(139, 146, 168, 0.1); color: var(--text-dim); }
+.badge.ok { background: rgba(16, 185, 129, 0.15); color: var(--success); }
+.badge.warn { background: rgba(245, 158, 11, 0.15); color: var(--warning); }
+.badge.critical { background: rgba(239, 68, 68, 0.15); color: var(--danger); }
 
 /* Progress */
 .progress-track {
@@ -399,12 +415,62 @@ body {
   padding: 12px 0;
 }
 
+/* Grid overview — 2 colunas desktop, 1 coluna mobile */
+.grid-overview {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+/* Grid 4 para stack health */
+.grid-4 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+/* Grid agentes — 3 desktop, 2 tablet, 1 mobile */
+.grid-agents {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+/* Botão theme toggle */
+.btn-theme {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: opacity 0.15s;
+  line-height: 1;
+}
+.btn-theme:hover { opacity: 0.8; }
+
+/* Pulse animation para alerts */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
 /* Responsive */
+@media (max-width: 768px) {
+  .grid-overview { grid-template-columns: 1fr; }
+  .grid-4 { grid-template-columns: repeat(2, 1fr); }
+  .grid-agents { grid-template-columns: repeat(2, 1fr); }
+}
+
 @media (max-width: 600px) {
   .content { padding: 12px; }
   .grid { grid-template-columns: 1fr; gap: 12px; }
+  .grid-2 { grid-template-columns: 1fr; }
+  .grid-agents { grid-template-columns: 1fr; }
   .card { padding: 16px; }
   .tabs { padding: 0 12px; }
   .app-header { padding: 12px 16px; }
   .tab { padding: 10px 12px; font-size: 0.8rem; }
+  .col-hide-sm { display: none; }
 }
