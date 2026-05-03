@@ -1,501 +1,737 @@
 <!DOCTYPE html>
-<html lang="pt">
+<html lang="pt-PT">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="theme-color" content="#534AB7">
-<title>PropTech Platform — Sprint 1D Dashboard</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="robots" content="noindex,nofollow" />
+<title>Agentic Ops · PropTech Platform</title>
 <style>
-  :root {
-    --bg: #0a0e1a;
-    --bg-card: #131826;
-    --bg-elevated: #1c2333;
-    --border: #2a3348;
-    --text: #e8eaf0;
-    --text-dim: #8b92a8;
-    --primary: #534AB7;
-    --success: #10b981;
-    --warning: #f59e0b;
-    --danger: #ef4444;
-    --info: #3b82f6;
-  }
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    line-height: 1.5;
-    padding: 16px;
-    min-height: 100vh;
-  }
-  header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 24px;
-    flex-wrap: wrap;
-    gap: 12px;
-  }
-  h1 {
-    font-size: 1.5rem;
-    font-weight: 700;
-    background: linear-gradient(135deg, #534AB7, #8b5cf6);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-  .last-update {
-    font-size: 0.75rem;
-    color: var(--text-dim);
-  }
-  .grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 16px;
-  }
-  .card {
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 20px;
-  }
-  .card h2 {
-    font-size: 0.875rem;
-    font-weight: 600;
-    color: var(--text-dim);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    margin-bottom: 16px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-  .card h2::before {
-    content: "";
-    width: 4px;
-    height: 14px;
-    background: var(--primary);
-    border-radius: 2px;
-  }
-  .progress-track {
-    height: 8px;
-    background: var(--bg-elevated);
-    border-radius: 4px;
-    overflow: hidden;
-    margin-top: 8px;
-  }
-  .progress-fill {
-    height: 100%;
-    background: linear-gradient(90deg, var(--primary), #8b5cf6);
-    border-radius: 4px;
-    transition: width 0.6s ease;
-  }
-  .stat {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    padding: 8px 0;
-    border-bottom: 1px solid var(--border);
-  }
-  .stat:last-child { border-bottom: none; }
-  .stat-label { color: var(--text-dim); font-size: 0.875rem; }
-  .stat-value { font-weight: 600; font-size: 1rem; }
-  .stat-value.big { font-size: 2rem; line-height: 1; color: var(--primary); }
-  .badge {
-    display: inline-block;
-    padding: 2px 8px;
-    border-radius: 4px;
-    font-size: 0.75rem;
-    font-weight: 600;
-  }
-  .badge.success { background: rgba(16,185,129,0.15); color: var(--success); }
-  .badge.warning { background: rgba(245,158,11,0.15); color: var(--warning); }
-  .badge.danger { background: rgba(239,68,68,0.15); color: var(--danger); }
-  .badge.info { background: rgba(59,130,246,0.15); color: var(--info); }
-  .issue-item {
-    padding: 12px 0;
-    border-bottom: 1px solid var(--border);
-  }
-  .issue-item:last-child { border-bottom: none; }
-  .issue-title {
-    font-weight: 500;
-    margin-bottom: 4px;
-    font-size: 0.9rem;
-  }
-  .issue-title a { color: var(--text); text-decoration: none; }
-  .issue-title a:hover { color: var(--primary); }
-  .issue-meta {
-    font-size: 0.75rem;
-    color: var(--text-dim);
-    display: flex;
-    gap: 8px;
-    align-items: center;
-    flex-wrap: wrap;
-  }
-  .commit-item {
-    font-family: "SF Mono", Monaco, Consolas, monospace;
-    font-size: 0.8rem;
-    padding: 6px 0;
-    color: var(--text-dim);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .commit-hash { color: var(--info); margin-right: 8px; }
-  .empty-state {
-    color: var(--text-dim);
-    font-style: italic;
-    font-size: 0.875rem;
-    padding: 12px 0;
-  }
-  .gate-list { list-style: none; }
-  .gate-item {
-    padding: 8px 0;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 0.875rem;
-    border-bottom: 1px solid var(--border);
-  }
-  .gate-item:last-child { border-bottom: none; }
-  .gate-icon {
-    display: inline-block;
-    width: 16px;
-    height: 16px;
-    border-radius: 50%;
-    flex-shrink: 0;
-  }
-  .gate-icon.pending { background: var(--bg-elevated); border: 2px solid var(--text-dim); }
-  .gate-icon.done { background: var(--success); }
-  .gate-icon.fail { background: var(--danger); }
-  .gate-date { color: var(--text-dim); font-size: 0.75rem; margin-left: auto; white-space: nowrap; }
-  .refresh-btn {
-    background: var(--primary);
-    color: white;
-    border: none;
-    padding: 8px 16px;
-    border-radius: 8px;
-    font-size: 0.875rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: opacity 0.2s;
-  }
-  .refresh-btn:hover { opacity: 0.9; }
-  .refresh-btn:active { opacity: 0.7; }
-  .skeleton {
-    background: linear-gradient(90deg, var(--bg-elevated) 0%, var(--border) 50%, var(--bg-elevated) 100%);
-    background-size: 200% 100%;
-    animation: shimmer 1.5s infinite;
-    border-radius: 4px;
-    height: 14px;
-    margin: 8px 0;
-  }
-  @keyframes shimmer {
-    0% { background-position: -200% 0; }
-    100% { background-position: 200% 0; }
-  }
-  @media (max-width: 600px) {
-    body { padding: 12px; }
-    h1 { font-size: 1.2rem; }
-    .grid { grid-template-columns: 1fr; gap: 12px; }
-    .card { padding: 16px; }
-  }
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased;line-height:1.5;min-height:100vh}
+.mono{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-feature-settings:"zero"}
+button{font:inherit;cursor:pointer;border:0;background:0;color:inherit}
+a{color:inherit;text-decoration:none}
+ul,ol{list-style:none}
+:root,body.dark{color-scheme:dark;--bg:#0a0a0a;--surface:#151515;--s2:rgba(255,255,255,.025);--s3:rgba(255,255,255,.04);--bo:rgba(255,255,255,.08);--bo2:rgba(255,255,255,.06);--t:#e7e5e4;--t2:#a8a29e;--t3:#78716c;--t4:#57534e;--gl:rgba(255,255,255,.018);--cy:#22d3ee;--cyb:rgba(34,211,238,.08);--cybo:rgba(34,211,238,.2);--em:#34d399;--emb:rgba(52,211,153,.08);--embo:rgba(52,211,153,.2);--am:#fbbf24;--amb:rgba(251,191,36,.1);--ambo:rgba(251,191,36,.25);--re:#f87171;--reb:rgba(248,113,113,.08);--rebo:rgba(248,113,113,.22);--vi:#a78bfa;--vib:rgba(167,139,250,.08);--vibo:rgba(167,139,250,.22);--st:#78716c;--stb:rgba(120,113,108,.08);--stbo:rgba(120,113,108,.22)}
+body.light{color-scheme:light;--bg:#fafaf9;--surface:#fff;--s2:rgba(0,0,0,.018);--s3:rgba(0,0,0,.035);--bo:rgba(0,0,0,.08);--bo2:rgba(0,0,0,.06);--t:#1c1917;--t2:#57534e;--t3:#78716c;--t4:#a8a29e;--gl:rgba(0,0,0,.025);--cy:#0891b2;--em:#059669;--am:#d97706;--re:#dc2626;--vi:#7c3aed;--st:#78716c}
+body{background:var(--bg);color:var(--t)}
+.gb{background-image:linear-gradient(var(--gl) 1px,transparent 1px),linear-gradient(90deg,var(--gl) 1px,transparent 1px);background-size:24px 24px;min-height:100vh}
+.c{max-width:1200px;margin:0 auto;padding:0 16px}
+@media(min-width:640px){.c{padding:0 24px}}
+header{position:sticky;top:0;z-index:40;backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);background:color-mix(in srgb,var(--bg) 75%,transparent);border-bottom:1px solid var(--bo2)}
+.ht{display:flex;align-items:center;justify-content:space-between;padding:12px 0}
+.br{display:flex;align-items:center;gap:12px}
+.brl{position:relative;width:28px;height:28px;border-radius:6px;background:var(--cyb);border:1px solid var(--cybo);display:flex;align-items:center;justify-content:center;overflow:hidden}
+.brl .sc{position:absolute;inset:0;width:1px;background:var(--cy);opacity:.6;animation:scan 3s linear infinite}
+@keyframes scan{0%{transform:translateX(-2px)}100%{transform:translateX(28px)}}
+.brl span{font-family:ui-monospace,monospace;color:var(--cy);font-size:11px;font-weight:600}
+.bn{font-size:15px;font-weight:600;letter-spacing:-.01em}
+.bm{font-size:11px;color:var(--t3);display:flex;align-items:center;gap:6px}
+.bd{width:4px;height:4px;border-radius:50%;background:var(--em)}
+.hr{display:flex;align-items:center;gap:12px}
+.lsl{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--t3)}
+.lst{font-size:12px;color:var(--t2)}
+@media(max-width:639px){.ls{display:none}}
+.tb{width:32px;height:32px;border-radius:6px;border:1px solid var(--bo);color:var(--t2);transition:background .15s}
+.tb:hover{background:var(--s2)}
+nav.tabs{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none}
+nav.tabs::-webkit-scrollbar{display:none}
+.tab{padding:10px 14px;font-size:13px;color:var(--t3);border-bottom:2px solid transparent;white-space:nowrap;transition:all .15s}
+.tab:hover{color:var(--t)}
+.tab.active{color:var(--t);border-bottom-color:var(--cy)}
+.tc{font-family:ui-monospace,monospace;font-size:10px;color:var(--t4);margin-left:4px}
+.tab.active .tc{color:var(--cy)}
+main{padding:24px 0}
+.view{display:none}
+.view.active{display:block}
+.hero{position:relative;overflow:hidden;border-radius:16px;border:1px solid var(--cybo);background:linear-gradient(135deg,rgba(34,211,238,.05) 0%,var(--surface) 50%);padding:20px;margin-bottom:24px}
+@media(min-width:640px){.hero{padding:28px}}
+.hero::before{content:'';position:absolute;top:-100px;right:-100px;width:256px;height:256px;border-radius:50%;background:rgba(34,211,238,.04);filter:blur(60px);pointer-events:none}
+.hi{position:relative}
+.hto{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px}
+.hta{display:flex;align-items:center;gap:8px;font-size:10px;text-transform:uppercase;letter-spacing:.15em}
+.hta .cy{color:var(--cy)}.hta .em{color:var(--em)}.hta .se{color:var(--t4)}
+.hg{font-size:11px;color:var(--t3)}
+.hg .am{color:var(--am);font-weight:500}
+.hid{font-size:26px;font-weight:600;letter-spacing:-.02em;color:var(--t)}
+@media(min-width:640px){.hid{font-size:32px}}
+.hn{color:var(--t2);font-size:14px;margin-top:2px}
+.hs{font-size:12px;color:var(--t3);margin-top:4px;margin-bottom:20px}
+.pm{display:flex;justify-content:space-between;font-size:10px;color:var(--t3);margin-bottom:6px}
+.pm .v{color:var(--cy)}
+.pt{height:6px;background:var(--s3);border-radius:999px;overflow:hidden}
+.pf{height:100%;border-radius:999px;background:linear-gradient(90deg,rgba(34,211,238,.4),var(--cy));transition:width .6s ease}
+.pd{display:flex;justify-content:space-between;font-size:10px;color:var(--t4);margin-top:6px}
+.alerts{margin-bottom:32px;display:flex;flex-direction:column;gap:8px}
+.alert{display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:10px;border:1px solid var(--rebo);background:var(--reb);cursor:pointer;transition:background .15s}
+.alert:hover{background:rgba(248,113,113,.12)}
+.ad{width:8px;height:8px;border-radius:50%;background:var(--re);position:relative;flex-shrink:0}
+.ad::after{content:'';position:absolute;inset:-4px;border-radius:50%;border:1px solid var(--re);opacity:.4;animation:pul 2s ease-in-out infinite}
+@keyframes pul{0%,100%{transform:scale(1);opacity:.4}50%{transform:scale(1.5);opacity:0}}
+.ab{flex:1;min-width:0}
+.ar{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.atag{font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:var(--re);font-weight:500}
+.at{font-size:13px;color:var(--t)}
+.av{font-size:12px;color:var(--re);font-weight:500}
+.adt{font-size:11px;color:var(--t3);margin-top:2px}
+.aa{color:var(--t3);font-size:14px;flex-shrink:0}
+section{margin-bottom:32px}
+.st{display:flex;align-items:baseline;gap:8px;font-size:11px;text-transform:uppercase;letter-spacing:.18em;color:var(--t3);margin-bottom:12px;font-weight:500}
+.scn{color:var(--t4);font-size:10px}
+.g3{display:grid;grid-template-columns:1fr;gap:24px}
+@media(min-width:1024px){.g3{grid-template-columns:2fr 1fr}}
+.g2{display:grid;grid-template-columns:1fr;gap:24px}
+@media(min-width:1024px){.g2{grid-template-columns:1fr 1fr}}
+.vs{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+@media(min-width:640px){.vs{grid-template-columns:repeat(4,1fr);gap:12px}}
+.vt{border:1px solid;border-radius:12px;padding:12px;cursor:pointer;transition:background .2s,transform .15s}
+.vt:hover{background:var(--s3);transform:translateY(-1px)}
+@media(min-width:640px){.vt{padding:16px}}
+.vt.amber{border-color:var(--ambo);background:var(--amb)}
+.vt.emerald{border-color:var(--embo);background:var(--emb)}
+.vt.violet{border-color:var(--vibo);background:var(--vib)}
+.vt.stone{border-color:var(--stbo);background:var(--stb)}
+.vh{display:flex;align-items:center;gap:6px;margin-bottom:6px}
+.vd{width:6px;height:6px;border-radius:50%}
+.vd.amber{background:var(--am)}.vd.emerald{background:var(--em)}.vd.violet{background:var(--vi)}.vd.stone{background:var(--st)}
+.vid{font-family:ui-monospace,monospace;font-size:11px;font-weight:600;letter-spacing:.04em;color:var(--t)}
+.vss{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--t3)}
+.vn{font-size:14px;font-weight:500;color:var(--t);margin-bottom:2px}
+.vdt{font-size:11px;color:var(--t3)}
+.vm{margin-top:8px;padding-top:8px;border-top:1px solid var(--bo2);font-family:ui-monospace,monospace;font-size:10px;color:var(--t4)}
+.card{border:1px solid var(--bo);background:var(--s2);border-radius:12px;padding:4px 16px}
+.cp{padding:16px}
+@media(min-width:640px){.cp{padding:20px}}
+.row{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--bo2);cursor:pointer;transition:background .15s;margin:0 -8px;padding-left:8px;padding-right:8px;border-radius:6px}
+.row:last-child{border-bottom:0}
+.row:hover{background:var(--s3)}
+.rb{flex:1;min-width:0}
+.rt{font-size:13px;color:var(--t);line-height:1.4}
+.rm{display:flex;gap:8px;align-items:center;font-size:11px;color:var(--t3);margin-top:4px;flex-wrap:wrap}
+.rm .se{color:var(--t4)}
+.ra{color:var(--t4);font-size:14px;flex-shrink:0;align-self:center}
+.prio{font-family:ui-monospace,monospace;font-size:10px;font-weight:600;padding:2px 6px;border-radius:4px;flex-shrink:0;align-self:flex-start}
+.prio.P0{color:var(--re);background:var(--reb)}.prio.P1{color:var(--am);background:var(--amb)}.prio.P2{color:var(--cy);background:var(--cyb)}
+.sr{display:grid;grid-template-columns:5fr 2fr 2fr 2fr;gap:8px;padding:10px 0;border-bottom:1px solid var(--bo2);align-items:center;font-size:12px}
+@media(min-width:640px){.sr{grid-template-columns:4fr 2fr 2fr 2fr 2fr}}
+.sr.head{font-family:ui-monospace,monospace;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--t4);padding:8px 0;border-bottom:1px solid var(--bo)}
+.sr:last-child{border-bottom:0}
+.sn{color:var(--t);font-weight:500}
+.srl{font-size:11px;color:var(--t3);margin-top:1px}
+.sh,.sct,.spr{font-family:ui-monospace,monospace;font-size:11px;color:var(--t3)}
+.sct{text-align:right;color:var(--t2)}
+.spr{text-align:right;color:var(--t4);font-size:10px;display:none}
+@media(min-width:640px){.spr{display:block}}
+.shc,.sctc,.sprc{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bg{font-family:ui-monospace,monospace;font-size:10px;padding:2px 6px;border-radius:4px;border:1px solid;display:inline-block;white-space:nowrap}
+.bg.OK{color:var(--em);background:var(--emb);border-color:var(--embo)}
+.bg.WARN{color:var(--am);background:var(--amb);border-color:var(--ambo)}
+.bg.FAIL,.bg.DOWN{color:var(--re);background:var(--reb);border-color:var(--rebo)}
+.bg.STALE{color:var(--t3);background:var(--stb);border-color:var(--stbo)}
+.bg.PLANNED{color:var(--cy);background:var(--cyb);border-color:var(--cybo)}
+.bg.DEFERRED{color:var(--t4);background:rgba(120,113,108,.04);border-color:var(--stbo)}
+.wr{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--bo2);cursor:pointer;transition:background .15s;margin:0 -8px;padding-left:8px;padding-right:8px;border-radius:6px}
+.wr:last-child{border-bottom:0}
+.wr:hover{background:var(--s3)}
+.wb{flex:1;min-width:0}
+.wn{font-family:ui-monospace,monospace;font-size:12px;color:var(--t)}
+.wo{font-size:11px;color:var(--t3);margin-top:1px}
+.wt{text-align:right;flex-shrink:0}
+.wl{font-family:ui-monospace,monospace;font-size:11px;color:var(--t2)}
+.wc{font-family:ui-monospace,monospace;font-size:10px;color:var(--t4)}
+.wcrd{border:1px solid var(--bo);background:var(--s2);border-radius:12px;padding:16px;margin-bottom:12px}
+.wch{display:flex;align-items:center;gap:12px;margin-bottom:12px;flex-wrap:wrap}
+.wcn{font-family:ui-monospace,monospace;font-size:14px;color:var(--t);font-weight:500}
+.wcm{display:grid;grid-template-columns:repeat(2,1fr);gap:8px 16px;font-size:11px;margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--bo2)}
+@media(min-width:640px){.wcm{grid-template-columns:repeat(4,1fr)}}
+.wml{color:var(--t3);text-transform:uppercase;letter-spacing:.1em;font-size:10px}
+.wmv{color:var(--t);font-family:ui-monospace,monospace;margin-top:2px}
+.wob{background:var(--bg);border:1px solid var(--bo2);border-radius:8px;padding:12px;font-family:ui-monospace,monospace;font-size:11px;color:var(--t2);white-space:pre-wrap;line-height:1.6;max-height:240px;overflow-y:auto}
+.wac{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+.btn{font-size:12px;padding:6px 12px;border:1px solid var(--bo);border-radius:6px;color:var(--t2);background:transparent;transition:all .15s}
+.btn:hover{background:var(--s3);color:var(--t)}
+.btn.pri{background:var(--cyb);border-color:var(--cybo);color:var(--cy)}
+.btn.pri:hover{background:rgba(34,211,238,.15)}
+.ga{display:flex;flex-direction:column;gap:14px}
+.gh{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}
+.gn{font-size:12px;color:var(--t)}
+.gl{font-family:ui-monospace,monospace;font-size:11px;color:var(--t3)}
+.gt{height:4px;background:var(--s3);border-radius:999px;overflow:hidden}
+.gf{height:100%;border-radius:999px;transition:width .6s ease}
+.gf.green{background:var(--em)}.gf.amber{background:var(--am)}.gf.red{background:var(--re)}
+.ag{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+@media(min-width:640px){.ag{grid-template-columns:repeat(3,1fr);gap:12px}}
+@media(min-width:1024px){.ag{grid-template-columns:repeat(6,1fr)}}
+.agc{border:1px solid var(--bo);background:var(--s2);border-radius:8px;padding:12px;cursor:pointer;transition:background .2s}
+.agc:hover{background:var(--s3)}
+.agh{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;gap:8px}
+.agn{font-family:ui-monospace,monospace;font-size:12px;color:var(--t);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.agd{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.agd.idle{background:var(--em)}.agd.never{background:var(--t4)}.agd.stale{background:var(--am)}
+.agt{font-size:11px;color:var(--t3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:2px}
+.agtm{font-family:ui-monospace,monospace;font-size:10px;color:var(--t4)}
+.ar2{display:flex;align-items:flex-start;gap:12px;padding:10px 0;border-bottom:1px solid var(--bo2)}
+.ar2:last-child{border-bottom:0}
+.atm{font-family:ui-monospace,monospace;font-size:10px;color:var(--t4);width:50px;flex-shrink:0;padding-top:2px}
+.abu{width:6px;height:6px;border-radius:50%;background:rgba(34,211,238,.4);margin-top:6px;flex-shrink:0}
+.aby{flex:1;min-width:0;font-size:12px;line-height:1.4}
+.aac{font-family:ui-monospace,monospace;color:var(--t2)}
+.aax{color:var(--t)}
+.awh{font-family:ui-monospace,monospace;color:var(--t4)}
+.aday{font-family:ui-monospace,monospace;font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:var(--t3);padding:16px 0 8px;border-bottom:1px solid var(--bo);margin-bottom:4px}
+.ds{display:flex;flex-direction:column;gap:6px}
+.dec{display:flex;align-items:flex-start;gap:12px;padding:12px;border-left:2px solid;background:var(--s2);border-radius:0 8px 8px 0;cursor:pointer;transition:background .15s}
+.dec:hover{background:var(--s3)}
+.dec.critical{border-left-color:var(--re)}
+.dec.high{border-left-color:var(--am)}
+.dec.medium{border-left-color:var(--cy)}
+.dec.low{border-left-color:var(--st)}
+.db{flex:1;min-width:0}
+.dt{font-size:13px;color:var(--t);line-height:1.4}
+.dm{font-family:ui-monospace,monospace;font-size:10px;color:var(--t3);margin-top:4px}
+.du{font-family:ui-monospace,monospace;font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:var(--t3);flex-shrink:0;padding-top:2px}
+.rf{display:flex;gap:6px;margin-bottom:20px;flex-wrap:wrap}
+.fc{font-size:12px;padding:6px 12px;border-radius:6px;border:1px solid var(--bo);color:var(--t2);transition:all .15s}
+.fc:hover{background:var(--s3)}
+.fc.active{background:var(--cyb);border-color:var(--cybo);color:var(--cy)}
+.wave{margin-bottom:28px}
+.wh{display:flex;align-items:center;gap:12px;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--bo);flex-wrap:wrap}
+.wid{font-family:ui-monospace,monospace;font-size:14px;font-weight:600;color:var(--t);padding:4px 10px;border-radius:6px;background:var(--s3)}
+.wnam{font-size:14px;color:var(--t);flex:1}
+.wst{font-family:ui-monospace,monospace;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--t3)}
+.ws{display:flex;flex-direction:column;gap:8px;padding-left:16px;border-left:2px solid var(--bo2)}
+.scd{display:flex;gap:12px;padding:12px;border:1px solid var(--bo);border-radius:8px;background:var(--s2);cursor:pointer;transition:all .15s;position:relative}
+.scd::before{content:'';position:absolute;left:-19px;top:50%;width:8px;height:8px;border-radius:50%;background:var(--t4);transform:translateY(-50%);border:2px solid var(--bg)}
+.scd.done::before{background:var(--em)}
+.scd.active::before{background:var(--cy);box-shadow:0 0 0 4px var(--cyb)}
+.scd.blocked::before{background:var(--re)}
+.scd.planned::before{background:var(--t4)}
+.scd:hover{background:var(--s3);transform:translateX(2px)}
+.si{flex:1;min-width:0}
+.sir{display:flex;align-items:baseline;gap:8px;margin-bottom:2px;flex-wrap:wrap}
+.sid{font-family:ui-monospace,monospace;font-size:13px;font-weight:600;color:var(--t)}
+.snam{font-size:13px;color:var(--t2)}
+.smr{font-family:ui-monospace,monospace;font-size:11px;color:var(--t3);display:flex;gap:8px;flex-wrap:wrap}
+.smr .se{color:var(--t4)}
+.cgrid{display:grid;grid-template-columns:1fr;gap:12px;margin-bottom:24px}
+@media(min-width:640px){.cgrid{grid-template-columns:1fr 1fr}}
+@media(min-width:1024px){.cgrid{grid-template-columns:repeat(3,1fr)}}
+.cmp{border:1px solid var(--bo);background:var(--s2);border-radius:12px;padding:16px;cursor:pointer;transition:all .15s;display:flex;flex-direction:column;gap:8px}
+.cmp:hover{background:var(--s3);transform:translateY(-1px)}
+.cmpt{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.cmpn{font-size:14px;font-weight:600;color:var(--t)}
+.cmptr{font-family:ui-monospace,monospace;font-size:10px;padding:2px 6px;border-radius:4px;text-transform:uppercase;letter-spacing:.08em}
+.cmptr.t1{color:var(--re);background:var(--reb)}
+.cmptr.t2{color:var(--am);background:var(--amb)}
+.cmptr.t3{color:var(--cy);background:var(--cyb)}
+.cmptr.t4{color:var(--t3);background:var(--stb)}
+.cmpd{font-size:12px;color:var(--t2);line-height:1.5}
+.cmpm{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px;padding-top:8px;border-top:1px solid var(--bo2);font-family:ui-monospace,monospace;font-size:10px;color:var(--t3)}
+.cmpm .se{color:var(--t4)}
+.cmps{font-family:ui-monospace,monospace;font-size:10px;text-transform:uppercase;letter-spacing:.08em}
+.cmps.weak{color:var(--t3)}
+.cmps.medium{color:var(--am)}
+.cmps.strong{color:var(--re)}
+.cmps.reference{color:var(--cy)}
+.cmps.silent{color:var(--t4)}
+.cmtx{overflow-x:auto;border:1px solid var(--bo);border-radius:12px;background:var(--s2)}
+.cmtx table{width:100%;border-collapse:collapse;font-size:12px;min-width:640px}
+.cmtx th,.cmtx td{padding:10px 12px;text-align:left;border-bottom:1px solid var(--bo2)}
+.cmtx th{font-family:ui-monospace,monospace;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--t4);background:var(--s3);font-weight:500;text-align:center}
+.cmtx th:first-child{text-align:left}
+.cmtx td:first-child{font-weight:500;color:var(--t)}
+.cmtx td:not(:first-child){text-align:center}
+.cmtx tr:last-child td{border-bottom:0}
+.cmtx tr:hover td{background:var(--s3)}
+.fy{color:var(--em);font-weight:600}
+.fn{color:var(--t4)}
+.fp{color:var(--cy);font-weight:600}
+.do{position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);z-index:50;opacity:0;pointer-events:none;transition:opacity .2s}
+.do.open{opacity:1;pointer-events:auto}
+.dr{position:fixed;top:0;right:0;bottom:0;width:100%;max-width:480px;background:var(--bg);border-left:1px solid var(--bo);z-index:51;transform:translateX(100%);transition:transform .25s cubic-bezier(.16,1,.3,1);display:flex;flex-direction:column}
+.dr.open{transform:translateX(0)}
+.dh{padding:16px 20px;border-bottom:1px solid var(--bo);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-shrink:0}
+.dttl{font-size:14px;font-weight:500;color:var(--t);flex:1;min-width:0}
+.dsub{font-family:ui-monospace,monospace;font-size:11px;color:var(--t3);margin-top:2px}
+.dcl{width:32px;height:32px;border-radius:6px;border:1px solid var(--bo);color:var(--t2);flex-shrink:0}
+.dcl:hover{background:var(--s2)}
+.dby{flex:1;overflow-y:auto;padding:20px}
+.dse{margin-bottom:20px}
+.dst{font-size:10px;text-transform:uppercase;letter-spacing:.15em;color:var(--t3);margin-bottom:8px;font-weight:500}
+.dtx{font-size:13px;color:var(--t);line-height:1.6}
+.dmo{font-family:ui-monospace,monospace;font-size:12px;color:var(--t2);background:var(--s2);padding:12px;border-radius:6px;border:1px solid var(--bo2);white-space:pre-wrap;line-height:1.6}
+.dl{display:flex;flex-direction:column;gap:6px}
+.dli{display:flex;align-items:center;gap:8px;font-size:12px;padding:8px 12px;background:var(--s2);border-radius:6px}
+.dli.done{color:var(--t3);text-decoration:line-through}
+.dli .ck{color:var(--em)}.dli .pe{color:var(--t4)}
+footer{margin-top:48px;padding-top:24px;border-top:1px solid var(--bo2);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;font-family:ui-monospace,monospace;font-size:11px;color:var(--t4)}
+footer .lnk{display:flex;gap:12px}
+footer .lnk a:hover{color:var(--t2)}
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--bo);border-radius:999px}
 </style>
 </head>
-<body>
-  <header>
-    <div>
-      <h1>🎛️ Sprint 1D Live Dashboard</h1>
-      <div class="last-update" id="lastUpdate">A carregar…</div>
-    </div>
-    <button class="refresh-btn" id="refreshBtn" onclick="loadAll()">🔄 Refresh</button>
-  </header>
-
-  <div class="grid">
-    <!-- Sprint progress -->
-    <div class="card">
-      <h2>Sprint 1D Status</h2>
-      <div class="stat">
-        <span class="stat-label">Day</span>
-        <span class="stat-value big" id="sprintDay">—</span>
-      </div>
-      <div class="stat">
-        <span class="stat-label">Hard deadline</span>
-        <span class="stat-value">2026-05-15</span>
-      </div>
-      <div class="progress-track">
-        <div class="progress-fill" id="sprintProgress" style="width:0%"></div>
-      </div>
-      <div class="stat" style="margin-top:12px;">
-        <span class="stat-label">Hypothesis</span>
-        <span class="stat-value" style="font-size:0.75rem;text-align:right;">Owner→link→prestador 48h</span>
-      </div>
-    </div>
-
-    <!-- Go/No-go gates -->
-    <div class="card">
-      <h2>Go/No-go Gates</h2>
-      <ul class="gate-list" id="gates">
-        <li class="gate-item"><span class="gate-icon pending" id="gate3"></span> Day 3: Foundations deployed <span class="gate-date">2026-05-03</span></li>
-        <li class="gate-item"><span class="gate-icon pending" id="gate7"></span> Day 7: 1+ owner externo flow <span class="gate-date">2026-05-07</span></li>
-        <li class="gate-item"><span class="gate-icon pending" id="gate11"></span> Day 11: 1+ end-to-end real <span class="gate-date">2026-05-11</span></li>
-        <li class="gate-item"><span class="gate-icon pending" id="gate14"></span> Day 14: 5/5 criteria + decisão 1E <span class="gate-date">2026-05-15</span></li>
-      </ul>
-    </div>
-
-    <!-- Watcher reports -->
-    <div class="card" style="grid-column: 1 / -1;">
-      <h2>🤖 Watcher reports (last 10)</h2>
-      <div id="watcherReports">
-        <div class="skeleton"></div>
-        <div class="skeleton"></div>
-        <div class="skeleton"></div>
-      </div>
-    </div>
-
-    <!-- Recent commits -->
-    <div class="card">
-      <h2>📝 Recent commits</h2>
-      <div id="commits">
-        <div class="skeleton"></div>
-        <div class="skeleton"></div>
-      </div>
-    </div>
-
-    <!-- Watcher health -->
-    <div class="card">
-      <h2>🩺 Watcher health</h2>
-      <div id="watcherHealth">
-        <div class="skeleton"></div>
-        <div class="skeleton"></div>
-      </div>
-    </div>
-
-    <!-- Cost tracking -->
-    <div class="card">
-      <h2>💰 Cost tracking (mês)</h2>
-      <div class="stat">
-        <span class="stat-label">Estimado</span>
-        <span class="stat-value">€0.60</span>
-      </div>
-      <div class="stat">
-        <span class="stat-label">Cap mensal</span>
-        <span class="stat-value">€100</span>
-      </div>
-      <div class="stat">
-        <span class="stat-label">Margem</span>
-        <span class="stat-value"><span class="badge success">8× livre</span></span>
-      </div>
-      <div class="progress-track" style="margin-top:8px;">
-        <div class="progress-fill" style="width:0.6%; background: var(--success);"></div>
-      </div>
-    </div>
-
-    <!-- Quick links -->
-    <div class="card" style="grid-column: 1 / -1;">
-      <h2>🔗 Quick links</h2>
-      <div style="display:flex;flex-wrap:wrap;gap:12px;font-size:0.875rem;">
-        <a href="https://github.com/UNIFY-MC/proptech-platform" style="color:var(--info);text-decoration:none;">📂 Repo</a>
-        <a href="https://github.com/UNIFY-MC/proptech-platform/issues" style="color:var(--info);text-decoration:none;">🐛 Issues</a>
-        <a href="https://github.com/UNIFY-MC/proptech-platform/actions" style="color:var(--info);text-decoration:none;">⚡ Actions</a>
-        <a href="https://www.notion.so/35384147fa60812c8ffdc2908ce22ef8" style="color:var(--info);text-decoration:none;">📋 Notion Dashboard</a>
-        <a href="https://www.notion.so/34c84147fa6081308a95d642b04b7798" style="color:var(--info);text-decoration:none;">🧠 MASTER PLAN</a>
-      </div>
-    </div>
-
-    <!-- Agentic ops: agents state -->
-    <div class="card">
-      <h2>🤖 Agentes — último estado</h2>
-      <div id="agentsState">
-        <div class="skeleton"></div>
-        <div class="skeleton"></div>
-      </div>
-    </div>
-
-    <!-- Agentic ops: recent activity -->
-    <div class="card">
-      <h2>📡 Actividade recente</h2>
-      <div id="recentActivity">
-        <div class="skeleton"></div>
-        <div class="skeleton"></div>
-      </div>
-    </div>
-
-    <!-- Agentic ops: opportunities + sprint -->
-    <div class="card">
-      <h2>🎯 Sprint &amp; Oportunidades</h2>
-      <div id="sprintOps">
-        <div class="skeleton"></div>
-      </div>
-    </div>
-
-  </div>
-
+<body class="dark">
+<div class="gb">
+<header>
+<div class="c">
+<div class="ht">
+<div class="br">
+<div class="brl"><div class="sc"></div><span>AO</span></div>
+<div><div class="bn">Agentic Ops</div><div class="bm"><span class="bd"></span><span id="branch">main</span> · <span id="worktree">proptech-platform</span></div></div>
+</div>
+<div class="hr">
+<div class="ls"><div class="lsl">last sync</div><div class="lst mono" id="lastSync">—</div></div>
+<button class="tb" id="themeBtn">☾</button>
+</div>
+</div>
+<nav class="tabs">
+<button class="tab active" data-tab="overview">Overview</button>
+<button class="tab" data-tab="roadmap">Roadmap<span class="tc" id="roadmapCount"></span></button>
+<button class="tab" data-tab="watchers">Watchers<span class="tc" id="watchersTabCount"></span></button>
+<button class="tab" data-tab="competitors">Competitors<span class="tc" id="competitorsCount"></span></button>
+<button class="tab" data-tab="activity">Activity<span class="tc" id="activityTabCount"></span></button>
+</nav>
+</div>
+</header>
+<main class="c">
+<div class="view active" id="view-overview">
+<section id="hero-section"></section>
+<section id="alerts-section" class="alerts"></section>
+<div class="g3">
+<div>
+<section><div class="st">Verticais <span class="scn mono">· 4</span></div><div class="vs" id="verticals"></div></section>
+<section><div class="st">Próximas acções <span class="scn mono" id="actionsCount"></span></div><div class="card" id="actions"></div></section>
+<section>
+<div class="st">Tech stack <span class="scn mono" id="stackCount"></span></div>
+<div class="card">
+<div class="sr head"><div>serviço</div><div class="shc">host</div><div>estado</div><div class="sctc" style="text-align:right">custo</div><div class="sprc" style="text-align:right">sprint</div></div>
+<div id="stack"></div>
+</div>
+</section>
+</div>
+<div>
+<section><div class="st">Stack health</div><div class="card cp"><div class="ga" id="gauges"></div></div></section>
+<section><div class="st">Watchers <span class="scn mono" id="watchersCount"></span></div><div class="card" id="watchers"></div></section>
+</div>
+</div>
+<section><div class="st">Agentes <span class="scn mono" id="agentsCount"></span></div><div class="ag" id="agents"></div></section>
+<div class="g2">
+<section><div class="st">Recent activity <span class="scn mono" id="activityCount"></span></div><div class="card" id="activity-preview"></div></section>
+<section><div class="st">Decisões pendentes <span class="scn mono" id="decisionsCount"></span></div><div class="ds" id="decisions"></div></section>
+</div>
+</div>
+ 
+<div class="view" id="view-roadmap">
+<section>
+<div class="st">Roadmap · todas as ondas</div>
+<div class="rf">
+<button class="fc active" data-filter="all">Todas</button>
+<button class="fc" data-filter="active">Active</button>
+<button class="fc" data-filter="planned">Planned</button>
+<button class="fc" data-filter="done">Done</button>
+</div>
+<div id="roadmap"></div>
+</section>
+</div>
+ 
+<div class="view" id="view-watchers">
+<section>
+<div class="st">Watchers · relatórios completos</div>
+<div id="watchers-full"></div>
+</section>
+</div>
+ 
+<div class="view" id="view-competitors">
+<section>
+<div class="st">Competitors</div>
+<div class="cgrid" id="competitors"></div>
+</section>
+<section>
+<div class="st">Comparativo · feature matrix</div>
+<div class="cmtx" id="cmatrix"></div>
+</section>
+</div>
+ 
+<div class="view" id="view-activity">
+<section>
+<div class="st">Activity · timeline completa</div>
+<div class="card" id="activity-full"></div>
+</section>
+</div>
+ 
+<footer>
+<div>agentic-ops · <span id="footerWt">proptech-platform</span> · <span id="footerSync">—</span></div>
+<div class="lnk"><a href="https://github.com/UNIFY-MC/proptech-platform" target="_blank">github</a></div>
+</footer>
+</main>
+<div class="do" id="drawerOverlay"></div>
+<aside class="dr" id="drawer">
+<div class="dh"><div style="flex:1;min-width:0"><div class="dttl" id="drawerTitle">—</div><div class="dsub" id="drawerSubtitle">—</div></div><button class="dcl" id="drawerClose">✕</button></div>
+<div class="dby" id="drawerBody"></div>
+</aside>
+</div>
+ 
 <script>
-const REPO = 'UNIFY-MC/proptech-platform';
-const SPRINT_START = new Date('2026-05-01');
-const SPRINT_DAYS = 14;
-
-const LABEL_COLORS = {
-  'competitor-monitor': 'info',
-  'daily-brief': 'warning',
-  'weekly-recap': 'info',
-  'healthcheck': 'success',
-  'incident': 'danger',
-  'automated': 'info',
+(function(){
+'use strict';
+var DATA={
+meta:{branch:'main',worktree:'proptech-platform',lastSync:'2026-05-01T23:42Z'},
+sprint:{id:'1D',day:'Day 5.7',name:'Receipt Trojan Horse Alpha',vertical:'V5',progress:78,daysToGate:2,gateName:'Day 7 · 5+ alpha owners',status:'shipped',started:'2026-04-25',target:'2026-05-04'},
+alerts:[{level:'critical',label:'R2 alpha owners',value:'1 / 5',detail:'Hard blocker · Day 7 gate em 2 dias'}],
+verticals:[
+{id:'V5',name:'Manutenção',status:'focus',detail:'foco 100% atenção',color:'amber',meta:'Sprint 1D · alpha',longDetail:'Vertical em foco activo. Sprint 1D Day 5.7 shipped, Day 7 gate em 2 dias. App em apps/v5-manutencao/ (React + Vite). Hipótese central: owner partilha link → prestador onboard em 48h.'},
+{id:'V2',name:'Condomínios',status:'production',detail:'low-touch · prataowners.pt',color:'emerald',meta:'~5k linhas reais',longDetail:'Production stable. Cliente piloto Property 007 LDA. Schema separado eozklslwfaqujaijvdnl. Próxima acção: nenhuma até V5 alpha validar.'},
+{id:'V4',name:'Energia',status:'standby',detail:'react paused · edge live',color:'stone',meta:'reactivação pós-alpha',longDetail:'Edge function v4-energia/lead deployed. App React paused. Re-activação trigger: V5 alpha valida (10+ owners). Backlog: ADR-001 V4 Energia React scope v1.'},
+{id:'V1',name:'Core Hub',status:'foundation',detail:'core.* schemas partilhados',color:'violet',meta:'foundation',longDetail:'Foundation. Tabelas chave: core.pessoas, core.organizations, core.imoveis, core.staff_secoes_acesso. Schema: hkmvszkpxjbxmnixzqbl.'}
+],
+nextActions:[
+{prio:'P0',who:'Mário',when:'Day 6',text:'Listar 4-7 amigos com casa para R2 outreach',effort:'30 min'},
+{prio:'P0',who:'Mário',when:'Day 6',text:'Self-test E2E mobile real (não localhost)',effort:'1h'},
+{prio:'P1',who:'supabase-designer',when:'Sprint 1E',text:'SHARE_BASE_URL env config',effort:'15 min'},
+{prio:'P1',who:'Mário',when:'Day 8-9',text:'Agendar 1-2 alpha entrevistas + bug-fixing',effort:'2h'},
+{prio:'P2',who:'architect-proptech',when:'Sprint 1E charter',text:'KR 4.2 review (€30 → €150/mês infra)',effort:'30 min'}
+],
+techStack:[
+{name:'Anthropic Claude',role:'coding + agents',host:'API',status:'OK',cost:'Max plan',sprint:'1A'},
+{name:'Supabase V1',role:'core hub data',host:'cloud',status:'OK',cost:'~$25/mo',sprint:'1A'},
+{name:'Supabase V2',role:'condomínios prod',host:'cloud',status:'OK',cost:'~$25/mo',sprint:'1A'},
+{name:'Netlify',role:'hosting V2 prod',host:'managed',status:'WARN',cost:'free → $9?',sprint:'1A · split'},
+{name:'Vercel',role:'V5 alpha + dashboard',host:'managed',status:'OK',cost:'Hobby (free)',sprint:'1D · novo'},
+{name:'GitHub',role:'pipeline + actions',host:'managed',status:'OK',cost:'free',sprint:'1A'},
+{name:'Stripe Connect Express PT',role:'payments',host:'managed',status:'PLANNED',cost:'2.9% + €0.30',sprint:'1E P0'},
+{name:'Moloni',role:'recibos fiscais PT',host:'managed',status:'PLANNED',cost:'~€19/mo',sprint:'1E P0'},
+{name:'Sentry',role:'errors + tracing',host:'managed',status:'PLANNED',cost:'~$26/mo',sprint:'1E P0'},
+{name:'PostHog',role:'analytics + replays',host:'managed',status:'PLANNED',cost:'free <1M',sprint:'1E P0'},
+{name:'Resend',role:'transactional email',host:'managed',status:'PLANNED',cost:'free <3k',sprint:'1E P0'},
+{name:'Upstash',role:'cache + rate limit',host:'managed',status:'PLANNED',cost:'free tier',sprint:'1E P2'},
+{name:'Twilio',role:'SMS + voice',host:'managed',status:'DEFERRED',cost:'pay-go',sprint:'2+'}
+],
+watchers:[
+{name:'weekly-recap',cadence:'Sex 17h Lisboa',last:'2026-04-25',next:'2026-05-02 17:00',status:'OK',output:'GitHub issue + Notion · KR table',
+outputFull:'Sprint 1D · Week 17 Recap (2026-04-19 -> 2026-04-25)\n\n## Highlights\n- magic_links + recibos visibility shipped (Day 5.7)\n- mixed feed lifecycle implemented\n- 1B.2.4 documentation hygiene closed\n\n## KR Progress\n- KR 1.1 Alpha owners: 1/5 (20%) RED\n- KR 1.2 Code shipped: 12 features (target 10) GREEN\n- KR 4.2 Cost <€30/mo: $65/mo (218%) YELLOW\n\n## Next week focus\n- R2 outreach (4-7 nomes)\n- Day 6 self-test E2E\n- Sprint 1E charter draft',
+link:'https://github.com/UNIFY-MC/proptech-platform/issues'},
+{name:'competitor-monitor',cadence:'2a 9h Lisboa',last:'2026-04-27',next:'2026-05-04 09:00',status:'OK',output:'Tier 1-4 competitor watch',
+outputFull:'Competitor Watch · 2026-04-27\n\n## Tier 1 (active threats)\n- FIXO: nova funcionalidade matching algorithm (signal: weak)\n- Hubbent: contratacao 2 engineers (signal: medium · investigar W18)\n\n## Tier 2 (PT-specific)\n- Fixando: lancou plano premium €19/mes\n- Jobber: sem updates relevantes\n\n## Tier 3 (international reference)\n- AppFolio: M&A activity\n- OSCAR: silent\n- Shipshape: sem mudancas\n\n## Action items\n- Hubbent investigation W18 (Mario decisao)',
+link:'https://github.com/UNIFY-MC/proptech-platform/issues'},
+{name:'daily-brief',cadence:'diario 8h',last:'2026-05-01',next:'2026-05-02 08:00',status:'WARN',output:'baixa leitura · revisitar formato',
+outputFull:'Daily Brief · 2026-05-01\n\n## Yesterday\n- Day 5.7 shipped: mixed feed lifecycle\n- 0 deploys to V2 prod\n- 0 errors logged\n\n## Today focus\n- R2 list 4-7 amigos\n- Self-test E2E\n\n## Health\n- Supabase V1: OK\n- Supabase V2: OK\n- Netlify: WARN 87% credits used\n\n[!] Recomendacao CTO: este brief tem baixa leitura. Considerar reduzir cadencia para semanal.',
+link:'https://github.com/UNIFY-MC/proptech-platform/issues'},
+{name:'healthcheck',cadence:'diario 9h',last:'2026-05-01',next:'2026-05-02 09:00',status:'STALE',output:'nunca foi vermelho · candidato a eliminar',
+outputFull:'Healthcheck · 2026-05-01\n\n## Endpoints\n- prataowners.pt: 200 OK · 142ms\n- supabase V1: 200 OK · 89ms\n- supabase V2: 200 OK · 76ms\n- netlify functions: 200 OK\n\n## SSL\n- prataowners.pt: valid until 2026-08-15\n\n## Status: ALL GREEN\n\n[!] Decisao pendente: este watcher nunca foi vermelho desde criado (12 semanas). Candidato a eliminacao para reduzir noise.',
+link:'https://github.com/UNIFY-MC/proptech-platform/issues'}
+],
+agents:[
+{name:'architect-proptech',last:'há 2h',task:'ADR-001 V4 review pending',state:'idle',desc:'Decisões arquitecturais, ADRs, valida impactos cross-vertical. Tools: Notion (RW), Read, Grep.'},
+{name:'supabase-designer',last:'há 5h',task:'migration 27 OK',state:'idle',desc:'Schemas, migrations, RLS, edge functions. Tools: Supabase (RW), Read, Write.'},
+{name:'frontend-builder',last:'há 1d',task:'V5 magic_links UI',state:'idle',desc:'Componentes React, design system, novas verticais. Tools: Read, Write, Edit, Bash.'},
+{name:'code-reviewer',last:'há 3h',task:'1D-day5.7 review approved',state:'idle',desc:'Revê antes de commits grandes, valida regras CLAUDE.md. Tools: Read, Grep, Glob.'},
+{name:'notion-librarian',last:'never',task:'— não inicializado',state:'never',desc:'Mantém Notion sincronizado com realidade do código. Tools: Notion (RW), Read.'},
+{name:'ops-builder',last:'há 7d',task:'stack audit pending',state:'stale',desc:'Workflows n8n, Edge Functions, integrações. Tools: Supabase (RW), Read, Write.'}
+],
+stackHealth:[
+{service:'Supabase V1',usage:25,label:'2 / 8 GB'},
+{service:'Supabase V2',usage:59,label:'4.7 / 8 GB'},
+{service:'Netlify credits',usage:87,label:'261 / 300'},
+{service:'GitHub Actions',usage:18,label:'720 / 4k min'}
+],
+recentActivity:[
+{ts:'23:42',day:'2026-05-01',actor:'system',action:'shared state initialized via junctions',where:'proptech-platform'},
+{ts:'21:50',day:'2026-05-01',actor:'mario',action:'feat(1D-day5.7) shipped: mixed feed lifecycle',where:'main'},
+{ts:'20:12',day:'2026-05-01',actor:'supabase-designer',action:'migration 27 applied',where:'V2'},
+{ts:'19:05',day:'2026-05-01',actor:'code-reviewer',action:'1D-day5.7 PR reviewed · 0 blockers',where:'main'},
+{ts:'14:30',day:'2026-05-01',actor:'architect-proptech',action:'V5 Master Roadmap consolidated',where:'docs'},
+{ts:'11:22',day:'2026-05-01',actor:'frontend-builder',action:'magic_links UI variants tested (v3 picked)',where:'V5'},
+{ts:'09:15',day:'2026-05-01',actor:'mario',action:'sprint 1D-day5.7 kickoff',where:'main'},
+{ts:'17:42',day:'2026-04-30',actor:'weekly-recap',action:'W17 recap published · KR 1.1 at 20%',where:'github-issues'},
+{ts:'16:08',day:'2026-04-30',actor:'mario',action:'fix(v5): equipamento_id link to intervencoes',where:'V5'},
+{ts:'13:20',day:'2026-04-30',actor:'supabase-designer',action:'RLS policies reviewed',where:'V5'},
+{ts:'11:55',day:'2026-04-30',actor:'code-reviewer',action:'review: 5 PRs approved, 1 blocked',where:'main'},
+{ts:'09:00',day:'2026-04-30',actor:'daily-brief',action:'brief published · health green',where:'github-issues'},
+{ts:'15:30',day:'2026-04-29',actor:'architect-proptech',action:'1B.2.4 closed · documentation hygiene shipped',where:'V5'},
+{ts:'14:00',day:'2026-04-29',actor:'mario',action:'docs(v5): consolidate per Anthropic .claude patterns',where:'V5'},
+{ts:'09:00',day:'2026-04-28',actor:'competitor-monitor',action:'W17 watch · Hubbent signal medium',where:'github-issues'},
+{ts:'17:50',day:'2026-04-28',actor:'supabase-designer',action:'image_inspector v1 system prompt versioned',where:'V5'},
+{ts:'14:15',day:'2026-04-28',actor:'mario',action:'1B.2.2 image_inspector v1 shipped',where:'V5'},
+{ts:'10:30',day:'2026-04-27',actor:'mario',action:'feat(v5): casa_advisor schema setup',where:'V5'}
+],
+decisions:[
+{id:1,text:'R2 alpha owners 4-7 nomes',urgency:'critical',meta:'HARD BLOCKER Day 7 gate',detail:'Sprint 1D fica bloqueado se chegar a Day 7 com menos de 5 owners committed. ICP: amigos com casa em Lisboa/Porto, idade 30-55, com problemas regulares de manutenção. Outreach pessoal preferido.'},
+{id:2,text:'Day 6 self-test E2E completo (mobile real)',urgency:'high',meta:'pre-outreach',detail:'Antes de outreach a alpha owners, testar flow completo em iOS Safari + Android Chrome. Validar: magic-link arrives, deep-link opens, recibo upload, share-back permite owner ver progresso.'},
+{id:3,text:'Stripe Connect Day 10 trigger se 1+ alpha valida',urgency:'high',meta:'Sprint 1E',detail:'Trigger condicional: se em Day 10 já tivermos 1+ owner pagante validar willingness-to-pay, arrancar Stripe Connect Express PT setup. Caso contrário, adiar.'},
+{id:4,text:'Hubbent investigation W18',urgency:'medium',meta:'competitive intel',detail:'Hubbent contratou 2 engineers (signal medium do competitor-monitor). Confirmar founders + capital. Investigar feature roadmap. Se overlap forte com V5, considerar acelerar GTM.'},
+{id:5,text:'CMO branding name iteração',urgency:'medium',meta:'background',detail:'Branding name em iteração. Inglesismo aceite. Agentes a testar variantes.'},
+{id:6,text:'Cowork experiment 1h Sprint 1E',urgency:'low',meta:'experiment',detail:'Anthropic Cowork GA Apr 2026. Investir 1h Sprint 1E para experimentar substituir watchers cron por Cowork scheduled tasks.'},
+{id:7,text:'Reduzir/eliminar healthcheck agent',urgency:'low',meta:'consumption review',detail:'Watcher nunca foi vermelho em 12 semanas. Candidato a eliminação para reduzir noise. Decidir Sprint 1E.'},
+{id:8,text:'KR 4.2 review charter Sprint 1E',urgency:'medium',meta:'budget',detail:'Stack 1E (~$130/mês) viola charter <€30/mês infra. Decisão: revise para <€150/mês ou justifique excepção.'}
+],
+roadmap:[
+{wave:'1A',name:'Foundation · Core schemas',status:'done',
+sprints:[
+{id:'1A.1',name:'Project bootstrap + Supabase V1 setup',status:'done',date:'2026-01-15',tasks:['Repo UNIFY-MC criado','Supabase V1 hkmvszkpxjbxmnixzqbl provisioned','Netlify deploy pipeline']},
+{id:'1A.2',name:'Schemas core.* canonical',status:'done',date:'2026-02-01',tasks:['core.pessoas','core.organizations','core.imoveis','core.staff_secoes_acesso','ADR-002 staff auth canonical']}
+]},
+{wave:'1B',name:'V5 Manutenção · Agentic foundation',status:'active',
+sprints:[
+{id:'1B.1',name:'Initial agentic schemas',status:'done',date:'2026-04-15',tasks:['core.agent_definitions','advisor_sessoes + advisor_mensagens']},
+{id:'1B.2.1',name:'Image inspector setup',status:'done',date:'2026-04-22',tasks:['Edge function image-inspector','OpenAI vision integration spike']},
+{id:'1B.2.2',name:'Image inspector v1',status:'done',date:'2026-04-28',tasks:['System prompt 74 linhas pt-PT','Seed sql/26_v5_1b_1_1_agents_schema.sql','Smoke tests com 5 cases reais']},
+{id:'1B.2.4',name:'Documentation hygiene',status:'done',date:'2026-04-29',tasks:['.claude/ patterns consolidated','.claude/rules/ extraction','.claude/agents/v5-prompts/ versioning','CLAUDE-FOLDER-FUTURE-IMPROVEMENTS.md']},
+{id:'1B.2.5',name:'ImovelWizard fix #1',status:'done',date:'2026-04-30',tasks:['Wizard step 3 navigation bug','Form state persistence']},
+{id:'1B.3',name:'Casa advisor + handoff',status:'planned',date:'pós-1D',tasks:['v5.casa_advisor system prompt','Edge function casa-advisor','Handoff de image_inspector → casa_advisor','UI: tab "Casa" no V5']}
+]},
+{wave:'1D',name:'V5 · Receipt Trojan Horse Alpha',status:'active',
+sprints:[
+{id:'1D-day1-5',name:'Sprint kickoff + magic links',status:'done',date:'2026-04-25 → 04-30',tasks:['Magic-link auth flow','Recibos schema','Mixed feed lifecycle']},
+{id:'1D-day5.7',name:'Mixed feed visibility',status:'active',date:'2026-05-01',tasks:['Magic_links visibility','Recibos display','Smoke test E2E (pendente)','R2 alpha owners outreach (1/5)']},
+{id:'1D-day6-7',name:'Self-test + R2 outreach gate',status:'planned',date:'2026-05-02 → 05-04',tasks:['Self-test E2E mobile real','Listar 4-7 amigos R2','Day 7 gate: 5+ alpha committed']},
+{id:'1D-day8-14',name:'Alpha entrevistas + bug-fixing',status:'planned',date:'2026-05-08 → 05-10',tasks:['1-2 alpha entrevistas/dia','Feedback loop','Minor bug fixes']}
+]},
+{wave:'1E',name:'V5 · Production grade (Camada 2)',status:'planned',
+sprints:[
+{id:'1E P0',name:'Charter + commercial stack',status:'planned',date:'~2026-05-15',tasks:['Stripe Connect Express PT','Moloni recibos fiscais','Sentry + PostHog + Resend','SHARE_BASE_URL real','KR 4.2 review']},
+{id:'1E P1',name:'Camada 2 prestador-app',status:'planned',date:'~2026-05-22',tasks:['Resumo trabalho + fotos','Magic-link reuse permanente','Owner UX feedback Day 5.7','equipamento_id link']},
+{id:'1E P2',name:'Nice-to-haves',status:'planned',date:'~2026-06',tasks:['notion-sync agent','Upstash Redis cache','Twilio SMS / WhatsApp']}
+]},
+{wave:'2A',name:'V4 Energia · Re-activation',status:'planned',
+sprints:[
+{id:'2A.1',name:'V4 scaffolding + ADR-001',status:'planned',date:'gated by V5 alpha 10+ owners',tasks:['ADR-001 V4 Energia React scope v1','Re-activate apps/v4-energia/ React app']}
+]},
+{wave:'2B+',name:'V3 Seguros · V6+ verticais',status:'planned',
+sprints:[
+{id:'2B',name:'V3 Seguros design + spike',status:'planned',date:'TBD',tasks:['Discovery interviews','Schema spike','Provider partnerships']}
+]}
+],
+competitors:[
+{name:'Hubbent',tier:1,signal:'medium',country:'PT',founded:'2024',funding:'undisclosed',lastUpdate:'2026-04-27',
+desc:'Plataforma PT de gestão de manutenção residencial. Player mais próximo da nossa proposta no mercado nacional.',
+strengths:['Foco PT específico (NIF, IVA, Moloni-style)','UX mobile-first','Equipa a crescer (2 engineers W17)'],
+weaknesses:['Sem evidência de magic-link onboarding','Modelo de receita pouco claro','Sem agentic AI visível'],
+threatLevel:'Investigar W18 — confirmar founders + capital',
+features:{magicLink:false,fiscalPT:true,stripe:true,mobile:true,multiVert:false,aiAdvisor:false,b2b:false}},
+{name:'FIXO',tier:1,signal:'weak',country:'PT/EU',founded:'2022',funding:'seed',lastUpdate:'2026-04-27',
+desc:'Marketplace PT-EU para serviços domésticos. Recente lançamento de matching algorithm para owners ↔ prestadores.',
+strengths:['Network effects (lado oferta + procura)','Brand awareness PT','Matching algorithm feature'],
+weaknesses:['UX desktop-first ainda','Sem prestador-app dedicada','Thin margins do marketplace model'],
+threatLevel:'Sinal fraco · monitorizar trimestralmente',
+features:{magicLink:false,fiscalPT:true,stripe:false,mobile:false,multiVert:true,aiAdvisor:false,b2b:false}},
+{name:'Fixando',tier:2,signal:'medium',country:'PT',founded:'2014',funding:'profitable',lastUpdate:'2026-04-27',
+desc:'Marketplace PT estabelecido. Lançou recentemente plano premium €19/mês para prestadores.',
+strengths:['10+ anos no mercado PT','Base instalada de prestadores','Profitable, no urgency to pivot'],
+weaknesses:['Modelo legacy (lead-gen vs SaaS)','UX dated','Sem mobile-first redesign'],
+threatLevel:'Player histórico, baixa probabilidade de pivot disruptivo',
+features:{magicLink:false,fiscalPT:true,stripe:false,mobile:false,multiVert:true,aiAdvisor:false,b2b:false}},
+{name:'Jobber',tier:3,signal:'reference',country:'CA/US',founded:'2011',funding:'$200M+ Series D',lastUpdate:'2026-04-20',
+desc:'Field service management para prestadores B2C. SaaS line item por mês. Reference para Camada 2 (prestador-app).',
+strengths:['10+ anos a refinar UX','Stripe Connect maduro','Recibos + scheduling + CRM integrado'],
+weaknesses:['Não optimizado para PT (sem NIF, sem Moloni)','Pricing $49+/mo agressivo para PT','Owner-side flow inexistente'],
+threatLevel:'Não compete em PT. Reference para feature parity Sprint 1E.',
+features:{magicLink:false,fiscalPT:false,stripe:true,mobile:true,multiVert:false,aiAdvisor:false,b2b:true}},
+{name:'AppFolio',tier:3,signal:'reference',country:'US',founded:'2006',funding:'public (NASDAQ)',lastUpdate:'2026-04-15',
+desc:'Property management SaaS para residential + commercial managers. M&A activity recente.',
+strengths:['Vertical leader US','AI Realm-X assistant','Massive product surface'],
+weaknesses:['Targeting property managers (não owners individuais)','US-only compliance','Enterprise pricing'],
+threatLevel:'Não compete em PT residential. Reference para AI advisor patterns.',
+features:{magicLink:false,fiscalPT:false,stripe:true,mobile:true,multiVert:true,aiAdvisor:true,b2b:true}},
+{name:'Shipshape',tier:3,signal:'reference',country:'US',founded:'2019',funding:'Series A',lastUpdate:'2026-04-10',
+desc:'Home maintenance assistant com sensor IoT + AI alerts. Closer match a tese "Casa Advisor".',
+strengths:['IoT integration','AI maintenance predictions','Subscription model B2C'],
+weaknesses:['Hardware dependency (sensor)','US-only','Sem prestador marketplace'],
+threatLevel:'Reference forte para AI advisor; modelo IoT não escala para PT no curto prazo.',
+features:{magicLink:false,fiscalPT:false,stripe:true,mobile:true,multiVert:false,aiAdvisor:true,b2b:false}},
+{name:'OSCAR',tier:4,signal:'silent',country:'EU',founded:'2020',funding:'undisclosed',lastUpdate:'2026-04-01',
+desc:'Property tech adjacente. Sem actividade relevante recente.',
+strengths:['—'],weaknesses:['Sem updates 6+ meses'],threatLevel:'Adjacent · sem ameaça actual',
+features:{magicLink:false,fiscalPT:false,stripe:false,mobile:false,multiVert:false,aiAdvisor:false,b2b:false}}
+],
+ourProduct:{
+name:'PropTech (V5)',
+features:{magicLink:true,fiscalPT:true,stripe:'planned',mobile:true,multiVert:true,aiAdvisor:true,b2b:'planned'}
+},
+featureMatrix:[
+{key:'magicLink',label:'Magic-link onboarding'},
+{key:'fiscalPT',label:'Recibos fiscais PT'},
+{key:'stripe',label:'Stripe Connect'},
+{key:'mobile',label:'Mobile-first'},
+{key:'multiVert',label:'Multi-vertical'},
+{key:'aiAdvisor',label:'AI advisor (Casa)'},
+{key:'b2b',label:'Prestador-app B2B'}
+]
 };
-
-async function loadAgenticOps() {
-  try {
-    const r = await fetch('data.json?t=' + Date.now()); // cache-bust
-    if (!r.ok) throw new Error('data.json not found');
-    const d = await r.json();
-
-    // Agents — mostra apenas os que tiveram actividade (lastRun != "_never_")
-    const activeAgents = (d.agents || []).filter(a => a.lastRun && a.lastRun !== '_never_');
-    const agentsHtml = activeAgents.length > 0
-      ? activeAgents.map(a => `
-        <div class="stat">
-          <span class="stat-label" style="max-width:120px;overflow:hidden;text-overflow:ellipsis;">${a.name}</span>
-          <span style="font-size:0.7rem;color:var(--text-dim);text-align:right;max-width:160px;overflow:hidden;text-overflow:ellipsis;">${(a.lastTask || '—').substring(0,60)}</span>
-        </div>
-      `).join('')
-      : '<div class="empty-state">Sem dados de agentes.</div>';
-    document.getElementById('agentsState').innerHTML = agentsHtml;
-
-    // Recent activity
-    const actHtml = (d.recentActivity || []).slice(0, 6).map(line => {
-      const match = line.match(/^\[([^\]]+)\]\s+(.+)$/);
-      if (!match) return `<div class="commit-item" style="white-space:normal;">${line}</div>`;
-      return `<div class="commit-item" style="white-space:normal;"><span class="commit-hash">${match[1].substring(0,16)}</span>${match[2]}</div>`;
-    }).join('') || '<div class="empty-state">Sem actividade recente.</div>';
-    document.getElementById('recentActivity').innerHTML = actHtml;
-
-    // Sprint + opportunities
-    const sprint = (d.currentSprint || '—')
-      .replace(/\*\*/g, '')  // remove markdown bold
-      .replace(/\s+—\s+/g, ' · '); // normaliza separadores
-    const opps = (d.topOpportunities || []).slice(0, 4).map(o =>
-      `<div class="stat"><span class="stat-label" style="font-size:0.75rem;white-space:normal;">${o.substring(0, 80)}</span></div>`
-    ).join('');
-    document.getElementById('sprintOps').innerHTML = `
-      <div class="stat"><span class="stat-label">Sprint activo</span><span class="stat-value" style="font-size:0.75rem;text-align:right;max-width:180px;">${sprint}</span></div>
-      ${opps || '<div class="empty-state">Sem oportunidades P1/P2.</div>'}
-    `;
-  } catch (e) {
-    ['agentsState','recentActivity','sprintOps'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.innerHTML = `<div class="empty-state">&#9888; ${e.message}</div>`;
-    });
-  }
+ 
+function $(id){return document.getElementById(id)}
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]})}
+ 
+function renderHero(){
+var s=DATA.sprint;
+$('hero-section').innerHTML='<div class="hero"><div class="hi"><div class="hto"><div class="hta"><span class="cy mono">SPRINT ACTUAL</span><span class="se mono">·</span><span class="em mono">'+esc(s.status.toUpperCase())+'</span></div><div class="hg mono">gate em <span class="am">'+s.daysToGate+'d</span></div></div><div class="hid mono">'+esc(s.id)+' · '+esc(s.day)+'</div><div class="hn">'+esc(s.name)+'</div><div class="hs">'+esc(s.vertical)+' manutenção · '+esc(s.gateName)+'</div><div class="pm mono"><span>progresso</span><span class="v">'+s.progress+'%</span></div><div class="pt"><div class="pf" style="width:'+s.progress+'%"></div></div><div class="pd mono"><span>'+esc(s.started)+'</span><span>'+esc(s.target)+'</span></div></div></div>';
 }
-
-function timeAgo(date) {
-  const seconds = Math.floor((Date.now() - new Date(date).getTime()) / 1000);
-  if (seconds < 60) return `há ${seconds}s`;
-  if (seconds < 3600) return `há ${Math.floor(seconds/60)}min`;
-  if (seconds < 86400) return `há ${Math.floor(seconds/3600)}h`;
-  return `há ${Math.floor(seconds/86400)}d`;
+ 
+function renderAlerts(){
+$('alerts-section').innerHTML=DATA.alerts.map(function(a,i){
+return '<div class="alert" data-alert="'+i+'"><div class="ad"></div><div class="ab"><div class="ar"><span class="atag mono">blocker</span><span class="at">'+esc(a.label)+'</span><span class="av mono">'+esc(a.value)+'</span></div><div class="adt">'+esc(a.detail)+'</div></div><span class="aa">→</span></div>';
+}).join('');
+bind('[data-alert]',function(idx){var a=DATA.alerts[idx];openDrawer(a.label+' · '+a.value,a.detail,'<div class="dse"><div class="dst">Status</div><div class="dtx">'+esc(a.detail)+'</div></div><div class="dse"><div class="dst">Acção sugerida</div><div class="dtx">Ir à secção Decisões pendentes para acompanhar resolução.</div></div>')});
 }
-
-function badgeForLabel(name) {
-  const cls = LABEL_COLORS[name] || 'info';
-  return `<span class="badge ${cls}">${name}</span>`;
+ 
+function renderVerticals(){
+$('verticals').innerHTML=DATA.verticals.map(function(v,i){
+return '<div class="vt '+v.color+'" data-vertical="'+i+'"><div class="vh"><span class="vd '+v.color+'"></span><span class="vid mono">'+esc(v.id)+'</span><span class="vss">'+esc(v.status)+'</span></div><div class="vn">'+esc(v.name)+'</div><div class="vdt">'+esc(v.detail)+'</div><div class="vm mono">'+esc(v.meta)+'</div></div>';
+}).join('');
+bind('[data-vertical]',function(idx){var v=DATA.verticals[idx];openDrawer(v.id+' · '+v.name,v.status+' · '+v.meta,'<div class="dse"><div class="dst">Estado</div><div class="dtx">'+esc(v.longDetail)+'</div></div>')});
 }
-
-async function loadIssues() {
-  try {
-    const labels = ['competitor-monitor', 'daily-brief', 'weekly-recap', 'healthcheck'].join(',');
-    const r = await fetch(`https://api.github.com/repos/${REPO}/issues?labels=${labels}&state=all&per_page=10&sort=created&direction=desc`);
-    if (!r.ok) throw new Error(`GitHub API: ${r.status}`);
-    const issues = await r.json();
-    const html = issues.length === 0
-      ? '<div class="empty-state">Nenhum watcher report ainda.</div>'
-      : issues.map(i => `
-        <div class="issue-item">
-          <div class="issue-title">
-            <a href="${i.html_url}" target="_blank" rel="noopener">${i.title}</a>
-          </div>
-          <div class="issue-meta">
-            ${(i.labels || []).map(l => badgeForLabel(l.name)).join(' ')}
-            <span>·</span>
-            <span>${timeAgo(i.created_at)}</span>
-          </div>
-        </div>
-      `).join('');
-    document.getElementById('watcherReports').innerHTML = html;
-  } catch (e) {
-    document.getElementById('watcherReports').innerHTML = `<div class="empty-state">⚠️ ${e.message}</div>`;
-  }
+ 
+function renderActions(){
+$('actions').innerHTML=DATA.nextActions.map(function(a,i){
+return '<div class="row" data-action="'+i+'"><span class="prio '+a.prio+' mono">'+a.prio+'</span><div class="rb"><div class="rt">'+esc(a.text)+'</div><div class="rm mono"><span>'+esc(a.who)+'</span><span class="se">·</span><span>'+esc(a.when)+'</span><span class="se">·</span><span>'+esc(a.effort)+'</span></div></div><span class="ra">→</span></div>';
+}).join('');
+$('actionsCount').textContent='· '+DATA.nextActions.length;
+bind('[data-action]',function(idx){var a=DATA.nextActions[idx];openDrawer(a.prio+' · '+a.text,a.who+' · '+a.when+' · '+a.effort,'<div class="dse"><div class="dst">Owner</div><div class="dtx">'+esc(a.who)+'</div></div><div class="dse"><div class="dst">Timing</div><div class="dtx">'+esc(a.when)+' · esforço estimado '+esc(a.effort)+'</div></div>')});
 }
-
-async function loadCommits() {
-  try {
-    const r = await fetch(`https://api.github.com/repos/${REPO}/commits?per_page=8`);
-    if (!r.ok) throw new Error(`GitHub API: ${r.status}`);
-    const commits = await r.json();
-    const html = commits.length === 0
-      ? '<div class="empty-state">Sem commits recentes.</div>'
-      : commits.map(c => {
-        const msg = c.commit.message.split('\n')[0].substring(0, 60);
-        const hash = c.sha.substring(0, 7);
-        return `<div class="commit-item"><span class="commit-hash">${hash}</span>${msg}</div>`;
-      }).join('');
-    document.getElementById('commits').innerHTML = html;
-  } catch (e) {
-    document.getElementById('commits').innerHTML = `<div class="empty-state">⚠️ ${e.message}</div>`;
-  }
+ 
+function renderStack(){
+$('stack').innerHTML=DATA.techStack.map(function(t){
+return '<div class="sr"><div><div class="sn">'+esc(t.name)+'</div><div class="srl">'+esc(t.role)+'</div></div><div class="sh shc">'+esc(t.host)+'</div><div><span class="bg '+t.status+'">'+t.status+'</span></div><div class="sct sctc">'+esc(t.cost)+'</div><div class="spr sprc">'+esc(t.sprint)+'</div></div>';
+}).join('');
+$('stackCount').textContent='· '+DATA.techStack.length;
 }
-
-async function loadWatcherHealth() {
-  try {
-    const r = await fetch(`https://api.github.com/repos/${REPO}/actions/runs?per_page=20`);
-    if (!r.ok) throw new Error(`GitHub API: ${r.status}`);
-    const data = await r.json();
-    const watchers = ['Healthcheck Watchers', 'Competitor Monitor', 'Daily Brief', 'Weekly Recap'];
-    const html = watchers.map(name => {
-      const run = (data.workflow_runs || []).find(r => r.name === name);
-      if (!run) return `<div class="stat"><span class="stat-label">${name}</span><span class="badge warning">never</span></div>`;
-      const cls = run.conclusion === 'success' ? 'success' : (run.conclusion === 'failure' ? 'danger' : 'warning');
-      return `<div class="stat">
-        <span class="stat-label">${name}</span>
-        <span><span class="badge ${cls}">${run.conclusion || run.status}</span> <small style="color:var(--text-dim)">${timeAgo(run.created_at)}</small></span>
-      </div>`;
-    }).join('');
-    document.getElementById('watcherHealth').innerHTML = html;
-  } catch (e) {
-    document.getElementById('watcherHealth').innerHTML = `<div class="empty-state">⚠️ ${e.message}</div>`;
-  }
+ 
+function renderWatchersPreview(){
+$('watchers').innerHTML=DATA.watchers.map(function(w,i){
+return '<div class="wr" data-watcher="'+i+'"><span class="bg '+w.status+'">'+w.status+'</span><div class="wb"><div class="wn">'+esc(w.name)+'</div><div class="wo">'+esc(w.output)+'</div></div><div class="wt"><div class="wl">'+esc(w.last)+'</div><div class="wc">'+esc(w.cadence)+'</div></div></div>';
+}).join('');
+$('watchersCount').textContent='· '+DATA.watchers.length;
+$('watchersTabCount').textContent='· '+DATA.watchers.length;
+bind('[data-watcher]',function(idx){switchTab('watchers');setTimeout(function(){var t=document.getElementById('wcrd-'+idx);if(t)t.scrollIntoView({behavior:'smooth',block:'start'})},200)});
 }
-
-function updateSprintProgress() {
-  const now = new Date();
-  const elapsed = Math.floor((now - SPRINT_START) / (1000*60*60*24));
-  const day = Math.max(0, Math.min(elapsed, SPRINT_DAYS));
-  const pct = Math.min(100, (day / SPRINT_DAYS) * 100);
-  document.getElementById('sprintDay').textContent = `${day}/${SPRINT_DAYS}`;
-  document.getElementById('sprintProgress').style.width = pct + '%';
-
-  // Update gate icons based on current day
-  const gates = [{id:'gate3',day:3},{id:'gate7',day:7},{id:'gate11',day:11},{id:'gate14',day:14}];
-  gates.forEach(g => {
-    const el = document.getElementById(g.id);
-    if (el) el.className = 'gate-icon ' + (day >= g.day ? 'pending' : 'pending');
-  });
+ 
+function renderWatchersFull(){
+$('watchers-full').innerHTML=DATA.watchers.map(function(w,i){
+return '<div class="wcrd" id="wcrd-'+i+'"><div class="wch"><span class="bg '+w.status+'">'+w.status+'</span><span class="wcn">'+esc(w.name)+'</span></div><div class="wcm"><div><div class="wml">Cadência</div><div class="wmv">'+esc(w.cadence)+'</div></div><div><div class="wml">Última run</div><div class="wmv">'+esc(w.last)+'</div></div><div><div class="wml">Próxima run</div><div class="wmv">'+esc(w.next)+'</div></div><div><div class="wml">Output</div><div class="wmv">'+esc(w.output)+'</div></div></div><div class="wob">'+esc(w.outputFull)+'</div><div class="wac"><a href="'+w.link+'" target="_blank" class="btn pri">Abrir relatório completo →</a><button class="btn">Marcar lido</button><button class="btn">Pausar</button></div></div>';
+}).join('');
 }
-
-async function loadAll() {
-  document.getElementById('refreshBtn').textContent = '⏳ A actualizar…';
-  document.getElementById('refreshBtn').disabled = true;
-  updateSprintProgress();
-  await Promise.all([loadIssues(), loadCommits(), loadWatcherHealth(), loadAgenticOps()]);
-  document.getElementById('lastUpdate').textContent = `Última actualização: ${new Date().toLocaleTimeString('pt-PT')}`;
-  document.getElementById('refreshBtn').textContent = '🔄 Refresh';
-  document.getElementById('refreshBtn').disabled = false;
+ 
+function renderAgents(){
+$('agents').innerHTML=DATA.agents.map(function(a,i){
+return '<div class="agc" data-agent="'+i+'"><div class="agh"><span class="agn">'+esc(a.name)+'</span><span class="agd '+a.state+'"></span></div><div class="agt">'+esc(a.task)+'</div><div class="agtm">'+esc(a.last)+'</div></div>';
+}).join('');
+$('agentsCount').textContent='· '+DATA.agents.length;
+bind('[data-agent]',function(idx){var a=DATA.agents[idx];openDrawer(a.name,a.state+' · '+a.last,'<div class="dse"><div class="dst">Função</div><div class="dtx">'+esc(a.desc)+'</div></div><div class="dse"><div class="dst">Última task</div><div class="dtx">'+esc(a.task)+'</div></div><div class="dse"><div class="dst">System prompt</div><div class="dmo">.claude/agents/'+esc(a.name)+'.md</div></div>')});
 }
-
-loadAll();
-setInterval(loadAll, 5 * 60 * 1000); // 5 min auto-refresh
+ 
+function renderGauges(){
+$('gauges').innerHTML=DATA.stackHealth.map(function(g){
+var c=g.usage>=80?'red':g.usage>=60?'amber':'green';
+return '<div><div class="gh"><span class="gn">'+esc(g.service)+'</span><span class="gl mono">'+esc(g.label)+'</span></div><div class="gt"><div class="gf '+c+'" style="width:'+g.usage+'%"></div></div></div>';
+}).join('');
+}
+ 
+function renderActivityPreview(){
+var p=DATA.recentActivity.slice(0,5);
+$('activity-preview').innerHTML=p.map(function(a){
+return '<div class="ar2"><span class="atm mono">'+esc(a.ts)+'</span><span class="abu"></span><div class="aby"><span class="aac">'+esc(a.actor)+'</span> <span class="aax">'+esc(a.action)+'</span><span class="awh"> · '+esc(a.where)+'</span></div></div>';
+}).join('');
+$('activityCount').textContent='· '+p.length;
+$('activityTabCount').textContent='· '+DATA.recentActivity.length;
+}
+ 
+function renderActivityFull(){
+var grouped={};
+DATA.recentActivity.forEach(function(a){if(!grouped[a.day])grouped[a.day]=[];grouped[a.day].push(a)});
+var html='';
+Object.keys(grouped).sort().reverse().forEach(function(day){
+html+='<div class="aday">'+esc(day)+'</div>';
+html+=grouped[day].map(function(a){return '<div class="ar2"><span class="atm mono">'+esc(a.ts)+'</span><span class="abu"></span><div class="aby"><span class="aac">'+esc(a.actor)+'</span> <span class="aax">'+esc(a.action)+'</span><span class="awh"> · '+esc(a.where)+'</span></div></div>';}).join('');
+});
+$('activity-full').innerHTML=html;
+}
+ 
+function renderDecisions(){
+$('decisions').innerHTML=DATA.decisions.map(function(d,i){
+return '<div class="dec '+d.urgency+'" data-decision="'+i+'"><div class="db"><div class="dt">'+esc(d.text)+'</div><div class="dm mono">'+esc(d.meta)+'</div></div><span class="du">'+esc(d.urgency)+'</span></div>';
+}).join('');
+$('decisionsCount').textContent='· '+DATA.decisions.length;
+bind('[data-decision]',function(idx){var d=DATA.decisions[idx];openDrawer(d.text,d.urgency+' · '+d.meta,'<div class="dse"><div class="dst">Contexto</div><div class="dtx">'+esc(d.detail||'Sem detalhe adicional.')+'</div></div>')});
+}
+ 
+function renderRoadmap(filter){
+filter=filter||'all';
+var total=0;DATA.roadmap.forEach(function(w){total+=w.sprints.length});
+$('roadmapCount').textContent='· '+total;
+$('roadmap').innerHTML=DATA.roadmap.map(function(wave){
+var visible=wave.sprints.filter(function(s){return filter==='all'?true:s.status===filter});
+if(visible.length===0)return '';
+return '<div class="wave"><div class="wh"><span class="wid">'+esc(wave.wave)+'</span><span class="wnam">'+esc(wave.name)+'</span><span class="wst">'+esc(wave.status)+'</span></div><div class="ws">'+
+visible.map(function(s){
+var idx=DATA.roadmap.indexOf(wave)+':'+wave.sprints.indexOf(s);
+return '<div class="scd '+s.status+'" data-sprint="'+idx+'"><div class="si"><div class="sir"><span class="sid">'+esc(s.id)+'</span><span class="snam">'+esc(s.name)+'</span></div><div class="smr"><span>'+esc(s.status)+'</span><span class="se">·</span><span>'+esc(s.date)+'</span><span class="se">·</span><span>'+s.tasks.length+' tarefas</span></div></div><span class="ra">→</span></div>';
+}).join('')+'</div></div>';
+}).join('');
+bind('[data-sprint]',function(rawIdx){
+var p=String(rawIdx).split(':');var w=DATA.roadmap[parseInt(p[0],10)];var s=w.sprints[parseInt(p[1],10)];
+var tasksHTML=s.tasks.map(function(t,j){var done=s.status==='done'||(s.status==='active'&&j<Math.floor(s.tasks.length*0.6));return '<div class="dli '+(done?'done':'')+'"><span class="'+(done?'ck':'pe')+'">'+(done?'✓':'○')+'</span><span>'+esc(t)+'</span></div>';}).join('');
+openDrawer(s.id+' · '+s.name,w.wave+' · '+w.name+' · '+s.status,'<div class="dse"><div class="dst">Datas</div><div class="dtx">'+esc(s.date)+'</div></div><div class="dse"><div class="dst">Tarefas ('+s.tasks.length+')</div><div class="dl">'+tasksHTML+'</div></div>');
+});
+}
+ 
+function renderCompetitors(){
+$('competitorsCount').textContent='· '+DATA.competitors.length;
+$('competitors').innerHTML=DATA.competitors.map(function(c,i){
+return '<div class="cmp" data-competitor="'+i+'"><div class="cmpt"><span class="cmpn">'+esc(c.name)+'</span><span class="cmptr t'+c.tier+'">tier '+c.tier+'</span></div><div class="cmpd">'+esc(c.desc)+'</div><div class="cmpm"><span>'+esc(c.country)+'</span><span class="se">·</span><span>'+esc(c.founded)+'</span><span class="se">·</span><span class="cmps '+c.signal+'">signal '+esc(c.signal)+'</span></div></div>';
+}).join('');
+bind('[data-competitor]',function(idx){
+var c=DATA.competitors[idx];
+var feats=DATA.featureMatrix.map(function(f){
+var has=c.features[f.key];var our=DATA.ourProduct.features[f.key];
+var hasIcon=has===true?'<span class="fy">✓</span>':has==='planned'?'<span class="fp">◐</span>':'<span class="fn">—</span>';
+var ourIcon=our===true?'<span class="fy">✓</span>':our==='planned'?'<span class="fp">◐</span>':'<span class="fn">—</span>';
+return '<div class="dli"><span style="flex:1">'+esc(f.label)+'</span><span style="width:60px;text-align:center">'+hasIcon+'</span><span style="width:60px;text-align:center">'+ourIcon+'</span></div>';
+}).join('');
+var headers='<div class="dli" style="font-family:ui-monospace,monospace;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--t4)"><span style="flex:1">feature</span><span style="width:60px;text-align:center">'+esc(c.name)+'</span><span style="width:60px;text-align:center">nós</span></div>';
+openDrawer(c.name,'tier '+c.tier+' · '+c.country+' · signal '+c.signal,
+'<div class="dse"><div class="dst">Visão geral</div><div class="dtx">'+esc(c.desc)+'</div></div>'+
+'<div class="dse"><div class="dst">Metadata</div><div class="dmo">Country: '+esc(c.country)+'\nFounded: '+esc(c.founded)+'\nFunding: '+esc(c.funding)+'\nLast update: '+esc(c.lastUpdate)+'</div></div>'+
+'<div class="dse"><div class="dst">Forças</div><div class="dl">'+c.strengths.map(function(s){return '<div class="dli"><span class="ck">+</span><span>'+esc(s)+'</span></div>';}).join('')+'</div></div>'+
+'<div class="dse"><div class="dst">Fraquezas</div><div class="dl">'+c.weaknesses.map(function(s){return '<div class="dli"><span class="pe">−</span><span>'+esc(s)+'</span></div>';}).join('')+'</div></div>'+
+'<div class="dse"><div class="dst">Threat assessment</div><div class="dtx">'+esc(c.threatLevel)+'</div></div>'+
+'<div class="dse"><div class="dst">Comparativo de features</div><div class="dl">'+headers+feats+'</div></div>'
+);
+});
+var ths='<th>feature</th>'+DATA.competitors.map(function(c){return '<th>'+esc(c.name)+'</th>';}).join('')+'<th style="color:var(--cy)">nós (V5)</th>';
+var rows=DATA.featureMatrix.map(function(f){
+var cells=DATA.competitors.map(function(c){var v=c.features[f.key];return '<td>'+(v===true?'<span class="fy">✓</span>':v==='planned'?'<span class="fp">◐</span>':'<span class="fn">—</span>')+'</td>';}).join('');
+var our=DATA.ourProduct.features[f.key];
+var ourCell='<td>'+(our===true?'<span class="fy">✓</span>':our==='planned'?'<span class="fp">◐ planned</span>':'<span class="fn">—</span>')+'</td>';
+return '<tr><td>'+esc(f.label)+'</td>'+cells+ourCell+'</tr>';
+}).join('');
+$('cmatrix').innerHTML='<table><thead><tr>'+ths+'</tr></thead><tbody>'+rows+'</tbody></table>';
+}
+ 
+function bind(sel,fn){var ns=document.querySelectorAll(sel);for(var i=0;i<ns.length;i++){ns[i].addEventListener('click',function(e){var n=e.currentTarget;var attrs=n.attributes;var key='';for(var j=0;j<attrs.length;j++){if(attrs[j].name.indexOf('data-')===0){key=attrs[j].value;break}}fn(key)})}}
+ 
+function openDrawer(title,subtitle,body){$('drawerTitle').textContent=title;$('drawerSubtitle').textContent=subtitle;$('drawerBody').innerHTML=body;$('drawer').classList.add('open');$('drawerOverlay').classList.add('open')}
+function closeDrawer(){$('drawer').classList.remove('open');$('drawerOverlay').classList.remove('open')}
+$('drawerClose').addEventListener('click',closeDrawer);
+$('drawerOverlay').addEventListener('click',closeDrawer);
+document.addEventListener('keydown',function(e){if(e.key==='Escape')closeDrawer()});
+ 
+function switchTab(name){
+var tabs=document.querySelectorAll('.tab');var views=document.querySelectorAll('.view');
+for(var i=0;i<tabs.length;i++)tabs[i].classList.toggle('active',tabs[i].getAttribute('data-tab')===name);
+for(var j=0;j<views.length;j++)views[j].classList.toggle('active',views[j].id==='view-'+name);
+window.scrollTo({top:0,behavior:'smooth'});
+}
+var tabBtns=document.querySelectorAll('.tab');
+for(var i=0;i<tabBtns.length;i++)tabBtns[i].addEventListener('click',function(e){switchTab(e.currentTarget.getAttribute('data-tab'))});
+var fcs=document.querySelectorAll('.fc');
+for(var i=0;i<fcs.length;i++)fcs[i].addEventListener('click',function(e){for(var j=0;j<fcs.length;j++)fcs[j].classList.remove('active');e.currentTarget.classList.add('active');renderRoadmap(e.currentTarget.getAttribute('data-filter'))});
+$('themeBtn').addEventListener('click',function(){var d=document.body.classList.contains('dark');document.body.classList.remove('dark','light');document.body.classList.add(d?'light':'dark');$('themeBtn').textContent=d?'☀':'☾'});
+ 
+function renderMeta(){$('branch').textContent=DATA.meta.branch;$('worktree').textContent=DATA.meta.worktree;$('lastSync').textContent=DATA.meta.lastSync;$('footerWt').textContent=DATA.meta.worktree;$('footerSync').textContent=DATA.meta.lastSync}
+ 
+renderMeta();renderHero();renderAlerts();renderVerticals();renderActions();renderStack();renderWatchersPreview();renderWatchersFull();renderAgents();renderGauges();renderActivityPreview();renderActivityFull();renderDecisions();renderRoadmap();renderCompetitors();
+})();
 </script>
 </body>
 </html>
