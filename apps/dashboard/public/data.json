@@ -1,0 +1,505 @@
+{
+  "meta": {
+    "schemaVersion": "1.0",
+    "lastSync": "2026-05-03T14:13:56.043Z",
+    "generatedAt": "2026-05-03T14:13:56.043Z",
+    "branch": "sprint/v5-1b3",
+    "worktree": "proptech-v5-1b3",
+    "generator": "scripts/dashboard-data-build.js"
+  },
+  "sprint": {
+    "name": "Sprint 1D — Receipt Trojan Horse Alpha",
+    "wave": "1D",
+    "day": 2,
+    "totalDays": 14,
+    "startDate": "2026-05-01",
+    "endDate": "2026-05-15",
+    "hypothesis": "Owner→link→prestador 48h",
+    "status": "ACTIVO",
+    "gates": [
+      {
+        "id": "day7",
+        "label": "Day 7 — 1 owner externo aceitou convite",
+        "status": "pending",
+        "date": "2026-05-07"
+      },
+      {
+        "id": "day11",
+        "label": "Day 11 — 1 end-to-end real",
+        "status": "pending",
+        "date": "2026-05-11"
+      },
+      {
+        "id": "day14",
+        "label": "Day 14 — 5/5 criteria + decisão 1E",
+        "status": "pending",
+        "date": "2026-05-15"
+      }
+    ]
+  },
+  "verticals": [
+    {
+      "id": "v1",
+      "name": "Core Hub",
+      "status": "Foundation",
+      "color": "#534AB7",
+      "description": "Hub horizontal partilhado"
+    },
+    {
+      "id": "v2",
+      "name": "Condomínios",
+      "status": "Production",
+      "color": "#10b981",
+      "description": "prataowners.pt — produção viva"
+    },
+    {
+      "id": "v3",
+      "name": "Seguros",
+      "status": "Planned",
+      "color": "#8b92a8",
+      "description": "Q1 2027"
+    },
+    {
+      "id": "v4",
+      "name": "Energia",
+      "status": "Foundation",
+      "color": "#f59e0b",
+      "description": "Schema pronto"
+    },
+    {
+      "id": "v5",
+      "name": "Manutenção",
+      "status": "Active",
+      "color": "#3b82f6",
+      "description": "Sprint 1D activo"
+    },
+    {
+      "id": "v6",
+      "name": "Reabilitação",
+      "status": "Planned",
+      "color": "#8b92a8",
+      "description": "Q1 2027"
+    },
+    {
+      "id": "v7",
+      "name": "Real Estate",
+      "status": "Planned",
+      "color": "#8b92a8",
+      "description": "2027+"
+    },
+    {
+      "id": "v8",
+      "name": "Rentals",
+      "status": "Planned",
+      "color": "#8b92a8",
+      "description": "2027+"
+    },
+    {
+      "id": "v9",
+      "name": "BaaS / Swan",
+      "status": "Planned",
+      "color": "#8b92a8",
+      "description": "Q1 2027"
+    },
+    {
+      "id": "v10",
+      "name": "Owners Club",
+      "status": "Foundation",
+      "color": "#8b5cf6",
+      "description": "Tab V5 Sprint 1E"
+    }
+  ],
+  "alerts": [
+    {
+      "id": "trigger-architect-proptech-vertical-builder-0",
+      "level": "warning",
+      "message": "architect-proptech → vertical-builder: implementar apps/dashboard/ React+Vite conforme ADR-005. Schema data.json canonico em .claude/current/ADR-005-dashboard-react.md. HTML aprovado (design tokens) em docs/dashboard/index.html. Fases 2-6 do brief original: criar app React 5 tabs (Overview/Activity/Agents/Roadmap/Watchers), script Node scripts/dashboard-data-build.js, vite.config.js porta 5180, package.json, vercel.json em apps/dashboard/.",
+      "since": "2026-05-03T14:30Z",
+      "source": "triggers.md"
+    }
+  ],
+  "actions": [],
+  "watchers": [
+    {
+      "id": "competitor-monitor",
+      "name": "Competitor Monitor",
+      "lastRun": "",
+      "status": "unknown",
+      "summary": "Aguarda primeira execução",
+      "source": "GitHub Issues"
+    },
+    {
+      "id": "daily-brief",
+      "name": "Daily Brief",
+      "lastRun": "",
+      "status": "unknown",
+      "summary": "Aguarda primeira execução",
+      "source": "GitHub Issues"
+    },
+    {
+      "id": "weekly-recap",
+      "name": "Weekly Recap",
+      "lastRun": "",
+      "status": "unknown",
+      "summary": "Aguarda primeira execução",
+      "source": "GitHub Issues"
+    },
+    {
+      "id": "healthcheck",
+      "name": "Stack Healthcheck",
+      "lastRun": "",
+      "status": "unknown",
+      "summary": "Aguarda primeira execução",
+      "source": "stack-health.md"
+    }
+  ],
+  "agents": [
+    {
+      "id": "architect-proptech",
+      "name": "architect-proptech",
+      "lastTask": "",
+      "lastRun": "",
+      "nextSuggested": "",
+      "worktree": "",
+      "status": "idle"
+    },
+    {
+      "id": "auditor-agent",
+      "name": "auditor-agent",
+      "lastTask": "",
+      "lastRun": "",
+      "nextSuggested": "",
+      "worktree": "",
+      "status": "idle"
+    },
+    {
+      "id": "ceo-agent",
+      "name": "ceo-agent",
+      "lastTask": "",
+      "lastRun": "",
+      "nextSuggested": "",
+      "worktree": "",
+      "status": "idle"
+    },
+    {
+      "id": "cfo-agent",
+      "name": "cfo-agent",
+      "lastTask": "",
+      "lastRun": "",
+      "nextSuggested": "",
+      "worktree": "",
+      "status": "idle"
+    },
+    {
+      "id": "cmo-agent",
+      "name": "cmo-agent",
+      "lastTask": "",
+      "lastRun": "",
+      "nextSuggested": "",
+      "worktree": "",
+      "status": "idle"
+    },
+    {
+      "id": "coo-agent",
+      "name": "coo-agent",
+      "lastTask": "",
+      "lastRun": "",
+      "nextSuggested": "",
+      "worktree": "",
+      "status": "idle"
+    },
+    {
+      "id": "cpo-agent",
+      "name": "cpo-agent",
+      "lastTask": "",
+      "lastRun": "",
+      "nextSuggested": "",
+      "worktree": "",
+      "status": "idle"
+    },
+    {
+      "id": "cto-agent",
+      "name": "cto-agent",
+      "lastTask": "",
+      "lastRun": "",
+      "nextSuggested": "",
+      "worktree": "",
+      "status": "idle"
+    },
+    {
+      "id": "notion-librarian",
+      "name": "notion-librarian",
+      "lastTask": "",
+      "lastRun": "",
+      "nextSuggested": "",
+      "worktree": "",
+      "status": "idle"
+    },
+    {
+      "id": "ops-builder",
+      "name": "ops-builder",
+      "lastTask": "",
+      "lastRun": "",
+      "nextSuggested": "",
+      "worktree": "",
+      "status": "idle"
+    },
+    {
+      "id": "supabase-designer",
+      "name": "supabase-designer",
+      "lastTask": "",
+      "lastRun": "",
+      "nextSuggested": "",
+      "worktree": "",
+      "status": "idle"
+    },
+    {
+      "id": "vertical-builder",
+      "name": "vertical-builder",
+      "lastTask": "",
+      "lastRun": "",
+      "nextSuggested": "",
+      "worktree": "",
+      "status": "idle"
+    }
+  ],
+  "activity": [
+    {
+      "ts": "2026-05-03T14:08Z",
+      "agent": "subagent",
+      "worktree": "proptech-v5-1b3",
+      "summary": "subagent stopped [session:d2eca88a]",
+      "refs": []
+    },
+    {
+      "ts": "2026-05-03T14:06Z",
+      "agent": "architect-proptech",
+      "worktree": "proptech-v5-1b3",
+      "summary": "subagent stopped [session:aff6d186]",
+      "refs": []
+    },
+    {
+      "ts": "2026-05-03T13:58Z",
+      "agent": "subagent",
+      "worktree": "proptech-v5-1b3",
+      "summary": "subagent stopped [session:d2eca88a]",
+      "refs": []
+    },
+    {
+      "ts": "2026-05-03T13:44Z",
+      "agent": "subagent",
+      "worktree": "proptech-v5-1b3",
+      "summary": "subagent stopped [session:3c01eeb3]",
+      "refs": []
+    },
+    {
+      "ts": "2026-05-03T13:14Z",
+      "agent": "subagent",
+      "worktree": "proptech-v5-1b3",
+      "summary": "subagent stopped [session:d2eca88a]",
+      "refs": []
+    },
+    {
+      "ts": "2026-05-03T12:57Z",
+      "agent": "subagent",
+      "worktree": "proptech-v5-1b3",
+      "summary": "subagent stopped [session:3c01eeb3]",
+      "refs": []
+    },
+    {
+      "ts": "2026-05-03T10:32Z",
+      "agent": "subagent",
+      "worktree": "proptech-v5-1b3",
+      "summary": "subagent stopped [session:d2eca88a]",
+      "refs": []
+    },
+    {
+      "ts": "2026-05-03T10:24Z",
+      "agent": "architect-proptech",
+      "worktree": "proptech-v5-1b3",
+      "summary": "subagent stopped [session:d2eca88a]",
+      "refs": []
+    },
+    {
+      "ts": "2026-05-03T10:20Z",
+      "agent": "architect-proptech",
+      "worktree": "proptech-v5-1b3",
+      "summary": "subagent stopped [session:d2eca88a]",
+      "refs": []
+    },
+    {
+      "ts": "2026-05-03T10:09Z",
+      "agent": "subagent",
+      "worktree": "proptech-v5-1b3",
+      "summary": "subagent stopped [session:d2eca88a]",
+      "refs": []
+    },
+    {
+      "ts": "2026-05-03T10:02Z",
+      "agent": "vertical-builder",
+      "worktree": "proptech-v5-1b3",
+      "summary": "subagent stopped [session:d2eca88a]",
+      "refs": []
+    },
+    {
+      "ts": "2026-05-02T23:10Z",
+      "agent": "subagent",
+      "worktree": "proptech-v5-1b3",
+      "summary": "subagent stopped [session:d2eca88a]",
+      "refs": []
+    },
+    {
+      "ts": "2026-05-02T22:19Z",
+      "agent": "subagent",
+      "worktree": "proptech-v5-1b3",
+      "summary": "subagent stopped [session:d2eca88a]",
+      "refs": []
+    },
+    {
+      "ts": "2026-05-02T15:51Z",
+      "agent": "subagent",
+      "worktree": "proptech-v5-1b3",
+      "summary": "subagent stopped [session:d2eca88a]",
+      "refs": []
+    },
+    {
+      "ts": "2026-05-02T15:38Z",
+      "agent": "architect-proptech",
+      "worktree": "proptech-v5-1b3",
+      "summary": "subagent stopped [session:d2eca88a]",
+      "refs": []
+    },
+    {
+      "ts": "2026-05-02T15:33Z",
+      "agent": "architect-proptech",
+      "worktree": "proptech-v5-1b3",
+      "summary": "subagent stopped [session:d2eca88a]",
+      "refs": []
+    },
+    {
+      "ts": "2026-05-02T15:26Z",
+      "agent": "architect-proptech",
+      "worktree": "proptech-v5-1b3",
+      "summary": "subagent stopped [session:d2eca88a]",
+      "refs": []
+    },
+    {
+      "ts": "2026-05-02T15:14Z",
+      "agent": "subagent",
+      "worktree": "proptech-v5-1b3",
+      "summary": "subagent stopped [session:d2eca88a]",
+      "refs": []
+    },
+    {
+      "ts": "2026-05-02T11:58Z",
+      "agent": "subagent",
+      "worktree": "proptech-v5-1b3",
+      "summary": "subagent stopped [session:d2eca88a]",
+      "refs": []
+    },
+    {
+      "ts": "2026-05-02T11:41Z",
+      "agent": "architect-proptech",
+      "worktree": "proptech-v5-1b3",
+      "summary": "subagent stopped [session:d2eca88a]",
+      "refs": []
+    }
+  ],
+  "decisions": [],
+  "techStack": [
+    {
+      "name": "Supabase V1",
+      "type": "database",
+      "cost": "free tier",
+      "status": "ok",
+      "projectId": "hkmvszkpxjbxmnixzqbl"
+    },
+    {
+      "name": "Supabase V2",
+      "type": "database",
+      "cost": "pro",
+      "status": "ok (PRODUÇÃO)",
+      "projectId": "eozklslwfaqujaijvdnl"
+    },
+    {
+      "name": "Vercel V5 alpha",
+      "type": "hosting",
+      "cost": "free tier",
+      "status": "ok",
+      "url": "https://proptech-v5-alpha.vercel.app"
+    },
+    {
+      "name": "Vercel Dashboard",
+      "type": "hosting",
+      "cost": "free tier",
+      "status": "ok",
+      "url": "https://proptech-agentic-ops.vercel.app"
+    },
+    {
+      "name": "Resend SMTP",
+      "type": "email",
+      "cost": "free tier",
+      "status": "ok"
+    },
+    {
+      "name": "GitHub Actions watchers",
+      "type": "automation",
+      "cost": "~€0.60/mês",
+      "status": "ok"
+    }
+  ],
+  "stackHealth": {
+    "score": 85,
+    "lastCheck": "2026-05-03T14:13:56.068Z",
+    "checks": []
+  },
+  "roadmap": {
+    "currentWave": "1D",
+    "waves": [
+      {
+        "id": "1D",
+        "name": "Receipt Trojan Horse Alpha",
+        "status": "active",
+        "period": "2026-05-01 / 2026-05-15"
+      },
+      {
+        "id": "1E",
+        "name": "Camada 2 Prestador-side",
+        "status": "planned",
+        "period": "pós 2026-05-15"
+      },
+      {
+        "id": "2A",
+        "name": "V4 Energia reactivar",
+        "status": "planned",
+        "period": "Q3 2026"
+      },
+      {
+        "id": "3A",
+        "name": "V3 Seguros arranque",
+        "status": "planned",
+        "period": "Q1 2027"
+      }
+    ]
+  },
+  "competitors": [
+    {
+      "name": "Hubbent",
+      "category": "maintenance",
+      "threat": "ALTO",
+      "notes": "Dual-app PT, Tier 1"
+    },
+    {
+      "name": "FIXO (Fidelidade)",
+      "category": "maintenance",
+      "threat": "CRÍTICO",
+      "notes": "Fidelidade-owned, escala imediata"
+    },
+    {
+      "name": "Jobber",
+      "category": "prestador-tools",
+      "threat": "MÉDIO",
+      "notes": "Referência UX prestador-side"
+    }
+  ]
+}

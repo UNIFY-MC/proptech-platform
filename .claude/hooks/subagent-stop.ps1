@@ -1,8 +1,12 @@
-# .claude/hooks/subagent-stop.ps1 (V3 — non-blocking stdin)
+# .claude/hooks/subagent-stop.ps1 (V4 — dashboard auto-update)
 # Hook: SubagentStop
 # Quando dispara: sub-agente termina o trabalho
 # Accao: appenda 1 linha ao recent-activity.md, corta para 20 entradas
+#        + regenera apps/dashboard/public/data.json (best effort)
 #
+# V4 changes:
+# - Regenera data.json via scripts/dashboard-data-build.js após activity update
+# - Commita + push data.json automaticamente (--no-verify, best effort)
 # V3 changes:
 # - IsInputRedirected check (V2 bloqueava em invocacao manual)
 
@@ -69,6 +73,26 @@ try {
     # 9. Reescrever (UTF-8 sem BOM)
     $output = $header + ($newEntries -join "`r`n") + "`r`n"
     [System.IO.File]::WriteAllText($activityFile, $output, [System.Text.UTF8Encoding]::new($false))
+
+    # 10. Regenerar dashboard data (best effort, não bloqueia hook)
+    try {
+        $dashScript = Join-Path $projectDir "scripts\dashboard-data-build.js"
+        if (Test-Path $dashScript) {
+            node $dashScript 2>&1 | Out-Null
+
+            $dataJson = Join-Path $projectDir "apps\dashboard\public\data.json"
+            if (Test-Path $dataJson) {
+                Push-Location $projectDir
+                try {
+                    git add $dataJson 2>&1 | Out-Null
+                    git commit -m "chore(dashboard): auto-update data.json [$ts]" --no-verify 2>&1 | Out-Null
+                    git push origin HEAD 2>&1 | Out-Null
+                } finally {
+                    Pop-Location
+                }
+            }
+        }
+    } catch {}
 
     exit 0
 }
