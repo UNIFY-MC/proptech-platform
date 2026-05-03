@@ -273,7 +273,7 @@ export default function CasaScreen({ equipamentos, authUser, onNavigate, onHambu
       })
       if (error) throw new Error(error.message || String(error))
       if (!data?.ok) throw new Error(data?.error || 'Erro desconhecido')
-      setConvidarResult({ url: data.url, expires_at: data.expires_at })
+      setConvidarResult({ url: `${window.location.origin}/r/join/${data.token_clear}`, expires_at: data.expires_at })
     } catch (err) {
       setConvidarError(err.message || 'Erro ao gerar link. Tenta novamente.')
     } finally {
