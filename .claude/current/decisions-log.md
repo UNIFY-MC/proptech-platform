@@ -5,6 +5,30 @@
 
 ---
 
+## 2026-05-03 — Magic-link URL fix: getBaseUrl(req) + path /r/join/
+
+**Decisão:** Substituir constante `SHARE_BASE_URL` (hardcoded fallback `prataowners.pt`) por função `getBaseUrl(req)` que deriva o domínio do request origin em runtime.
+
+**Causa do bug (confirmado Mário mobile test 2026-05-02 19h):**
+1. `SHARE_BASE_URL` não estava definida como Supabase secret → fallback para `prataowners.pt`
+2. Path `/join/{token}` não correspondia à rota `/r/join/{token}` definida em `App.jsx`
+
+**Fix aplicado (2026-05-03):**
+- `getBaseUrl(req)`: tenta `SHARE_BASE_URL` env var (override) → `origin`/`referer` header → fallback `proptech-v5-alpha.vercel.app`
+- Path corrigido para `/r/join/{token}` em File B
+- File A (`supabase/functions/gerar-magic-link/`) marcado obsoleto com warning header
+
+**Edge function deployed:** versão 5 (ACTIVE) em `hkmvszkpxjbxmnixzqbl`. Anterior: versão 4.
+
+**Smoke test pendente:** Mário testa DEV (localhost:5175) + Vercel (proptech-v5-alpha.vercel.app).
+
+**Refs:**
+- File B: `apps/v5-manutencao/supabase/functions/gerar-magic-link/index.ts`
+- opportunities.md: P0 → DONE + novo P2 (eliminar File A)
+- Decisão D2.2 adicionada ao header da edge function
+
+---
+
 ## 2026-05-02 — R2 Alpha Outreach adiado indefinidamente
 
 **Decisão:** Adiar o R2 alpha outreach (gate original 2026-05-04, Day 7 da Sprint 1D) até infra estar pronta.

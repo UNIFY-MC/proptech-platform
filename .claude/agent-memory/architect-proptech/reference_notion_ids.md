@@ -10,6 +10,7 @@ type: reference
 |---|---|
 | Visão & Arquitectura | `34084147-fa60-813d-94fe-d7f72d47d8bd` |
 | Developer Guide | `34184147-fa60-81b1-b72c-e4e6878656bb` |
+| Schema de Base de Dados — Core | `34084147-fa60-81639f80-c6f1dd3dd629` |
 | Prompts de Contexto V1-V9 | `34084147-fa60-814d-9836-c3c572949438` |
 | Contabilidade Toconline | `34684147-fa60-810f-8133-ec96e510c10f` |
 
@@ -39,13 +40,14 @@ type: reference
 
 ## ADRs
 
-| ADR | ID | Estado |
+| ADR | ID Notion | Estado |
 |---|---|---|
 | ADR-001 — Scope V4 Energia + Edge Function leads | `34784147-fa60-81f1-9bb4-ff7aee1306f4` | Aceite · confirmado 2026-04-19 |
-| ADR-001 filha "Decisões Finais" | `34784147-fa60-8137-8944-ec5f5d04b822` | — |
-| ADR-001 filha "Fecho Opção A" (SQL + Edge Function spec) | `34784147-fa60-81e6-bbd1-f774fccc3aa9` | — |
+| ADR-002 — Padrão de Autenticação Staff Canónico | `34884147-fa60-811c-9855-d1f7ebdfb1d7` | Aceite · canónico para todas as verticais |
+| ADR-003 — Reorganização V9 Owners Club | `34884147-fa60-81df-bfa9-c7b3e25b5ba8` | Proposto · aguarda confirmação Mário |
+| ADR-004 — Campo tags em core.imoveis | `35484147-fa60-8197-a198-ed427cd69668` | Aceite · 2026-05-02 |
 
-**Próximo ADR a criar: ADR-002**
+**Próximo ADR a criar: ADR-005**
 
 ## V8 BaaS Swan
 
