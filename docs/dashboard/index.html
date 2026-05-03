@@ -302,6 +302,33 @@
         <a href="https://www.notion.so/34c84147fa6081308a95d642b04b7798" style="color:var(--info);text-decoration:none;">🧠 MASTER PLAN</a>
       </div>
     </div>
+
+    <!-- Agentic ops: agents state -->
+    <div class="card">
+      <h2>🤖 Agentes — último estado</h2>
+      <div id="agentsState">
+        <div class="skeleton"></div>
+        <div class="skeleton"></div>
+      </div>
+    </div>
+
+    <!-- Agentic ops: recent activity -->
+    <div class="card">
+      <h2>📡 Actividade recente</h2>
+      <div id="recentActivity">
+        <div class="skeleton"></div>
+        <div class="skeleton"></div>
+      </div>
+    </div>
+
+    <!-- Agentic ops: opportunities + sprint -->
+    <div class="card">
+      <h2>🎯 Sprint &amp; Oportunidades</h2>
+      <div id="sprintOps">
+        <div class="skeleton"></div>
+      </div>
+    </div>
+
   </div>
 
 <script>
@@ -317,6 +344,51 @@ const LABEL_COLORS = {
   'incident': 'danger',
   'automated': 'info',
 };
+
+async function loadAgenticOps() {
+  try {
+    const r = await fetch('data.json?t=' + Date.now()); // cache-bust
+    if (!r.ok) throw new Error('data.json not found');
+    const d = await r.json();
+
+    // Agents — mostra apenas os que tiveram actividade (lastRun != "_never_")
+    const activeAgents = (d.agents || []).filter(a => a.lastRun && a.lastRun !== '_never_');
+    const agentsHtml = activeAgents.length > 0
+      ? activeAgents.map(a => `
+        <div class="stat">
+          <span class="stat-label" style="max-width:120px;overflow:hidden;text-overflow:ellipsis;">${a.name}</span>
+          <span style="font-size:0.7rem;color:var(--text-dim);text-align:right;max-width:160px;overflow:hidden;text-overflow:ellipsis;">${(a.lastTask || '—').substring(0,60)}</span>
+        </div>
+      `).join('')
+      : '<div class="empty-state">Sem dados de agentes.</div>';
+    document.getElementById('agentsState').innerHTML = agentsHtml;
+
+    // Recent activity
+    const actHtml = (d.recentActivity || []).slice(0, 6).map(line => {
+      const match = line.match(/^\[([^\]]+)\]\s+(.+)$/);
+      if (!match) return `<div class="commit-item" style="white-space:normal;">${line}</div>`;
+      return `<div class="commit-item" style="white-space:normal;"><span class="commit-hash">${match[1].substring(0,16)}</span>${match[2]}</div>`;
+    }).join('') || '<div class="empty-state">Sem actividade recente.</div>';
+    document.getElementById('recentActivity').innerHTML = actHtml;
+
+    // Sprint + opportunities
+    const sprint = (d.currentSprint || '—')
+      .replace(/\*\*/g, '')  // remove markdown bold
+      .replace(/\s+—\s+/g, ' · '); // normaliza separadores
+    const opps = (d.topOpportunities || []).slice(0, 4).map(o =>
+      `<div class="stat"><span class="stat-label" style="font-size:0.75rem;white-space:normal;">${o.substring(0, 80)}</span></div>`
+    ).join('');
+    document.getElementById('sprintOps').innerHTML = `
+      <div class="stat"><span class="stat-label">Sprint activo</span><span class="stat-value" style="font-size:0.75rem;text-align:right;max-width:180px;">${sprint}</span></div>
+      ${opps || '<div class="empty-state">Sem oportunidades P1/P2.</div>'}
+    `;
+  } catch (e) {
+    ['agentsState','recentActivity','sprintOps'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.innerHTML = `<div class="empty-state">&#9888; ${e.message}</div>`;
+    });
+  }
+}
 
 function timeAgo(date) {
   const seconds = Math.floor((Date.now() - new Date(date).getTime()) / 1000);
@@ -416,7 +488,7 @@ async function loadAll() {
   document.getElementById('refreshBtn').textContent = '⏳ A actualizar…';
   document.getElementById('refreshBtn').disabled = true;
   updateSprintProgress();
-  await Promise.all([loadIssues(), loadCommits(), loadWatcherHealth()]);
+  await Promise.all([loadIssues(), loadCommits(), loadWatcherHealth(), loadAgenticOps()]);
   document.getElementById('lastUpdate').textContent = `Última actualização: ${new Date().toLocaleTimeString('pt-PT')}`;
   document.getElementById('refreshBtn').textContent = '🔄 Refresh';
   document.getElementById('refreshBtn').disabled = false;

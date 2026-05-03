@@ -1,0 +1,152 @@
+{
+  "generated": "2026-05-03T09:59:45Z",
+  "recentActivity": [
+    "[2026-05-02T23:10Z] subagent @ proptech-v5-1b3: subagent stopped [session:d2eca88a]",
+    "[2026-05-02T22:19Z] subagent @ proptech-v5-1b3: subagent stopped [session:d2eca88a]",
+    "[2026-05-02T15:51Z] subagent @ proptech-v5-1b3: subagent stopped [session:d2eca88a]",
+    "[2026-05-02T15:38Z] architect-proptech @ proptech-v5-1b3: subagent stopped [session:d2eca88a]",
+    "[2026-05-02T15:33Z] architect-proptech @ proptech-v5-1b3: subagent stopped [session:d2eca88a]",
+    "[2026-05-02T15:26Z] architect-proptech @ proptech-v5-1b3: subagent stopped [session:d2eca88a]",
+    "[2026-05-02T15:14Z] subagent @ proptech-v5-1b3: subagent stopped [session:d2eca88a]",
+    "[2026-05-02T11:58Z] subagent @ proptech-v5-1b3: subagent stopped [session:d2eca88a]",
+    "[2026-05-02T11:41Z] architect-proptech @ proptech-v5-1b3: subagent stopped [session:d2eca88a]",
+    "[2026-05-02T11:29Z] subagent @ proptech-v5-1b3: subagent stopped [session:d2eca88a]"
+  ],
+  "activeTriggers": [],
+  "topOpportunities": [
+    "[P2] Lint pre-commit para .claude/agents/ — validar zero placeholders, zero typos, state files coerentes",
+    "[P2] Investigar encoding pipeline state files — agentes geram mojibake em Edit/Write (Windows runtime issue)",
+    "[P1] Rotacionar SUPABASE_SERVICE_ROLE_KEY V1 (hkmvszkpxjbxmnixzqbl) — exposed em chat 2026-05-02. Trigger: pré-R2 outreach OU pré-produção V5. Ver decisions-log 2026-05-02 (15h) para plano detalhado.",
+    "[P1] Central de comando vivo (dashboard com dados vivos) — script parsa state files → data.json → dashboard fetcha. Hook SubagentStop estendido para auto-update. Próxima sessão útil. ~3h @vertical-builder.",
+    "[P1] Prestador-app charter (Sprint 1E P1) — ADR-006 + plano detalhado. Pré-requisito para R2 outreach dual. Sessão N+2. @cpo-agent + @architect-proptech.",
+    "[P2] Cross-vertical V4-V5 fatura electricidade — owner upload em V5 dispara V4 comparação ERSE. Trigger: V4 reactivar (Sprint 2A).",
+    "[P2] Skills gap analysis agentes + verticais — gap analysis formal. 30 min @cto-agent + @cpo-agent. Output: .claude/strategy/skills-gap-analysis.md"
+  ],
+  "agents": [
+    {
+      "name": "architect-proptech",
+      "lastRun": "2026-05-02T20:00Z",
+      "lastTask": "fecho de sessão — decisions-log 17h30 (visão estratégica), next-session.md criado, opportunities.md actualizado (7 itens), commit 20ffa22",
+      "nextSuggested": "próxima sessão — @vertical-builder dashboard com dados vivos (~3h)"
+    },
+    {
+      "name": "auditor-agent",
+      "lastRun": "2026-05-02T12:15Z",
+      "lastTask": "Auditoria do commit 61573e0 (inter-agent protocol injection) — encontrados 5 RISK CRÍTICOS (typo arquitect, placeholders <TEU_NOME>, state files corrompidos, code-reviewer fictício, ausência de enforcement)",
+      "nextSuggested": "aguardar decisão do Mário sobre revert vs fix-forward; se fix-forward, criar trigger TO architect-proptech para corrigir typo e centralizar protocolo no CLAUDE.md"
+    },
+    {
+      "name": "ceo-agent",
+      "lastRun": "_never_",
+      "lastTask": "_n/a_",
+      "nextSuggested": "_aguardar primeiro trigger_"
+    },
+    {
+      "name": "cfo-agent",
+      "lastRun": "_never_",
+      "lastTask": "_n/a_",
+      "nextSuggested": "_aguardar primeiro trigger_"
+    },
+    {
+      "name": "cmo-agent",
+      "lastRun": "_never_",
+      "lastTask": "_n/a_",
+      "nextSuggested": "_aguardar primeiro trigger_"
+    },
+    {
+      "name": "coo-agent",
+      "lastRun": "_never_",
+      "lastTask": "_n/a_",
+      "nextSuggested": "_aguardar primeiro trigger_"
+    },
+    {
+      "name": "cpo-agent",
+      "lastRun": "_never_",
+      "lastTask": "_n/a_",
+      "nextSuggested": "_aguardar primeiro trigger_"
+    },
+    {
+      "name": "cto-agent",
+      "lastRun": "_never_",
+      "lastTask": "_n/a_",
+      "nextSuggested": "_aguardar primeiro trigger_"
+    },
+    {
+      "name": "notion-librarian",
+      "lastRun": "_never_",
+      "lastTask": "_n/a_",
+      "nextSuggested": "_aguardar primeiro trigger ou pedido directo do Mário_"
+    },
+    {
+      "name": "ops-builder",
+      "lastRun": "_never_",
+      "lastTask": "_n/a_",
+      "nextSuggested": "_aguardar primeiro trigger ou pedido directo do Mário_"
+    },
+    {
+      "name": "supabase-designer",
+      "lastRun": "_never_",
+      "lastTask": "_n/a_",
+      "nextSuggested": "_aguardar primeiro trigger ou pedido directo do Mário_"
+    },
+    {
+      "name": "vertical-builder",
+      "lastRun": "_never_",
+      "lastTask": "_n/a_",
+      "nextSuggested": "_aguardar primeiro trigger ou pedido directo do Mario_"
+    }
+  ],
+  "currentSprint": "**Sprint 1D** — **ACTIVO** — **2026-05-01 → 2026-05-15** — **Receipt Trojan Horse Alpha — owner-first 14-day MVP**",
+  "verticals": [
+    {
+      "id": "V1",
+      "name": "Core Hub",
+      "status": "Foundation"
+    },
+    {
+      "id": "V2",
+      "name": "Condomínios",
+      "status": "Production"
+    },
+    {
+      "id": "V3",
+      "name": "Seguros",
+      "status": "Planned"
+    },
+    {
+      "id": "V4",
+      "name": "Energia",
+      "status": "Foundation"
+    },
+    {
+      "id": "V5",
+      "name": "Manutenção",
+      "status": "Active"
+    },
+    {
+      "id": "V6",
+      "name": "Reabilitação",
+      "status": "Planned"
+    },
+    {
+      "id": "V7",
+      "name": "Real Estate",
+      "status": "Planned"
+    },
+    {
+      "id": "V8",
+      "name": "Rentals",
+      "status": "Planned"
+    },
+    {
+      "id": "V9",
+      "name": "BaaS / Swan",
+      "status": "Planned"
+    },
+    {
+      "id": "V10",
+      "name": "Owners Club",
+      "status": "Foundation"
+    }
+  ]
+}

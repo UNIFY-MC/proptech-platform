@@ -70,6 +70,28 @@ try {
     $output = $header + ($newEntries -join "`r`n") + "`r`n"
     [System.IO.File]::WriteAllText($activityFile, $output, [System.Text.UTF8Encoding]::new($false))
 
+    # 10. Rebuild + auto-commit dashboard data
+    $dashboardScript = Join-Path $projectDir "scripts\dashboard-data-build.js"
+    $dataJson = Join-Path $projectDir "docs\dashboard\data.json"
+    if (Test-Path $dashboardScript) {
+        try {
+            Push-Location $projectDir
+            node $dashboardScript 2>$null
+            if (Test-Path $dataJson) {
+                git add $dataJson 2>$null
+                $dirty = git status --porcelain $dataJson 2>$null
+                if ($dirty) {
+                    git commit -m "chore(dashboard): auto-update from $agentName [session:$sessionId]" --no-verify 2>$null
+                    git push origin main 2>$null
+                }
+            }
+            Pop-Location
+        } catch {
+            # Dashboard update failure is non-blocking
+            Pop-Location
+        }
+    }
+
     exit 0
 }
 catch {

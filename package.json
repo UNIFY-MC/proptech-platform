@@ -4,5 +4,8 @@
   "workspaces": [
     "apps/*",
     "packages/*"
-  ]
+  ],
+  "scripts": {
+    "dashboard:build": "node scripts/dashboard-data-build.js"
+  }
 }
