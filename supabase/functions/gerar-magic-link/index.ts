@@ -1,4 +1,17 @@
 /**
+ * ⚠️ AVISO · ESTE FICHEIRO NÃO É DEPLOYED
+ *
+ * Versão obsoleta de Day 2 (Sprint 1D, 2026-05-01). Última edição: commit c97d125.
+ * Em produção corre apps/v5-manutencao/supabase/functions/gerar-magic-link/index.ts
+ * (versão 4 deployed 2026-05-01 21:14, contém Day 5.5 equipamento_id).
+ *
+ * Eliminação programada: Fase 2.5 stale review (P2 em opportunities.md).
+ * Refs: decisions-log 2026-05-03 — magic-link bug fix
+ *
+ * NÃO EDITES ESTE FICHEIRO. Edita File B em apps/v5-manutencao/supabase/functions/.
+ */
+
+/**
  * Edge Function: gerar-magic-link
  * Endpoint: POST /functions/v1/gerar-magic-link
  *

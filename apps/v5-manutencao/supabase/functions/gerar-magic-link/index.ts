@@ -12,6 +12,11 @@
  *   Response: { token_clear, url, expires_at, magic_link_id }
  *   NUNCA retornar tokenHash na response.
  *
+ * Decisão D2.2 (Mário sign-off 2026-05-03) — URL building:
+ *   getBaseUrl(req) deriva domínio do request origin (DEV/produção autónomos).
+ *   SHARE_BASE_URL secret só usada como override forçado (default: vazia).
+ *   Path /r/join/{token} alinhado com router App.jsx.
+ *
  * Auth obrigatória: JWT Supabase do owner. Sem JWT → 401.
  *
  * Input (JSON):
@@ -28,7 +33,7 @@
  *   {
  *     ok: true,
  *     token_clear: "abc...64hex",      ← owner partilha este valor em URL
- *     url: "https://prataowners.pt/join/abc...",
+ *     url: "https://proptech-v5-alpha.vercel.app/r/join/abc...",
  *     expires_at: "2026-05-03T10:00:00.000Z",
  *     magic_link_id: "uuid"
  *   }
@@ -48,7 +53,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
-const SHARE_BASE_URL = Deno.env.get("SHARE_BASE_URL") ?? "https://prataowners.pt";
+// SHARE_BASE_URL removed — use getBaseUrl(req) instead
 
 const TTL_HOURS = 48;
 const RATE_LIMIT_PER_DAY = 10;
@@ -183,6 +188,21 @@ function extractIp(req: Request): string {
     req.headers.get("x-real-ip") ??
     "unknown"
   );
+}
+
+// ── URL helper ────────────────────────────────────────────────────────────────
+function getBaseUrl(req: Request): string {
+  const fromEnv = Deno.env.get("SHARE_BASE_URL");
+  if (fromEnv) return fromEnv;
+
+  const origin = req.headers.get("origin") || req.headers.get("referer");
+  if (origin) {
+    try {
+      return new URL(origin).origin;
+    } catch {}
+  }
+
+  return "https://proptech-v5-alpha.vercel.app";
 }
 
 // ── Handler ───────────────────────────────────────────────────────────────────
@@ -400,7 +420,8 @@ Deno.serve(async (req: Request) => {
   }
 
   // ── 8. Resposta — tokenClear (NUNCA tokenHash) ───────────────────────────
-  const url = `${SHARE_BASE_URL}/join/${tokenClear}`;
+  const baseUrl = getBaseUrl(req);
+  const url = `${baseUrl}/r/join/${tokenClear}`;
 
   console.log(JSON.stringify({
     event: "magic_link_gerado",
