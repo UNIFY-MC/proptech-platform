@@ -1,12 +1,14 @@
 #!/usr/bin/env node
 // scripts/dashboard-data-build.js
-// Gera apps/dashboard/public/data.json — schema v2.0
-// Fases: parse state files + hardcoded tech stack/roadmap/competitors/watchers
+// Gera apps/dashboard/public/data.json — schema v3.0
+// Princípio: 100% LIVE sources. Zero hardcodes para dados de estado.
+// Se ficheiro falha → secção retorna { _source, _status: 'missing', _error }
 
 import { readFileSync, writeFileSync, readdirSync, existsSync } from 'fs'
 import { join, dirname, basename } from 'path'
 import { fileURLToPath } from 'url'
 import { execSync } from 'child_process'
+import matter from 'gray-matter'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const ROOT = join(__dirname, '..')
@@ -14,7 +16,7 @@ const STATE_DIR = 'C:\\Users\\mario\\dev\\proptech-state'
 const OUTPUT = join(ROOT, 'apps', 'dashboard', 'public', 'data.json')
 
 // ---------------------------------------------------------------------------
-// Hardcoded data
+// Hardcoded data — APENAS metadados estáveis que não mudam com estado
 // ---------------------------------------------------------------------------
 
 const TECH_STACK = [
@@ -31,51 +33,6 @@ const TECH_STACK = [
   { name: 'Resend',       role: 'Email transac.',      host: 'Resend',     status: 'ok',       cost: 'free tier',   sprint: '1B' },
   { name: 'Upstash',      role: 'Redis/queue',         host: 'Upstash',    status: 'deferred', cost: 'free tier',   sprint: '1E' },
   { name: 'Twilio',       role: 'SMS',                 host: 'Twilio',     status: 'deferred', cost: '~$0.10/SMS',  sprint: '1E' },
-]
-
-const STACK_HEALTH = [
-  { service: 'Supabase V1',    usage: 25, label: '2/8 GB',       status: 'ok' },
-  { service: 'Supabase V2',    usage: 59, label: '4.7/8 GB',     status: 'warn' },
-  { service: 'Netlify build',  usage: 87, label: '261/300 min',  status: 'critical' },
-  { service: 'GitHub Actions', usage: 18, label: '720/4k min',   status: 'ok' },
-]
-
-const ROADMAP = [
-  { wave: '1A', name: 'Foundation',              status: 'done',    sprints: [
-    { id: '0',    name: 'Reset estrutural',           status: 'done',    date: 'Pre-2026',          tasks: [] },
-    { id: '3.3',  name: 'UI catálogo + wizard',        status: 'done',    date: 'Pre-2026',          tasks: [] },
-    { id: '3.4',  name: 'Auth + RLS + onboarding',     status: 'done',    date: 'Pre-2026',          tasks: [] },
-  ]},
-  { wave: '1B', name: 'V5 Agentic Foundation',   status: 'active',  sprints: [
-    { id: '1B.1', name: 'Agent infra + Vision',        status: 'done',    date: '2026-04-20',        tasks: [] },
-    { id: '1B.4', name: 'Weather + HeroHeader',        status: 'done',    date: '2026-04-29',        tasks: [] },
-    { id: '1B.5A',name: 'SQL foundations + pricing',   status: 'done',    date: '2026-04-30',        tasks: [] },
-    { id: 'A',    name: 'C-Suite agents (7 personas)', status: 'done',    date: '2026-04-30',        tasks: [] },
-    { id: 'B',    name: 'Watchers + crons',            status: 'done',    date: '2026-05-01',        tasks: [] },
-  ]},
-  { wave: '1D', name: 'V5 Receipt Trojan Horse',  status: 'active',  sprints: [
-    { id: '1D', name: 'Receipt Alpha — owner-first 14d', status: 'active', date: '2026-05-01→15', tasks: [
-      'Magic-link flow owner→prestador',
-      '5 alpha owners recrutados',
-      'Recibo digital gerado end-to-end',
-      'Gate Day 7: 1 owner externo',
-      'Gate Day 14: 5/5 criteria + decisão 1E',
-    ]}
-  ]},
-  { wave: '1E', name: 'V5 Production Grade',     status: 'planned', sprints: [
-    { id: '1E', name: 'Camada 2: prestador-side', status: 'planned', date: 'pós 2026-05-15', tasks: [
-      'Dashboard prestador',
-      'Stripe Connect',
-      'Moloni integração',
-      'Schema rename recibos_servico→trabalhos_documentados',
-    ]}
-  ]},
-  { wave: '2A', name: 'V4 Energia reactivação',  status: 'planned', sprints: [
-    { id: '2A', name: 'V4 Energia construção',    status: 'planned', date: 'Q3 2026',       tasks: [] }
-  ]},
-  { wave: '2B', name: 'V3 Seguros + V6+',        status: 'planned', sprints: [
-    { id: '2B', name: 'V3 Seguros arranque',      status: 'planned', date: 'Q1 2027',       tasks: [] }
-  ]},
 ]
 
 const OUR_PRODUCT = {
@@ -156,9 +113,288 @@ function parseKV(content) {
   return result
 }
 
+function getGitInfo() {
+  try {
+    const branch = execSync('git rev-parse --abbrev-ref HEAD', { cwd: ROOT, encoding: 'utf8' }).trim()
+    const worktree = basename(ROOT)
+    return { branch, worktree }
+  } catch { return { branch: 'unknown', worktree: 'unknown' } }
+}
+
 // ---------------------------------------------------------------------------
-// Parsers
+// Parsers LIVE — cada um retorna { ..., _source, _status, _lastParsed }
 // ---------------------------------------------------------------------------
+
+function parseSprint(filePath) {
+  const src = '.claude/current/current-sprint-state.md'
+  try {
+    const content = readFile(filePath)
+    if (!content) throw new Error('Ficheiro vazio ou inexistente')
+    const { data } = matter(content)
+    if (!data.sprint) throw new Error('Frontmatter sprint: em falta')
+    const sprint = data.sprint
+    const gates = data.gates || []
+    const started = new Date(sprint.started)
+    const now = new Date()
+    const day = Math.max(0, Math.floor((now - started) / 86400000))
+    const totalDays = sprint.total_days || 14
+    const progress = Math.min(100, Math.round((day / totalDays) * 100))
+    const nextGate = gates.find(g => g.status === 'pending')
+    const daysToGate = nextGate ? Math.max(0, Math.ceil((new Date(nextGate.date) - now) / 86400000)) : 0
+    return {
+      id: sprint.id,
+      name: sprint.name,
+      wave: sprint.wave || sprint.id,
+      vertical: sprint.vertical,
+      status: sprint.status,
+      started: sprint.started,
+      startDate: sprint.started,
+      target: sprint.target,
+      endDate: sprint.target,
+      day,
+      totalDays,
+      progress,
+      hypothesis: sprint.hypothesis,
+      daysToGate,
+      gateName: nextGate ? nextGate.desc : '',
+      gates: gates.map(g => ({
+        id: `day${g.day}`,
+        day: g.day,
+        label: g.desc,
+        desc: g.desc,
+        date: g.date,
+        status: g.status || (day >= g.day ? 'done' : 'pending')
+      })),
+      daysDone: data.days_done || [],
+      _source: src,
+      _status: 'live',
+      _lastParsed: new Date().toISOString()
+    }
+  } catch (e) {
+    return { _source: src, _status: 'missing', _error: e.message }
+  }
+}
+
+function parseVerticals(filePath) {
+  const src = '.claude/strategy/verticals-state.md'
+  try {
+    const content = readFile(filePath)
+    if (!content) throw new Error('Ficheiro vazio')
+    const { data } = matter(content)
+    if (!data.verticals || !data.verticals.length) throw new Error('verticals[] em falta no frontmatter')
+    const colorMap = {
+      violet: '#534AB7',
+      emerald: '#10b981',
+      stone: '#8b92a8',
+      amber: '#f59e0b',
+      blue: '#3b82f6'
+    }
+    return {
+      verticals: data.verticals.map(v => ({
+        id: v.id,
+        name: v.name,
+        status: v.status,
+        color: colorMap[v.color] || '#8b92a8',
+        meta: v.meta || '',
+        detail: v.detail || '',
+        description: v.detail || '',
+        longDetail: v.longDetail || ''
+      })),
+      _source: src,
+      _status: 'live',
+      _lastParsed: new Date().toISOString()
+    }
+  } catch (e) {
+    return { verticals: [], _source: src, _status: 'missing', _error: e.message }
+  }
+}
+
+function parseNextActions(filePath) {
+  const src = 'proptech-state/opportunities.md'
+  try {
+    const content = readFile(filePath)
+    if (!content) throw new Error('Ficheiro vazio')
+    // Regex para linha de tabela com | P0 | ou | P1 | ou | P2 | na primeira coluna
+    const re = /^\|\s*(P[0-3]|H|M|L)\s*\|([^|]+)\|([^|]+)\|([^|]+)\|([^|]+)\|([^|]*)\|?/gm
+    const actions = []
+    let m
+    while ((m = re.exec(content)) !== null) {
+      const prio = m[1].trim()
+      if (prio === 'Prioridade' || prio === 'Prio') continue // header
+      const desc = (m[2] || '').trim()
+      const owner = (m[3] || '').trim()
+      const effort = (m[4] || '').trim()
+      const status = (m[5] || '').trim()
+      const date = (m[6] || '').trim()
+      // Só P0/P1 para nextActions; P2+ são backlog
+      if (prio === 'P0' || prio === 'P1') {
+        actions.push({
+          id: `opp-${actions.length + 1}`,
+          priority: prio,
+          description: desc,
+          owner,
+          effort,
+          status,
+          date,
+          source: src
+        })
+      }
+    }
+    return {
+      nextActions: actions,
+      _source: src,
+      _status: actions.length > 0 ? 'live' : 'partial',
+      _lastParsed: new Date().toISOString()
+    }
+  } catch (e) {
+    return { nextActions: [], _source: src, _status: 'missing', _error: e.message }
+  }
+}
+
+function parseStackHealth(filePath) {
+  const src = 'proptech-state/stack-health.md'
+  try {
+    const content = readFile(filePath)
+    if (!content) throw new Error('Ficheiro vazio')
+    // Parse tabela ## Gauges
+    const gaugesSection = content.match(/## Gauges[\s\S]*?(?=##|$)/i)
+    if (!gaugesSection) throw new Error('Secção ## Gauges em falta')
+    const re = /^\|\s*([^|]+?)\s*\|\s*(\d+)\s*\|\s*([^|]+?)\s*\|\s*(ok|warn|critical)\s*\|/gim
+    const gauges = []
+    let m
+    while ((m = re.exec(gaugesSection[0])) !== null) {
+      const service = m[1].trim()
+      if (service.toLowerCase() === 'serviço' || service === '---') continue
+      gauges.push({
+        service,
+        usage: parseInt(m[2]),
+        label: m[3].trim(),
+        status: m[4].trim()
+      })
+    }
+    if (gauges.length === 0) throw new Error('Nenhum gauge encontrado na tabela')
+    return {
+      stackHealth: gauges,
+      _source: src,
+      _status: 'live',
+      _lastParsed: new Date().toISOString()
+    }
+  } catch (e) {
+    return { stackHealth: [], _source: src, _status: 'missing', _error: e.message }
+  }
+}
+
+function parseDecisions(filePath) {
+  const src = '.claude/current/decisions-log.md'
+  try {
+    const content = readFile(filePath)
+    if (!content) throw new Error('Ficheiro vazio')
+    const decisions = []
+    // Split por H2 ##
+    const blocks = content.split(/\n## /).slice(1)
+    for (const block of blocks) {
+      if (decisions.length >= 10) break
+      const lines = block.split('\n')
+      const title = lines[0].trim()
+      if (!title || title.startsWith('---')) continue
+      const body = lines.slice(1).join('\n')
+      // Extrair urgência: procura **Urgência:** high|medium|low|critical
+      const urgencyMatch = body.match(/\*\*Urgência:\*\*\s*(critical|high|medium|low)/i)
+      const urgency = urgencyMatch ? urgencyMatch[1].toLowerCase() : 'low'
+      // Data do título (YYYY-MM-DD no início)
+      const dateMatch = title.match(/(\d{4}-\d{2}-\d{2})/)
+      const date = dateMatch ? dateMatch[1] : ''
+      // Texto limpo (sem data e — separador)
+      const text = title.replace(/^\d{4}-\d{2}-\d{2}\s*[—–-]\s*/, '').trim()
+      const meta = date ? `${date} · V5` : 'V5'
+      const detail = body.replace(/\*\*Urgência:\*\*[^\n]+\n?/, '').substring(0, 300).trim()
+      decisions.push({
+        id: `d-${date || decisions.length}`,
+        text,
+        urgency,
+        meta,
+        detail
+      })
+    }
+    return {
+      decisions,
+      _source: src,
+      _status: 'live',
+      _lastParsed: new Date().toISOString()
+    }
+  } catch (e) {
+    return { decisions: [], _source: src, _status: 'missing', _error: e.message }
+  }
+}
+
+function parseRoadmap(filePath) {
+  const src = '.claude/current/current-sprint-state.md'
+  try {
+    const content = readFile(filePath)
+    if (!content) throw new Error('Ficheiro vazio')
+    // Tentar parse tabela ## Roadmap geral
+    const roadmapSection = content.match(/## Roadmap geral[\s\S]*?(?=## |$)/i)
+    if (!roadmapSection) {
+      // Fallback: usar frontmatter sprint como única wave active
+      const { data } = matter(content)
+      if (data.sprint) {
+        return {
+          roadmap: [{
+            wave: data.sprint.wave || data.sprint.id,
+            name: data.sprint.name,
+            status: data.sprint.status,
+            sprints: [{
+              id: data.sprint.id,
+              name: data.sprint.name,
+              status: data.sprint.status,
+              date: `${data.sprint.started} → ${data.sprint.target}`,
+              tasks: (data.gates || []).map(g => `Gate Day ${g.day}: ${g.desc}`)
+            }]
+          }],
+          _source: src,
+          _status: 'partial',
+          _lastParsed: new Date().toISOString()
+        }
+      }
+      throw new Error('Roadmap geral não encontrado')
+    }
+    const re = /^\|\s*\*{0,2}([^|*]+?)\*{0,2}\s*\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|/gm
+    const waves = []
+    let m
+    while ((m = re.exec(roadmapSection[0])) !== null) {
+      const wave = m[1].trim()
+      if (wave === 'Wave' || wave === '---') continue
+      const statusRaw = m[2].trim()
+      const period = m[3].trim()
+      const output = m[4].trim()
+      const status = statusRaw.includes('ACTIVO') ? 'active'
+        : statusRaw.includes('Fechado') || statusRaw.includes('✅') ? 'done'
+        : statusRaw.includes('Planeado') ? 'planned'
+        : 'planned'
+      waves.push({
+        wave: wave.replace(/Sprint\s+/i, ''),
+        name: output.replace(/\*\*/g, ''),
+        status,
+        sprints: [{
+          id: wave,
+          name: output.replace(/\*\*/g, '').substring(0, 60),
+          status,
+          date: period,
+          tasks: []
+        }]
+      })
+    }
+    if (waves.length === 0) throw new Error('Nenhuma wave encontrada na tabela')
+    return {
+      roadmap: waves,
+      _source: src,
+      _status: 'live',
+      _lastParsed: new Date().toISOString()
+    }
+  } catch (e) {
+    return { roadmap: [], _source: src, _status: 'missing', _error: e.message }
+  }
+}
 
 function parseActivity(content) {
   const entries = []
@@ -170,7 +406,7 @@ function parseActivity(content) {
   return entries
 }
 
-function parseTriggers(content) {
+function parseAlerts(content) {
   const alerts = []
   const activos = content.match(/## Activos\s*([\s\S]*?)(?=##|$)/i)
   if (!activos) return alerts
@@ -188,22 +424,54 @@ function parseTriggers(content) {
   return alerts
 }
 
-function parseOpportunities(content) {
-  const actions = []
-  const re = /^\|\s*\*{0,2}(P[012])\*{0,2}\s*\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|/gm
-  let m
-  while ((m = re.exec(content)) !== null) {
-    if (m[1] === 'P0' || m[1] === 'P1') {
-      actions.push({
-        id: `opp-${actions.length + 1}`,
-        priority: m[1],
-        description: m[2].trim(),
-        owner: m[3].trim(),
-        source: 'opportunities.md'
-      })
+function parseWatchers(filePath) {
+  const watchers = []
+  const content = readFile(filePath)
+  if (!content) return watchers
+  const blocks = content.split(/\n## /)
+  for (const block of blocks.slice(1)) {
+    const lines = block.split(/\r?\n/)
+    const name = lines[0].trim()
+    if (!name || name.startsWith('Estrutura')) continue
+
+    const kv = {}
+    let section = null
+    const outputLines = []
+    const outputFullLines = []
+
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i]
+      if (line.startsWith('### Último output')) { section = 'output'; continue }
+      if (line.startsWith('### Output completo')) { section = 'outputFull'; continue }
+      if (line.startsWith('### ')) { section = null; continue }
+      if (line.startsWith('---')) { section = null; continue }
+
+      if (section === null) {
+        const m = line.match(/^([\w][\w -]*):\s*(.*)$/)
+        if (m) kv[m[1].trim()] = m[2].trim()
+      } else if (section === 'output') {
+        if (line.trim()) outputLines.push(line)
+      } else if (section === 'outputFull') {
+        outputFullLines.push(line)
+      }
     }
+
+    const output = outputLines[0] || 'Sem dados ainda.'
+    const outputFull = outputFullLines.join('\n').trimEnd()
+
+    watchers.push({
+      id: name,
+      name,
+      cadence: kv['cadence'] || '',
+      last: kv['last'] || '',
+      next: kv['next'] || '',
+      status: kv['status'] || 'never',
+      link: kv['link'] || '',
+      output,
+      outputFull,
+    })
   }
-  return actions
+  return watchers
 }
 
 function parseAgents() {
@@ -218,7 +486,6 @@ function parseAgents() {
     const id = basename(file, '.md')
     const meta = AGENT_META[id] || {}
 
-    // Calcular state: stale se > 24h sem actividade, idle caso contrário
     let state = 'never'
     if (kv['Last run']) {
       const lastRun = new Date(kv['Last run'])
@@ -243,122 +510,16 @@ function parseAgents() {
   return agents
 }
 
-function parseVerticals(content) {
-  const verticals = []
-  const colorMap = {
-    V1: '#534AB7', V2: '#10b981', V3: '#8b92a8', V4: '#f59e0b',
-    V5: '#3b82f6', V6: '#8b92a8', V7: '#8b92a8', V8: '#8b92a8',
-    V9: '#8b92a8', V10: '#8b5cf6'
-  }
-  const re = /^\|\s*\*{0,2}(V\d+)\*{0,2}\s*\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|/gm
-  let m
-  while ((m = re.exec(content)) !== null) {
-    const id = m[1].toLowerCase()
-    verticals.push({
-      id,
-      name: m[2].trim(),
-      status: m[3].trim(),
-      color: colorMap[m[1]] || '#8b92a8',
-      description: m[4].trim()
-    })
-  }
-  return verticals
-}
-
-function getGitInfo() {
-  try {
-    const branch = execSync('git rev-parse --abbrev-ref HEAD', { cwd: ROOT, encoding: 'utf8' }).trim()
-    const worktree = basename(ROOT)
-    return { branch, worktree }
-  } catch { return { branch: 'unknown', worktree: 'unknown' } }
-}
-
-function parseSprint(content) {
-  const now = new Date()
-  const start = new Date('2026-05-01')
-  const end = new Date('2026-05-15')
-  const totalDays = 14
-  const day = Math.max(0, Math.min(totalDays, Math.floor((now - start) / (1000 * 60 * 60 * 24))))
-  const progress = Math.round((day / totalDays) * 100)
-
-  let hypothesis = 'Owner→link→prestador 48h'
-  const hypMatch = content.match(/[Hh]ypothesis[:\s]+([^\n]+)/)
-  if (hypMatch) hypothesis = hypMatch[1].trim()
-
-  const gates = [
-    { id: 'day7',  label: 'Day 7 — 1 owner externo aceitou convite',  status: day >= 7  ? 'done' : 'pending', date: '2026-05-07' },
-    { id: 'day11', label: 'Day 11 — 1 end-to-end real',               status: day >= 11 ? 'done' : 'pending', date: '2026-05-11' },
-    { id: 'day14', label: 'Day 14 — 5/5 criteria + decisão 1E',       status: day >= 14 ? 'done' : 'pending', date: '2026-05-15' }
-  ]
-
-  const nextPendingGate = gates.find(g => g.status === 'pending')
-  let daysToGate = 0
-  let gateName = ''
-  if (nextPendingGate) {
-    const gateDate = new Date(nextPendingGate.date)
-    daysToGate = Math.max(0, Math.ceil((gateDate - now) / (1000 * 60 * 60 * 24)))
-    gateName = nextPendingGate.label
-  }
-
-  return {
-    name: 'Sprint 1D — Receipt Trojan Horse Alpha',
-    wave: '1D',
-    day,
-    totalDays,
-    startDate: '2026-05-01',
-    endDate: '2026-05-15',
-    hypothesis,
-    status: 'active',
-    progress,
-    daysToGate,
-    gateName,
-    gates
-  }
-}
-
-function parseDecisions(content) {
-  const decisions = []
-  // Parsear entradas ## [YYYY-MM-DD] titulo
-  const re = /^##\s+(.+)$/gm
-  let m
-  while ((m = re.exec(content)) !== null && decisions.length < 10) {
-    const title = m[1].trim()
-    if (title.toLowerCase() === 'histórico' || title.toLowerCase() === 'backlog') continue
-    const dateMatch = title.match(/\d{4}-\d{2}-\d{2}/)
-
-    // Extrair o bloco de texto após o título até ao próximo ## ou fim
-    const blockStart = m.index + m[0].length
-    const nextMatch = /^##\s+/gm
-    nextMatch.lastIndex = blockStart
-    const nextH = nextMatch.exec(content)
-    const block = (nextH ? content.slice(blockStart, nextH.index) : content.slice(blockStart)).trim()
-
-    // Extrair urgência se existir
-    const urgencyMatch = block.match(/urgência[:\s]*(critical|high|medium|low)/i)
-    const urgency = urgencyMatch ? urgencyMatch[1].toLowerCase() : 'low'
-
-    decisions.push({
-      id: title.replace(/\s+/g, '-').toLowerCase().substring(0, 50),
-      text: title.replace(/^\[|\]$/g, '').replace(/\d{4}-\d{2}-\d{2}\s*[—–-]?\s*/, '').trim() || title,
-      meta: dateMatch ? dateMatch[0] : '',
-      detail: block.substring(0, 300),
-      urgency,
-    })
-  }
-  return decisions
-}
-
-// Parser de competitors.md
-function parseCompetitors(content) {
+function parseCompetitors(filePath) {
   const competitors = []
-  // Split por "\n## " para obter cada bloco — ignorar o cabeçalho
+  const content = readFile(filePath)
+  if (!content) return competitors
   const blocks = content.split(/\n## /)
   for (const block of blocks.slice(1)) {
     const lines = block.split(/\r?\n/)
     const name = lines[0].trim()
     if (!name || name.startsWith('Estrutura')) continue
 
-    // Extrair key: value
     const kv = {}
     let section = null
     const strengths = []
@@ -408,57 +569,6 @@ function parseCompetitors(content) {
   return competitors
 }
 
-// Parser de watchers-state.md
-function parseWatchers(content) {
-  const watchers = []
-  const blocks = content.split(/\n## /)
-  for (const block of blocks.slice(1)) {
-    const lines = block.split(/\r?\n/)
-    const name = lines[0].trim()
-    if (!name || name.startsWith('Estrutura')) continue
-
-    const kv = {}
-    let section = null
-    let outputLines = []
-    let outputFullLines = []
-
-    for (let i = 1; i < lines.length; i++) {
-      const line = lines[i]
-      if (line.startsWith('### Último output')) { section = 'output'; continue }
-      if (line.startsWith('### Output completo')) { section = 'outputFull'; continue }
-      if (line.startsWith('### ')) { section = null; continue }
-      if (line.startsWith('---')) { section = null; continue }
-
-      if (section === null) {
-        const m = line.match(/^([\w][\w -]*):\s*(.*)$/)
-        if (m) kv[m[1].trim()] = m[2].trim()
-      } else if (section === 'output') {
-        if (line.trim()) outputLines.push(line)
-      } else if (section === 'outputFull') {
-        outputFullLines.push(line)
-      }
-    }
-
-    // output = primeira linha não-vazia após "### Último output"
-    const output = outputLines[0] || 'Sem dados ainda.'
-    // outputFull = tudo (trim trailing empty lines)
-    const outputFull = outputFullLines.join('\n').trimEnd()
-
-    watchers.push({
-      id: name,
-      name,
-      cadence: kv['cadence'] || '',
-      last: kv['last'] || '',
-      next: kv['next'] || '',
-      status: kv['status'] || 'never',
-      link: kv['link'] || '',
-      output,
-      outputFull,
-    })
-  }
-  return watchers
-}
-
 // ---------------------------------------------------------------------------
 // MAIN
 // ---------------------------------------------------------------------------
@@ -466,75 +576,109 @@ function parseWatchers(content) {
 const git = getGitInfo()
 const now = new Date().toISOString()
 
-const activityContent     = readFile(join(STATE_DIR, 'recent-activity.md'))
-const triggersContent     = readFile(join(STATE_DIR, 'triggers.md'))
-const opportunitiesContent= readFile(join(STATE_DIR, 'opportunities.md'))
+// Ficheiros source
+const sprintFile       = join(ROOT, '.claude', 'current', 'current-sprint-state.md')
+const verticalsFile    = join(ROOT, '.claude', 'strategy', 'verticals-state.md')
+const decisionsFile    = join(ROOT, '.claude', 'current', 'decisions-log.md')
+const competitorsFile  = join(ROOT, '.claude', 'strategy', 'competitors.md')
+const watchersFile     = join(ROOT, '.claude', 'strategy', 'watchers-state.md')
+const opportunitiesFile = join(STATE_DIR, 'opportunities.md')
+const stackHealthFile  = join(STATE_DIR, 'stack-health.md')
+const activityContent  = readFile(join(STATE_DIR, 'recent-activity.md'))
+const triggersContent  = readFile(join(STATE_DIR, 'triggers.md'))
 
-const verticalsContent    = readFile(join(ROOT, '.claude', 'strategy', 'verticals-state.md'))
-const sprintContent       = readFile(join(ROOT, '.claude', 'current', 'current-sprint-state.md'))
-const decisionsContent    = readFile(join(ROOT, '.claude', 'current', 'decisions-log.md'))
-const competitorsContent  = readFile(join(ROOT, '.claude', 'strategy', 'competitors.md'))
-const watchersContent     = readFile(join(ROOT, '.claude', 'strategy', 'watchers-state.md'))
-
-const parsedVerticals = parseVerticals(verticalsContent)
-const parsedSprint = parseSprint(sprintContent)
-const parsedAgents = parseAgents()
-const parsedActivity = parseActivity(activityContent)
-const parsedWatchers = parseWatchers(watchersContent)
-const parsedCompetitors = parseCompetitors(competitorsContent)
+// Executar todos os parsers
+const sprintResult      = parseSprint(sprintFile)
+const verticalsResult   = parseVerticals(verticalsFile)
+const actionsResult     = parseNextActions(opportunitiesFile)
+const healthResult      = parseStackHealth(stackHealthFile)
+const decisionsResult   = parseDecisions(decisionsFile)
+const roadmapResult     = parseRoadmap(sprintFile)
+const watchersResult    = parseWatchers(watchersFile)
+const agentsResult      = parseAgents()
+const activityResult    = parseActivity(activityContent)
+const alertsResult      = parseAlerts(triggersContent)
+const competitorsResult = parseCompetitors(competitorsFile)
 
 const data = {
   meta: {
-    schemaVersion: '2.0',
+    schemaVersion: '3.0',
     lastSync: now,
     generatedAt: now,
     branch: git.branch,
     worktree: git.worktree,
     generator: 'scripts/dashboard-data-build.js'
   },
-  sprint: parsedSprint,
-  verticals: parsedVerticals.length > 0 ? parsedVerticals : [
-    { id: 'v1', name: 'Core Hub',     status: 'Foundation', color: '#534AB7', description: 'Hub horizontal partilhado' },
-    { id: 'v2', name: 'Condomínios',  status: 'Production', color: '#10b981', description: 'prataowners.pt — produção viva' },
-    { id: 'v3', name: 'Seguros',      status: 'Planned',    color: '#8b92a8', description: 'Q1 2027' },
-    { id: 'v4', name: 'Energia',      status: 'Foundation', color: '#f59e0b', description: 'Schema pronto' },
-    { id: 'v5', name: 'Manutenção',   status: 'Active',     color: '#3b82f6', description: 'Sprint 1D activo' },
-    { id: 'v6', name: 'Reabilitação', status: 'Planned',    color: '#8b92a8', description: 'Q1 2027' },
-    { id: 'v7', name: 'Real Estate',  status: 'Planned',    color: '#8b92a8', description: '2027+' },
-    { id: 'v8', name: 'Rentals',      status: 'Planned',    color: '#8b92a8', description: '2027+' },
-    { id: 'v9', name: 'BaaS / Swan',  status: 'Planned',    color: '#8b92a8', description: 'Q1 2027' },
-    { id: 'v10',name: 'Owners Club',  status: 'Foundation', color: '#8b5cf6', description: 'Tab V5 Sprint 1E' }
-  ],
-  alerts: parseTriggers(triggersContent),
-  nextActions: parseOpportunities(opportunitiesContent),
+  sprint: sprintResult,
+  verticals: verticalsResult.verticals,
+  _verticalsMeta: {
+    _source: verticalsResult._source,
+    _status: verticalsResult._status,
+    _error: verticalsResult._error
+  },
+  alerts: alertsResult,
+  nextActions: actionsResult.nextActions,
+  _nextActionsMeta: {
+    _source: actionsResult._source,
+    _status: actionsResult._status,
+    _error: actionsResult._error
+  },
   techStack: TECH_STACK,
-  stackHealth: STACK_HEALTH,
-  watchers: parsedWatchers,
-  agents: parsedAgents,
-  recentActivity: parsedActivity.slice(0, 20),
-  decisions: parseDecisions(decisionsContent).slice(0, 10),
-  roadmap: ROADMAP,
-  competitors: parsedCompetitors,
+  stackHealth: healthResult.stackHealth,
+  _stackHealthMeta: {
+    _source: healthResult._source,
+    _status: healthResult._status,
+    _error: healthResult._error
+  },
+  watchers: watchersResult,
+  agents: agentsResult,
+  recentActivity: activityResult.slice(0, 20),
+  decisions: decisionsResult.decisions,
+  _decisionsMeta: {
+    _source: decisionsResult._source,
+    _status: decisionsResult._status,
+    _error: decisionsResult._error
+  },
+  roadmap: roadmapResult.roadmap,
+  _roadmapMeta: {
+    _source: roadmapResult._source,
+    _status: roadmapResult._status,
+    _error: roadmapResult._error
+  },
+  competitors: competitorsResult,
   ourProduct: OUR_PRODUCT,
-  featureMatrix: FEATURE_MATRIX,
+  featureMatrix: FEATURE_MATRIX
 }
 
 writeFileSync(OUTPUT, JSON.stringify(data, null, 2), 'utf8')
 
-// Verificar tamanho
 const sizeKB = Math.round(Buffer.byteLength(JSON.stringify(data, null, 2)) / 1024)
 
-console.log(`data.json escrito em ${OUTPUT}`)
-console.log(`   Schema: v${data.meta.schemaVersion}`)
-console.log(`   Tamanho: ~${sizeKB}KB`)
-console.log(`   Sprint: Wave ${data.sprint.wave}, Day ${data.sprint.day}/${data.sprint.totalDays} (${data.sprint.progress}%)`)
-console.log(`   Agents: ${data.agents.length}`)
-console.log(`   Activity: ${data.recentActivity.length} entradas`)
-console.log(`   Alerts: ${data.alerts.length}`)
-console.log(`   NextActions: ${data.nextActions.length}`)
-console.log(`   Watchers: ${data.watchers.length}`)
-console.log(`   Competitors: ${data.competitors.length}`)
-console.log(`   TechStack: ${data.techStack.length}`)
-console.log(`   Roadmap waves: ${data.roadmap.length}`)
-console.log(`   Decisions: ${data.decisions.length}`)
-if (sizeKB > 100) console.warn(`   AVISO: data.json acima de 100KB (${sizeKB}KB)`)
+// Log de auditoria com status por secção
+const sections = [
+  { name: 'Sprint',       status: sprintResult._status,      n: sprintResult._status === 'live' ? 1 : 0 },
+  { name: 'Verticals',    status: verticalsResult._status,   n: verticalsResult.verticals?.length || 0 },
+  { name: 'NextActions',  status: actionsResult._status,     n: actionsResult.nextActions?.length || 0 },
+  { name: 'StackHealth',  status: healthResult._status,      n: healthResult.stackHealth?.length || 0 },
+  { name: 'Decisions',    status: decisionsResult._status,   n: decisionsResult.decisions?.length || 0 },
+  { name: 'Roadmap',      status: roadmapResult._status,     n: roadmapResult.roadmap?.length || 0 },
+  { name: 'Watchers',     status: 'live',                    n: watchersResult.length },
+  { name: 'Agents',       status: 'live',                    n: agentsResult.length },
+  { name: 'Activity',     status: 'live',                    n: activityResult.length },
+  { name: 'Alerts',       status: 'live',                    n: alertsResult.length },
+  { name: 'Competitors',  status: 'live',                    n: competitorsResult.length },
+  { name: 'TechStack',    status: 'hardcoded',               n: TECH_STACK.length },
+  { name: 'OurProduct',   status: 'hardcoded',               n: 1 },
+  { name: 'FeatureMatrix',status: 'hardcoded',               n: FEATURE_MATRIX.length },
+]
+
+console.log(`\ndata.json escrito em ${OUTPUT}`)
+console.log(`  Schema: v${data.meta.schemaVersion} | Tamanho: ~${sizeKB}KB`)
+console.log(`\n  Auditoria de secções:`)
+for (const s of sections) {
+  const icon = s.status === 'live' ? '✓' : s.status === 'hardcoded' ? 'H' : s.status === 'partial' ? '~' : '✗'
+  const errStr = (s.status === 'missing' || s.status === 'error') ? ` ERROR: ${s.error || '?'}` : ''
+  console.log(`  [${icon}] ${s.name.padEnd(14)} ${s.status.padEnd(10)} n=${s.n}${errStr}`)
+}
+
+if (sizeKB > 100) console.warn(`\n  AVISO: data.json acima de 100KB (${sizeKB}KB)`)

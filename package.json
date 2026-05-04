@@ -9,5 +9,8 @@
   "scripts": {
     "dashboard:build": "node scripts/dashboard-data-build.js",
     "dashboard:dev": "node scripts/dashboard-data-build.js && cd apps/dashboard && npm run dev"
+  },
+  "dependencies": {
+    "gray-matter": "^4.0.3"
   }
 }
