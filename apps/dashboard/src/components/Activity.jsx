@@ -1,4 +1,5 @@
 import { Card } from './shared/Card.jsx'
+import { SourceTag } from './shared/SourceTag.jsx'
 import { timeAgo, isoDateLabel } from '../utils/time.js'
 
 function groupByDay(entries) {
@@ -55,6 +56,7 @@ export default function Activity({ data }) {
           ))}
         </div>
       ))}
+      <SourceTag source="proptech-state/recent-activity.md" status="live" />
     </Card>
   )
 }

@@ -1,5 +1,6 @@
 import { Card } from './shared/Card.jsx'
 import { Badge } from './shared/Badge.jsx'
+import { SourceTag } from './shared/SourceTag.jsx'
 import { DrawerSection } from './Drawer.jsx'
 import { useDrawer } from '../context/DrawerContext.jsx'
 import { timeAgo } from '../utils/time.js'
@@ -147,6 +148,8 @@ export default function Agents({ data }) {
           </div>
         </>
       )}
+
+      <SourceTag source="proptech-state/agents/*.md" status="live" />
     </div>
   )
 }

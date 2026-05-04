@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Badge } from './shared/Badge.jsx'
+import { SourceTag } from './shared/SourceTag.jsx'
 import { DrawerSection } from './Drawer.jsx'
 import { useDrawer } from '../context/DrawerContext.jsx'
 
@@ -61,6 +62,8 @@ export default function Roadmap({ data }) {
           Sem waves com o filtro seleccionado.
         </div>
       )}
+
+      <SourceTag source={data._roadmapMeta?._source} status={data._roadmapMeta?._status} error={data._roadmapMeta?._error} />
 
       {/* Waves */}
       {waves.map(wave => (

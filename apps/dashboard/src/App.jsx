@@ -8,7 +8,7 @@ import Roadmap from './components/Roadmap.jsx'
 import Watchers from './components/Watchers.jsx'
 import Competitors from './components/Competitors.jsx'
 
-const TABS = ['Overview', 'Roadmap', 'Watchers', 'Competitors', 'Actividade']
+const TABS = ['Overview', 'Roadmap', 'Watchers', 'Competitors', 'Actividade', 'Agentes']
 
 const TAB_COMPONENTS = {
   Overview,
@@ -16,6 +16,7 @@ const TAB_COMPONENTS = {
   Watchers,
   Competitors,
   Actividade: Activity,
+  Agentes: Agents,
 }
 
 function tabLabel(name, data) {
@@ -25,6 +26,7 @@ function tabLabel(name, data) {
     'Watchers':    data.watchers?.filter(w => w.status !== 'never').length,
     'Competitors': data.competitors?.length,
     'Actividade':  data.recentActivity?.length,
+    'Agentes':     data.agents?.length,
   }
   const c = counts[name]
   return (c && c > 0) ? `${name} · ${c}` : name

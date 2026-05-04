@@ -1,6 +1,7 @@
 import { Card } from './shared/Card.jsx'
 import { Badge } from './shared/Badge.jsx'
 import { SprintProgress } from './shared/SprintProgress.jsx'
+import { SourceTag } from './shared/SourceTag.jsx'
 import { DrawerSection } from './Drawer.jsx'
 import { useDrawer } from '../context/DrawerContext.jsx'
 
@@ -44,6 +45,8 @@ export default function Overview({ data }) {
   const { sprint, verticals = [], alerts = [], nextActions = [], techStack = [], stackHealth = [], decisions = [] } = data
   const { openDrawer } = useDrawer()
 
+  const sprintMissing = sprint?._status === 'missing' || sprint?._status === 'error'
+
   // Mostrar só as 4 verticais principais no overview
   const topVerticals = verticals.slice(0, 4)
 
@@ -73,41 +76,53 @@ export default function Overview({ data }) {
 
       {/* Hero — Sprint */}
       <Card>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-          <span style={{ fontWeight: 700, fontSize: '1.1rem' }}>{sprint?.wave}</span>
-          <span style={{ color: 'var(--text-dim)', fontSize: '0.875rem' }}>— {sprint?.name}</span>
-          <Badge level={sprint?.status === 'active' ? 'active' : 'success'}>
-            {sprint?.status || 'activo'}
-          </Badge>
-        </div>
-
-        <SprintProgress
-          day={sprint?.day}
-          totalDays={sprint?.totalDays}
-          startDate={sprint?.startDate}
-          endDate={sprint?.endDate}
-        />
-
-        {sprint?.daysToGate > 0 && (
-          <div style={{ marginTop: 8, fontSize: '0.75rem', color: 'var(--text-dim)' }}>
-            ⏱ {sprint.daysToGate} dias para {sprint.gateName}
+        {sprintMissing ? (
+          <div style={{ padding: 20, border: '1px solid var(--danger)', borderRadius: 8, color: 'var(--danger)' }}>
+            ⚠ Sprint state indisponível<br/>
+            <small style={{ fontFamily: 'monospace', opacity: 0.7 }}>{sprint?._error}</small>
+            <SourceTag source={sprint?._source} status="missing" />
           </div>
-        )}
+        ) : (
+          <>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+              <span style={{ fontWeight: 700, fontSize: '1.1rem' }}>{sprint?.wave}</span>
+              <span style={{ color: 'var(--text-dim)', fontSize: '0.875rem' }}>— {sprint?.name}</span>
+              <Badge level={sprint?.status === 'active' ? 'active' : 'success'}>
+                {sprint?.status || 'activo'}
+              </Badge>
+            </div>
 
-        <div style={{ marginTop: 12, fontSize: '0.8rem', color: 'var(--text-dim)' }}>
-          {sprint?.hypothesis}
-        </div>
+            <SprintProgress
+              day={sprint?.day}
+              totalDays={sprint?.totalDays}
+              startDate={sprint?.startDate}
+              endDate={sprint?.endDate}
+            />
 
-        {sprint?.gates && sprint.gates.length > 0 && (
-          <ul className="gate-list" style={{ marginTop: 16 }}>
-            {sprint.gates.map(g => (
-              <li key={g.id} className="gate-item">
-                <span className={`gate-icon ${g.status}`} />
-                <span>{g.label}</span>
-                <span className="gate-date">{g.date}</span>
-              </li>
-            ))}
-          </ul>
+            {sprint?.daysToGate > 0 && (
+              <div style={{ marginTop: 8, fontSize: '0.75rem', color: 'var(--text-dim)' }}>
+                ⏱ {sprint.daysToGate} dias para {sprint.gateName}
+              </div>
+            )}
+
+            <div style={{ marginTop: 12, fontSize: '0.8rem', color: 'var(--text-dim)' }}>
+              {sprint?.hypothesis}
+            </div>
+
+            {sprint?.gates && sprint.gates.length > 0 && (
+              <ul className="gate-list" style={{ marginTop: 16 }}>
+                {sprint.gates.map(g => (
+                  <li key={g.id} className="gate-item">
+                    <span className={`gate-icon ${g.status}`} />
+                    <span>{g.label || g.desc}</span>
+                    <span className="gate-date">{g.date}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            <SourceTag source={sprint?._source} status={sprint?._status} error={sprint?._error} />
+          </>
         )}
       </Card>
 
@@ -151,6 +166,7 @@ export default function Overview({ data }) {
             </div>
           )}
           {verticals.length === 0 && <div className="empty">Sem dados de verticais</div>}
+          <SourceTag source={data._verticalsMeta?._source} status={data._verticalsMeta?._status} error={data._verticalsMeta?._error} />
         </Card>
 
         {/* Próximas Acções P0/P1 */}
@@ -184,6 +200,7 @@ export default function Overview({ data }) {
               </div>
             </div>
           ))}
+          <SourceTag source={data._nextActionsMeta?._source} status={data._nextActionsMeta?._status} error={data._nextActionsMeta?._error} />
         </Card>
       </div>
 
@@ -239,9 +256,10 @@ export default function Overview({ data }) {
             </tbody>
           </table>
         </div>
+        <SourceTag source="scripts/dashboard-data-build.js (hardcoded — estável)" status="live" />
       </Card>
 
-      {/* Stack Health — 4 gauges */}
+      {/* Stack Health — gauges */}
       {stackHealth.length > 0 && (
         <Card title="Stack Health">
           <div className="grid-4">
@@ -268,6 +286,7 @@ export default function Overview({ data }) {
               </div>
             ))}
           </div>
+          <SourceTag source={data._stackHealthMeta?._source} status={data._stackHealthMeta?._status} error={data._stackHealthMeta?._error} />
         </Card>
       )}
 
@@ -304,6 +323,7 @@ export default function Overview({ data }) {
               <div style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>{d.meta}</div>
             </div>
           ))}
+          <SourceTag source={data._decisionsMeta?._source} status={data._decisionsMeta?._status} error={data._decisionsMeta?._error} />
         </Card>
       )}
     </div>

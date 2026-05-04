@@ -1,5 +1,6 @@
 import { Card } from './shared/Card.jsx'
 import { Badge } from './shared/Badge.jsx'
+import { SourceTag } from './shared/SourceTag.jsx'
 import { DrawerSection } from './Drawer.jsx'
 import { useDrawer } from '../context/DrawerContext.jsx'
 import { timeAgo } from '../utils/time.js'
@@ -96,6 +97,8 @@ export default function Watchers({ data }) {
       <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)', paddingTop: 4 }}>
         Watchers executam via GitHub Actions. Clica num watcher para ver o relatório completo.
       </div>
+
+      <SourceTag source=".claude/strategy/watchers-state.md" status="live" />
     </div>
   )
 }

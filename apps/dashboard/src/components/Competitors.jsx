@@ -1,4 +1,5 @@
 import { Badge } from './shared/Badge.jsx'
+import { SourceTag } from './shared/SourceTag.jsx'
 import { DrawerSection } from './Drawer.jsx'
 import { useDrawer } from '../context/DrawerContext.jsx'
 
@@ -139,6 +140,8 @@ export default function Competitors({ data }) {
           Sem dados de competitors.
         </div>
       )}
+
+      <SourceTag source=".claude/strategy/competitors.md" status="live" />
 
       {/* Feature matrix tabela full */}
       {competitors.length > 0 && featureMatrix.length > 0 && (
