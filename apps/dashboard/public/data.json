@@ -1,190 +1,175 @@
 {
   "meta": {
     "schemaVersion": "3.0",
-    "lastSync": "2026-05-04T22:06:07.472Z",
-    "generatedAt": "2026-05-04T22:06:07.472Z",
-    "branch": "sprint/v5-1b3",
-    "worktree": "proptech-v5-1b3",
+    "lastSync": "2026-05-04T22:20:26.344Z",
+    "generatedAt": "2026-05-04T22:20:26.344Z",
+    "branch": "feat/command-center",
+    "worktree": "proptech-platform",
     "generator": "scripts/dashboard-data-build.js"
   },
   "sprint": {
-    "id": "1D",
-    "name": "Receipt Trojan Horse Alpha",
-    "wave": "1D",
+    "id": "1D-recovery",
+    "name": "Dashboard live + magic-link fix + prestador-app charter",
+    "wave": "1D-recovery",
     "vertical": "V5",
     "status": "active",
-    "started": "2026-05-01",
-    "startDate": "2026-05-01",
-    "target": "2026-05-15",
-    "endDate": "2026-05-15",
-    "day": 3,
+    "started": "2026-05-04",
+    "startDate": "2026-05-04",
+    "target": "2026-05-18",
+    "endDate": "2026-05-18",
+    "day": 0,
     "totalDays": 14,
-    "progress": 21,
-    "hypothesis": "Owner→link→prestador 48h: se proporcionarmos a um owner PT proprietário 40-65 anos um link partilhável que dispara recibo digital + ficha mínima do prestador, então pelo menos 1 em 5 owners convidados completa o fluxo end-to-end",
-    "daysToGate": 3,
-    "gateName": "≥1 owner externo aceitou convite; flow funciona no telefone",
+    "progress": 0,
+    "hypothesis": "Preparar V5 para alpha dual launch (owner + prestador): com dashboard agentic-ops 100% live, magic-link fix em produção e charter prestador-app aprovado, o sprint estabelece as fundações necessárias para outreach R2 com confiança técnica e clareza de produto",
+    "daysToGate": 14,
+    "gateName": "Prestador-app charter aprovado (ADR-006)",
     "gates": [
       {
-        "id": "day7",
-        "day": 7,
-        "label": "≥1 owner externo aceitou convite; flow funciona no telefone",
-        "desc": "≥1 owner externo aceitou convite; flow funciona no telefone",
-        "date": "2026-05-07",
-        "status": "pending"
+        "id": "day6",
+        "day": 6,
+        "label": "Dashboard 100% live, source indicators, 0 hardcoded estado",
+        "desc": "Dashboard 100% live, source indicators, 0 hardcoded estado",
+        "date": "2026-05-10",
+        "status": "done"
       },
       {
-        "id": "day11",
-        "day": 11,
-        "label": "≥1 end-to-end real: owner convida, prestador aceita, recibo emitido",
-        "desc": "≥1 end-to-end real: owner convida, prestador aceita, recibo emitido",
-        "date": "2026-05-11",
-        "status": "pending"
+        "id": "day10",
+        "day": 10,
+        "label": "Magic-link fix em produção, validado mobile DEV + Vercel",
+        "desc": "Magic-link fix em produção, validado mobile DEV + Vercel",
+        "date": "2026-05-14",
+        "status": "done"
       },
       {
         "id": "day14",
         "day": 14,
-        "label": "5/5 criteria OK + decisão Sprint 1E",
-        "desc": "5/5 criteria OK + decisão Sprint 1E",
-        "date": "2026-05-15",
+        "label": "Prestador-app charter aprovado (ADR-006)",
+        "desc": "Prestador-app charter aprovado (ADR-006)",
+        "date": "2026-05-18",
         "status": "pending"
       }
     ],
     "daysDone": [
       {
         "day": 0,
-        "label": "Charter aprovado · reconciliações fechadas",
+        "label": "Dashboard React shell deployed + parser v3.0 live + source indicators (SourceTag)",
         "status": "done"
       },
       {
-        "day": 1,
-        "label": "Migration Sprint 1D aplicada — magic_links + prestadores_parceiros + recibos_servico",
+        "day": 0,
+        "label": "Magic-link fix commit (fix: getBaseUrl dynamic) em Production via merge sprint/v5-1b3 → main",
         "status": "done"
       },
       {
-        "day": 2,
-        "label": "RPC atomic + 2 Edge Functions deployed",
-        "status": "done"
-      },
-      {
-        "day": 3,
-        "label": "Route /r/join/:token + PrestadorOnboardingFlow + E2E PASS",
-        "status": "done"
-      },
-      {
-        "day": 4,
-        "label": "Trabalhos recentes owner-side + realtime",
-        "status": "done"
-      },
-      {
-        "day": 5,
-        "label": "UI Registar trabalho + modal 3 campos + WhatsApp link",
+        "day": 0,
+        "label": "Deploy protocol D1-D6 adicionado a CLAUDE.md + sprint/v5-1b3 merged → main",
         "status": "done"
       }
     ],
     "_source": ".claude/current/current-sprint-state.md",
     "_status": "live",
-    "_lastParsed": "2026-05-04T22:06:07.478Z"
+    "_lastParsed": "2026-05-04T22:20:26.348Z"
   },
   "verticals": [
     {
-      "id": "v1",
+      "id": "V1",
       "name": "Core Hub",
-      "status": "foundation",
-      "color": "#534AB7",
-      "meta": "hkmvszkpxjbxmnixzqbl",
-      "detail": "Hub horizontal partilhado por todas as verticais",
-      "description": "Hub horizontal partilhado por todas as verticais",
-      "longDetail": "Foundation. Tabelas: core.pessoas, core.organizations, core.imoveis. Schema v5_manutencao activo com magic_links + prestadores_parceiros + recibos_servico."
+      "status": "Foundation",
+      "color": "#8b92a8",
+      "meta": "Hub horizontal partilhado",
+      "detail": "Schema core + migrações activas (pessoas, imoveis, memberships)",
+      "description": "Schema core + migrações activas (pessoas, imoveis, memberships)",
+      "longDetail": "Hub horizontal partilhado por todas as verticais. Supabase hkmvszkpxjbxmnixzqbl (Paris). Tabelas: pessoas, organizations, memberships, imoveis, eventos_cliente. Schemas activos: core, v4_energia, v5_manutencao."
     },
     {
-      "id": "v2",
+      "id": "V2",
       "name": "Condomínios",
-      "status": "production",
+      "status": "Production",
       "color": "#10b981",
-      "meta": "~5k linhas reais",
-      "detail": "prataowners.pt — produção viva",
-      "description": "prataowners.pt — produção viva",
-      "longDetail": "Production stable. 30 tabelas, ~5000 linhas reais. Zero touch policy — nunca alterar dados. Próximo: V10 Copilot add-on Q4 2026."
+      "meta": "prataowners.pt — 5k linhas reais",
+      "detail": "Em produção viva. Zero touch policy.",
+      "description": "Em produção viva. Zero touch policy.",
+      "longDetail": "30 tabelas, ~5.000 linhas reais. Supabase eozklslwfaqujaijvdnl. Tabelas chave: condominos, fracoes, documentos (2733), recebimentos (593), extrato_bancario (1056). NUNCA alterar dados."
     },
     {
-      "id": "v3",
+      "id": "V3",
       "name": "Seguros",
-      "status": "planned",
+      "status": "Planned",
       "color": "#8b92a8",
-      "meta": "Q1 2027",
-      "detail": "Relatório estratégico escrito no Notion",
-      "description": "Relatório estratégico escrito no Notion",
-      "longDetail": "Planned Q1 2027. Scope: análise de portfolio de seguros + sinistros. Triggers: V5 50 owners pagantes + V4 validada."
+      "meta": "Q1 2027 — pós V5 validada",
+      "detail": "Relatório estratégico Notion escrito. Schema a criar.",
+      "description": "Relatório estratégico Notion escrito. Schema a criar.",
+      "longDetail": "Schema v3_seguros a criar em V1 Core Hub. Arranque previsto Q1 2027. Triggers: V5 com 50 owners pagantes + V4 validada."
     },
     {
-      "id": "v4",
+      "id": "V4",
       "name": "Energia",
-      "status": "foundation",
+      "status": "Foundation",
       "color": "#f59e0b",
-      "meta": "Schema v4_energia criado",
-      "detail": "Schema pronto, produto a construir",
-      "description": "Schema pronto, produto a construir",
-      "longDetail": "Foundation. Schema v4_energia aplicado em V1 Core Hub. Sprint 2A Q3 2026. Relatório estratégico Notion."
+      "meta": "Schema pronto — produto a construir",
+      "detail": "Migration aplicada 2026-04-19. Edge Function criada (não deployada).",
+      "description": "Migration aplicada 2026-04-19. Edge Function criada (não deployada).",
+      "longDetail": "Schema v4_energia aplicado em V1 Core Hub. Tabelas: acordos_comercializadoras (8 seeds), contratos_energia. Edge Function v4-energia-lead criada mas não deployada. Arranque activo Q3 2026."
     },
     {
-      "id": "v5",
+      "id": "V5",
       "name": "Manutenção",
-      "status": "active",
-      "color": "#3b82f6",
-      "meta": "Sprint 1D activo",
-      "detail": "V5 alpha deployed em proptech-v5-alpha.vercel.app",
-      "description": "V5 alpha deployed em proptech-v5-alpha.vercel.app",
-      "longDetail": "Active. Sprint 1D — Receipt Trojan Horse Alpha. Day 5/14. Gates: Day 7 owner externo, Day 14 5/5 criteria. 5 alpha owners em recrutamento."
-    },
-    {
-      "id": "v6",
-      "name": "Reabilitação",
-      "status": "planned",
-      "color": "#8b92a8",
-      "meta": "Q1 2027",
-      "detail": "Prevista no roadmap",
-      "description": "Prevista no roadmap",
-      "longDetail": "Planned. Scope TBD. Segue V5 validada + V4 energética."
-    },
-    {
-      "id": "v7",
-      "name": "Real Estate",
-      "status": "planned",
-      "color": "#8b92a8",
-      "meta": "2027+",
-      "detail": "Prevista no roadmap",
-      "description": "Prevista no roadmap",
-      "longDetail": "Planned 2027+. Scope TBD."
-    },
-    {
-      "id": "v8",
-      "name": "Rentals",
-      "status": "planned",
-      "color": "#8b92a8",
-      "meta": "2027+",
-      "detail": "Prevista no roadmap",
-      "description": "Prevista no roadmap",
-      "longDetail": "Planned 2027+. Scope TBD."
-    },
-    {
-      "id": "v9",
-      "name": "BaaS / Swan",
-      "status": "planned",
-      "color": "#8b92a8",
-      "meta": "Q1 2027",
-      "detail": "Infraestrutura financeira Swan BaaS",
-      "description": "Infraestrutura financeira Swan BaaS",
-      "longDetail": "Planned Q1 2027. Parceria Swan pendente de assinatura. Relatório estratégico Notion."
-    },
-    {
-      "id": "v10",
-      "name": "Owners Club",
-      "status": "foundation",
+      "status": "Active",
       "color": "#534AB7",
-      "meta": "Tab V5 Sprint 1E",
-      "detail": "Fidelidade — tab dedicada planeada Sprint 1E",
-      "description": "Fidelidade — tab dedicada planeada Sprint 1E",
-      "longDetail": "Foundation. Tab dedicada Owners Club prevista para Sprint 1E. Integração V2 condomínios + V5 histórico. Q4 2026."
+      "meta": "Sprint 1D-recovery activo",
+      "detail": "React app live. Magic-link fix em produção. Dashboard agentic-ops live.",
+      "description": "React app live. Magic-link fix em produção. Dashboard agentic-ops live.",
+      "longDetail": "Frontend apps/v5-manutencao/ (React 18 + Vite). Schema v5_manutencao: magic_links, prestadores_parceiros, recibos_servico. 2 Edge Functions live. Sprint 1D-recovery: dashboard + magic-link fix + prestador-app charter."
+    },
+    {
+      "id": "V6",
+      "name": "Reabilitação",
+      "status": "Planned",
+      "color": "#8b92a8",
+      "meta": "Q1 2027 — pós V5+V4 validadas",
+      "detail": "Scoping e ADR previstos Q1 2027.",
+      "description": "Scoping e ADR previstos Q1 2027.",
+      "longDetail": "Schema v6_reabilitacao a criar em V1 Core Hub. Nenhum trabalho técnico iniciado. Triggers: V5 >50 owners pagantes E V4 com 1+ parceiro activo."
+    },
+    {
+      "id": "V7",
+      "name": "Real Estate",
+      "status": "Planned",
+      "color": "#8b92a8",
+      "meta": "Pós 2027",
+      "detail": "Mencionada no naming canónico. Zero trabalho técnico.",
+      "description": "Mencionada no naming canónico. Zero trabalho técnico.",
+      "longDetail": "Schema v7_real_estate a criar. Sem roadmap concreto até 2027. Triggers: V5 + V4 em produção com receita estável."
+    },
+    {
+      "id": "V8",
+      "name": "Rentals",
+      "status": "Planned",
+      "color": "#8b92a8",
+      "meta": "Pós 2027",
+      "detail": "Lisbeyond identificado como potencial B2B partner.",
+      "description": "Lisbeyond identificado como potencial B2B partner.",
+      "longDetail": "Schema v8_rentals a criar. Trigger: V5 Fase 6 (prestador app) entregue E V5 >100 utilizadores activos. Possível parceria com operadores de arrendamento."
+    },
+    {
+      "id": "V9",
+      "name": "BaaS / Swan",
+      "status": "Planned",
+      "color": "#3b82f6",
+      "meta": "Infra financeira — Q1 2027",
+      "detail": "Swan BaaS em negociação. Pré-req: Stripe Connect V5 Sprint 1E.",
+      "description": "Swan BaaS em negociação. Pré-req: Stripe Connect V5 Sprint 1E.",
+      "longDetail": "Schema v9_swan a criar em V1 Core Hub. Integração pagamentos nativa prevista Q1 2027. Pré-requisito: Stripe Connect implementado em V5 Sprint 1E com >10 transacções reais."
+    },
+    {
+      "id": "V10",
+      "name": "Owners Club",
+      "status": "Foundation",
+      "color": "#534AB7",
+      "meta": "Tab V5 Sprint 1E — schema Q3 2026",
+      "detail": "Tab dedicada diferida para Sprint 1E. ADR-003 proposto (aguarda Mário).",
+      "description": "Tab dedicada diferida para Sprint 1E. ADR-003 proposto (aguarda Mário).",
+      "longDetail": "Horizontal de fidelidade. Tab V5 Sprint 1E (diferida de 1C). Schema v10_owners_club Q3 2026. Add-on pricing: €15–30/mês/edifício para gestoras V2."
     }
   ],
   "_verticalsMeta": {
@@ -193,10 +178,10 @@
   },
   "alerts": [
     {
-      "id": "trigger-architect-proptech-supabase-designer-0",
+      "id": "trigger-supabase-designer-supabase-designer-0",
       "level": "warning",
-      "message": "architect-proptech → supabase-designer: criar migration schema system + tabelas inbox_items e approvals_queue com RLS via is_staff() conforme DDL em .claude/str",
-      "since": "2026-05-04T22:00Z",
+      "message": "supabase-designer → supabase-designer: quando Mário confirmar schema design — criar migration SQL real apps/v5-manutencao/sql/20260504_system_command_center_sc",
+      "since": "2026-05-04T23:00Z",
       "source": "triggers.md"
     },
     {
@@ -576,10 +561,10 @@
         "Write"
       ],
       "promptPath": ".claude/agents/supabase-designer.md",
-      "task": "_n/a_",
-      "last": "_never_",
-      "nextSuggested": "_aguardar primeiro trigger ou pedido directo do Mário_",
-      "worktree": "_n/a_",
+      "task": "Designed Supabase schema for Command Center MVP (system.inbox_items + system.inbox_reads + system.approvals_queue) — DDL, RLS, indexes, Realtime, constraints",
+      "last": "2026-05-04T23:00Z",
+      "nextSuggested": "Criar migration SQL real 20260504_system_command_center_schema.sql quando Mário confirmar schema design",
+      "worktree": "proptech-v5-1b3",
       "state": "idle"
     },
     {
@@ -748,16 +733,16 @@
     {
       "id": "d-2026-05-03",
       "text": "Magic-link URL fix: getBaseUrl(req) + path /r/join/",
-      "urgency": "medium",
+      "urgency": "low",
       "meta": "2026-05-03 · V5",
-      "detail": "**Decisão:** Substituir constante `SHARE_BASE_URL` (hardcoded fallback `prataowners.pt`) por função `getBaseUrl(req)` que deriva o domínio do request origin em runtime.\r\n\r\n**Causa do bug (confirmado Mário mobile test 2026-05-02 19h):**\r\n1. `SHARE_BASE_URL` não estava definida como Supabase secre"
+      "detail": "**Decisão:** Substituir constante `SHARE_BASE_URL` (hardcoded fallback `prataowners.pt`) por função `getBaseUrl(req)` que deriva o domínio do request origin em runtime.\r\n\r\n**Causa do bug (confirmado Mário mobile test 2026-05-02 19h):**\r\n1. `SHARE_BASE_URL` não estava definida como Supabase secret"
     },
     {
       "id": "d-2026-05-02",
       "text": "R2 Alpha Outreach adiado indefinidamente",
-      "urgency": "high",
+      "urgency": "low",
       "meta": "2026-05-02 · V5",
-      "detail": "**Decisão:** Adiar o R2 alpha outreach (gate original 2026-05-04, Day 7 da Sprint 1D) até infra estar pronta.\r\n\r\n**Razões (Mário, 2026-05-02 ~13h):**\r\n1. App V5 nunca foi testada end-to-end em mobile real (apenas localhost desktop)\r\n2. Vercel deploy V5 alpha não está executado (URL público inexi"
+      "detail": "**Decisão:** Adiar o R2 alpha outreach (gate original 2026-05-04, Day 7 da Sprint 1D) até infra estar pronta.\r\n\r\n**Razões (Mário, 2026-05-02 ~13h):**\r\n1. App V5 nunca foi testada end-to-end em mobile real (apenas localhost desktop)\r\n2. Vercel deploy V5 alpha não está executado (URL público inexist"
     },
     {
       "id": "d-2026-05-02",
@@ -977,14 +962,28 @@
     },
     {
       "wave": "1D",
-      "name": "Receipt Trojan Horse Alpha — owner-first 14-day MVP",
-      "status": "active",
+      "name": "Receipt Trojan Horse Alpha — backend 100% + frontend owner-side",
+      "status": "done",
       "sprints": [
         {
           "id": "Sprint 1D",
-          "name": "Receipt Trojan Horse Alpha — owner-first 14-day MVP",
+          "name": "Receipt Trojan Horse Alpha — backend 100% + frontend owner-s",
+          "status": "done",
+          "date": "2026-05-01 → 2026-05-03",
+          "tasks": []
+        }
+      ]
+    },
+    {
+      "wave": "1D-recovery",
+      "name": "Dashboard live + magic-link fix + prestador-app charter",
+      "status": "active",
+      "sprints": [
+        {
+          "id": "Sprint 1D-recovery",
+          "name": "Dashboard live + magic-link fix + prestador-app charter",
           "status": "active",
-          "date": "**2026-05-01 → 2026-05-15**",
+          "date": "**2026-05-04 → 2026-05-18**",
           "tasks": []
         }
       ]
@@ -998,7 +997,7 @@
           "id": "Sprint 1E",
           "name": "Camada 2: dashboard prestador · Stripe Connect · Moloni · sc",
           "status": "planned",
-          "date": "Pós 2026-05-15",
+          "date": "Pós 2026-05-18",
           "tasks": []
         }
       ]

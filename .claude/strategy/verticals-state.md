@@ -1,77 +1,76 @@
 ---
 verticals:
-  - id: v1
-    name: "Core Hub"
-    status: foundation
-    color: violet
-    meta: "hkmvszkpxjbxmnixzqbl"
-    detail: "Hub horizontal partilhado por todas as verticais"
-    longDetail: "Foundation. Tabelas: core.pessoas, core.organizations, core.imoveis. Schema v5_manutencao activo com magic_links + prestadores_parceiros + recibos_servico."
-  - id: v2
-    name: "Condomínios"
-    status: production
+  - id: V1
+    name: Core Hub
+    status: Foundation
+    color: stone
+    meta: Hub horizontal partilhado
+    detail: Schema core + migrações activas (pessoas, imoveis, memberships)
+    longDetail: "Hub horizontal partilhado por todas as verticais. Supabase hkmvszkpxjbxmnixzqbl (Paris). Tabelas: pessoas, organizations, memberships, imoveis, eventos_cliente. Schemas activos: core, v4_energia, v5_manutencao."
+  - id: V2
+    name: Condomínios
+    status: Production
     color: emerald
-    meta: "~5k linhas reais"
-    detail: "prataowners.pt — produção viva"
-    longDetail: "Production stable. 30 tabelas, ~5000 linhas reais. Zero touch policy — nunca alterar dados. Próximo: V10 Copilot add-on Q4 2026."
-  - id: v3
-    name: "Seguros"
-    status: planned
+    meta: prataowners.pt — 5k linhas reais
+    detail: Em produção viva. Zero touch policy.
+    longDetail: "30 tabelas, ~5.000 linhas reais. Supabase eozklslwfaqujaijvdnl. Tabelas chave: condominos, fracoes, documentos (2733), recebimentos (593), extrato_bancario (1056). NUNCA alterar dados."
+  - id: V3
+    name: Seguros
+    status: Planned
     color: stone
-    meta: "Q1 2027"
-    detail: "Relatório estratégico escrito no Notion"
-    longDetail: "Planned Q1 2027. Scope: análise de portfolio de seguros + sinistros. Triggers: V5 50 owners pagantes + V4 validada."
-  - id: v4
-    name: "Energia"
-    status: foundation
+    meta: Q1 2027 — pós V5 validada
+    detail: Relatório estratégico Notion escrito. Schema a criar.
+    longDetail: "Schema v3_seguros a criar em V1 Core Hub. Arranque previsto Q1 2027. Triggers: V5 com 50 owners pagantes + V4 validada."
+  - id: V4
+    name: Energia
+    status: Foundation
     color: amber
-    meta: "Schema v4_energia criado"
-    detail: "Schema pronto, produto a construir"
-    longDetail: "Foundation. Schema v4_energia aplicado em V1 Core Hub. Sprint 2A Q3 2026. Relatório estratégico Notion."
-  - id: v5
-    name: "Manutenção"
-    status: active
-    color: blue
-    meta: "Sprint 1D activo"
-    detail: "V5 alpha deployed em proptech-v5-alpha.vercel.app"
-    longDetail: "Active. Sprint 1D — Receipt Trojan Horse Alpha. Day 5/14. Gates: Day 7 owner externo, Day 14 5/5 criteria. 5 alpha owners em recrutamento."
-  - id: v6
-    name: "Reabilitação"
-    status: planned
-    color: stone
-    meta: "Q1 2027"
-    detail: "Prevista no roadmap"
-    longDetail: "Planned. Scope TBD. Segue V5 validada + V4 energética."
-  - id: v7
-    name: "Real Estate"
-    status: planned
-    color: stone
-    meta: "2027+"
-    detail: "Prevista no roadmap"
-    longDetail: "Planned 2027+. Scope TBD."
-  - id: v8
-    name: "Rentals"
-    status: planned
-    color: stone
-    meta: "2027+"
-    detail: "Prevista no roadmap"
-    longDetail: "Planned 2027+. Scope TBD."
-  - id: v9
-    name: "BaaS / Swan"
-    status: planned
-    color: stone
-    meta: "Q1 2027"
-    detail: "Infraestrutura financeira Swan BaaS"
-    longDetail: "Planned Q1 2027. Parceria Swan pendente de assinatura. Relatório estratégico Notion."
-  - id: v10
-    name: "Owners Club"
-    status: foundation
+    meta: Schema pronto — produto a construir
+    detail: Migration aplicada 2026-04-19. Edge Function criada (não deployada).
+    longDetail: "Schema v4_energia aplicado em V1 Core Hub. Tabelas: acordos_comercializadoras (8 seeds), contratos_energia. Edge Function v4-energia-lead criada mas não deployada. Arranque activo Q3 2026."
+  - id: V5
+    name: Manutenção
+    status: Active
     color: violet
-    meta: "Tab V5 Sprint 1E"
-    detail: "Fidelidade — tab dedicada planeada Sprint 1E"
-    longDetail: "Foundation. Tab dedicada Owners Club prevista para Sprint 1E. Integração V2 condomínios + V5 histórico. Q4 2026."
+    meta: Sprint 1D-recovery activo
+    detail: React app live. Magic-link fix em produção. Dashboard agentic-ops live.
+    longDetail: "Frontend apps/v5-manutencao/ (React 18 + Vite). Schema v5_manutencao: magic_links, prestadores_parceiros, recibos_servico. 2 Edge Functions live. Sprint 1D-recovery: dashboard + magic-link fix + prestador-app charter."
+  - id: V6
+    name: Reabilitação
+    status: Planned
+    color: stone
+    meta: Q1 2027 — pós V5+V4 validadas
+    detail: Scoping e ADR previstos Q1 2027.
+    longDetail: "Schema v6_reabilitacao a criar em V1 Core Hub. Nenhum trabalho técnico iniciado. Triggers: V5 >50 owners pagantes E V4 com 1+ parceiro activo."
+  - id: V7
+    name: Real Estate
+    status: Planned
+    color: stone
+    meta: Pós 2027
+    detail: Mencionada no naming canónico. Zero trabalho técnico.
+    longDetail: "Schema v7_real_estate a criar. Sem roadmap concreto até 2027. Triggers: V5 + V4 em produção com receita estável."
+  - id: V8
+    name: Rentals
+    status: Planned
+    color: stone
+    meta: Pós 2027
+    detail: Lisbeyond identificado como potencial B2B partner.
+    longDetail: "Schema v8_rentals a criar. Trigger: V5 Fase 6 (prestador app) entregue E V5 >100 utilizadores activos. Possível parceria com operadores de arrendamento."
+  - id: V9
+    name: BaaS / Swan
+    status: Planned
+    color: blue
+    meta: Infra financeira — Q1 2027
+    detail: "Swan BaaS em negociação. Pré-req: Stripe Connect V5 Sprint 1E."
+    longDetail: "Schema v9_swan a criar em V1 Core Hub. Integração pagamentos nativa prevista Q1 2027. Pré-requisito: Stripe Connect implementado em V5 Sprint 1E com >10 transacções reais."
+  - id: V10
+    name: Owners Club
+    status: Foundation
+    color: violet
+    meta: Tab V5 Sprint 1E — schema Q3 2026
+    detail: Tab dedicada diferida para Sprint 1E. ADR-003 proposto (aguarda Mário).
+    longDetail: "Horizontal de fidelidade. Tab V5 Sprint 1E (diferida de 1C). Schema v10_owners_club Q3 2026. Add-on pricing: €15–30/mês/edifício para gestoras V2."
 ---
-
 # Estado das verticais — PropTech Platform
 > Documento complementar a `.claude/current/current-sprint-state.md`
 > Foco: estado de cada vertical, não sprints
