@@ -267,6 +267,83 @@ Contexto V4 no Notion:
 - Competitiva: `34284147-fa60-8177-a35c-ef819dd16cac`
 - Spock.es: `34284147-fa60-81c1-97b1-f366c27254f9`
 
+---
+
+## 🚀 Protocolo de Deploy (vinculativo · todos os agentes)
+
+Aplica-se sempre que um agente faz commits em qualquer worktree. Regras absolutas, sem excepção.
+
+### Regra D1 — Identificar projecto Vercel afectado ANTES de commit
+
+Cada commit afecta um ou mais projectos Vercel. Identificar antes de prosseguir:
+
+| Path tocado | Projecto Vercel | Production Branch |
+|-------------|-----------------|-------------------|
+| `apps/v5-manutencao/**` | proptech-v5-alpha | `main` |
+| `apps/dashboard/**` | proptech-agentic-ops | `main` |
+| `docs/dashboard/**` | proptech-agentic-ops (legado) | `main` |
+| `apps/v4-energia/**` | proptech-v4-alpha (futuro) | `main` |
+| `scripts/dashboard-data-build.js` | proptech-agentic-ops (data only) | `main` |
+| `.claude/**`, `.claude/state/**` | nenhum (Vercel ignora) | n/a |
+| `proptech-state/**` | proptech-agentic-ops (via parser) | `main` |
+| `*.md` raiz | nenhum | n/a |
+
+Se o commit toca em `apps/` ou `scripts/dashboard-*`, vai afectar Vercel Production quando chegar a `main`.
+
+### Regra D2 — Branches de sprint NÃO chegam a Production sozinhas
+
+Vercel só promove a Production o que está em `main`. Branches `sprint/*`, `feat/*`, `chore/*` ficam em Preview only.
+
+Workflow obrigatório:
+
+1. Trabalho em branch de sprint (ex: `sprint/v5-1b3`)
+2. Push despoleta Preview deployment Vercel
+3. Mário valida em Preview URL
+4. Quando OK → merge para `main` → Production rebuild automático
+5. Mário valida em URL Production
+6. Sprint fechado → branch eliminada (opcional)
+
+Se agente acaba implementação em `sprint/*` sem mergear para `main`, deve reportar a Mário com instruções de merge.
+
+### Regra D3 — Smoke test obrigatório antes de merge a main
+
+Para commits que tocam em `apps/v5-manutencao/**` ou `apps/dashboard/**`:
+
+1. Aguardar Preview build OK em Vercel (~1-2 min)
+2. Abrir Preview URL no browser
+3. Verificar que renderiza sem erros
+4. Para apps com auth/dados: verificar que requests não falham
+5. Só depois propor merge a `main`
+
+Se Preview falha → debugar em Preview, não em Production.
+
+### Regra D4 — V2 produção (prataowners.pt) é INTOCÁVEL
+
+`apps/v2-condominios/**` ou qualquer path em produção V2:
+- Está em Netlify (não Vercel) — auto-deploy desactivado
+- Schema Supabase separado (`eozklslwfaqujaijvdnl`)
+- Cliente real (Property 007 LDA) com ~5k linhas
+- Mudanças em V2 requerem aprovação humana explícita do Mário
+
+Agentes nunca fazem commits que tocam V2 sem trigger explícito.
+
+### Regra D5 — Reportar deploy status no fim da sessão
+
+Quando agente termina trabalho que envolveu commits em qualquer projecto Vercel, deve reportar a Mário:
+
+- Branch onde trabalhou
+- Commits feitos (count + último hash)
+- Vercel impact por projecto (Production vs Preview)
+- Acção pendente Mário (validar Preview, aprovar merge, etc)
+
+Sem este report, sessão considerada incompleta.
+
+### Regra D6 — Hooks não devem auto-mergear branches a main
+
+O hook `SubagentStop` faz auto-commit + auto-push em branches de sprint. NÃO deve fazer merge a `main` automaticamente. Merge para `main` é decisão humana do Mário.
+
+Se algum agente sugere "automatizar merge a `main` no hook", recusar — viola Regra D2.
+
 Abordagem:
 1. Estrutura idêntica a `apps/v1-core/`
 2. Design system partilhado (mesmas fontes, mesmos tokens)
