@@ -1,3 +1,48 @@
+---
+sprint:
+  id: 1D
+  name: "Receipt Trojan Horse Alpha"
+  wave: 1D
+  vertical: V5
+  status: active
+  started: "2026-05-01"
+  target: "2026-05-15"
+  total_days: 14
+  hypothesis: "Owner→link→prestador 48h: se proporcionarmos a um owner PT proprietário 40-65 anos um link partilhável que dispara recibo digital + ficha mínima do prestador, então pelo menos 1 em 5 owners convidados completa o fluxo end-to-end"
+gates:
+  - day: 7
+    desc: "≥1 owner externo aceitou convite; flow funciona no telefone"
+    date: "2026-05-07"
+    status: pending
+  - day: 11
+    desc: "≥1 end-to-end real: owner convida, prestador aceita, recibo emitido"
+    date: "2026-05-11"
+    status: pending
+  - day: 14
+    desc: "5/5 criteria OK + decisão Sprint 1E"
+    date: "2026-05-15"
+    status: pending
+days_done:
+  - day: 0
+    label: "Charter aprovado · reconciliações fechadas"
+    status: done
+  - day: 1
+    label: "Migration Sprint 1D aplicada — magic_links + prestadores_parceiros + recibos_servico"
+    status: done
+  - day: 2
+    label: "RPC atomic + 2 Edge Functions deployed"
+    status: done
+  - day: 3
+    label: "Route /r/join/:token + PrestadorOnboardingFlow + E2E PASS"
+    status: done
+  - day: 4
+    label: "Trabalhos recentes owner-side + realtime"
+    status: done
+  - day: 5
+    label: "UI Registar trabalho + modal 3 campos + WhatsApp link"
+    status: done
+---
+
 # Estado consolidado dos sprints
 > Auto-gerado por architect-proptech em 2026-05-02
 > Source of truth: este ficheiro. Detalhe: `.claude/sprints/<wave>/`
