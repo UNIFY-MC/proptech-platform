@@ -1,3 +1,77 @@
+---
+verticals:
+  - id: v1
+    name: "Core Hub"
+    status: foundation
+    color: violet
+    meta: "hkmvszkpxjbxmnixzqbl"
+    detail: "Hub horizontal partilhado por todas as verticais"
+    longDetail: "Foundation. Tabelas: core.pessoas, core.organizations, core.imoveis. Schema v5_manutencao activo com magic_links + prestadores_parceiros + recibos_servico."
+  - id: v2
+    name: "Condomínios"
+    status: production
+    color: emerald
+    meta: "~5k linhas reais"
+    detail: "prataowners.pt — produção viva"
+    longDetail: "Production stable. 30 tabelas, ~5000 linhas reais. Zero touch policy — nunca alterar dados. Próximo: V10 Copilot add-on Q4 2026."
+  - id: v3
+    name: "Seguros"
+    status: planned
+    color: stone
+    meta: "Q1 2027"
+    detail: "Relatório estratégico escrito no Notion"
+    longDetail: "Planned Q1 2027. Scope: análise de portfolio de seguros + sinistros. Triggers: V5 50 owners pagantes + V4 validada."
+  - id: v4
+    name: "Energia"
+    status: foundation
+    color: amber
+    meta: "Schema v4_energia criado"
+    detail: "Schema pronto, produto a construir"
+    longDetail: "Foundation. Schema v4_energia aplicado em V1 Core Hub. Sprint 2A Q3 2026. Relatório estratégico Notion."
+  - id: v5
+    name: "Manutenção"
+    status: active
+    color: blue
+    meta: "Sprint 1D activo"
+    detail: "V5 alpha deployed em proptech-v5-alpha.vercel.app"
+    longDetail: "Active. Sprint 1D — Receipt Trojan Horse Alpha. Day 5/14. Gates: Day 7 owner externo, Day 14 5/5 criteria. 5 alpha owners em recrutamento."
+  - id: v6
+    name: "Reabilitação"
+    status: planned
+    color: stone
+    meta: "Q1 2027"
+    detail: "Prevista no roadmap"
+    longDetail: "Planned. Scope TBD. Segue V5 validada + V4 energética."
+  - id: v7
+    name: "Real Estate"
+    status: planned
+    color: stone
+    meta: "2027+"
+    detail: "Prevista no roadmap"
+    longDetail: "Planned 2027+. Scope TBD."
+  - id: v8
+    name: "Rentals"
+    status: planned
+    color: stone
+    meta: "2027+"
+    detail: "Prevista no roadmap"
+    longDetail: "Planned 2027+. Scope TBD."
+  - id: v9
+    name: "BaaS / Swan"
+    status: planned
+    color: stone
+    meta: "Q1 2027"
+    detail: "Infraestrutura financeira Swan BaaS"
+    longDetail: "Planned Q1 2027. Parceria Swan pendente de assinatura. Relatório estratégico Notion."
+  - id: v10
+    name: "Owners Club"
+    status: foundation
+    color: violet
+    meta: "Tab V5 Sprint 1E"
+    detail: "Fidelidade — tab dedicada planeada Sprint 1E"
+    longDetail: "Foundation. Tab dedicada Owners Club prevista para Sprint 1E. Integração V2 condomínios + V5 histórico. Q4 2026."
+---
+
 # Estado das verticais — PropTech Platform
 > Documento complementar a `.claude/current/current-sprint-state.md`
 > Foco: estado de cada vertical, não sprints

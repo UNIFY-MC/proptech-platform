@@ -1,8 +1,8 @@
 {
   "meta": {
     "schemaVersion": "3.0",
-    "lastSync": "2026-05-04T00:06:00.078Z",
-    "generatedAt": "2026-05-04T00:06:00.078Z",
+    "lastSync": "2026-05-04T22:06:07.472Z",
+    "generatedAt": "2026-05-04T22:06:07.472Z",
     "branch": "sprint/v5-1b3",
     "worktree": "proptech-v5-1b3",
     "generator": "scripts/dashboard-data-build.js"
@@ -83,7 +83,7 @@
     ],
     "_source": ".claude/current/current-sprint-state.md",
     "_status": "live",
-    "_lastParsed": "2026-05-04T00:06:00.083Z"
+    "_lastParsed": "2026-05-04T22:06:07.478Z"
   },
   "verticals": [
     {
@@ -193,10 +193,17 @@
   },
   "alerts": [
     {
-      "id": "trigger-architect-proptech-vertical-builder-0",
+      "id": "trigger-architect-proptech-supabase-designer-0",
       "level": "warning",
-      "message": "architect-proptech → vertical-builder: corrigir scripts/dashboard-data-build.js para 100% LIVE — ler frontmatter YAML de current-sprint-state.md + verticals-st",
-      "since": "2026-05-04T09:00Z",
+      "message": "architect-proptech → supabase-designer: criar migration schema system + tabelas inbox_items e approvals_queue com RLS via is_staff() conforme DDL em .claude/str",
+      "since": "2026-05-04T22:00Z",
+      "source": "triggers.md"
+    },
+    {
+      "id": "trigger-architect-proptech-vertical-builder-1",
+      "level": "warning",
+      "message": "architect-proptech → vertical-builder: após migration system.* aplicada — Phase 1 do pivot requer 3 dependências novas em apps/dashboard/package.json: @supabas",
+      "since": "2026-05-04T22:00Z",
       "source": "triggers.md"
     }
   ],
@@ -422,10 +429,10 @@
         "mcp__notion"
       ],
       "promptPath": ".claude/agents/architect-proptech.md",
-      "task": "Fase 1 preparação state files para dashboard 100% LIVE — frontmatter YAML em current-sprint-state.md + verticals-state.md, opportunities.md convertido para tabela, urgency em decisions-log.md, gauges em stack-health.md.",
-      "last": "2026-05-04T09:00Z",
-      "nextSuggested": "vertical-builder implementar Fase 2 — corrigir dashboard-data-build.js para ler state files sem fallbacks hardcoded",
-      "worktree": "proptech-v5-1b3",
+      "task": "Review arquitectural D6+D7 — Command Center pivot: Supabase Phase 1 (ACCEPT) + Auth Phase 1.5 (ACCEPT). Schema system.* com inbox_items + approvals_queue. RLS via is_staff(). Triggers para supabase-designer.",
+      "last": "2026-05-04T22:00Z",
+      "nextSuggested": "supabase-designer criar migration para schema system + tabelas inbox_items/approvals_queue + RLS conforme review-command-center.md",
+      "worktree": "proptech-platform",
       "state": "idle"
     },
     {
@@ -443,7 +450,7 @@
       "last": "2026-05-02T12:15Z",
       "nextSuggested": "aguardar decisão do Mário sobre revert vs fix-forward; se fix-forward, criar trigger TO architect-proptech para corrigir typo e centralizar protocolo no CLAUDE.md",
       "worktree": "proptech-v5-1b3",
-      "state": "idle"
+      "state": "stale"
     },
     {
       "id": "ceo-agent",
@@ -588,14 +595,77 @@
         "Glob"
       ],
       "promptPath": ".claude/agents/vertical-builder.md",
-      "task": "feat(dashboard) — schema v2.0, DrawerContext, Competitors.jsx, Roadmap filtros, theme toggle, build OK, commit 382b063, push sprint/v5-1b3",
-      "last": "2026-05-03T16:30Z",
-      "nextSuggested": "Vercel deploy automático após push — verificar se proptech-agentic-ops.vercel.app reflecte schema v2.0; se não, trigger manual no painel Vercel",
+      "task": "feat(parser v3.0) — 100% LIVE sources, gray-matter, SourceTag indicators, tabs reorder. Commits 7653ca5+d3f9d56+35470bb. Push sprint/v5-1b3.",
+      "last": "2026-05-04T00:00Z",
+      "nextSuggested": "Verificar proptech-agentic-ops.vercel.app após deploy automático — confirmar schemaVersion=3.0 e SourceTags visíveis nas tabs",
       "worktree": "proptech-v5-1b3",
       "state": "idle"
     }
   ],
   "recentActivity": [
+    {
+      "ts": "2026-05-04T22:06Z",
+      "agent": "subagent",
+      "worktree": "proptech-v5-1b3",
+      "action": "subagent stopped [session:cbd58b15]",
+      "refs": []
+    },
+    {
+      "ts": "2026-05-04T22:02Z",
+      "agent": "architect-proptech",
+      "worktree": "proptech-v5-1b3",
+      "action": "subagent stopped [session:cbd58b15]",
+      "refs": []
+    },
+    {
+      "ts": "2026-05-04T21:46Z",
+      "agent": "subagent",
+      "worktree": "proptech-v5-1b3",
+      "action": "subagent stopped [session:cbd58b15]",
+      "refs": []
+    },
+    {
+      "ts": "2026-05-04T17:06Z",
+      "agent": "subagent",
+      "worktree": "proptech-v5-1b3",
+      "action": "subagent stopped [session:cbd58b15]",
+      "refs": []
+    },
+    {
+      "ts": "2026-05-04T16:31Z",
+      "agent": "subagent",
+      "worktree": "proptech-v5-1b3",
+      "action": "subagent stopped [session:cbd58b15]",
+      "refs": []
+    },
+    {
+      "ts": "2026-05-04T01:22Z",
+      "agent": "subagent",
+      "worktree": "proptech-v5-1b3",
+      "action": "subagent stopped [session:aff6d186]",
+      "refs": []
+    },
+    {
+      "ts": "2026-05-04T00:27Z",
+      "agent": "subagent",
+      "worktree": "proptech-v5-1b3",
+      "action": "subagent stopped [session:aff6d186]",
+      "refs": []
+    },
+    {
+      "ts": "2026-05-04T00:24Z",
+      "agent": "vertical-builder",
+      "worktree": "proptech-v5-1b3",
+      "action": "subagent stopped [session:aff6d186]",
+      "refs": []
+    },
+    {
+      "ts": "2026-05-04T00:00Z",
+      "agent": "vertical-builder",
+      "worktree": "proptech-v5-1b3",
+      "action": "feat(parser v3.0) — 100% LIVE, gray-matter, SourceTag, tabs reorder. Audit 11 live/3 hardcoded. 42KB. 3 commits 7653ca5+d3f9d56+35470bb push sprint/v5-1b3 [ADR-005-v3]",
+      "refs": []
+    },
     {
       "ts": "2026-05-03T23:58Z",
       "agent": "architect-proptech",
@@ -671,69 +741,6 @@
       "agent": "subagent",
       "worktree": "proptech-v5-1b3",
       "action": "subagent stopped [session:aff6d186]",
-      "refs": []
-    },
-    {
-      "ts": "2026-05-03T14:24Z",
-      "agent": "subagent",
-      "worktree": "proptech-v5-1b3",
-      "action": "subagent stopped [session:aff6d186]",
-      "refs": []
-    },
-    {
-      "ts": "2026-05-03T14:21Z",
-      "agent": "vertical-builder",
-      "worktree": "proptech-v5-1b3",
-      "action": "subagent stopped [session:aff6d186]",
-      "refs": []
-    },
-    {
-      "ts": "2026-05-03T14:08Z",
-      "agent": "subagent",
-      "worktree": "proptech-v5-1b3",
-      "action": "subagent stopped [session:d2eca88a]",
-      "refs": []
-    },
-    {
-      "ts": "2026-05-03T14:06Z",
-      "agent": "architect-proptech",
-      "worktree": "proptech-v5-1b3",
-      "action": "subagent stopped [session:aff6d186]",
-      "refs": []
-    },
-    {
-      "ts": "2026-05-03T13:58Z",
-      "agent": "subagent",
-      "worktree": "proptech-v5-1b3",
-      "action": "subagent stopped [session:d2eca88a]",
-      "refs": []
-    },
-    {
-      "ts": "2026-05-03T13:44Z",
-      "agent": "subagent",
-      "worktree": "proptech-v5-1b3",
-      "action": "subagent stopped [session:3c01eeb3]",
-      "refs": []
-    },
-    {
-      "ts": "2026-05-03T13:14Z",
-      "agent": "subagent",
-      "worktree": "proptech-v5-1b3",
-      "action": "subagent stopped [session:d2eca88a]",
-      "refs": []
-    },
-    {
-      "ts": "2026-05-03T12:57Z",
-      "agent": "subagent",
-      "worktree": "proptech-v5-1b3",
-      "action": "subagent stopped [session:3c01eeb3]",
-      "refs": []
-    },
-    {
-      "ts": "2026-05-03T10:32Z",
-      "agent": "subagent",
-      "worktree": "proptech-v5-1b3",
-      "action": "subagent stopped [session:d2eca88a]",
       "refs": []
     }
   ],

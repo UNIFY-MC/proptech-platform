@@ -7,6 +7,8 @@
 
 ## 2026-05-03 — Magic-link URL fix: getBaseUrl(req) + path /r/join/
 
+**Urgência:** medium
+
 **Decisão:** Substituir constante `SHARE_BASE_URL` (hardcoded fallback `prataowners.pt`) por função `getBaseUrl(req)` que deriva o domínio do request origin em runtime.
 
 **Causa do bug (confirmado Mário mobile test 2026-05-02 19h):**
@@ -30,6 +32,8 @@
 ---
 
 ## 2026-05-02 — R2 Alpha Outreach adiado indefinidamente
+
+**Urgência:** high
 
 **Decisão:** Adiar o R2 alpha outreach (gate original 2026-05-04, Day 7 da Sprint 1D) até infra estar pronta.
 
