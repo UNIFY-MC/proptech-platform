@@ -1,50 +1,41 @@
 ---
 sprint:
-  id: 1D
-  name: "Receipt Trojan Horse Alpha"
-  wave: 1D
+  id: 1D-recovery
+  name: "Dashboard live + magic-link fix + prestador-app charter"
+  wave: 1D-recovery
   vertical: V5
   status: active
-  started: "2026-05-01"
-  target: "2026-05-15"
+  started: "2026-05-04"
+  target: "2026-05-18"
   total_days: 14
-  hypothesis: "Owner→link→prestador 48h: se proporcionarmos a um owner PT proprietário 40-65 anos um link partilhável que dispara recibo digital + ficha mínima do prestador, então pelo menos 1 em 5 owners convidados completa o fluxo end-to-end"
+  hypothesis: "Preparar V5 para alpha dual launch (owner + prestador): com dashboard agentic-ops 100% live, magic-link fix em produção e charter prestador-app aprovado, o sprint estabelece as fundações necessárias para outreach R2 com confiança técnica e clareza de produto"
 gates:
-  - day: 7
-    desc: "≥1 owner externo aceitou convite; flow funciona no telefone"
-    date: "2026-05-07"
-    status: pending
-  - day: 11
-    desc: "≥1 end-to-end real: owner convida, prestador aceita, recibo emitido"
-    date: "2026-05-11"
-    status: pending
+  - day: 6
+    desc: "Dashboard 100% live, source indicators, 0 hardcoded estado"
+    date: "2026-05-10"
+    status: done
+  - day: 10
+    desc: "Magic-link fix em produção, validado mobile DEV + Vercel"
+    date: "2026-05-14"
+    status: done
   - day: 14
-    desc: "5/5 criteria OK + decisão Sprint 1E"
-    date: "2026-05-15"
+    desc: "Prestador-app charter aprovado (ADR-006)"
+    date: "2026-05-18"
     status: pending
 days_done:
   - day: 0
-    label: "Charter aprovado · reconciliações fechadas"
+    label: "Dashboard React shell deployed + parser v3.0 live + source indicators (SourceTag)"
     status: done
-  - day: 1
-    label: "Migration Sprint 1D aplicada — magic_links + prestadores_parceiros + recibos_servico"
+  - day: 0
+    label: "Magic-link fix commit (fix: getBaseUrl dynamic) em Production via merge sprint/v5-1b3 → main"
     status: done
-  - day: 2
-    label: "RPC atomic + 2 Edge Functions deployed"
-    status: done
-  - day: 3
-    label: "Route /r/join/:token + PrestadorOnboardingFlow + E2E PASS"
-    status: done
-  - day: 4
-    label: "Trabalhos recentes owner-side + realtime"
-    status: done
-  - day: 5
-    label: "UI Registar trabalho + modal 3 campos + WhatsApp link"
+  - day: 0
+    label: "Deploy protocol D1-D6 adicionado a CLAUDE.md + sprint/v5-1b3 merged → main"
     status: done
 ---
 
 # Estado consolidado dos sprints
-> Auto-gerado por architect-proptech em 2026-05-02
+> Actualizado por architect-proptech em 2026-05-04
 > Source of truth: este ficheiro. Detalhe: `.claude/sprints/<wave>/`
 
 ---
@@ -63,8 +54,9 @@ days_done:
 | Sprint A | ✅ Fechado | 2026-04-30 | C-Suite agents (7 personas) em `.claude/agents/` |
 | Sprint B Lite | ✅ Fechado | 2026-05-01 | 3 watchers (competitor-monitor + daily-brief + weekly-recap) + healthcheck · crons ON · custo $0.60/mês |
 | Sprint 1C lite | ✅ Incluído em 1D | 2026-05-01 | Casa+Início merge + Receipt flow inline (scope absorvido pelo 1D) |
-| **Sprint 1D** | **ACTIVO** | **2026-05-01 → 2026-05-15** | **Receipt Trojan Horse Alpha — owner-first 14-day MVP** |
-| Sprint 1E | Planeado | Pós 2026-05-15 | Camada 2: dashboard prestador · Stripe Connect · Moloni · schema rename `recibos_servico → trabalhos_documentados` |
+| Sprint 1D | ✅ Fechado | 2026-05-01 → 2026-05-03 | Receipt Trojan Horse Alpha — backend 100% + frontend owner-side |
+| **Sprint 1D-recovery** | **ACTIVO** | **2026-05-04 → 2026-05-18** | **Dashboard live + magic-link fix + prestador-app charter** |
+| Sprint 1E | Planeado | Pós 2026-05-18 | Camada 2: dashboard prestador · Stripe Connect · Moloni · schema rename `recibos_servico → trabalhos_documentados` |
 | Fase 4 | Futura | TBD | Backoffice staff panel |
 | Fase 5 | Futura | TBD | IA features (poupanças reais, score Home Intelligence) |
 
@@ -72,29 +64,23 @@ days_done:
 
 ## Sprint actual
 
-**Wave:** Sprint 1D — Receipt Trojan Horse Alpha
-**Hipótese:** "Se proporcionarmos a um owner PT proprietário 40–65 anos com 1–3 imóveis um link partilhável que dispara recibo digital + ficha mínima do prestador para ele entregar ao seu canalizador/electricista/jardineiro habitual após um serviço pago fora-app, então pelo menos 1 em 5 owners convidados completa o fluxo end-to-end."
-**Hard blocker:** Nenhum P0 activo. Bug weather "Todos os imóveis" (Modo A/B) é P1 diferido para Sprint 1E.
-**Próximo gate:** Day 7 (2026-05-07) — ≥1 owner externo aceitou convite; flow funciona no telefone.
+**Wave:** Sprint 1D-recovery — Dashboard live + magic-link fix + prestador-app charter
+**Hipótese:** Com dashboard agentic-ops 100% live, magic-link fix validado em produção e charter prestador-app aprovado (ADR-006), estamos prontos para outreach R2 dual (owner + prestador) com confiança técnica e clareza de produto.
+**Hard blocker:** Nenhum P0 activo.
+**Próximo gate:** Day 14 (2026-05-18) — Prestador-app charter aprovado (ADR-006).
 
 ### O que foi feito
 
 | Day | Estado | Entregável |
 |-----|--------|-----------|
-| Day 0 | ✅ | Charter aprovado · reconciliações fechadas · `tasks/alpha-owners.md` escrito |
-| Day 1 | ✅ | Migration `202605010001_v5_1d_foundations.sql` aplicada via Supabase MCP — 3 tabelas (`magic_links`, `prestadores_parceiros`, `recibos_servico`) + RLS + 10 indexes. 4/4 smoke tests PASS. |
-| Day 2 | ✅ | RPC `create_prestador_and_recibo_atomic` deployed + 2 Edge Functions (`gerar-magic-link`, `prestador-onboarding`). 4/4 smoke tests PASS. |
-| Day 3 | ✅ | Route `/r/join/:token` + `PrestadorOnboardingFlow` + 6 sub-components. RPC pública `get_magic_link_public_info` (SECURITY DEFINER + GRANT anon). E2E PASS browser anónimo. |
-| Day 4 | ✅ | Secção "Trabalhos recentes" owner-side + realtime channel + bug fix `useAuth()`. Visual PASS Mário. |
-| Day 5 | ✅ | UI "Registar trabalho" above-fold + modal 3 campos + link WhatsApp. |
-| Day 5.5 | ✅ | Linkagem `equipamento_id` — dropdown no modal + edge fn v2 + card embed. |
-| Day 5.6 | ✅ | Naming pivot: "registar trabalho" (Camada 1) vs "recibo fiscal" (Camada 2). |
-| Day 5.7 | ✅ | Mixed feed lifecycle — pending (amber) + completed (verde) + expired (vermelho) + realtime 2 canais (INSERT em `recibos_servico` + INSERT/UPDATE em `magic_links`). Header counter dinâmico. |
+| Day 0 | ✅ | Dashboard React `apps/dashboard/` com parser v3.0 (gray-matter) — 100% live, source indicators (SourceTag), 0 hardcoded estado. Deploy Vercel `proptech-agentic-ops`. |
+| Day 0 | ✅ | Magic-link fix: `getBaseUrl(req)` dinâmico — URL aponta para domínio real, não `localhost:5175`. Commit `fix(v5): magic-link URL builds dynamically`. |
+| Day 0 | ✅ | Deploy protocol D1-D6 adicionado a `CLAUDE.md`. Sprint `sprint/v5-1b3` merged → `main` (Production). |
 
 ### O que está em curso
 
-- **Day 6** (próximo): R2 outreach aos 5 alpha owners — partilha de magic link pessoalmente + CMO naming background.
-- **Day 7** (2026-05-07): Gate — confirmar ≥1 owner externo aceitou e o flow funciona no telefone.
+- **Prestador-app charter (ADR-006)** — plano detalhado para dashboard prestador-side. Pré-requisito: R2 outreach dual (owner + prestador).
+- **Smoke test V5 mobile** — validar magic-link URL correcto em `proptech-v5-alpha.vercel.app` (não localhost).
 
 ### O que vem a seguir
 
@@ -112,7 +98,9 @@ days_done:
 
 **Sprint B Lite (2026-05-01):** Automação de inteligência competitiva — 3 watchers GitHub Actions (competitor-monitor semanal, daily-brief, weekly-recap) + healthcheck. Custo validado $0.60/mês (cap €100/mês = 166x de margem). Detalhe: `.github/workflows/`
 
-**Sprint 1D Days 0–5.7 (2026-05-01–02):** Receipt Trojan Horse em execução. Backend 100% pronto (schema + 2 edge fns + RPC pública). Frontend owner-side completo (feed misto lifecycle, above-fold, realtime). Aguarda validação com owners reais a partir de Day 6. Detalhe: `.claude/sprints/1D-receipt-trojan-horse/`
+**Sprint 1D Days 0–5.7 (2026-05-01–03):** Receipt Trojan Horse executado. Backend 100% pronto (schema + 2 edge fns + RPC pública). Frontend owner-side completo (feed misto lifecycle, above-fold, realtime). Fechado sem outreach — pivot para 1D-recovery (infra + charter).
+
+**Sprint 1D-recovery Day 0 (2026-05-04):** Dashboard agentic-ops live (React + Vite, parser v3.0, 100% LIVE), magic-link fix deployed, deploy protocol estabelecido, sprint/v5-1b3 merged → main.
 
 ---
 
@@ -120,10 +108,10 @@ days_done:
 
 | Data | Owner | Decisão pendente |
 |------|-------|----------------|
-| 2026-05-01 | CEO via weekly-recap #8 | "W18 must shift energy from building to recruiting 5 alpha owners" — operacionalizado em 1D mas validação de impacto pendente (gate Day 7) |
-| 2026-05-01 | CMO | Hubbent threat=ALTO classification provisional — reclassificar após W18 investigation (founders, capital, tracção) |
-| Pré-launch | CTO | P0 security: `VITE_ANTHROPIC_API_KEY` em `App.jsx` (browser-side) — blocker para V5 production deploy. Mitigado até agora (não deployed), resolve em Sprint 1E |
+| 2026-05-04 | Mário + architect-proptech | ADR-006 Prestador-app charter — scope, stack, timeline |
+| Pré-launch | CTO | P0 security: `VITE_ANTHROPIC_API_KEY` em `App.jsx` (browser-side) — blocker para V5 production deploy. Mitigado (não deployed), resolve em Sprint 1E |
 | TBD | Mário | Decidir sprint 1C full (Owners Club tab, weather bug fix) — diferido de 1D para 1E |
+| 2026-05-02 | Mário | Rotação `SUPABASE_SERVICE_ROLE_KEY` V1 — exposed em chat. Trigger: pré-R2 outreach |
 
 ---
 
