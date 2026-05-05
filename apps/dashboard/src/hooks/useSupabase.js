@@ -50,7 +50,8 @@ export function useInboxItems(vertical = null) {
   return { items, loading, error }
 }
 
-export function useApprovals(vertical = null) {
+// statusFilter: 'pending' | 'approved' | 'dismissed' | 'edited_approved' | null (= all)
+export function useApprovals(vertical = null, statusFilter = 'pending') {
   const [approvals, setApprovals] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -67,9 +68,9 @@ export function useApprovals(vertical = null) {
         .schema('system')
         .from('approvals_queue')
         .select('*')
-        .eq('status', 'pending')
-        .order('created_at', { ascending: true })
+        .order('created_at', { ascending: false })
 
+      if (statusFilter) query = query.eq('status', statusFilter)
       if (vertical) query = query.eq('target_vertical', vertical)
 
       const { data, error } = await query
@@ -90,7 +91,7 @@ export function useApprovals(vertical = null) {
       .subscribe()
 
     return () => supabase.removeChannel(channel)
-  }, [vertical])
+  }, [vertical, statusFilter])
 
   return { approvals, loading, error }
 }

@@ -13,6 +13,7 @@ import InboxView from './views/InboxView.jsx'
 import ApprovalsView from './views/ApprovalsView.jsx'
 import BiaPlaceholder from './views/BiaPlaceholder.jsx'
 import LoginView from './views/LoginView.jsx'
+import ToastContainer from './components/ToastContainer.jsx'
 
 export default function App() {
   const { data, error } = useData()
@@ -28,6 +29,7 @@ export default function App() {
 
   return (
     <DrawerProvider>
+      <ToastContainer />
       <div className="layout">
         <Sidebar theme={theme} setTheme={setTheme} data={data} />
         <main className="main-content">
