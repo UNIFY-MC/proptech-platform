@@ -474,3 +474,200 @@ body {
   .tab { padding: 10px 12px; font-size: 0.8rem; }
   .col-hide-sm { display: none; }
 }
+
+/* ── Cook.ai sidebar layout ─────────────────────────── */
+
+.app-layout {
+  display: flex;
+  min-height: 100vh;
+}
+
+.app-sidebar {
+  width: 220px;
+  flex-shrink: 0;
+  background: var(--bg-card);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.app-main {
+  flex: 1;
+  min-width: 0;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+/* Brand */
+.sidebar-brand {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.sidebar-brand-title {
+  font-size: 0.875rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, #534AB7, #8b5cf6);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.sidebar-brand-sub {
+  font-size: 0.6rem;
+  color: var(--text-dim);
+  margin-top: 2px;
+  font-family: monospace;
+}
+
+/* Vertical select */
+.sidebar-vertical {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.sidebar-select {
+  width: 100%;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 0.72rem;
+  padding: 5px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  outline: none;
+}
+
+/* Nav scroll area */
+.sidebar-nav {
+  flex: 1;
+  overflow-y: auto;
+  padding: 6px 0;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+.sidebar-section-label {
+  font-size: 0.57rem;
+  font-weight: 700;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding: 10px 14px 3px;
+}
+
+.sidebar-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 14px;
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  text-decoration: none;
+  transition: background 0.1s, color 0.1s;
+  gap: 6px;
+}
+
+.sidebar-link:hover {
+  background: var(--bg-elevated);
+  color: var(--text);
+}
+
+.sidebar-link.active {
+  background: rgba(83, 74, 183, 0.12);
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.sidebar-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  border-radius: 9px;
+  background: var(--primary);
+  color: white;
+  font-size: 0.58rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+/* Tasks / Chats scrollable employee list */
+.sidebar-tasks {
+  border-top: 1px solid var(--border);
+  max-height: 260px;
+  overflow-y: auto;
+  flex-shrink: 0;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+.sidebar-task-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 14px;
+  text-decoration: none;
+  font-size: 0.73rem;
+  color: var(--text-dim);
+  transition: background 0.1s, color 0.1s;
+}
+
+.sidebar-task-item:hover {
+  background: var(--bg-elevated);
+  color: var(--text);
+}
+
+.sidebar-task-item.active {
+  background: rgba(83, 74, 183, 0.1);
+  color: var(--primary);
+}
+
+.sidebar-avatar {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.52rem;
+  font-weight: 700;
+  color: var(--text);
+  flex-shrink: 0;
+}
+
+/* Footer */
+.sidebar-footer {
+  padding: 10px 14px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.sidebar-sync {
+  font-size: 0.58rem;
+  color: var(--text-dim);
+  font-family: monospace;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Responsive sidebar */
+@media (max-width: 768px) {
+  .app-sidebar { display: none; }
+  .app-main { padding: 12px; }
+}
