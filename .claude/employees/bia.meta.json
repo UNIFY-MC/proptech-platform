@@ -1,51 +1,39 @@
 {
-  "employee": "bia",
-  "workspace": "proptech-v5",
+  "id": "bia",
+  "name": "Bia",
   "role": "Maintenance Concierge",
+  "vertical": "V5 PRATA",
   "model": "claude-sonnet-4-6",
-  "status": "active",
   "version": "1.1",
-  "avatar_initials": "B",
+  "status": "active",
+  "color": "purple",
+  "avatarInitial": "B",
   "integrations": [
-    { "id": "whatsapp", "name": "WhatsApp Cloud", "icon": "💬", "status": "planned" },
-    { "id": "supabase_v5", "name": "Supabase V5 Manutenção", "icon": "⚡", "status": "connected" },
-    { "id": "supabase_core", "name": "Supabase Core", "icon": "⚡", "status": "connected" },
-    { "id": "resend", "name": "Resend", "icon": "✉", "status": "planned" },
-    { "id": "discord", "name": "Discord", "icon": "◆", "status": "planned" },
-    { "id": "claude_vision", "name": "Claude Vision", "icon": "◉", "status": "connected" },
-    { "id": "google_sheets", "name": "Google Sheets", "icon": "▤", "status": "planned" }
+    { "id": "supabase_v1", "name": "Supabase V1 Core", "desc": "edge functions, RLS, auth", "icon": "SB", "color": "emerald", "enabled": true },
+    { "id": "supabase_v5", "name": "Supabase V5", "desc": "manutencao schema · realtime", "icon": "SB", "color": "emerald", "enabled": true },
+    { "id": "whatsapp", "name": "WhatsApp Cloud", "desc": "intake + outreach", "icon": "WA", "color": "green", "enabled": true },
+    { "id": "resend", "name": "Resend", "desc": "transactional email", "icon": "RS", "color": "cyan", "enabled": true },
+    { "id": "moloni", "name": "Moloni", "desc": "recibos fiscais PT", "icon": "ML", "color": "amber", "enabled": true },
+    { "id": "stripe", "name": "Stripe Connect", "desc": "payments PT — sprint 1E", "icon": "SC", "color": "purple", "enabled": false, "planned": true },
+    { "id": "posthog", "name": "PostHog", "desc": "product analytics", "icon": "PH", "color": "amber", "enabled": false, "planned": true }
   ],
   "skills": [
     { "id": "classify-problem-pt", "desc": "Categoriza descrição em taxonomy V5" },
     { "id": "match-prestador-geo", "desc": "Filtra prestadores por zona + especialidade" },
     { "id": "compose-pedido-msg", "desc": "Gera mensagem WhatsApp PT-PT" },
     { "id": "extract-magic-link-token", "desc": "Gera magic-link único por pedido" },
-    { "id": "escalate-to-human", "desc": "Sinaliza baixa confiança e pinga Mário" },
-    { "id": "vision-analyse-foto", "desc": "Extrai dados de foto enviada por owner" }
+    { "id": "summarize-trabalho", "desc": "Resumo trabalho + fotos para owner" },
+    { "id": "flag-anomaly", "desc": "Detecta padrões fora da norma" }
   ],
   "recipes": [
-    {
-      "id": "intake-conversation",
-      "trigger_type": "event",
-      "trigger_label": "whatsapp_cloud_webhook",
-      "desc": "Atende pedido novo de owner em PT-PT, classifica, propõe match"
-    },
-    {
-      "id": "daily-handoff-summary",
-      "trigger_type": "schedule",
-      "trigger_label": "0 18 * * * Lisboa",
-      "desc": "Daily roundup às 18h00 com scorecard + flags + action items"
-    }
+    { "id": "intake-conversation", "trigger": "event", "source": "whatsapp_cloud_webhook", "desc": "Atende pedido novo do owner em PT-PT, classifica, propõe match" },
+    { "id": "daily-handoff-summary", "trigger": "schedule", "source": "cron 18:00 Lisboa", "desc": "Daily Handoff: novos pedidos, approvals expirando, flags >2h, cost burn" }
   ],
-  "peer_reads": [
-    { "sprint": "current", "agents": [] },
-    { "sprint": "sprint_1f", "agents": ["auditor"] },
-    { "sprint": "sprint_2a", "agents": ["casa-advisor", "auditor"] },
-    { "sprint": "sprint_2b", "agents": ["casa-advisor", "auditor", "v5-matchmaker"] }
+  "peerReads": [
+    { "stage": "current", "value": "— none" },
+    { "stage": "sprint_1f", "value": "auditor" },
+    { "stage": "sprint_2a", "value": "casa-advisor + auditor" },
+    { "stage": "sprint_2b", "value": "matchmaker + auditor" }
   ],
-  "cost": {
-    "sprint_1e": "$5/mo",
-    "sprint_1f": "$25/mo",
-    "notes": "Prompt cache pode reduzir 60-70%"
-  }
+  "cost": { "current": 5, "currency": "USD", "period": "30d" }
 }
