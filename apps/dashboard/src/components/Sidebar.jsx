@@ -1,6 +1,7 @@
 import { NavLink } from 'react-router-dom'
 import { useVerticalStore, useAuthStore } from '../store'
 import { useInboxItems, useApprovals } from '../hooks/useSupabase'
+import { useInboxReads } from '../hooks/useInboxReads'
 import { supabase } from '../lib/supabase.js'
 
 export default function Sidebar({ theme, setTheme, data }) {
@@ -8,8 +9,9 @@ export default function Sidebar({ theme, setTheme, data }) {
   const { user } = useAuthStore()
   const { items } = useInboxItems(activeVertical)
   const { approvals } = useApprovals(activeVertical)
+  const { readSet } = useInboxReads()
 
-  const inboxCount = items.length
+  const unreadCount = items.filter(i => !readSet.has(i.id)).length
   const approvalsCount = approvals.length
 
   const meta = data?.meta
@@ -44,7 +46,7 @@ export default function Sidebar({ theme, setTheme, data }) {
       <nav>
         <NavLink to="/inbox" className={({ isActive }) => 'sidebar-link' + (isActive ? ' active' : '')}>
           <span>Inbox</span>
-          {inboxCount > 0 && <span className="sidebar-badge">{inboxCount}</span>}
+          {unreadCount > 0 && <span className="sidebar-badge">{unreadCount}</span>}
         </NavLink>
         <NavLink to="/approvals" className={({ isActive }) => 'sidebar-link' + (isActive ? ' active' : '')}>
           <span>Approvals</span>
