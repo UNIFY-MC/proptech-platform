@@ -3,6 +3,7 @@
   "name": "Paula",
   "role": "Publisher Social Media",
   "vertical": "core",
+  "department": "Marketing",
   "model": "claude-haiku-4-5-20251001",
   "version": "1.0",
   "status": "active",

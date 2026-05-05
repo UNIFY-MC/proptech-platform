@@ -3,6 +3,7 @@
   "name": "Ana",
   "role": "Atendimento & Triagem",
   "vertical": "V2 Condomínios",
+  "department": "Condomínios",
   "model": "claude-haiku-4-5",
   "version": "1.0",
   "status": "active",

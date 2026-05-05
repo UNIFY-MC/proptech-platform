@@ -3,6 +3,7 @@
   "name": "Clara",
   "role": "Compliance & Legal",
   "vertical": "V2 Condomínios",
+  "department": "Condomínios",
   "model": "claude-sonnet-4-6",
   "version": "1.0",
   "status": "active",

@@ -3,6 +3,7 @@
   "name": "Enzo",
   "role": "Especialista de Energia",
   "vertical": "V2+V4 Condomínios/Energia",
+  "department": "Condomínios",
   "model": "claude-sonnet-4-6",
   "version": "1.0",
   "status": "active",

@@ -8,8 +8,9 @@ import Roadmap from './components/Roadmap.jsx'
 import Watchers from './components/Watchers.jsx'
 import Competitors from './components/Competitors.jsx'
 import Verticais from './components/Verticais.jsx'
+import Equipa from './components/Equipa.jsx'
 
-const TABS = ['Overview', 'Roadmap', 'Watchers', 'Competitors', 'Actividade', 'Agentes', 'Verticais']
+const TABS = ['Overview', 'Roadmap', 'Watchers', 'Competitors', 'Actividade', 'Agentes', 'Equipa', 'Verticais']
 
 const TAB_COMPONENTS = {
   Overview,
@@ -18,6 +19,7 @@ const TAB_COMPONENTS = {
   Competitors,
   Actividade: Activity,
   Agentes: Agents,
+  Equipa,
   Verticais,
 }
 
@@ -29,6 +31,7 @@ function tabLabel(name, data) {
     'Competitors': data.competitors?.length,
     'Actividade':  data.recentActivity?.length,
     'Agentes':     data.agents?.length,
+    'Equipa':      data.employees?.length,
   }
   const c = counts[name]
   return (c && c > 0) ? `${name} · ${c}` : name

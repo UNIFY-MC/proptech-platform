@@ -3,6 +3,7 @@
   "name": "Orquestrador",
   "role": "Director Operacional",
   "vertical": "V2 Condomínios",
+  "department": "Condomínios",
   "model": "claude-opus-4-7",
   "version": "1.0",
   "status": "active",

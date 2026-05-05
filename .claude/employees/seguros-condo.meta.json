@@ -3,6 +3,7 @@
   "name": "Sofia",
   "role": "Especialista de Seguros",
   "vertical": "V2+V3 Condomínios/Seguros",
+  "department": "Condomínios",
   "model": "claude-sonnet-4-6",
   "version": "1.0",
   "status": "active",

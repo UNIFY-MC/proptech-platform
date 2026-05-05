@@ -1,8 +1,8 @@
 {
   "meta": {
     "schemaVersion": "3.0",
-    "lastSync": "2026-05-05T21:52:47.394Z",
-    "generatedAt": "2026-05-05T21:52:47.394Z",
+    "lastSync": "2026-05-05T22:16:14.500Z",
+    "generatedAt": "2026-05-05T22:16:14.500Z",
     "branch": "sprint/v5-1b3",
     "worktree": "proptech-v5-1b3",
     "generator": "scripts/dashboard-data-build.js"
@@ -83,7 +83,7 @@
     ],
     "_source": ".claude/current/current-sprint-state.md",
     "_status": "live",
-    "_lastParsed": "2026-05-05T21:52:47.412Z"
+    "_lastParsed": "2026-05-05T22:16:14.512Z"
   },
   "verticals": [
     {
@@ -827,6 +827,7 @@
       "name": "Assie",
       "role": "Secretária de Assembleia",
       "vertical": "V2 Condomínios",
+      "department": "Condomínios",
       "model": "claude-sonnet-4-6",
       "version": "1.0",
       "status": "active",
@@ -922,6 +923,7 @@
       "name": "Ana",
       "role": "Atendimento & Triagem",
       "vertical": "V2 Condomínios",
+      "department": "Condomínios",
       "model": "claude-haiku-4-5",
       "version": "1.0",
       "status": "active",
@@ -1016,10 +1018,153 @@
       }
     },
     {
+      "id": "bia",
+      "name": "Bia",
+      "role": "Maintenance Concierge",
+      "vertical": "V5 PRATA",
+      "department": "Manutenção",
+      "model": "claude-sonnet-4-6",
+      "version": "1.1",
+      "status": "active",
+      "color": "purple",
+      "avatarInitial": "B",
+      "integrations": [
+        {
+          "id": "supabase_v1",
+          "name": "Supabase V1 Core",
+          "desc": "edge functions, RLS, auth",
+          "icon": "SB",
+          "color": "emerald",
+          "enabled": true
+        },
+        {
+          "id": "supabase_v5",
+          "name": "Supabase V5",
+          "desc": "manutencao schema · realtime",
+          "icon": "SB",
+          "color": "emerald",
+          "enabled": true
+        },
+        {
+          "id": "whatsapp",
+          "name": "WhatsApp Cloud",
+          "desc": "intake + outreach",
+          "icon": "WA",
+          "color": "green",
+          "enabled": true
+        },
+        {
+          "id": "resend",
+          "name": "Resend",
+          "desc": "transactional email",
+          "icon": "RS",
+          "color": "cyan",
+          "enabled": true
+        },
+        {
+          "id": "moloni",
+          "name": "Moloni",
+          "desc": "recibos fiscais PT",
+          "icon": "ML",
+          "color": "amber",
+          "enabled": true
+        },
+        {
+          "id": "stripe",
+          "name": "Stripe Connect",
+          "desc": "payments PT — sprint 1E",
+          "icon": "SC",
+          "color": "purple",
+          "enabled": false,
+          "planned": true
+        },
+        {
+          "id": "posthog",
+          "name": "PostHog",
+          "desc": "product analytics",
+          "icon": "PH",
+          "color": "amber",
+          "enabled": false,
+          "planned": true
+        }
+      ],
+      "skills": [
+        {
+          "id": "classify-problem-pt",
+          "desc": "Categoriza descrição em taxonomy V5 + retorna confiança"
+        },
+        {
+          "id": "match-prestador-geo",
+          "desc": "Filtra prestadores por concelho/freguesia + especialidade + rating"
+        },
+        {
+          "id": "compose-pedido-msg",
+          "desc": "Gera mensagem WhatsApp em PT-PT calibrada ao tom"
+        },
+        {
+          "id": "extract-magic-link-token",
+          "desc": "Gera magic-link único por pedido com expiry"
+        },
+        {
+          "id": "escalate-to-human",
+          "desc": "Sinaliza baixa confiança e pinga Mário no Discord"
+        },
+        {
+          "id": "vision-analyse-foto",
+          "desc": "Extrai dados de foto enviada pelo owner"
+        }
+      ],
+      "recipes": [
+        {
+          "id": "intake-conversation",
+          "trigger": "event",
+          "source": "whatsapp_cloud_webhook",
+          "trigger_type": "event",
+          "trigger_label": "whatsapp_cloud_webhook",
+          "desc": "Atende pedido novo de owner em PT-PT, classifica, propõe match"
+        },
+        {
+          "id": "daily-handoff-summary",
+          "trigger": "schedule",
+          "source": "cron 18:00 Lisboa",
+          "trigger_type": "schedule",
+          "trigger_label": "0 18 * * * Lisboa",
+          "desc": "Daily roundup às 18h00 com scorecard + flags + action items"
+        }
+      ],
+      "peerReads": [
+        {
+          "stage": "current",
+          "value": "— none"
+        },
+        {
+          "stage": "sprint_1f",
+          "value": "auditor"
+        },
+        {
+          "stage": "sprint_2a",
+          "value": "casa-advisor + auditor"
+        },
+        {
+          "stage": "sprint_2b",
+          "value": "matchmaker + auditor"
+        }
+      ],
+      "cost": {
+        "current": 5,
+        "currency": "USD",
+        "period": "30d",
+        "sprint_1e": "$5/mo",
+        "sprint_1f": "$25/mo",
+        "notes": "Prompt cache pode reduzir 60-70%"
+      }
+    },
+    {
       "id": "compliance-condo",
       "name": "Clara",
       "role": "Compliance & Legal",
       "vertical": "V2 Condomínios",
+      "department": "Condomínios",
       "model": "claude-sonnet-4-6",
       "version": "1.0",
       "status": "active",
@@ -1109,6 +1254,7 @@
       "name": "Cami",
       "role": "Gestora de Comunicações",
       "vertical": "V2 Condomínios",
+      "department": "Condomínios",
       "model": "claude-haiku-4-5",
       "version": "1.0",
       "status": "active",
@@ -1207,6 +1353,7 @@
       "name": "Cris",
       "role": "Criativo de Conteúdo",
       "vertical": "core",
+      "department": "Marketing",
       "model": "claude-sonnet-4-6",
       "version": "1.0",
       "status": "active",
@@ -1314,6 +1461,7 @@
       "name": "Diogo",
       "role": "Director de Marketing",
       "vertical": "core",
+      "department": "Marketing",
       "model": "claude-opus-4-7",
       "version": "1.0",
       "status": "active",
@@ -1417,6 +1565,7 @@
       "name": "Dora",
       "role": "Gestora de Documentos",
       "vertical": "V2 Condomínios",
+      "department": "Condomínios",
       "model": "claude-sonnet-4-6",
       "version": "1.0",
       "status": "active",
@@ -1514,6 +1663,7 @@
       "name": "Enzo",
       "role": "Especialista de Energia",
       "vertical": "V2+V4 Condomínios/Energia",
+      "department": "Condomínios",
       "model": "claude-sonnet-4-6",
       "version": "1.0",
       "status": "active",
@@ -1622,6 +1772,7 @@
       "name": "Fina",
       "role": "Gestora Financeira",
       "vertical": "V2 Condomínios",
+      "department": "Condomínios",
       "model": "claude-sonnet-4-6",
       "version": "1.0",
       "status": "active",
@@ -1730,6 +1881,7 @@
       "name": "Gabi",
       "role": "Gestora de Publicidade Paga",
       "vertical": "core",
+      "department": "Marketing",
       "model": "claude-sonnet-4-6",
       "version": "1.0",
       "status": "active",
@@ -1845,6 +1997,7 @@
       "name": "Leo",
       "role": "Gestor de Leads",
       "vertical": "core",
+      "department": "Marketing",
       "model": "claude-sonnet-4-6",
       "version": "1.0",
       "status": "active",
@@ -1964,6 +2117,7 @@
       "name": "Marco",
       "role": "Gestor de Manutenção",
       "vertical": "V2+V5 Condomínios/Manutenção",
+      "department": "Condomínios",
       "model": "claude-sonnet-4-6",
       "version": "1.0",
       "status": "active",
@@ -2081,6 +2235,7 @@
       "name": "Orquestrador",
       "role": "Director Operacional",
       "vertical": "V2 Condomínios",
+      "department": "Condomínios",
       "model": "claude-opus-4-7",
       "version": "1.0",
       "status": "active",
@@ -2182,6 +2337,7 @@
       "name": "Paula",
       "role": "Publisher Social Media",
       "vertical": "core",
+      "department": "Marketing",
       "model": "claude-haiku-4-5-20251001",
       "version": "1.0",
       "status": "active",
@@ -2301,6 +2457,7 @@
       "name": "Sofia",
       "role": "Especialista de Seguros",
       "vertical": "V2+V3 Condomínios/Seguros",
+      "department": "Condomínios",
       "model": "claude-sonnet-4-6",
       "version": "1.0",
       "status": "active",
@@ -2406,6 +2563,13 @@
     }
   ],
   "recentActivity": [
+    {
+      "ts": "2026-05-05T22:07Z",
+      "agent": "subagent",
+      "worktree": "proptech-v5-1b3",
+      "action": "subagent stopped [session:d62fe085]",
+      "refs": []
+    },
     {
       "ts": "2026-05-05T21:52Z",
       "agent": "subagent",
@@ -2535,13 +2699,6 @@
     {
       "ts": "2026-05-05T17:16Z",
       "agent": "subagent",
-      "worktree": "proptech-v5-1b3",
-      "action": "subagent stopped [session:a74b3960]",
-      "refs": []
-    },
-    {
-      "ts": "2026-05-05T17:01Z",
-      "agent": "Explore",
       "worktree": "proptech-v5-1b3",
       "action": "subagent stopped [session:a74b3960]",
       "refs": []

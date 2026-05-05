@@ -3,6 +3,7 @@
   "name": "Leo",
   "role": "Gestor de Leads",
   "vertical": "core",
+  "department": "Marketing",
   "model": "claude-sonnet-4-6",
   "version": "1.0",
   "status": "active",

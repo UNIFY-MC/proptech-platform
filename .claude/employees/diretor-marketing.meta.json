@@ -3,6 +3,7 @@
   "name": "Diogo",
   "role": "Director de Marketing",
   "vertical": "core",
+  "department": "Marketing",
   "model": "claude-opus-4-7",
   "version": "1.0",
   "status": "active",

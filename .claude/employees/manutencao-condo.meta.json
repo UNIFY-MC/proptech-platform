@@ -3,6 +3,7 @@
   "name": "Marco",
   "role": "Gestor de Manutenção",
   "vertical": "V2+V5 Condomínios/Manutenção",
+  "department": "Condomínios",
   "model": "claude-sonnet-4-6",
   "version": "1.0",
   "status": "active",
