@@ -510,6 +510,18 @@ function parseAgents() {
   return agents
 }
 
+function parseEmployees() {
+  const employeesDir = join(ROOT, '.claude', 'employees')
+  if (!existsSync(employeesDir)) return []
+  const files = readdirSync(employeesDir).filter(f => f.endsWith('.meta.json'))
+  return files.map(file => {
+    try {
+      const raw = readFile(join(employeesDir, file))
+      return JSON.parse(raw)
+    } catch { return null }
+  }).filter(Boolean)
+}
+
 function parseCompetitors(filePath) {
   const competitors = []
   const content = readFile(filePath)
@@ -596,6 +608,7 @@ const decisionsResult   = parseDecisions(decisionsFile)
 const roadmapResult     = parseRoadmap(sprintFile)
 const watchersResult    = parseWatchers(watchersFile)
 const agentsResult      = parseAgents()
+const employeesResult   = parseEmployees()
 const activityResult    = parseActivity(activityContent)
 const alertsResult      = parseAlerts(triggersContent)
 const competitorsResult = parseCompetitors(competitorsFile)
@@ -632,6 +645,7 @@ const data = {
   },
   watchers: watchersResult,
   agents: agentsResult,
+  employees: employeesResult,
   recentActivity: activityResult.slice(0, 20),
   decisions: decisionsResult.decisions,
   _decisionsMeta: {
