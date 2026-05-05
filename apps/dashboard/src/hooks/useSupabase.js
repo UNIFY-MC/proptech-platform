@@ -36,7 +36,7 @@ export function useInboxItems(vertical = null) {
     fetchItems()
 
     const channel = supabase
-      .channel('inbox_items_changes')
+      .channel(`inbox_items_changes-${crypto.randomUUID()}`)
       .on('postgres_changes', {
         event: '*',
         schema: 'system',
@@ -81,7 +81,7 @@ export function useApprovals(vertical = null) {
     fetchApprovals()
 
     const channel = supabase
-      .channel('approvals_changes')
+      .channel(`approvals_changes-${crypto.randomUUID()}`)
       .on('postgres_changes', {
         event: '*',
         schema: 'system',
