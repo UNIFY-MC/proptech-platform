@@ -1,41 +1,44 @@
-export default function BiaHeader({ meta }) {
-  const name = meta.employee.charAt(0).toUpperCase() + meta.employee.slice(1)
+import { useNavigate } from 'react-router-dom'
+
+export default function BiaHeader({ meta, isEditing }) {
+  const navigate = useNavigate()
 
   return (
-    <header className="bia-header">
-      {/* Avatar */}
-      <div className="bia-avatar">{meta.avatar_initials}</div>
+    <div className={`bsc-header${isEditing ? ' editing' : ''}`}>
+      <button className="bsc-back" onClick={() => navigate(-1)} title="Voltar">←</button>
 
-      {/* Centre: name + role + integrations row */}
-      <div>
-        <div className="bia-name">{name}</div>
-        <div className="bia-role">{meta.role}</div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 10 }}>
-          <div className="bia-integrations-row">
-            {meta.integrations.map(int => (
-              <div
-                key={int.id}
-                className={`bia-int-cell ${int.status}`}
-                title={`${int.name} · ${int.status}`}
-              >
-                {int.icon}
-              </div>
-            ))}
-          </div>
-          <span className="bia-mono" style={{ fontSize: 10, color: 'var(--bia-text-dim)', letterSpacing: '0.05em' }}>
-            {meta.integrations.length} integrations
-          </span>
+      <div className="bsc-avatar">{meta.avatarInitial}</div>
+
+      <div className="bsc-title-group">
+        <div className="bsc-title-row">
+          <span className="bsc-name">{meta.name}</span>
+          <span className="bsc-sep">·</span>
+          <span className="bsc-role">{meta.role}</span>
+          <span className="bsc-vertical">{meta.vertical}</span>
+        </div>
+        <div className="bsc-subline">
+          <span>{meta.model}</span>
+          <span className="sep">·</span>
+          <span>replies pt-pt</span>
+          <span className="sep">·</span>
+          <span>last check —</span>
+          <span className="sep">·</span>
+          <span className="bsc-version-chip">v{meta.version}</span>
         </div>
       </div>
 
-      {/* Right: version + model + status */}
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <span className="bia-version-chip bia-mono">v{meta.version}</span>
-          <span className="bia-model-chip bia-mono">{meta.model}</span>
-        </div>
-        <span className={`bia-status-pill ${meta.status}`}>{meta.status}</span>
+      <div className="bsc-right">
+        <span className={`bsc-status-pill ${isEditing ? 'editing' : meta.status}`}>
+          {isEditing ? 'editing' : meta.status}
+        </span>
+        <button
+          className="bsc-menu"
+          title="Detalhes (Phase 5.1)"
+          onClick={() => console.log('[BiaHeader] ⋯ stub — BiaDetailsDrawer Phase 5.1')}
+        >
+          ⋯
+        </button>
       </div>
-    </header>
+    </div>
   )
 }
