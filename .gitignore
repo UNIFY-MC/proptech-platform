@@ -51,3 +51,8 @@ desktop.ini
 __pycache__/
 *.pyc
 __MACOSX/
+
+# Vídeos de research (demasiado grandes para GitHub)
+*.mp4
+*.mov
+*.avi
