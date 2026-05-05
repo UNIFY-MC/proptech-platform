@@ -647,3 +647,385 @@ body {
   .tab { padding: 10px 12px; font-size: 0.8rem; }
   .col-hide-sm { display: none; }
 }
+
+/* ============================================================
+   Bia Scorecard — Cook.ai / Hermes aesthetic
+   ============================================================ */
+
+:root {
+  --bia-accent:       #7c6ef7;
+  --bia-accent2:      #a78bfa;
+  --bia-surface:      var(--bg-card);
+  --bia-surface2:     var(--bg-elevated);
+  --bia-border:       var(--border);
+  --bia-text:         var(--text);
+  --bia-text-dim:     var(--text-dim);
+  --bia-toc-w:        200px;
+  --bia-meta-w:       280px;
+  --bia-radius:       10px;
+}
+
+/* Page wrapper */
+.bia-page {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  min-height: 0;
+}
+
+/* Header */
+.bia-header {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 18px;
+  align-items: center;
+  padding: 20px 24px;
+  background: var(--bia-surface);
+  border: 1px solid var(--bia-border);
+  border-radius: var(--bia-radius);
+  margin-bottom: 18px;
+}
+
+.bia-avatar {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, var(--bia-accent), var(--bia-accent2));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+  letter-spacing: 0;
+}
+
+.bia-name {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--bia-text);
+  line-height: 1.2;
+}
+
+.bia-role {
+  font-size: 12px;
+  color: var(--bia-text-dim);
+  margin-top: 2px;
+}
+
+.bia-integrations-row {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.bia-int-cell {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  border: 1px solid var(--bia-border);
+  background: var(--bia-surface2);
+  cursor: default;
+}
+
+.bia-int-cell.connected {
+  border-color: var(--success);
+  background: rgba(16, 185, 129, 0.08);
+}
+
+.bia-int-cell.planned {
+  opacity: 0.45;
+}
+
+.bia-version-chip,
+.bia-model-chip {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 5px;
+  border: 1px solid var(--bia-border);
+  background: var(--bia-surface2);
+  color: var(--bia-text-dim);
+}
+
+.bia-mono {
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.bia-status-pill {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 20px;
+  text-transform: lowercase;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.bia-status-pill.active {
+  background: rgba(16, 185, 129, 0.15);
+  color: var(--success);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  animation: bia-pulse 2.4s ease-in-out infinite;
+}
+
+@keyframes bia-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.6; }
+}
+
+/* 3-column layout */
+.bia-layout {
+  display: grid;
+  grid-template-columns: var(--bia-toc-w) 1fr var(--bia-meta-w);
+  gap: 18px;
+  align-items: flex-start;
+}
+
+/* TOC */
+.bia-toc {
+  position: sticky;
+  top: 16px;
+  max-height: calc(100vh - 140px);
+  overflow-y: auto;
+  padding: 14px 0;
+  background: var(--bia-surface);
+  border: 1px solid var(--bia-border);
+  border-radius: var(--bia-radius);
+}
+
+.bia-toc-item {
+  display: block;
+  font-size: 11.5px;
+  color: var(--bia-text-dim);
+  padding: 5px 14px 5px 12px;
+  border-left: 2px solid transparent;
+  cursor: pointer;
+  line-height: 1.4;
+  transition: color 0.12s, border-color 0.12s;
+}
+
+.bia-toc-item:hover {
+  color: var(--bia-text);
+  border-left-color: var(--bia-accent);
+}
+
+.bia-toc-item.active {
+  color: var(--bia-accent2);
+  border-left-color: var(--bia-accent);
+  font-weight: 600;
+}
+
+/* Content area */
+.bia-content {
+  min-width: 0;
+}
+
+.bia-section {
+  margin-bottom: 12px;
+  background: var(--bia-surface);
+  border: 1px solid var(--bia-border);
+  border-radius: var(--bia-radius);
+  padding: 16px 20px;
+  border-left-width: 3px;
+}
+
+.bia-section-title {
+  font-size: 10px;
+  font-weight: 700;
+  font-family: 'JetBrains Mono', monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 10px;
+}
+
+/* Meta sidebar */
+.bia-meta {
+  position: sticky;
+  top: 16px;
+  max-height: calc(100vh - 140px);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.bia-meta-block {
+  background: var(--bia-surface);
+  border: 1px solid var(--bia-border);
+  border-radius: var(--bia-radius);
+  overflow: hidden;
+}
+
+.bia-meta-head {
+  font-size: 9px;
+  font-weight: 700;
+  font-family: 'JetBrains Mono', monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--bia-text-dim);
+  padding: 8px 12px 6px;
+  border-bottom: 1px solid var(--bia-border);
+}
+
+.bia-meta-body {
+  padding: 8px 12px;
+}
+
+/* Stat rows */
+.bia-stat-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  padding: 3px 0;
+  color: var(--bia-text-dim);
+}
+
+.bia-stat-row .v {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--bia-text);
+}
+
+/* Integration grid */
+.bia-int-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 5px;
+  padding: 8px 12px;
+}
+
+/* Skill rows */
+.bia-skill-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  padding: 6px 12px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--bia-border);
+  transition: background 0.1s;
+}
+
+.bia-skill-row:last-child { border-bottom: none; }
+
+.bia-skill-row:hover { background: var(--bia-surface2); }
+
+.bia-skill-row .arrow {
+  font-size: 10px;
+  color: var(--bia-accent);
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.bia-skill-row .name {
+  display: block;
+  font-size: 11px;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 600;
+  color: var(--bia-text);
+}
+
+.bia-skill-row .desc {
+  display: block;
+  font-size: 10px;
+  color: var(--bia-text-dim);
+  margin-top: 1px;
+}
+
+/* Recipe cards */
+.bia-recipe-card {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--bia-border);
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.bia-recipe-card:last-child { border-bottom: none; }
+
+.bia-recipe-card:hover { background: var(--bia-surface2); }
+
+.bia-recipe-name {
+  font-size: 11px;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 600;
+  color: var(--bia-text);
+}
+
+.bia-recipe-meta {
+  font-size: 10px;
+  color: var(--bia-text-dim);
+  margin-top: 2px;
+}
+
+.bia-recipe-trigger {
+  color: var(--bia-accent2);
+}
+
+.bia-recipe-desc {
+  font-size: 10px;
+  color: var(--bia-text-dim);
+  margin-top: 3px;
+}
+
+/* Peer reads */
+.bia-peer-row {
+  display: flex;
+  gap: 8px;
+  padding: 5px 12px;
+  font-size: 11px;
+  border-bottom: 1px solid var(--bia-border);
+}
+
+.bia-peer-row:last-child { border-bottom: none; }
+
+.bia-peer-row.current { background: rgba(124, 110, 247, 0.07); }
+
+.bia-peer-sprint {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--bia-text-dim);
+  flex-shrink: 0;
+  width: 68px;
+}
+
+.bia-peer-agents {
+  font-size: 10px;
+  color: var(--bia-text);
+}
+
+/* Cost rows */
+.bia-cost-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 12px;
+  font-size: 11px;
+}
+
+.bia-cost-row .label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--bia-text-dim);
+}
+
+.bia-cost-row .value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--success);
+}
+
+.bia-cost-note {
+  padding: 6px 12px 8px;
+  font-size: 10px;
+  color: var(--bia-text-dim);
+  border-top: 1px solid var(--bia-border);
+}

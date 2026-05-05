@@ -1,4 +1,8 @@
 import biaRaw from '../../../../.claude/employees/bia.md?raw'
+import biaMeta from '../../../../.claude/employees/bia.meta.json'
+import BiaHeader from '../components/bia/BiaHeader'
+import BiaTOC from '../components/bia/BiaTOC'
+import BiaMetaSidebar from '../components/bia/BiaMetaSidebar'
 
 // ── Parser ────────────────────────────────────────────────────────────────────
 
@@ -24,7 +28,7 @@ function parseSections(body) {
     .map(part => {
       const nl = part.indexOf('\n')
       const title = part.slice(0, nl).trim()
-      return { title, content: part.slice(nl + 1).trim(), slug: slug(title) }
+      return { id: slug(title), title, content: part.slice(nl + 1).trim() }
     })
 }
 
@@ -67,7 +71,6 @@ function ContentBlock({ content }) {
   while (i < lines.length) {
     const line = lines[i]
 
-    // Code fence
     if (line.startsWith('```')) {
       const codeLines = []
       i++
@@ -91,11 +94,10 @@ function ContentBlock({ content }) {
           {codeLines.join('\n')}
         </pre>
       )
-      i++ // skip closing ```
+      i++
       continue
     }
 
-    // Table row
     if (line.trim().startsWith('|')) {
       const tableLines = []
       while (i < lines.length && lines[i].trim().startsWith('|')) {
@@ -135,7 +137,6 @@ function ContentBlock({ content }) {
       continue
     }
 
-    // Ordered list
     if (/^\d+\.\s/.test(line.trim())) {
       const items = []
       while (i < lines.length && /^\d+\.\s/.test(lines[i].trim())) {
@@ -154,7 +155,6 @@ function ContentBlock({ content }) {
       continue
     }
 
-    // Unordered list
     if (line.trim().startsWith('- ') || line.trim().startsWith('* ')) {
       const items = []
       while (i < lines.length && (lines[i].trim().startsWith('- ') || lines[i].trim().startsWith('* '))) {
@@ -173,7 +173,6 @@ function ContentBlock({ content }) {
       continue
     }
 
-    // Flag lines (🔴 🟡)
     if (line.startsWith('🔴') || line.startsWith('🟡')) {
       const isRed = line.startsWith('🔴')
       result.push(
@@ -194,7 +193,6 @@ function ContentBlock({ content }) {
       continue
     }
 
-    // H3
     if (line.startsWith('### ')) {
       result.push(
         <div key={`h3-${i}`} style={{
@@ -214,10 +212,8 @@ function ContentBlock({ content }) {
       continue
     }
 
-    // Empty line
     if (!line.trim()) { i++; continue }
 
-    // Paragraph
     result.push(
       <p key={`p-${i}`} style={{ fontSize: 13, lineHeight: 1.65, color: 'var(--text)', marginBottom: 8 }}>
         <Inline>{line}</Inline>
@@ -252,199 +248,42 @@ function sectionAccent(title) {
   return 'var(--primary)'
 }
 
-// ── MetaBadge ─────────────────────────────────────────────────────────────────
-
-function MetaBadge({ label, color }) {
-  if (!label) return null
-  return (
-    <span style={{
-      fontSize: 10,
-      fontFamily: 'JetBrains Mono, monospace',
-      fontWeight: 600,
-      background: 'var(--bg-elevated)',
-      color: color || 'var(--text-dim)',
-      border: '1px solid var(--border)',
-      borderRadius: 4,
-      padding: '2px 8px',
-    }}>
-      {label}
-    </span>
-  )
-}
-
 // ── Main component ────────────────────────────────────────────────────────────
 
 export default function BiaScorecard() {
-  const { fm, body } = parseFrontmatter(biaRaw)
+  const { body } = parseFrontmatter(biaRaw)
   const sections = parseSections(body)
 
   return (
-    <div>
-      {/* Header */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'flex-start',
-        gap: 16,
-        marginBottom: 28,
-        paddingBottom: 24,
-        borderBottom: '1px solid var(--border)',
-      }}>
-        <div style={{
-          width: 52,
-          height: 52,
-          borderRadius: 14,
-          background: 'linear-gradient(135deg, var(--primary), #8b5cf6)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: 24,
-          flexShrink: 0,
-        }}>
-          🤖
-        </div>
-        <div style={{ flex: 1 }}>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 4 }}>
-            <h1 style={{ fontSize: 20, fontWeight: 700 }}>{fm.name || 'Bia'}</h1>
-            <span style={{ fontSize: 13, color: 'var(--text-dim)' }}>{fm.vertical || 'v5'}</span>
-          </div>
-          <div style={{ fontSize: 13, color: 'var(--text-dim)', marginBottom: 10 }}>
-            {fm.tagline || fm.role}
-          </div>
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-            <MetaBadge label={fm.model} />
-            <MetaBadge label={fm.integrations ? `${fm.integrations} integrations` : null} />
-            <MetaBadge label={fm.skills ? `${fm.skills} skills` : null} />
-            <MetaBadge label={fm.recipes ? `${fm.recipes} recipes` : null} />
-            <MetaBadge label={fm.status} color="var(--success)" />
-            <MetaBadge label={fm.version ? `v${fm.version}` : null} />
-          </div>
-        </div>
-      </div>
+    <div className="bia-page">
+      <BiaHeader meta={biaMeta} />
 
-      {/* TOC + Content */}
-      <div style={{ display: 'flex', gap: 24, alignItems: 'flex-start' }}>
+      <div className="bia-layout">
+        <BiaTOC sections={sections} />
 
-        {/* TOC — sticky */}
-        <aside style={{
-          width: 156,
-          flexShrink: 0,
-          position: 'sticky',
-          top: 0,
-          maxHeight: 'calc(100vh - 60px)',
-          overflowY: 'auto',
-          paddingRight: 4,
-        }}>
-          <div style={{
-            fontSize: 9,
-            fontWeight: 700,
-            fontFamily: 'JetBrains Mono, monospace',
-            textTransform: 'uppercase',
-            letterSpacing: '0.1em',
-            color: 'var(--text-dim)',
-            marginBottom: 8,
-          }}>
-            Secções
-          </div>
+        <main className="bia-content">
           {sections.map(s => {
             const accent = sectionAccent(s.title)
-            return (
-              <a
-                key={s.slug}
-                href={`#${s.slug}`}
-                style={{
-                  display: 'block',
-                  fontSize: 12,
-                  color: 'var(--text-dim)',
-                  textDecoration: 'none',
-                  padding: '4px 0 4px 9px',
-                  borderLeft: '2px solid transparent',
-                  lineHeight: 1.4,
-                  transition: 'color 0.1s, border-color 0.1s',
-                }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.color = 'var(--text)'
-                  e.currentTarget.style.borderLeftColor = accent
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.color = 'var(--text-dim)'
-                  e.currentTarget.style.borderLeftColor = 'transparent'
-                }}
-              >
-                {s.title}
-              </a>
-            )
-          })}
-        </aside>
-
-        {/* Sections */}
-        <div style={{ flex: 1, minWidth: 0 }}>
-          {sections.map(s => {
-            const accent = sectionAccent(s.title)
-            const isNever = s.title === 'NEVER'
             return (
               <div
-                key={s.slug}
-                id={s.slug}
+                key={s.id}
+                id={s.id}
+                className="bia-section"
                 style={{
-                  marginBottom: 14,
-                  background: isNever ? 'rgba(239,68,68,0.04)' : 'var(--bg-card)',
-                  border: '1px solid var(--border)',
-                  borderLeft: `3px solid ${accent}`,
-                  borderRadius: 8,
-                  padding: '14px 18px',
+                  borderLeftColor: accent,
+                  background: s.title === 'NEVER' ? 'rgba(239,68,68,0.04)' : 'var(--bia-surface)',
                 }}
               >
-                <div style={{
-                  fontSize: 10,
-                  fontWeight: 700,
-                  fontFamily: 'JetBrains Mono, monospace',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.08em',
-                  color: accent,
-                  marginBottom: 10,
-                }}>
+                <div className="bia-section-title" style={{ color: accent }}>
                   {s.title}
                 </div>
                 <ContentBlock content={s.content} />
               </div>
             )
           })}
+        </main>
 
-          {/* Footer: costs + tech debt */}
-          <div style={{
-            marginTop: 4,
-            padding: '14px 18px',
-            background: 'var(--bg-elevated)',
-            border: '1px solid var(--border)',
-            borderRadius: 8,
-            borderLeft: '3px solid var(--text-dim)',
-          }}>
-            <div style={{
-              fontSize: 10,
-              fontWeight: 700,
-              fontFamily: 'JetBrains Mono, monospace',
-              textTransform: 'uppercase',
-              letterSpacing: '0.08em',
-              color: 'var(--text-dim)',
-              marginBottom: 10,
-            }}>
-              Custos & Tech Debt
-            </div>
-            <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', marginBottom: 10 }}>
-              <div style={{ fontSize: 13 }}>
-                <span style={{ color: 'var(--text-dim)' }}>Sprint 1E: </span>
-                <span style={{ color: 'var(--text)', fontWeight: 600 }}>{fm.cost_1e || '~$5/mês'}</span>
-              </div>
-              <div style={{ fontSize: 13 }}>
-                <span style={{ color: 'var(--text-dim)' }}>Sprint 1F: </span>
-                <span style={{ color: 'var(--text)', fontWeight: 600 }}>{fm.cost_1f || '~$25/mês'}</span>
-              </div>
-            </div>
-            <div style={{ fontSize: 12, color: 'var(--text-dim)' }}>
-              Tech debt: Gmail integration (Sprint 1F) · Voice TTS (Sprint 1F+) · Prompt cache (reduz 60-70% custo)
-            </div>
-          </div>
-        </div>
+        <BiaMetaSidebar meta={biaMeta} />
       </div>
     </div>
   )
