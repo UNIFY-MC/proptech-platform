@@ -18,16 +18,16 @@
     { "id": "posthog", "name": "PostHog", "desc": "product analytics", "icon": "PH", "color": "amber", "enabled": false, "planned": true }
   ],
   "skills": [
-    { "id": "classify-problem-pt", "desc": "Categoriza descrição em taxonomy V5" },
-    { "id": "match-prestador-geo", "desc": "Filtra prestadores por zona + especialidade" },
-    { "id": "compose-pedido-msg", "desc": "Gera mensagem WhatsApp PT-PT" },
-    { "id": "extract-magic-link-token", "desc": "Gera magic-link único por pedido" },
-    { "id": "summarize-trabalho", "desc": "Resumo trabalho + fotos para owner" },
-    { "id": "flag-anomaly", "desc": "Detecta padrões fora da norma" }
+    { "id": "classify-problem-pt", "desc": "Categoriza descrição em taxonomy V5 + retorna confiança" },
+    { "id": "match-prestador-geo", "desc": "Filtra prestadores por concelho/freguesia + especialidade + rating" },
+    { "id": "compose-pedido-msg", "desc": "Gera mensagem WhatsApp em PT-PT calibrada ao tom" },
+    { "id": "extract-magic-link-token", "desc": "Gera magic-link único por pedido com expiry" },
+    { "id": "escalate-to-human", "desc": "Sinaliza baixa confiança e pinga Mário no Discord" },
+    { "id": "vision-analyse-foto", "desc": "Extrai dados de foto enviada pelo owner" }
   ],
   "recipes": [
-    { "id": "intake-conversation", "trigger": "event", "source": "whatsapp_cloud_webhook", "desc": "Atende pedido novo do owner em PT-PT, classifica, propõe match" },
-    { "id": "daily-handoff-summary", "trigger": "schedule", "source": "cron 18:00 Lisboa", "desc": "Daily Handoff: novos pedidos, approvals expirando, flags >2h, cost burn" }
+    { "id": "intake-conversation", "trigger": "event", "source": "whatsapp_cloud_webhook", "trigger_type": "event", "trigger_label": "whatsapp_cloud_webhook", "desc": "Atende pedido novo de owner em PT-PT, classifica, propõe match" },
+    { "id": "daily-handoff-summary", "trigger": "schedule", "source": "cron 18:00 Lisboa", "trigger_type": "schedule", "trigger_label": "0 18 * * * Lisboa", "desc": "Daily roundup às 18h00 com scorecard + flags + action items" }
   ],
   "peerReads": [
     { "stage": "current", "value": "— none" },
@@ -35,5 +35,11 @@
     { "stage": "sprint_2a", "value": "casa-advisor + auditor" },
     { "stage": "sprint_2b", "value": "matchmaker + auditor" }
   ],
-  "cost": { "current": 5, "currency": "USD", "period": "30d" }
+  "peer_reads": [
+    { "sprint": "current",   "agents": [] },
+    { "sprint": "sprint_1f", "agents": ["auditor"] },
+    { "sprint": "sprint_2a", "agents": ["casa-advisor", "auditor"] },
+    { "sprint": "sprint_2b", "agents": ["casa-advisor", "auditor", "v5-matchmaker"] }
+  ],
+  "cost": { "current": 5, "currency": "USD", "period": "30d", "sprint_1e": "$5/mo", "sprint_1f": "$25/mo", "notes": "Prompt cache pode reduzir 60-70%" }
 }

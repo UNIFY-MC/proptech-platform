@@ -1553,3 +1553,152 @@ body {
 
 .bia-intg-toggle.on::after  { left: 15px; }
 .bia-intg-toggle.off::after { left: 2px; }
+
+/* ============================================================
+   Bia Meta Sidebar — Cook.ai/Hermes aesthetic (Phase 5b)
+   ============================================================ */
+
+.bsc-grid {
+  display: grid;
+  grid-template-columns: 1fr 280px;
+  gap: 32px;
+  align-items: start;
+}
+.bsc-grid.editing { grid-template-columns: 1fr; }
+@media (max-width: 1100px) {
+  .bsc-grid { grid-template-columns: 1fr; }
+}
+
+.bia-meta-sidebar {
+  position: sticky;
+  top: 16px;
+  align-self: start;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  font-size: 12px;
+}
+@media (max-width: 1100px) {
+  .bia-meta-sidebar { position: static; }
+}
+
+.bia-meta-block {
+  border: 1px solid var(--bia-border, #262626);
+  background: var(--bia-surface, #111);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.bia-meta-head {
+  font-family: var(--bia-mono, ui-monospace, 'JetBrains Mono', monospace);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: var(--bia-text-dim, #737373);
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--bia-border, #262626);
+}
+.bia-meta-body { padding: 4px 0; }
+.bia-recipes-body { padding: 4px 8px; }
+
+/* Skills */
+.bia-skill-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--bia-border, #262626);
+  cursor: default;
+  transition: background 0.15s;
+}
+.bia-skill-row:last-child { border-bottom: 0; }
+.bia-skill-row:hover { background: var(--bia-surface-2, #161616); }
+.bia-skill-row .arrow {
+  color: var(--bia-text-dim, #737373);
+  font-size: 11px;
+  flex-shrink: 0;
+  padding-top: 1px;
+}
+.bia-skill-row .name {
+  display: block;
+  font-size: 11px;
+  color: var(--bia-text, #f5f5f5);
+  line-height: 1.2;
+}
+.bia-skill-row .desc {
+  display: block;
+  color: var(--bia-text-dim, #737373);
+  font-size: 10px;
+  line-height: 1.4;
+  margin-top: 3px;
+}
+
+/* Recipes */
+.bia-recipe-card {
+  margin: 6px 0;
+  border: 1px solid var(--bia-border, #262626);
+  border-radius: 6px;
+  padding: 10px 12px;
+  background: var(--bia-bg, #0a0a0a);
+  cursor: default;
+  transition: border-color 0.15s;
+}
+.bia-recipe-card:hover { border-color: var(--bia-accent, #22d3ee); }
+.bia-recipe-name {
+  font-size: 11px;
+  color: var(--bia-text, #f5f5f5);
+  margin-bottom: 4px;
+}
+.bia-recipe-meta {
+  font-size: 9px;
+  color: var(--bia-text-dim, #737373);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 6px;
+}
+.bia-recipe-trigger { color: var(--bia-accent, #22d3ee); }
+.bia-recipe-desc {
+  font-size: 10px;
+  color: var(--text-dim, #a3a3a3);
+  line-height: 1.4;
+}
+
+/* Peer reads */
+.bia-peer-row {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  padding: 6px 12px;
+  font-size: 10px;
+}
+.bia-peer-sprint {
+  color: var(--bia-text-dim, #737373);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  width: 70px;
+  flex-shrink: 0;
+}
+.bia-peer-agents { color: var(--text-dim, #a3a3a3); }
+.bia-peer-row.current .bia-peer-sprint { color: var(--bia-accent, #22d3ee); }
+
+/* Cost */
+.bia-cost-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 12px;
+  font-size: 11px;
+}
+.bia-cost-row .label {
+  color: var(--bia-text-dim, #737373);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 10px;
+}
+.bia-cost-row .value { color: var(--bia-green, #34d399); }
+.bia-cost-note {
+  padding: 8px 12px;
+  font-size: 10px;
+  color: var(--bia-text-dim, #737373);
+  border-top: 1px solid var(--bia-border, #262626);
+  font-style: italic;
+  line-height: 1.4;
+}

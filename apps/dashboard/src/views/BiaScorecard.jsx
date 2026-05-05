@@ -5,6 +5,7 @@ import BiaHeader              from '../components/bia/BiaHeader'
 import BiaStats               from '../components/bia/BiaStats'
 import BiaInstructions        from '../components/bia/BiaInstructions'
 import BiaIntegrations        from '../components/bia/BiaIntegrations'
+import BiaMetaSidebar         from '../components/bia/BiaMetaSidebar'
 
 export default function BiaScorecard() {
   const meta         = useBiaMeta()
@@ -17,17 +18,23 @@ export default function BiaScorecard() {
     <div className="bia-scorecard">
       <BiaHeader meta={meta} isEditing={isEditing} />
 
-      <BiaStats
-        stats={stats}
-        loading={statsLoading}
-        dimmed={isEditing}
-      />
+      <div className={`bsc-grid${isEditing ? ' editing' : ''}`}>
+        <div>
+          <BiaStats
+            stats={stats}
+            loading={statsLoading}
+            dimmed={isEditing}
+          />
 
-      <BiaInstructions {...instructions} />
+          {!isEditing && (
+            <BiaIntegrations integrations={meta.integrations} />
+          )}
 
-      {!isEditing && (
-        <BiaIntegrations integrations={meta.integrations} />
-      )}
+          <BiaInstructions {...instructions} />
+        </div>
+
+        <BiaMetaSidebar hidden={isEditing} />
+      </div>
     </div>
   )
 }
