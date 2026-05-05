@@ -1,12 +1,10 @@
 import { NavLink } from 'react-router-dom'
-import { useVerticalStore, useAuthStore } from '../store'
+import { useVerticalStore } from '../store'
 import { useInboxItems, useApprovals } from '../hooks/useSupabase'
 import { useInboxReads } from '../hooks/useInboxReads'
-import { supabase } from '../lib/supabase.js'
 
 export default function Sidebar({ theme, setTheme, data }) {
   const { activeVertical, setVertical } = useVerticalStore()
-  const { user } = useAuthStore()
   const { items } = useInboxItems(activeVertical)
   const { approvals } = useApprovals(activeVertical)
   const { readSet } = useInboxReads()
@@ -99,15 +97,6 @@ export default function Sidebar({ theme, setTheme, data }) {
             <div className="sidebar-sync">sync {meta.lastSync}</div>
           )}
         </div>
-        {user?.email && (
-          <div className="sidebar-user-email">{user.email}</div>
-        )}
-        <button
-          className="sidebar-logout"
-          onClick={() => supabase?.auth.signOut()}
-        >
-          Encerrar sessão
-        </button>
       </div>
     </aside>
   )

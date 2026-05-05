@@ -1,7 +1,6 @@
 import { useInboxItems } from '../hooks/useSupabase'
 import { useInboxReads } from '../hooks/useInboxReads'
 import { useVerticalStore } from '../store'
-import { useStaffStatus } from '../hooks/useStaffStatus'
 import { useDrawer } from '../context/DrawerContext'
 import InboxItemCard from '../components/inbox/InboxItemCard'
 import InboxItemDrawer from '../components/inbox/InboxItemDrawer'
@@ -10,7 +9,6 @@ export default function InboxView() {
   const { activeVertical } = useVerticalStore()
   const { items, loading, error } = useInboxItems(activeVertical)
   const { readSet, markAsRead, markAsUnread } = useInboxReads()
-  const { isStaff, loading: staffLoading } = useStaffStatus()
   const { openDrawer, closeDrawer } = useDrawer()
 
   // Sort: não lidos primeiro, depois por created_at DESC
@@ -35,24 +33,6 @@ export default function InboxView() {
         onMarkUnread={() => markAsUnread(item.id)}
         onClose={closeDrawer}
       />
-    )
-  }
-
-  // Fallback: autenticado mas não é staff
-  if (!staffLoading && !isStaff) {
-    return (
-      <div>
-        <h1 style={{ marginBottom: 16 }}>Inbox</h1>
-        <div style={{
-          background: 'rgba(245,158,11,0.1)',
-          border: '1px solid rgba(245,158,11,0.3)',
-          borderRadius: 8,
-          padding: 16,
-          color: '#f59e0b',
-        }}>
-          Estás autenticado mas não és staff. Contacta admin para te adicionar a core.staff_roles.
-        </div>
-      </div>
     )
   }
 
