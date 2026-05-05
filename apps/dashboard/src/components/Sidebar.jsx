@@ -1,9 +1,11 @@
 import { NavLink } from 'react-router-dom'
-import { useVerticalStore } from '../store'
+import { useVerticalStore, useAuthStore } from '../store'
 import { useInboxItems, useApprovals } from '../hooks/useSupabase'
+import { supabase } from '../lib/supabase.js'
 
 export default function Sidebar({ theme, setTheme, data }) {
   const { activeVertical, setVertical } = useVerticalStore()
+  const { user } = useAuthStore()
   const { items } = useInboxItems(activeVertical)
   const { approvals } = useApprovals(activeVertical)
 
@@ -83,16 +85,27 @@ export default function Sidebar({ theme, setTheme, data }) {
 
       {/* Footer */}
       <div className="sidebar-footer">
-        <button
-          className="btn-theme"
-          onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-          title={theme === 'dark' ? 'Mudar para tema claro' : 'Mudar para tema escuro'}
-        >
-          {theme === 'dark' ? '☀️' : '🌙'}
-        </button>
-        {meta?.lastSync && (
-          <div className="sidebar-sync">sync {meta.lastSync}</div>
+        <div className="sidebar-footer-top">
+          <button
+            className="btn-theme"
+            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+            title={theme === 'dark' ? 'Mudar para tema claro' : 'Mudar para tema escuro'}
+          >
+            {theme === 'dark' ? '☀️' : '🌙'}
+          </button>
+          {meta?.lastSync && (
+            <div className="sidebar-sync">sync {meta.lastSync}</div>
+          )}
+        </div>
+        {user?.email && (
+          <div className="sidebar-user-email">{user.email}</div>
         )}
+        <button
+          className="sidebar-logout"
+          onClick={() => supabase?.auth.signOut()}
+        >
+          Encerrar sessão
+        </button>
       </div>
     </aside>
   )

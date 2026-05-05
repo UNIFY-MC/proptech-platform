@@ -577,6 +577,12 @@ body {
   border-top: 1px solid var(--border);
   padding: 12px 16px;
   display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sidebar-footer-top {
+  display: flex;
   align-items: center;
   gap: 10px;
 }
@@ -588,6 +594,35 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* Auth — user email + logout */
+.sidebar-user-email {
+  font-size: 11px;
+  color: var(--text-dim);
+  padding: 0;
+  word-break: break-all;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sidebar-logout {
+  display: block;
+  width: 100%;
+  padding: 6px 12px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-dim);
+  font-size: 12px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.sidebar-logout:hover {
+  border-color: var(--danger);
+  color: var(--danger);
 }
 
 /* ============================================================
