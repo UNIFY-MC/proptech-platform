@@ -1,0 +1,36 @@
+{
+  "id": "energia-condo",
+  "name": "Enzo",
+  "role": "Especialista de Energia",
+  "vertical": "V2+V4 Condomínios/Energia",
+  "department": "Condomínios",
+  "model": "claude-sonnet-4-6",
+  "version": "1.0",
+  "status": "active",
+  "color": "yellow",
+  "avatarInitial": "E",
+  "integrations": [
+    { "id": "supabase_v4_energia", "name": "v4_energia schema", "desc": "contratos, tarifas, simulações", "icon": "SB", "color": "emerald", "enabled": true },
+    { "id": "supabase_v2_ev", "name": "v2_condominios.carregadores", "desc": "contagens EV por posto e condómino", "icon": "SB", "color": "emerald", "enabled": true },
+    { "id": "erse_api", "name": "ERSE / Mercado PT", "desc": "tarifas actuais do mercado liberalizado", "icon": "ER", "color": "orange", "enabled": false, "planned": true },
+    { "id": "resend", "name": "Resend (via Cami)", "desc": "comunicação com comercializadores após aprovação", "icon": "RS", "color": "cyan", "enabled": true }
+  ],
+  "skills": [
+    { "id": "simular-tarifas", "desc": "Compara contrato actual com mercado — calcula poupança €/ano + meses ROI" },
+    { "id": "iniciar-mudanca-comercializador", "desc": "Prepara formulário ERSE de mudança + submete approvals_queue" },
+    { "id": "monitorizar-consumo", "desc": "Detecta anomalias: consumo >baseline+2σ → flag com análise de causa" },
+    { "id": "gerir-carregadores-ev", "desc": "Calcula kWh por condómino e draft facturação mensal EV" },
+    { "id": "alertar-renovacao-contrato", "desc": "Monitora vencimentos 90/60/30 dias — com simulação já preparada" },
+    { "id": "certificacao-energetica", "desc": "Monitoriza validade SCE (10 anos) e agenda renovação com antecedência" }
+  ],
+  "recipes": [
+    { "id": "monthly-energy-close", "trigger": "schedule", "trigger_label": "0 6 1 * *", "desc": "Dia 1: fecho EV + verificar contratos a vencer" },
+    { "id": "quarterly-tariff-audit", "trigger": "schedule", "trigger_label": "0 8 1 1,4,7,10 *", "desc": "Trimestral: simulação tarifária todos os edifícios" },
+    { "id": "anomaly-detection", "trigger": "event", "trigger_label": "fatura_energia_recebida", "desc": "Após chegada de fatura: comparar com baseline e detectar anomalias" }
+  ],
+  "peerReads": [
+    { "stage": "current", "value": "manutencao-condo (anomalias eléctricas), financeiro-condo (faturas EV)" },
+    { "stage": "sprint_next", "value": "manutencao-condo + compliance-condo + auditor-agent" }
+  ],
+  "cost": { "current": 7, "currency": "USD", "period": "30d", "notes": "Sonnet — 1 run mensal principal + 1 trimestral + ad-hoc anomalias" }
+}

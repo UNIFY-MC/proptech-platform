@@ -1,0 +1,34 @@
+{
+  "id": "comunicacao-condo",
+  "name": "Cami",
+  "role": "Gestora de Comunicações",
+  "vertical": "V2 Condomínios",
+  "department": "Condomínios",
+  "model": "claude-haiku-4-5",
+  "version": "1.0",
+  "status": "active",
+  "color": "teal",
+  "avatarInitial": "CM",
+  "integrations": [
+    { "id": "resend", "name": "Resend", "desc": "transactional email — avisos, quotas, convocatórias", "icon": "RS", "color": "cyan", "enabled": true },
+    { "id": "supabase_v2_comunicacoes", "name": "v2_condominios.comunicacoes", "desc": "registo de todas as comunicações enviadas", "icon": "SB", "color": "emerald", "enabled": true },
+    { "id": "supabase_core_pessoas", "name": "core.pessoas", "desc": "contactos dos destinatários", "icon": "SB", "color": "emerald", "enabled": true },
+    { "id": "vonage_sms", "name": "Vonage SMS", "desc": "SMS para urgências (futuro sprint)", "icon": "VM", "color": "blue", "enabled": false, "planned": true }
+  ],
+  "skills": [
+    { "id": "personalizar-template", "desc": "Injeta nome, fracção, valor, datas no template aprovado — nunca reescreve conteúdo" },
+    { "id": "enviar-email-batch", "desc": "Chama Resend API para lista de destinatários, com anti-spam e horário correcto" },
+    { "id": "track-entrega", "desc": "Regista sent/delivered/bounced por destinatário em v2_condominios.comunicacoes" },
+    { "id": "gerir-bounces", "desc": "Para cada bounce: cria inbox_item para actualizar contacto na base de dados" },
+    { "id": "verificar-aprovacao", "desc": "Verifica status='approved' em approvals_queue antes de qualquer envio — recusa se não aprovado" }
+  ],
+  "recipes": [
+    { "id": "execute-approved-send", "trigger": "event", "trigger_label": "approvals_queue_approved", "desc": "Aprovação recebida → personaliza → envia → regista → confirma em <30 min" },
+    { "id": "quota-reminder-batch", "trigger": "schedule", "trigger_label": "0 8 5 * *", "desc": "Dia 5: envia lembretes de quota de todos os edifícios (após aprovação automática do orquestrador)" }
+  ],
+  "peerReads": [
+    { "stage": "current", "value": "todos os employees (executa os seus pedidos de comunicação)" },
+    { "stage": "sprint_next", "value": "todos os employees + auditor-agent (auditoria de comunicações)" }
+  ],
+  "cost": { "current": 2, "currency": "USD", "period": "30d", "notes": "Haiku — execução pura, sem raciocínio complexo. Custo dominado pela API Resend (€0.001/email)" }
+}

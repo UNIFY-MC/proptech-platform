@@ -21,14 +21,4 @@ const useNotificationsStore = create((set) => ({
     set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),
 }))
 
-// Auth — NÃO persiste (Supabase gere sessão via localStorage interno)
-const useAuthStore = create((set) => ({
-  session: null,
-  user: null,
-  loading: true,
-  setSession: (session) =>
-    set({ session, user: session?.user || null, loading: false }),
-  clear: () => set({ session: null, user: null, loading: false }),
-}))
-
-export { useVerticalStore, useNotificationsStore, useAuthStore }
+export { useVerticalStore, useNotificationsStore }

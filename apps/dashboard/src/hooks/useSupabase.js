@@ -36,7 +36,7 @@ export function useInboxItems(vertical = null) {
     fetchItems()
 
     const channel = supabase
-      .channel(`inbox_items_changes-${crypto.randomUUID()}`)
+      .channel('inbox_items_changes')
       .on('postgres_changes', {
         event: '*',
         schema: 'system',
@@ -50,8 +50,7 @@ export function useInboxItems(vertical = null) {
   return { items, loading, error }
 }
 
-// statusFilter: 'pending' | 'approved' | 'dismissed' | 'edited_approved' | null (= all)
-export function useApprovals(vertical = null, statusFilter = 'pending') {
+export function useApprovals(vertical = null) {
   const [approvals, setApprovals] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -68,9 +67,9 @@ export function useApprovals(vertical = null, statusFilter = 'pending') {
         .schema('system')
         .from('approvals_queue')
         .select('*')
-        .order('created_at', { ascending: false })
+        .eq('status', 'pending')
+        .order('created_at', { ascending: true })
 
-      if (statusFilter) query = query.eq('status', statusFilter)
       if (vertical) query = query.eq('target_vertical', vertical)
 
       const { data, error } = await query
@@ -82,7 +81,7 @@ export function useApprovals(vertical = null, statusFilter = 'pending') {
     fetchApprovals()
 
     const channel = supabase
-      .channel(`approvals_changes-${crypto.randomUUID()}`)
+      .channel('approvals_changes')
       .on('postgres_changes', {
         event: '*',
         schema: 'system',
@@ -91,7 +90,7 @@ export function useApprovals(vertical = null, statusFilter = 'pending') {
       .subscribe()
 
     return () => supabase.removeChannel(channel)
-  }, [vertical, statusFilter])
+  }, [vertical])
 
   return { approvals, loading, error }
 }

@@ -1,65 +1,101 @@
 import { useState, useEffect } from 'react'
-import { Routes, Route, Navigate } from 'react-router-dom'
 import { useData } from './hooks/useData.js'
 import { DrawerProvider } from './context/DrawerContext.jsx'
-import Sidebar from './components/Sidebar.jsx'
 import Overview from './components/Overview.jsx'
 import Activity from './components/Activity.jsx'
 import Agents from './components/Agents.jsx'
 import Roadmap from './components/Roadmap.jsx'
 import Watchers from './components/Watchers.jsx'
 import Competitors from './components/Competitors.jsx'
-import InboxView from './views/InboxView.jsx'
-import ApprovalsView from './views/ApprovalsView.jsx'
-import BiaPlaceholder from './views/BiaPlaceholder.jsx'
-import BiaScorecard from './views/BiaScorecard.jsx'
-import LoginView from './views/LoginView.jsx'
-import ToastContainer from './components/ToastContainer.jsx'
+import Verticais from './components/Verticais.jsx'
+import Equipa from './components/Equipa.jsx'
+
+const TABS = ['Overview', 'Roadmap', 'Watchers', 'Competitors', 'Actividade', 'Agentes', 'Equipa', 'Verticais']
+
+const TAB_COMPONENTS = {
+  Overview,
+  Roadmap,
+  Watchers,
+  Competitors,
+  Actividade: Activity,
+  Agentes: Agents,
+  Equipa,
+  Verticais,
+}
+
+function tabLabel(name, data) {
+  if (!data) return name
+  const counts = {
+    'Roadmap':     data.roadmap?.length,
+    'Watchers':    data.watchers?.filter(w => w.status !== 'never').length,
+    'Competitors': data.competitors?.length,
+    'Actividade':  data.recentActivity?.length,
+    'Agentes':     data.agents?.length,
+    'Equipa':      data.employees?.length,
+  }
+  const c = counts[name]
+  return (c && c > 0) ? `${name} · ${c}` : name
+}
 
 export default function App() {
-  const { data, error } = useData()
+  const [tab, setTab] = useState('Overview')
+  const { data, loading, error, lastSync, refresh } = useData()
 
-  const [theme, setTheme] = useState(
-    () => localStorage.getItem('dashboard-theme') || 'dark'
-  )
+  const [theme, setTheme] = useState(() => localStorage.getItem('dashboard-theme') || 'dark')
 
   useEffect(() => {
     document.body.setAttribute('data-theme', theme)
     localStorage.setItem('dashboard-theme', theme)
   }, [theme])
 
+  const ActiveComponent = TAB_COMPONENTS[tab]
+
   return (
     <DrawerProvider>
-      <ToastContainer />
-      <div className="layout">
-        <Sidebar theme={theme} setTheme={setTheme} data={data} />
-        <main className="main-content">
+      <div className="app">
+        <header className="app-header">
+          <div>
+            <h1>PropTech Platform</h1>
+            <span className="last-sync">
+              {lastSync ? `Actualizado ${lastSync}` : 'A carregar…'}
+            </span>
+          </div>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <button
+              onClick={() => setTheme(t => t === 'dark' ? 'light' : 'dark')}
+              className="btn-theme"
+              title={theme === 'dark' ? 'Mudar para tema claro' : 'Mudar para tema escuro'}
+            >
+              {theme === 'dark' ? '☀️' : '🌙'}
+            </button>
+            <button onClick={refresh} className="btn-refresh" disabled={loading}>
+              {loading ? '⏳ A actualizar…' : '🔄 Refresh'}
+            </button>
+          </div>
+        </header>
+
+        <nav className="tabs">
+          {TABS.map(t => (
+            <button
+              key={t}
+              className={`tab ${tab === t ? 'active' : ''}`}
+              onClick={() => setTab(t)}
+            >
+              {tabLabel(t, data)}
+            </button>
+          ))}
+        </nav>
+
+        <main className="content">
           {error && (
             <div className="error-banner">
               Erro ao carregar dados: {error}
             </div>
           )}
-          <Routes>
-            <Route path="/" element={<Navigate to="/inbox" replace />} />
-            <Route path="/login" element={<LoginView />} />
-            <Route path="/inbox" element={<InboxView />} />
-            <Route path="/approvals" element={<ApprovalsView />} />
-            <Route path="/overview" element={<Overview data={data} />} />
-            <Route path="/roadmap" element={<Roadmap data={data} />} />
-            <Route path="/watchers" element={<Watchers data={data} />} />
-            <Route path="/competitors" element={<Competitors data={data} />} />
-            <Route path="/activity" element={<Activity data={data} />} />
-            <Route path="/agents" element={<Agents data={data} />} />
-            <Route path="/employees/bia" element={<BiaScorecard />} />
-            <Route
-              path="*"
-              element={
-                <div style={{ padding: '2rem' }}>
-                  <h2>404</h2>
-                </div>
-              }
-            />
-          </Routes>
+          {!data && !error && (
+            <div className="loading">A carregar dados do dashboard…</div>
+          )}
+          {data && <ActiveComponent data={data} />}
         </main>
       </div>
     </DrawerProvider>

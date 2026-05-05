@@ -3,6 +3,7 @@
   "name": "Bia",
   "role": "Maintenance Concierge",
   "vertical": "V5 PRATA",
+  "department": "Manutenção",
   "model": "claude-sonnet-4-6",
   "version": "1.1",
   "status": "active",
@@ -34,12 +35,6 @@
     { "stage": "sprint_1f", "value": "auditor" },
     { "stage": "sprint_2a", "value": "casa-advisor + auditor" },
     { "stage": "sprint_2b", "value": "matchmaker + auditor" }
-  ],
-  "peer_reads": [
-    { "sprint": "current",   "agents": [] },
-    { "sprint": "sprint_1f", "agents": ["auditor"] },
-    { "sprint": "sprint_2a", "agents": ["casa-advisor", "auditor"] },
-    { "sprint": "sprint_2b", "agents": ["casa-advisor", "auditor", "v5-matchmaker"] }
   ],
   "cost": { "current": 5, "currency": "USD", "period": "30d", "sprint_1e": "$5/mo", "sprint_1f": "$25/mo", "notes": "Prompt cache pode reduzir 60-70%" }
 }

@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<title>V5 Desktop Suite — Admin · Cliente · Prestador · V2 Copilot</title>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, sans-serif; }
+body { background: #e5e5e3; min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 14px 8px; gap: 12px; }
+button, input, select, textarea { font-family: inherit; border: none; background: none; }
+.pills { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.pill { font-size: 12px; padding: 7px 14px; border-radius: 16px; cursor: pointer; font-weight: 600; border: 1px solid #e5e5e3; background: #fff; color: #555; }
+.pill.on-dark { border-color: #1a1a2e; background: #1a1a2e; color: #fff; }
+.pill.on-green { border-color: #1B4332; background: #1B4332; color: #fff; }
+.pill.on-copper { border-color: #C17E3A; background: #C17E3A; color: #fff; }
+.pill.on-purple { border-color: #534AB7; background: #534AB7; color: #fff; }
+.app { width: 100%; max-width: 1280px; height: 740px; background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,.18); display: flex; }
+.sidebar { width: 220px; display: flex; flex-direction: column; flex-shrink: 0; color: #fff; }
+.sb-admin { background: #1a1a2e; }
+.sb-client { background: #1B4332; }
+.sb-pro { background: #1a1a18; }
+.sb-copilot { background: #26215C; }
+.logo { padding: 14px 18px; border-bottom: 1px solid rgba(255,255,255,.08); display: flex; align-items: center; gap: 10px; }
+.logo-box { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; }
+.sb-admin .logo-box { background: #D4A72C; color: #1a1a2e; }
+.sb-client .logo-box { background: #52B788; color: #1B4332; }
+.sb-pro .logo-box { background: #C17E3A; color: #1a1a18; }
+.sb-copilot .logo-box { background: #FFD166; color: #26215C; }
+.logo-title { font-size: 12px; font-weight: 700; }
+.logo-sub { font-size: 9px; color: rgba(255,255,255,.5); letter-spacing: .3px; }
+.nav { flex: 1; overflow-y: auto; padding: 8px 0; }
+.nav-gt { font-size: 9px; color: rgba(255,255,255,.35); font-weight: 700; letter-spacing: .8px; padding: 8px 18px 5px; }
+.nav-item { padding: 7px 18px; display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 11.5px; color: rgba(255,255,255,.72); border-left: 3px solid transparent; }
+.nav-item:hover { color: #fff; background: rgba(255,255,255,.04); }
+.nav-item.on { background: rgba(255,255,255,.1); color: #fff; font-weight: 600; }
+.sb-admin .nav-item.on { border-left-color: #D4A72C; }
+.sb-client .nav-item.on { border-left-color: #52B788; }
+.sb-pro .nav-item.on { border-left-color: #C17E3A; }
+.sb-copilot .nav-item.on { border-left-color: #FFD166; }
+.nav-ic { font-size: 14px; }
+.nav-badge { margin-left: auto; font-size: 9px; padding: 1px 6px; border-radius: 3px; font-weight: 700; background: rgba(255,255,255,.15); }
+.user-card { padding: 10px 16px; border-top: 1px solid rgba(255,255,255,.08); display: flex; align-items: center; gap: 10px; }
+.user-avatar { width: 30px; height: 30px; border-radius: 50%; font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.sb-admin .user-avatar { background: #D4A72C; color: #1a1a2e; }
+.sb-client .user-avatar { background: #52B788; color: #1B4332; }
+.sb-pro .user-avatar { background: #C17E3A; color: #1a1a18; }
+.sb-copilot .user-avatar { background: #FFD166; color: #26215C; }
+.user-name { font-size: 11px; font-weight: 700; }
+.user-sub { font-size: 9px; color: rgba(255,255,255,.5); }
+.main { flex: 1; overflow: auto; background: #f7f7f5; }
+.topbar { background: #fff; border-bottom: 1px solid #e5e5e3; padding: 11px 22px; display: flex; align-items: center; justify-content: space-between; }
+.topbar-label { font-size: 10px; color: #999; font-weight: 700; letter-spacing: .5px; }
+.topbar-title { font-size: 17px; font-weight: 700; color: #111; font-family: Georgia, serif; margin-top: 2px; }
+.btn { padding: 7px 13px; border-radius: 7px; font-size: 12px; font-weight: 700; cursor: pointer; }
+.btn-dark { background: #1a1a2e; color: #fff; }
+.btn-green { background: #1B4332; color: #fff; }
+.btn-copper { background: #C17E3A; color: #fff; }
+.btn-purple { background: #534AB7; color: #fff; }
+.kpis { padding: 18px 22px; display: grid; gap: 10px; }
+.kpi { background: #fff; border: 1px solid #e5e5e3; border-radius: 10px; padding: 13px 14px; }
+.kpi-l { font-size: 9px; color: #999; text-transform: uppercase; letter-spacing: .3px; font-weight: 700; }
+.kpi-v { font-size: 22px; font-weight: 700; margin-top: 4px; }
+.kpi-s { font-size: 10px; color: #555; margin-top: 2px; }
+.grid { padding: 0 22px 22px; display: grid; gap: 14px; }
+.card { background: #fff; border: 1px solid #e5e5e3; border-radius: 10px; }
+.card-hdr { padding: 12px 15px; border-bottom: 1px solid #e5e5e3; display: flex; justify-content: space-between; align-items: center; }
+.card-title { font-size: 13px; font-weight: 700; }
+.card-sub { font-size: 10px; color: #999; margin-top: 2px; }
+.tbl-hdr { padding: 8px 15px; background: #f7f7f5; font-size: 9px; font-weight: 700; color: #999; text-transform: uppercase; letter-spacing: .3px; border-bottom: 1px solid #e5e5e3; display: grid; }
+.tbl-row { padding: 10px 15px; border-bottom: 1px solid #e5e5e3; align-items: center; display: grid; font-size: 11px; cursor: pointer; }
+.tbl-row:hover { background: #fafaf8; }
+.tbl-row:last-child { border-bottom: none; }
+.badge { font-size: 10px; padding: 2px 7px; border-radius: 5px; font-weight: 700; display: inline-block; }
+.b-red { background: #FCEBEB; color: #A32D2D; }
+.b-amb { background: #FAEEDA; color: #854F0B; }
+.b-grn { background: #D8F3DC; color: #1B4332; }
+.b-blu { background: #E6F1FB; color: #185FA5; }
+.b-ppl { background: #EEEDFE; color: #534AB7; }
+.mono { font-family: monospace; font-size: 10px; font-weight: 700; }
+.btn-mini { font-size: 10px; padding: 4px 9px; border-radius: 5px; font-weight: 700; cursor: pointer; }
+.section-title { padding: 18px 22px 6px; font-size: 13px; font-weight: 700; font-family: Georgia, serif; }
+.small-bar { height: 5px; background: #f5f5f3; border-radius: 3px; overflow: hidden; }
+.chat-msg { padding: 9px 12px; border-radius: 10px; font-size: 11px; line-height: 1.5; max-width: 88%; margin-bottom: 7px; }
+.chat-ai { background: #EEEDFE; color: #26215C; align-self: flex-start; }
+.chat-user { background: #534AB7; color: #fff; align-self: flex-end; margin-left: auto; }
+.footer-info { font-size: 10px; color: #999; text-align: center; max-width: 720px; line-height: 1.5; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState } = React;
+
+function Sidebar({ role, active, setActive }) {
+  const cfgs = {
+    admin: {
+      cls: "sb-admin", logo: "V5", title: "V5 Admin", sub: "ERP · CRM",
+      user: "Mário Carvalho", usub: "Super Admin", ini: "MC",
+      groups: [
+        { t: "Operações", items: [["📊","Dashboard"],["👥","Utilizadores"],["🔧","Prestadores"],["📋","Ordens"],["💰","Financeiro"],["⚖️","Disputas","4"]] },
+        { t: "Negócio", items: [["📈","Analytics"],["🎯","Marketing"],["🏢","B2B Condos","42"]] },
+        { t: "Plataforma", items: [["⚙️","Configurações"],["🔌","Integrações"],["🛡️","Compliance"]] }
+      ]
+    },
+    client: {
+      cls: "sb-client", logo: "V5", title: "V5 Home", sub: "A minha casa",
+      user: "Maria Santos", usub: "Home+ · 🔥 22d", ini: "MS",
+      groups: [
+        { t: "Minha casa", items: [["🏡","Visão geral"],["🔧","Equipamentos"],["📄","Documentos","47"],["⚡","Energia"]] },
+        { t: "Serviços", items: [["📋","Pedidos"],["🛠️","Catálogo"],["💰","Orçamentos","2"],["👥","Equipa"]] },
+        { t: "Financeiro", items: [["📊","Gastos 2026"],["💸","Poupanças"],["💳","Subscrição"]] },
+        { t: "IA", items: [["🤖","AI Expert"],["🔔","Alertas","3"]] }
+      ]
+    },
+    pro: {
+      cls: "sb-pro", logo: "V5", title: "V5 Pro", sub: "Gestão profissional",
+      user: "António Ferreira", usub: "Pro · Certificado", ini: "AF",
+      groups: [
+        { t: "Hoje", items: [["📅","Agenda"],["🔧","Em curso"],["📥","Pedidos","3"]] },
+        { t: "Negócio", items: [["👥","Clientes","87"],["📝","Orçamentos"],["🧾","Faturas"],["📊","Dashboard"]] },
+        { t: "Financeiro", items: [["💰","Receitas"],["🧮","Contabilidade"]] },
+        { t: "Ferramentas", items: [["🗂️","Serviços"],["⭐","Avaliações"]] }
+      ]
+    },
+    copilot: {
+      cls: "sb-copilot", logo: "V2", title: "V2 Copilot", sub: "IA · Condomínios",
+      user: "AdminCondo Lda", usub: "42 edifícios", ini: "AC",
+      groups: [
+        { t: "Assistente IA", items: [["✨","Briefing semanal"],["🎙️","Atas IA"],["📄","Análise orçamentos"],["💬","Chat condóminos"]] },
+        { t: "Gestão", items: [["🏢","Carteira"],["⚠️","Obrigatórias","7"],["📅","Assembleias"]] },
+        { t: "Automação", items: [["📧","Comunicações"],["🔔","Compliance"],["📊","Insights"]] }
+      ]
+    }
+  };
+  const c = cfgs[role];
+  let idx = -1;
+  return (
+    <div className={"sidebar " + c.cls}>
+      <div className="logo">
+        <div className="logo-box">{c.logo}</div>
+        <div>
+          <div className="logo-title">{c.title}</div>
+          <div className="logo-sub">{c.sub}</div>
+        </div>
+      </div>
+      <div className="nav">
+        {c.groups.map(g => (
+          <div key={g.t}>
+            <div className="nav-gt">{g.t.toUpperCase()}</div>
+            {g.items.map((it) => {
+              idx++;
+              const myIdx = idx;
+              const [ic, l, badge] = it;
+              return (
+                <div key={l} onClick={() => setActive(myIdx)} className={"nav-item" + (myIdx === active ? " on" : "")}>
+                  <span className="nav-ic">{ic}</span>
+                  <span>{l}</span>
+                  {badge && <span className="nav-badge">{badge}</span>}
+                </div>
+              );
+            })}
+          </div>
+        ))}
+      </div>
+      <div className="user-card">
+        <div className="user-avatar">{c.ini}</div>
+        <div style={{minWidth:0}}>
+          <div className="user-name">{c.user}</div>
+          <div className="user-sub">{c.usub}</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ADMIN VIEWS */
+function AdminDashboard() {
+  return (
+    <React.Fragment>
+      <div className="kpis" style={{gridTemplateColumns:"repeat(6,1fr)"}}>
+        {[["Utilizadores","1.847","+124 mês","#1B4332"],["MRR","8.340€","+18%","#1B4332"],["Comissões","12.450€","320 ordens","#D4A72C"],["Prest. Pro","87","+12","#C17E3A"],["Disputas","4","prazo 48h","#A32D2D"],["Churn","2.3%","-0.8pp","#1B4332"]].map(k => (
+          <div key={k[0]} className="kpi">
+            <div className="kpi-l">{k[0]}</div>
+            <div className="kpi-v" style={{color:k[3]}}>{k[1]}</div>
+            <div className="kpi-s">{k[2]}</div>
+          </div>
+        ))}
+      </div>
+      <div className="grid" style={{gridTemplateColumns:"2fr 1fr"}}>
+        <div className="card">
+          <div className="card-hdr">
+            <div>
+              <div className="card-title">🚨 Ordens com atenção</div>
+              <div className="card-sub">Sem prestador · reclamação · pagamento atrasado</div>
+            </div>
+            <span style={{fontSize:11,color:"#1a1a2e",fontWeight:700,cursor:"pointer"}}>Ver 18 →</span>
+          </div>
+          <div className="tbl-hdr" style={{gridTemplateColumns:"80px 1fr 1fr 70px 130px 85px"}}>
+            <span>Ordem</span><span>Cliente</span><span>Serviço</span><span>Valor</span><span>Problema</span><span>Ação</span>
+          </div>
+          {[
+            ["ORD-2889","Rita Costa","Revisão caldeira","93€","Sem prest 36h","#A32D2D"],
+            ["ORD-2876","João Lopes","Impermeabilização","340€","Reclamação","#854F0B"],
+            ["ORD-2871","Ana Reis","Limpeza","120€","Pag. 15d","#854F0B"],
+            ["ORD-2866","Cond. Palmeira","Elevador","580€","Docs","#555"]
+          ].map((r,i) => (
+            <div key={i} className="tbl-row" style={{gridTemplateColumns:"80px 1fr 1fr 70px 130px 85px"}}>
+              <span className="mono" style={{color:"#1a1a2e"}}>{r[0]}</span>
+              <span>{r[1]}</span>
+              <span style={{color:"#555"}}>{r[2]}</span>
+              <span style={{fontWeight:700}}>{r[3]}</span>
+              <span style={{fontSize:10,color:r[5],fontWeight:600}}>{r[4]}</span>
+              <button className="btn-mini btn-dark">Resolver</button>
+            </div>
+          ))}
+        </div>
+        <div style={{display:"flex",flexDirection:"column",gap:12}}>
+          <div style={{background:"#1a1a2e",borderRadius:10,padding:"14px 16px",color:"#fff"}}>
+            <div style={{fontSize:9,color:"#D4A72C",fontWeight:700,letterSpacing:.4}}>🤖 IA SUPERVISOR</div>
+            <div style={{fontSize:13,fontWeight:700,margin:"5px 0 6px"}}>3 padrões detectados</div>
+            <div style={{fontSize:11,color:"rgba(255,255,255,.75)",lineHeight:1.5}}>Ricardo Gomes: 4 avaliações {"<"} 3★ em 30d.</div>
+            <button style={{background:"#D4A72C",color:"#1a1a2e",padding:"6px 10px",borderRadius:6,fontSize:10,fontWeight:700,marginTop:10,cursor:"pointer"}}>Ver análise →</button>
+          </div>
+          <div className="card" style={{padding:"12px 14px"}}>
+            <div className="card-title" style={{marginBottom:4}}>🔗 Integrações V1/V2</div>
+            <div style={{fontSize:10,color:"#999",marginBottom:9}}>Cross-app + cross-sell</div>
+            {[["V2 Condomínios","42"],["V3 Seguros","14"],["V4 Energia","+28"],["Cross-sell IA","5"]].map(r => (
+              <div key={r[0]} style={{display:"flex",justifyContent:"space-between",padding:"4px 0",fontSize:10.5}}>
+                <span style={{color:"#555"}}>{r[0]}</span><b>{r[1]}</b>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </React.Fragment>
+  );
+}
+
+function AdminUsers() {
+  return (
+    <div style={{padding:"20px 22px"}}>
+      <div className="card">
+        <div className="card-hdr">
+          <div>
+            <div className="card-title">👥 Utilizadores · 1.847 total</div>
+            <div className="card-sub">Individuais · Condomínios · Empresas · Prestadores</div>
+          </div>
+          <div style={{display:"flex",gap:8}}>
+            <input placeholder="Procurar..." style={{padding:"6px 10px",borderRadius:6,border:"1px solid #e5e5e3",fontSize:11,outline:"none",width:160}}/>
+            <button className="btn btn-dark">+ Convidar</button>
+          </div>
+        </div>
+        <div style={{padding:"8px 15px",display:"flex",gap:6,borderBottom:"1px solid #e5e5e3",flexWrap:"wrap"}}>
+          {[["Todos",1847,true],["Indiv.",1420],["Condomínio",142],["Empresa",18],["Prest. básico",180],["Prest. Pro",87]].map(([l,n,on]) => (
+            <div key={l} style={{fontSize:10,padding:"4px 10px",borderRadius:12,background:on?"#1a1a2e":"#f5f5f3",color:on?"#fff":"#555",cursor:"pointer",fontWeight:on?700:400,border:"1px solid "+(on?"#1a1a2e":"#e5e5e3")}}>{l} ({n})</div>
+          ))}
+        </div>
+        <div className="tbl-hdr" style={{gridTemplateColumns:"1fr 130px 100px 70px 90px 100px"}}>
+          <span>Utilizador</span><span>Tipo</span><span>Subscrição</span><span>Ordens</span><span>Lifetime</span><span>Estado</span>
+        </div>
+        {[
+          ["Maria Santos","Cliente Indiv.","Home+","23","1.240€","✓ Ativo","#1B4332","b-grn"],
+          ["AdminCondo Lda","Empresa B2B","B2B Pro","342","38.470€","✓ Ativo","#534AB7","b-ppl"],
+          ["Cond. Palmeira 2A","Condomínio","—","18","4.230€","✓ Ativo","#534AB7","b-ppl"],
+          ["António Ferreira","Prest. Pro","Trial 30d","64","—","⏱ Trial 12d","#C17E3A","b-amb"],
+          ["Rita Costa","Cliente Indiv.","Grátis","3","180€","⚠ Disputa","#A32D2D","b-red"],
+          ["Imob. Central Lda","Empresa · 3 esc.","B2B","28","2.340€","✓ Ativo","#534AB7","b-ppl"]
+        ].map((r,i) => (
+          <div key={i} className="tbl-row" style={{gridTemplateColumns:"1fr 130px 100px 70px 90px 100px"}}>
+            <span style={{fontWeight:600}}>{r[0]}</span>
+            <span className={"badge " + r[7]}>{r[1]}</span>
+            <span style={{fontSize:10,color:"#555"}}>{r[2]}</span>
+            <span>{r[3]}</span>
+            <span style={{fontWeight:700,color:"#1B4332"}}>{r[4]}</span>
+            <span style={{fontSize:10,color:r[6],fontWeight:600}}>{r[5]}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* CLIENT VIEWS */
+function ClientOverview() {
+  return (
+    <React.Fragment>
+      <div style={{padding:"20px 22px 14px"}}>
+        <div style={{background:"linear-gradient(135deg,#1B4332,#2D6A4F)",borderRadius:12,padding:"22px 24px",color:"#fff",display:"grid",gridTemplateColumns:"1fr 1fr",gap:22}}>
+          <div>
+            <div style={{fontSize:10,color:"#52B788",fontWeight:700,letterSpacing:.5}}>A TUA CASA</div>
+            <div style={{fontSize:58,fontWeight:700,lineHeight:1,fontFamily:"Georgia, serif",marginTop:4}}>74<span style={{fontSize:22,opacity:.6}}>/100</span></div>
+            <div style={{fontSize:12,marginTop:5}}>🌱 Casa Saudável · +11 pts para Gold</div>
+            <div style={{display:"flex",gap:14,marginTop:14,fontSize:11}}>
+              <span>⭐ 1.240 pts</span><span>🔥 22 dias</span><span>💸 147€ poupados</span>
+            </div>
+          </div>
+          <div>
+            {[["AVAC",82],["Canalização",91],["Elétrica",70],["Estrutura",60],["Água",88]].map(([l,v]) => (
+              <div key={l} style={{marginBottom:7}}>
+                <div style={{display:"flex",justifyContent:"space-between",fontSize:10,marginBottom:2,color:"rgba(255,255,255,.85)"}}>
+                  <span>{l}</span><b>{v}</b>
+                </div>
+                <div style={{height:4,background:"rgba(255,255,255,.2)",borderRadius:2}}>
+                  <div style={{width:v+"%",height:4,background:v>=85?"#52B788":v>=70?"#FAC775":"#F9BABA",borderRadius:2}}/>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+      <div className="grid" style={{gridTemplateColumns:"2fr 1fr"}}>
+        <div className="card" style={{padding:"14px 16px"}}>
+          <div className="card-title" style={{marginBottom:12}}>📊 Gastos · 2026 YTD</div>
+          <div style={{display:"flex",gap:20,alignItems:"center"}}>
+            <div style={{position:"relative",width:140,height:140,flexShrink:0}}>
+              <svg width="140" height="140" style={{transform:"rotate(-90deg)"}}>
+                <circle cx="70" cy="70" r="56" stroke="#f5f5f3" strokeWidth="16" fill="none"/>
+                <circle cx="70" cy="70" r="56" stroke="#52B788" strokeWidth="16" fill="none" strokeDasharray="352" strokeDashoffset="176"/>
+                <circle cx="70" cy="70" r="56" stroke="#185FA5" strokeWidth="16" fill="none" strokeDasharray="352" strokeDashoffset="260"/>
+                <circle cx="70" cy="70" r="56" stroke="#854F0B" strokeWidth="16" fill="none" strokeDasharray="352" strokeDashoffset="308"/>
+              </svg>
+              <div style={{position:"absolute",inset:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
+                <div style={{fontSize:9,color:"#999"}}>Total</div>
+                <div style={{fontSize:22,fontWeight:700}}>1.240€</div>
+              </div>
+            </div>
+            <div style={{flex:1}}>
+              {[["Manutenção preventiva",620,"#52B788"],["Reparações",340,"#185FA5"],["Limpeza",180,"#854F0B"],["Outros",100,"#999"]].map(s => (
+                <div key={s[0]} style={{display:"flex",alignItems:"center",gap:8,padding:"5px 0",fontSize:11}}>
+                  <div style={{width:10,height:10,borderRadius:2,background:s[2]}}/>
+                  <span style={{flex:1}}>{s[0]}</span><b>{s[1]}€</b>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+        <div style={{display:"flex",flexDirection:"column",gap:12}}>
+          <div style={{background:"#FCEBEB",border:"1px solid #F9BABA",borderRadius:10,padding:"12px 14px"}}>
+            <div style={{fontSize:9,color:"#A32D2D",fontWeight:700,letterSpacing:.4}}>🚨 URGENTE</div>
+            <div style={{fontSize:12,fontWeight:700,margin:"4px 0"}}>Cobertura em risco</div>
+            <div style={{fontSize:10.5,color:"#A32D2D",lineHeight:1.5,marginBottom:9}}>35mm previstos. Telhado score 38.</div>
+            <button className="btn-mini" style={{background:"#A32D2D",color:"#fff"}}>Agendar técnico →</button>
+          </div>
+          <div className="card" style={{padding:"13px 14px"}}>
+            <div className="kpi-l">SUBSCRIÇÃO HOME+</div>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginTop:4}}>
+              <span style={{fontSize:11,color:"#555"}}>A pagar</span>
+              <span style={{fontSize:20,fontWeight:700,color:"#1B4332"}}>2,10€</span>
+            </div>
+            <div style={{fontSize:10,color:"#999"}}>6,90€ − 4,80€ crédito</div>
+            <div className="small-bar" style={{marginTop:8}}>
+              <div style={{width:"70%",height:5,background:"linear-gradient(90deg,#52B788,#D4A72C)",borderRadius:3}}/>
+            </div>
+            <div style={{fontSize:10,color:"#555",marginTop:4}}>+21€ = grátis</div>
+          </div>
+        </div>
+      </div>
+    </React.Fragment>
+  );
+}
+
+function ClientDocs() {
+  return (
+    <div style={{padding:"20px 22px"}}>
+      <div className="card">
+        <div className="card-hdr">
+          <div>
+            <div className="card-title">📄 Cofre de documentos</div>
+            <div className="card-sub">47 documentos · 234 MB · encriptados</div>
+          </div>
+          <div style={{display:"flex",gap:6}}>
+            <input placeholder="Procurar..." style={{padding:"5px 10px",borderRadius:6,border:"1px solid #e5e5e3",fontSize:11,width:160,outline:"none"}}/>
+            <button className="btn btn-green" style={{fontSize:11,padding:"6px 12px"}}>+ Upload</button>
+          </div>
+        </div>
+        <div style={{padding:"8px 15px",display:"flex",gap:6,borderBottom:"1px solid #e5e5e3",flexWrap:"wrap"}}>
+          {[["Todos",47,true],["Faturas",18],["Garantias",12],["Relatórios",9],["Contratos",5],["Manuais",3]].map(([l,n,on]) => (
+            <div key={l} style={{fontSize:10,padding:"4px 10px",borderRadius:12,background:on?"#D8F3DC":"#f5f5f3",color:on?"#1B4332":"#555",cursor:"pointer",fontWeight:on?700:400,border:"1px solid "+(on?"#52B788":"#e5e5e3")}}>{l} ({n})</div>
+          ))}
+        </div>
+        <div className="tbl-hdr" style={{gridTemplateColumns:"40px 1fr 110px 95px 140px 40px"}}>
+          <span></span><span>Nome</span><span>Tipo</span><span>Data</span><span>Relacionado</span><span></span>
+        </div>
+        {[
+          ["🛡️","Garantia Junkers ZWC 24","Garantia","15 Mar 2016","Caldeira","#1B4332"],
+          ["🧾","Fatura instalação caldeira","Fatura","15 Mar 2016","Caldeira · 2.340€","#185FA5"],
+          ["📋","Relatório revisão 2023","Relatório","14 Nov 2023","Caldeira","#E76F51"],
+          ["📘","Manual Daikin FTXC25","Manual","Jun 2022","AC Sala","#534AB7"],
+          ["📄","Contrato manutenção 2025","Contrato","Jan 2025","Multi-equip.","#854F0B"],
+          ["🧾","Fatura limpeza Abril 2026","Fatura","05 Abr 2026","120€","#185FA5"],
+          ["📋","Relatório gás certificado","Relatório","22 Jan 2026","Caldeira","#E76F51"]
+        ].map((d,i) => (
+          <div key={i} className="tbl-row" style={{gridTemplateColumns:"40px 1fr 110px 95px 140px 40px"}}>
+            <div style={{fontSize:18}}>{d[0]}</div>
+            <div style={{fontSize:12,fontWeight:600}}>{d[1]}</div>
+            <span style={{fontSize:10,color:d[5],fontWeight:700,textTransform:"uppercase"}}>{d[2]}</span>
+            <span style={{fontSize:10,color:"#555"}}>{d[3]}</span>
+            <span style={{fontSize:10,color:"#555"}}>{d[4]}</span>
+            <span style={{fontSize:11,color:"#999"}}>⋯</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* PRO VIEWS */
+function ProDashboard() {
+  return (
+    <React.Fragment>
+      <div className="kpis" style={{gridTemplateColumns:"repeat(4,1fr)"}}>
+        {[["Faturado","2.847€","▲ 18%","#1B4332"],["Pendente","890€","4 faturas","#854F0B"],["Agendados","12","próx 7d","#185FA5"],["Clientes","87","23+64","#C17E3A"]].map(k => (
+          <div key={k[0]} className="kpi">
+            <div className="kpi-l">{k[0]}</div>
+            <div className="kpi-v" style={{color:k[3]}}>{k[1]}</div>
+            <div className="kpi-s">{k[2]}</div>
+          </div>
+        ))}
+      </div>
+      <div className="grid" style={{gridTemplateColumns:"2fr 1fr"}}>
+        <div className="card">
+          <div className="card-hdr">
+            <div className="card-title">🧾 Faturas pendentes</div>
+            <div style={{fontSize:11,color:"#854F0B",fontWeight:700}}>890€ em aberto</div>
+          </div>
+          <div className="tbl-hdr" style={{gridTemplateColumns:"85px 1fr 1fr 75px 80px 90px"}}>
+            <span>Nº</span><span>Cliente</span><span>Descrição</span><span>Valor</span><span>Vencim.</span><span>Estado</span>
+          </div>
+          {[
+            ["FT 2026/87","Maria Santos","Revisão caldeira","114€","30 Abr","a prazo","#555"],
+            ["FT 2026/85","Cond. Palmeira","Manut. Abril","280€","15 Abr","atraso 9d","#A32D2D"],
+            ["FT 2026/84","Rita Costa","Desentupimento","97€","20 Abr","a prazo","#555"],
+            ["FT 2026/82","José Mendes","Instalação AC","399€","10 Abr","atraso 14d","#A32D2D"]
+          ].map((f,i) => (
+            <div key={i} className="tbl-row" style={{gridTemplateColumns:"85px 1fr 1fr 75px 80px 90px"}}>
+              <span className="mono" style={{color:"#C17E3A"}}>{f[0]}</span>
+              <span>{f[1]}</span>
+              <span style={{fontSize:10,color:"#555"}}>{f[2]}</span>
+              <span style={{fontWeight:700}}>{f[3]}</span>
+              <span style={{fontSize:10,color:"#555"}}>{f[4]}</span>
+              <span style={{fontSize:10,color:f[6],fontWeight:600}}>{f[5]}</span>
+            </div>
+          ))}
+        </div>
+        <div style={{display:"flex",flexDirection:"column",gap:12}}>
+          <div style={{background:"#26215C",borderRadius:10,padding:"13px 15px",color:"#fff"}}>
+            <div style={{fontSize:9,color:"#FFD166",fontWeight:700}}>💡 IA ASSISTANT</div>
+            <div style={{fontSize:13,fontWeight:700,margin:"5px 0 6px"}}>Taxa de resposta baixou</div>
+            <div style={{fontSize:11,color:"rgba(255,255,255,.75)",lineHeight:1.5}}>Em 2h fechas 35% mais.</div>
+            <button style={{background:"#fff",color:"#26215C",padding:"6px 10px",borderRadius:6,fontSize:10,fontWeight:700,marginTop:9,cursor:"pointer"}}>Ver pendentes →</button>
+          </div>
+          <div className="card" style={{padding:"12px 14px"}}>
+            <div className="card-title" style={{marginBottom:9}}>🧮 Abril</div>
+            {[["Faturado","2.847€","#1B4332",false],["IVA 23%","532€","#555",false],["IRS","327€","#555",false],["Líquido","1.988€","#1B4332",true]].map((r,i) => (
+              <div key={i} style={{display:"flex",justifyContent:"space-between",padding:r[3]?"8px 0 4px":"4px 0",fontSize:11,borderTop:r[3]?"1px solid #e5e5e3":"none",marginTop:r[3]?4:0}}>
+                <span style={{color:"#555",fontWeight:r[3]?700:400}}>{r[0]}</span>
+                <b style={{color:r[2]}}>{r[1]}</b>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </React.Fragment>
+  );
+}
+
+function ProAgenda() {
+  const rows = [
+    [null,{t:"Rev.cald",c:"#52B788"},{t:"Inst.torn.",c:"#C17E3A"},null,{t:"Contrato",c:"#52B788"},null,null],
+    [{t:"Limp AC",c:"#C17E3A"},null,null,{t:"Pest",c:"#52B788"},null,null,null],
+    [null,{t:"URG",c:"#52B788"},{t:"Orç.AC",c:"#C17E3A"},null,null,{t:"Jardim",c:"#C17E3A"},null],
+    [null,null,null,{t:"Pintura",c:"#52B788"},null,null,null]
+  ];
+  return (
+    <div style={{padding:"20px 22px"}}>
+      <div className="card">
+        <div className="card-hdr">
+          <div className="card-title">📅 Agenda · Semana 17</div>
+          <div style={{display:"flex",gap:6}}>
+            <span className="badge b-grn">◼ Plataforma</span>
+            <span className="badge" style={{background:"#F2EDE0",color:"#C17E3A"}}>◼ Próprios</span>
+          </div>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"60px repeat(7,1fr)"}}>
+          <div style={{borderBottom:"1px solid #e5e5e3",borderRight:"1px solid #e5e5e3"}}></div>
+          {[["Seg",22],["Ter",23],["Qua",24],["Qui",25],["Sex",26],["Sáb",27],["Dom",28]].map(([d,n],i) => (
+            <div key={d} style={{padding:"10px 4px",textAlign:"center",fontSize:10,borderBottom:"1px solid #e5e5e3",borderRight:i<6?"1px solid #e5e5e3":"none",background:i===2?"#F2EDE0":"#fff"}}>
+              <div style={{color:"#999",fontWeight:600}}>{d}</div>
+              <div style={{fontSize:14,fontWeight:700,marginTop:2,color:i===2?"#C17E3A":"#111"}}>{n}</div>
+            </div>
+          ))}
+          {["09h","11h","14h","16h"].map((h,ri) => (
+            <React.Fragment key={h}>
+              <div style={{padding:"6px",fontSize:10,color:"#999",fontWeight:600,borderRight:"1px solid #e5e5e3",textAlign:"right",minHeight:54,borderBottom:ri<3?"1px solid #e5e5e3":"none"}}>{h}</div>
+              {rows[ri].map((ev,ci) => (
+                <div key={ci} style={{borderBottom:ri<3?"1px solid #e5e5e3":"none",borderRight:ci<6?"1px solid #e5e5e3":"none",padding:5,minHeight:54}}>
+                  {ev && <div style={{background:ev.c,color:"#fff",padding:"4px 6px",borderRadius:5,fontSize:9,fontWeight:600}}>{ev.t}</div>}
+                </div>
+              ))}
+            </React.Fragment>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* V2 COPILOT VIEWS */
+function CopilotBriefing() {
+  return (
+    <React.Fragment>
+      <div style={{padding:"20px 22px 10px"}}>
+        <div style={{background:"linear-gradient(135deg,#26215C,#534AB7)",borderRadius:14,padding:"18px 22px",color:"#fff"}}>
+          <div style={{fontSize:10,color:"#FFD166",fontWeight:700,letterSpacing:.4}}>✨ V2 COPILOT · BRIEFING SEMANAL</div>
+          <div style={{fontSize:19,fontWeight:700,fontFamily:"Georgia, serif",margin:"4px 0 10px"}}>Esta semana na tua carteira · 24 Abr 2026</div>
+          <div style={{fontSize:12,color:"rgba(255,255,255,.85)",lineHeight:1.6}}>De <b>42 edifícios</b>, <b>7 precisam da tua atenção</b>. A IA analisou compliance, finanças, padrões de gastos e comunicações. Abaixo o radar ordenado.</div>
+        </div>
+      </div>
+      <div className="section-title">🚨 Urgência alta · acção em 7 dias</div>
+      <div style={{padding:"0 22px"}}>
+        {[
+          {ic:"⚠️",ed:"Ed. Palmeira",det:"Elevador · inspeção ISQ venceu há 9 dias · risco coima 2.500€",ac:"Agendar"},
+          {ic:"💰",ed:"Quinta dos Arcos",det:"Quotas 54% · fundo 1.100€ · obra cobertura 12 Mai sem cobertura financeira",ac:"Plano"},
+          {ic:"📅",ed:"Prata Riverside 2A",det:"Assembleia anual a convocar até 15 Mai (prazo legal 30d antes)",ac:"Convocar"}
+        ].map((r,i) => (
+          <div key={i} className="card" style={{padding:"13px 15px",marginBottom:8,borderLeft:"4px solid #A32D2D",cursor:"pointer"}}>
+            <div style={{display:"flex",gap:12,alignItems:"center"}}>
+              <div style={{fontSize:22}}>{r.ic}</div>
+              <div style={{flex:1}}>
+                <div style={{fontSize:13,fontWeight:700}}>{r.ed}</div>
+                <div style={{fontSize:11,color:"#555",lineHeight:1.5,marginTop:2}}>{r.det}</div>
+              </div>
+              <button className="btn btn-purple" style={{fontSize:11}}>{r.ac} →</button>
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="section-title">📊 Padrões detectados pela IA</div>
+      <div style={{padding:"0 22px 22px",display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+        {[
+          {ic:"📈",t:"Ed. Palmeira: +42% em elevador",s:"Vs edifícios similares. Historicamente 580€/mês, agora 825€/mês. Pedir 3 orçamentos alternativos.",cor:"#854F0B"},
+          {ic:"🔁",t:"3 edifícios com mesmo prestador a degradar",s:"ServiTech: avaliações decrescentes em Residências Verde, Bloco Oceano e Central em 90d.",cor:"#A32D2D"},
+          {ic:"💡",t:"6 edifícios podiam poupar em seguro",s:"Todos com Home Score > 75. Fidelidade dá 15% desconto. Poupança: 3.240€/ano.",cor:"#1B4332"},
+          {ic:"📆",t:"Assembleias agrupáveis",s:"5 assembleias em Junho. Agrupa Cascais na mesma semana, poupa 3 deslocações.",cor:"#185FA5"}
+        ].map((p,i) => (
+          <div key={i} className="card" style={{padding:"13px 14px"}}>
+            <div style={{fontSize:22,marginBottom:5}}>{p.ic}</div>
+            <div style={{fontSize:12,fontWeight:700,color:p.cor,marginBottom:5,lineHeight:1.3}}>{p.t}</div>
+            <div style={{fontSize:10.5,color:"#555",lineHeight:1.5}}>{p.s}</div>
+          </div>
+        ))}
+      </div>
+    </React.Fragment>
+  );
+}
+
+function CopilotAtas() {
+  return (
+    <div style={{padding:"20px 22px"}}>
+      <div className="grid" style={{padding:0,gridTemplateColumns:"1fr 1fr",gap:14}}>
+        <div className="card">
+          <div className="card-hdr">
+            <div>
+              <div className="card-title">🎙️ Atas IA · esta semana</div>
+              <div className="card-sub">Áudio → ata legal em 3 minutos</div>
+            </div>
+          </div>
+          <div style={{padding:14}}>
+            {[
+              {ed:"Ed. Palmeira",d:"Assembleia ordinária · 20 Abr",del:6,ta:4,done:false},
+              {ed:"Bloco Oceano",d:"Ass. extraordinária · 18 Abr",del:3,ta:2,done:true},
+              {ed:"Prata Riverside",d:"Conselho fiscal · 15 Abr",del:2,ta:0,done:false}
+            ].map((a,i,arr) => (
+              <div key={i} style={{padding:"10px 0",borderBottom:i<arr.length-1?"1px solid #e5e5e3":"none"}}>
+                <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
+                  <div style={{fontSize:12,fontWeight:700}}>{a.ed}</div>
+                  <span className={"badge " + (a.done?"b-grn":"b-blu")}>{a.done?"✓ Enviada":"Rever"}</span>
+                </div>
+                <div style={{fontSize:10.5,color:"#555",marginBottom:5}}>{a.d}</div>
+                <div style={{display:"flex",gap:14,fontSize:10,color:"#999"}}>
+                  <span>📋 {a.del} deliberações</span>
+                  {a.ta>0 && <span>✅ {a.ta} tarefas criadas</span>}
+                </div>
+              </div>
+            ))}
+            <button className="btn btn-purple" style={{width:"100%",marginTop:12}}>+ Nova ata · carregar áudio</button>
+          </div>
+        </div>
+        <div className="card">
+          <div className="card-hdr">
+            <div>
+              <div className="card-title">📄 Análise IA de orçamentos</div>
+              <div className="card-sub">Comparador · destaca omissões · alerta preços</div>
+            </div>
+          </div>
+          <div style={{padding:14}}>
+            <div style={{fontSize:11,color:"#555",marginBottom:9,fontWeight:700}}>📌 Pintura fachada · Ed. Palmeira</div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 70px 70px 70px",padding:"6px 8px",background:"#f7f7f5",fontSize:9,fontWeight:700,color:"#999",borderBottom:"1px solid #e5e5e3",textTransform:"uppercase"}}>
+              <span>Rubrica</span><span>ServiTech</span><span>PintarJá</span><span>ObraLda</span>
+            </div>
+            {[
+              ["Preparação","Incl.","2.400€","Incl."],
+              ["Tinta (80L)","1.800€","Incl.","1.950€"],
+              ["Andaimes","⚠ Falta","1.200€","Incl."],
+              ["Mão obra","6.400€","5.800€","6.200€"],
+              ["Resíduos","Incl.","Incl.","⚠ Falta"],
+              ["TOTAL","8.200€","9.400€","8.150€"]
+            ].map((r,i,arr) => (
+              <div key={i} style={{display:"grid",gridTemplateColumns:"1fr 70px 70px 70px",padding:"7px 8px",borderBottom:i<arr.length-1?"1px solid #e5e5e3":"none",fontSize:10,fontWeight:i===arr.length-1?700:400}}>
+                <span>{r[0]}</span>
+                <span style={{color:r[1].includes("Falta")?"#A32D2D":"#111"}}>{r[1]}</span>
+                <span style={{color:r[2].includes("Falta")?"#A32D2D":"#111"}}>{r[2]}</span>
+                <span style={{color:r[3].includes("Falta")?"#A32D2D":"#111"}}>{r[3]}</span>
+              </div>
+            ))}
+            <div style={{background:"#FAEEDA",borderLeft:"3px solid #854F0B",padding:"8px 10px",marginTop:10,fontSize:10,color:"#854F0B",lineHeight:1.5}}>
+              <b>⚠ IA:</b> ServiTech não inclui andaimes (~1.200€). Total real: 9.400€ — o mais caro. <b>PintarJá é a melhor escolha</b>.
+            </div>
+          </div>
+        </div>
+      </div>
+      <div className="card" style={{marginTop:14}}>
+        <div className="card-hdr">
+          <div className="card-title">💬 Chat IA para condóminos · Ed. Palmeira · hoje</div>
+          <span className="badge b-grn">✓ 14 respondidas · 0 escalou</span>
+        </div>
+        <div style={{padding:14,display:"flex",flexDirection:"column",maxHeight:260,overflowY:"auto"}}>
+          <div className="chat-msg chat-user">A que horas passa o lixo amarelo?</div>
+          <div className="chat-msg chat-ai">O lixo amarelo é recolhido às <b>terças e sextas, a partir das 7h30</b>. Coloque os contentores na rua só na noite anterior. Fonte: Regulamento art. 14º.</div>
+          <div className="chat-msg chat-user">Posso ter cão no apartamento?</div>
+          <div className="chat-msg chat-ai">Sim, animais são permitidos desde que declarados à administração. No elevador devem ser transportados ao colo ou com trela curta. Fonte: Regulamento art. 22º + Ata assembleia 14 Jun 2024.</div>
+          <div className="chat-msg chat-user">Tenho uma infiltração na casa de banho.</div>
+          <div className="chat-msg chat-ai">Vou abrir um ticket e notificar a administração. Tiras 2-3 fotos? Respondem em 24h. Se for urgência com perigo, chama <b>112</b>.</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CopilotPlaceholder({ t }) {
+  return (
+    <div style={{padding:"40px 22px",textAlign:"center"}}>
+      <div style={{fontSize:42,marginBottom:10}}>✨</div>
+      <div style={{fontSize:16,fontWeight:700,fontFamily:"Georgia, serif"}}>{t}</div>
+      <div style={{fontSize:11,color:"#999",marginTop:8,maxWidth:500,margin:"8px auto 0",lineHeight:1.6}}>Esta vista faz parte do V2 Copilot. Seria construída em produção — o protótipo foca-se no Briefing, Atas IA e Análise de orçamentos como demonstração de valor.</div>
+    </div>
+  );
+}
+
+function TopBar({ role, view }) {
+  const titles = {
+    admin: {0:["DASHBOARD · OPERAÇÕES","Cockpit V5 Manutenção"],1:["UTILIZADORES","Gestão de contas"]},
+    client: {0:["CASA PRINCIPAL · COIMBRA","Bom dia Maria 👋"],2:["DOCUMENTOS","Cofre · 234 MB"]},
+    pro: {0:["AGENDA","Semana 17 · 22 Abr"],3:["DASHBOARD","Vista financeira"]},
+    copilot: {0:["BRIEFING SEMANAL","24 Abr · 42 edifícios"],1:["ATAS IA","Gerar · rever · enviar"],2:["ANÁLISE ORÇAMENTOS","Comparador IA"]}
+  };
+  const def = titles[role][Object.keys(titles[role])[0]];
+  const t = titles[role]?.[view] || def;
+  return (
+    <div className="topbar">
+      <div>
+        <div className="topbar-label">{t[0]}</div>
+        <div className="topbar-title">{t[1]}</div>
+      </div>
+      <div style={{display:"flex",gap:8,alignItems:"center"}}>
+        {role==="copilot" && <button className="btn btn-purple">+ Nova análise IA</button>}
+        {role==="admin" && <button className="btn btn-dark">Exportar</button>}
+        {role==="client" && <button className="btn btn-green">+ Pedir serviço</button>}
+        {role==="pro" && <button className="btn btn-copper">+ Fatura</button>}
+      </div>
+    </div>
+  );
+}
+
+function App() {
+  const [role, setRole] = useState("admin");
+  const [activeIdx, setActiveIdx] = useState({admin:0, client:0, pro:0, copilot:0});
+  const setActive = (idx) => setActiveIdx(prev => ({...prev, [role]: idx}));
+  const ai = activeIdx[role];
+
+  const render = () => {
+    if (role === "admin") return ai === 1 ? <AdminUsers/> : <AdminDashboard/>;
+    if (role === "client") return ai === 2 ? <ClientDocs/> : <ClientOverview/>;
+    if (role === "pro") return ai === 0 ? <ProAgenda/> : <ProDashboard/>;
+    if (role === "copilot") {
+      if (ai === 1 || ai === 2) return <CopilotAtas/>;
+      if (ai >= 4) return <CopilotPlaceholder t="Em construção"/>;
+      return <CopilotBriefing/>;
+    }
+  };
+
+  return (
+    <React.Fragment>
+      <div className="pills">
+        <div className={"pill " + (role==="admin"?"on-dark":"")} onClick={() => setRole("admin")}>Admin ERP/CRM</div>
+        <div className={"pill " + (role==="client"?"on-green":"")} onClick={() => setRole("client")}>Cliente Desktop</div>
+        <div className={"pill " + (role==="pro"?"on-copper":"")} onClick={() => setRole("pro")}>Prestador Pro</div>
+        <div className={"pill " + (role==="copilot"?"on-purple":"")} onClick={() => setRole("copilot")}>✨ V2 Copilot (novo)</div>
+      </div>
+      <div className="app">
+        <Sidebar role={role} active={ai} setActive={setActive}/>
+        <div className="main">
+          <TopBar role={role} view={ai}/>
+          {render()}
+        </div>
+      </div>
+      <div className="footer-info">
+        <b>Clica nos itens do menu lateral</b> · Admin (Dashboard+Utilizadores) · Cliente (Visão geral+Documentos) · Prestador (Agenda+Dashboard) · V2 Copilot (Briefing+Atas/Análise)
+      </div>
+    </React.Fragment>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>

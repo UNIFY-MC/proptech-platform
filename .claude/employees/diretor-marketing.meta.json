@@ -1,0 +1,35 @@
+{
+  "id": "diretor-marketing",
+  "name": "Diogo",
+  "role": "Director de Marketing",
+  "vertical": "core",
+  "department": "Marketing",
+  "model": "claude-opus-4-7",
+  "version": "1.0",
+  "status": "active",
+  "color": "slate",
+  "avatarInitial": "DM",
+  "integrations": [
+    { "id": "supabase_core_leads", "name": "core.leads", "desc": "volume e qualidade de leads por vertical", "icon": "SB", "color": "emerald", "enabled": true },
+    { "id": "supabase_core_campanhas", "name": "core.campanhas", "desc": "campanhas activas e seu status", "icon": "SB", "color": "emerald", "enabled": true },
+    { "id": "system_inbox_items", "name": "system.inbox_items", "desc": "flags e digests para Mário", "icon": "SB", "color": "blue", "enabled": true },
+    { "id": "system_approvals_queue", "name": "system.approvals_queue", "desc": "conteúdo e gasto para aprovação", "icon": "SB", "color": "amber", "enabled": true }
+  ],
+  "skills": [
+    { "id": "briefing-vertical", "desc": "Cria brief completo (ICP, mensagem, budget, canal) antes de invocar criativo-conteudo" },
+    { "id": "aprovacao-conteudo", "desc": "Revê cada peça antes de submeter approvals_queue para Mário" },
+    { "id": "budget-discipline", "desc": "Valida ROAS vs. target antes de escalar gasto; para campanha se CAC > limite" },
+    { "id": "calendario-editorial", "desc": "Plano 4 semanas à frente: orgânico + pago por vertical" },
+    { "id": "digest-semanal", "desc": "KPIs por vertical + recomendação de optimização ao cmo-agent" }
+  ],
+  "recipes": [
+    { "id": "weekly-kpi-digest", "trigger": "schedule", "trigger_label": "0 9 * * 1", "desc": "Segunda 09h00: ROAS, CPL, impressões, leads por vertical" },
+    { "id": "monthly-editorial-calendar", "trigger": "schedule", "trigger_label": "0 10 1 * *", "desc": "Dia 1: calendário editorial do próximo mês + report CAC para cmo-agent" },
+    { "id": "campaign-launch", "trigger": "manual", "trigger_label": "on_request", "desc": "Brief → criativo → aprovação → gestor-ads/publisher-social" }
+  ],
+  "peerReads": [
+    { "stage": "current", "value": "criativo-conteudo + gestor-ads + publisher-social + gestor-leads" },
+    { "stage": "sprint_next", "value": "cmo-agent (estratégia) + auditor-agent" }
+  ],
+  "cost": { "current": 12, "currency": "USD", "period": "30d", "notes": "Opus — coordenação semanal + revisão de conteúdo + planeamento mensal" }
+}

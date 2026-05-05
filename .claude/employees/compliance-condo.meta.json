@@ -1,0 +1,33 @@
+{
+  "id": "compliance-condo",
+  "name": "Clara",
+  "role": "Compliance & Legal",
+  "vertical": "V2 Condomínios",
+  "department": "Condomínios",
+  "model": "claude-sonnet-4-6",
+  "version": "1.0",
+  "status": "active",
+  "color": "red",
+  "avatarInitial": "C",
+  "integrations": [
+    { "id": "supabase_v2_compliance", "name": "v2_condominios — financeiro + assembleias", "desc": "recebimentos, assembleias, seguros", "icon": "SB", "color": "emerald", "enabled": true },
+    { "id": "supabase_core", "name": "core.imoveis", "desc": "edifícios activos e metadata legal", "icon": "SB", "color": "emerald", "enabled": true },
+    { "id": "resend", "name": "Resend (via Cami)", "desc": "cartas de interpelação após aprovação Mário", "icon": "RS", "color": "cyan", "enabled": true }
+  ],
+  "skills": [
+    { "id": "monitorizar-prazos-legais", "desc": "Verifica 8 tipos de prazo obrigatório por edifício — alertas em cascata 90/60/30/15 dias" },
+    { "id": "calcular-mora-grave", "desc": "Capital + juros legais (Euribor 6M + 1pp) desde vencimento — para mora >60 dias" },
+    { "id": "draft-interpelacao-judicial", "desc": "Carta formal de último aviso com cálculo de juros — submete approvals_queue" },
+    { "id": "verificar-rgpd", "desc": "Responde pedidos RGPD em prazo (30 dias), verifica audit_log activo" },
+    { "id": "calendario-anual-obrigacoes", "desc": "Gera calendário de todas as obrigações legais do ano para cada edifício" }
+  ],
+  "recipes": [
+    { "id": "weekly-compliance", "trigger": "schedule", "trigger_label": "0 6 * * 1", "desc": "Segunda: relatório de prazos próximos 30 dias + mora grave por edifício" },
+    { "id": "mora-grave-intake", "trigger": "event", "trigger_label": "mora_acima_60_dias", "desc": "Recebe de financeiro-condo: calcula juros + prepara carta interpelação" }
+  ],
+  "peerReads": [
+    { "stage": "current", "value": "financeiro-condo (mora grave), seguros-condo (coberturas obrigatórias), assembleia-condo (mandatos)" },
+    { "stage": "sprint_next", "value": "financeiro-condo + seguros-condo + assembleia-condo + auditor-agent" }
+  ],
+  "cost": { "current": 6, "currency": "USD", "period": "30d", "notes": "Sonnet — 1 run semanal + ad-hoc mora grave (volume baixo por edifício)" }
+}

@@ -1,197 +1,197 @@
 {
   "meta": {
     "schemaVersion": "3.0",
-    "lastSync": "2026-05-04T22:20:26.344Z",
-    "generatedAt": "2026-05-04T22:20:26.344Z",
-    "branch": "feat/command-center",
-    "worktree": "proptech-platform",
+    "lastSync": "2026-05-05T22:16:14.500Z",
+    "generatedAt": "2026-05-05T22:16:14.500Z",
+    "branch": "sprint/v5-1b3",
+    "worktree": "proptech-v5-1b3",
     "generator": "scripts/dashboard-data-build.js"
   },
   "sprint": {
-    "id": "1D-recovery",
-    "name": "Dashboard live + magic-link fix + prestador-app charter",
-    "wave": "1D-recovery",
+    "id": "1D",
+    "name": "Receipt Trojan Horse Alpha",
+    "wave": "1D",
     "vertical": "V5",
     "status": "active",
-    "started": "2026-05-04",
-    "startDate": "2026-05-04",
-    "target": "2026-05-18",
-    "endDate": "2026-05-18",
-    "day": 0,
+    "started": "2026-05-01",
+    "startDate": "2026-05-01",
+    "target": "2026-05-15",
+    "endDate": "2026-05-15",
+    "day": 4,
     "totalDays": 14,
-    "progress": 0,
-    "hypothesis": "Preparar V5 para alpha dual launch (owner + prestador): com dashboard agentic-ops 100% live, magic-link fix em produção e charter prestador-app aprovado, o sprint estabelece as fundações necessárias para outreach R2 com confiança técnica e clareza de produto",
-    "daysToGate": 14,
-    "gateName": "Prestador-app charter aprovado (ADR-006)",
+    "progress": 29,
+    "hypothesis": "Owner→link→prestador 48h: se proporcionarmos a um owner PT proprietário 40-65 anos um link partilhável que dispara recibo digital + ficha mínima do prestador, então pelo menos 1 em 5 owners convidados completa o fluxo end-to-end",
+    "daysToGate": 2,
+    "gateName": "≥1 owner externo aceitou convite; flow funciona no telefone",
     "gates": [
       {
-        "id": "day6",
-        "day": 6,
-        "label": "Dashboard 100% live, source indicators, 0 hardcoded estado",
-        "desc": "Dashboard 100% live, source indicators, 0 hardcoded estado",
-        "date": "2026-05-10",
-        "status": "done"
+        "id": "day7",
+        "day": 7,
+        "label": "≥1 owner externo aceitou convite; flow funciona no telefone",
+        "desc": "≥1 owner externo aceitou convite; flow funciona no telefone",
+        "date": "2026-05-07",
+        "status": "pending"
       },
       {
-        "id": "day10",
-        "day": 10,
-        "label": "Magic-link fix em produção, validado mobile DEV + Vercel",
-        "desc": "Magic-link fix em produção, validado mobile DEV + Vercel",
-        "date": "2026-05-14",
-        "status": "done"
+        "id": "day11",
+        "day": 11,
+        "label": "≥1 end-to-end real: owner convida, prestador aceita, recibo emitido",
+        "desc": "≥1 end-to-end real: owner convida, prestador aceita, recibo emitido",
+        "date": "2026-05-11",
+        "status": "pending"
       },
       {
         "id": "day14",
         "day": 14,
-        "label": "Prestador-app charter aprovado (ADR-006)",
-        "desc": "Prestador-app charter aprovado (ADR-006)",
-        "date": "2026-05-18",
+        "label": "5/5 criteria OK + decisão Sprint 1E",
+        "desc": "5/5 criteria OK + decisão Sprint 1E",
+        "date": "2026-05-15",
         "status": "pending"
       }
     ],
     "daysDone": [
       {
         "day": 0,
-        "label": "Dashboard React shell deployed + parser v3.0 live + source indicators (SourceTag)",
+        "label": "Charter aprovado · reconciliações fechadas",
         "status": "done"
       },
       {
-        "day": 0,
-        "label": "Magic-link fix commit (fix: getBaseUrl dynamic) em Production via merge sprint/v5-1b3 → main",
+        "day": 1,
+        "label": "Migration Sprint 1D aplicada — magic_links + prestadores_parceiros + recibos_servico",
         "status": "done"
       },
       {
-        "day": 0,
-        "label": "Deploy protocol D1-D6 adicionado a CLAUDE.md + sprint/v5-1b3 merged → main",
+        "day": 2,
+        "label": "RPC atomic + 2 Edge Functions deployed",
+        "status": "done"
+      },
+      {
+        "day": 3,
+        "label": "Route /r/join/:token + PrestadorOnboardingFlow + E2E PASS",
+        "status": "done"
+      },
+      {
+        "day": 4,
+        "label": "Trabalhos recentes owner-side + realtime",
+        "status": "done"
+      },
+      {
+        "day": 5,
+        "label": "UI Registar trabalho + modal 3 campos + WhatsApp link",
         "status": "done"
       }
     ],
     "_source": ".claude/current/current-sprint-state.md",
     "_status": "live",
-    "_lastParsed": "2026-05-04T22:20:26.348Z"
+    "_lastParsed": "2026-05-05T22:16:14.512Z"
   },
   "verticals": [
     {
-      "id": "V1",
+      "id": "v1",
       "name": "Core Hub",
-      "status": "Foundation",
-      "color": "#8b92a8",
-      "meta": "Hub horizontal partilhado",
-      "detail": "Schema core + migrações activas (pessoas, imoveis, memberships)",
-      "description": "Schema core + migrações activas (pessoas, imoveis, memberships)",
-      "longDetail": "Hub horizontal partilhado por todas as verticais. Supabase hkmvszkpxjbxmnixzqbl (Paris). Tabelas: pessoas, organizations, memberships, imoveis, eventos_cliente. Schemas activos: core, v4_energia, v5_manutencao."
+      "status": "foundation",
+      "color": "#534AB7",
+      "meta": "hkmvszkpxjbxmnixzqbl",
+      "detail": "Hub horizontal partilhado por todas as verticais",
+      "description": "Hub horizontal partilhado por todas as verticais",
+      "longDetail": "Foundation. Tabelas: core.pessoas, core.organizations, core.imoveis. Schema v5_manutencao activo com magic_links + prestadores_parceiros + recibos_servico."
     },
     {
-      "id": "V2",
+      "id": "v2",
       "name": "Condomínios",
-      "status": "Production",
+      "status": "production",
       "color": "#10b981",
-      "meta": "prataowners.pt — 5k linhas reais",
-      "detail": "Em produção viva. Zero touch policy.",
-      "description": "Em produção viva. Zero touch policy.",
-      "longDetail": "30 tabelas, ~5.000 linhas reais. Supabase eozklslwfaqujaijvdnl. Tabelas chave: condominos, fracoes, documentos (2733), recebimentos (593), extrato_bancario (1056). NUNCA alterar dados."
+      "meta": "~5k linhas reais",
+      "detail": "prataowners.pt — produção viva",
+      "description": "prataowners.pt — produção viva",
+      "longDetail": "Production stable. 30 tabelas, ~5000 linhas reais. Zero touch policy — nunca alterar dados. Próximo: V10 Copilot add-on Q4 2026."
     },
     {
-      "id": "V3",
+      "id": "v3",
       "name": "Seguros",
-      "status": "Planned",
+      "status": "planned",
       "color": "#8b92a8",
-      "meta": "Q1 2027 — pós V5 validada",
-      "detail": "Relatório estratégico Notion escrito. Schema a criar.",
-      "description": "Relatório estratégico Notion escrito. Schema a criar.",
-      "longDetail": "Schema v3_seguros a criar em V1 Core Hub. Arranque previsto Q1 2027. Triggers: V5 com 50 owners pagantes + V4 validada."
+      "meta": "Q1 2027",
+      "detail": "Relatório estratégico escrito no Notion",
+      "description": "Relatório estratégico escrito no Notion",
+      "longDetail": "Planned Q1 2027. Scope: análise de portfolio de seguros + sinistros. Triggers: V5 50 owners pagantes + V4 validada."
     },
     {
-      "id": "V4",
+      "id": "v4",
       "name": "Energia",
-      "status": "Foundation",
+      "status": "foundation",
       "color": "#f59e0b",
-      "meta": "Schema pronto — produto a construir",
-      "detail": "Migration aplicada 2026-04-19. Edge Function criada (não deployada).",
-      "description": "Migration aplicada 2026-04-19. Edge Function criada (não deployada).",
-      "longDetail": "Schema v4_energia aplicado em V1 Core Hub. Tabelas: acordos_comercializadoras (8 seeds), contratos_energia. Edge Function v4-energia-lead criada mas não deployada. Arranque activo Q3 2026."
+      "meta": "Schema v4_energia criado",
+      "detail": "Schema pronto, produto a construir",
+      "description": "Schema pronto, produto a construir",
+      "longDetail": "Foundation. Schema v4_energia aplicado em V1 Core Hub. Sprint 2A Q3 2026. Relatório estratégico Notion."
     },
     {
-      "id": "V5",
+      "id": "v5",
       "name": "Manutenção",
-      "status": "Active",
-      "color": "#534AB7",
-      "meta": "Sprint 1D-recovery activo",
-      "detail": "React app live. Magic-link fix em produção. Dashboard agentic-ops live.",
-      "description": "React app live. Magic-link fix em produção. Dashboard agentic-ops live.",
-      "longDetail": "Frontend apps/v5-manutencao/ (React 18 + Vite). Schema v5_manutencao: magic_links, prestadores_parceiros, recibos_servico. 2 Edge Functions live. Sprint 1D-recovery: dashboard + magic-link fix + prestador-app charter."
-    },
-    {
-      "id": "V6",
-      "name": "Reabilitação",
-      "status": "Planned",
-      "color": "#8b92a8",
-      "meta": "Q1 2027 — pós V5+V4 validadas",
-      "detail": "Scoping e ADR previstos Q1 2027.",
-      "description": "Scoping e ADR previstos Q1 2027.",
-      "longDetail": "Schema v6_reabilitacao a criar em V1 Core Hub. Nenhum trabalho técnico iniciado. Triggers: V5 >50 owners pagantes E V4 com 1+ parceiro activo."
-    },
-    {
-      "id": "V7",
-      "name": "Real Estate",
-      "status": "Planned",
-      "color": "#8b92a8",
-      "meta": "Pós 2027",
-      "detail": "Mencionada no naming canónico. Zero trabalho técnico.",
-      "description": "Mencionada no naming canónico. Zero trabalho técnico.",
-      "longDetail": "Schema v7_real_estate a criar. Sem roadmap concreto até 2027. Triggers: V5 + V4 em produção com receita estável."
-    },
-    {
-      "id": "V8",
-      "name": "Rentals",
-      "status": "Planned",
-      "color": "#8b92a8",
-      "meta": "Pós 2027",
-      "detail": "Lisbeyond identificado como potencial B2B partner.",
-      "description": "Lisbeyond identificado como potencial B2B partner.",
-      "longDetail": "Schema v8_rentals a criar. Trigger: V5 Fase 6 (prestador app) entregue E V5 >100 utilizadores activos. Possível parceria com operadores de arrendamento."
-    },
-    {
-      "id": "V9",
-      "name": "BaaS / Swan",
-      "status": "Planned",
+      "status": "active",
       "color": "#3b82f6",
-      "meta": "Infra financeira — Q1 2027",
-      "detail": "Swan BaaS em negociação. Pré-req: Stripe Connect V5 Sprint 1E.",
-      "description": "Swan BaaS em negociação. Pré-req: Stripe Connect V5 Sprint 1E.",
-      "longDetail": "Schema v9_swan a criar em V1 Core Hub. Integração pagamentos nativa prevista Q1 2027. Pré-requisito: Stripe Connect implementado em V5 Sprint 1E com >10 transacções reais."
+      "meta": "Sprint 1D activo",
+      "detail": "V5 alpha deployed em proptech-v5-alpha.vercel.app",
+      "description": "V5 alpha deployed em proptech-v5-alpha.vercel.app",
+      "longDetail": "Active. Sprint 1D — Receipt Trojan Horse Alpha. Day 5/14. Gates: Day 7 owner externo, Day 14 5/5 criteria. 5 alpha owners em recrutamento."
     },
     {
-      "id": "V10",
+      "id": "v6",
+      "name": "Reabilitação",
+      "status": "planned",
+      "color": "#8b92a8",
+      "meta": "Q1 2027",
+      "detail": "Prevista no roadmap",
+      "description": "Prevista no roadmap",
+      "longDetail": "Planned. Scope TBD. Segue V5 validada + V4 energética."
+    },
+    {
+      "id": "v7",
+      "name": "Real Estate",
+      "status": "planned",
+      "color": "#8b92a8",
+      "meta": "2027+",
+      "detail": "Prevista no roadmap",
+      "description": "Prevista no roadmap",
+      "longDetail": "Planned 2027+. Scope TBD."
+    },
+    {
+      "id": "v8",
+      "name": "Rentals",
+      "status": "planned",
+      "color": "#8b92a8",
+      "meta": "2027+",
+      "detail": "Prevista no roadmap",
+      "description": "Prevista no roadmap",
+      "longDetail": "Planned 2027+. Scope TBD."
+    },
+    {
+      "id": "v9",
+      "name": "BaaS / Swan",
+      "status": "planned",
+      "color": "#8b92a8",
+      "meta": "Q1 2027",
+      "detail": "Infraestrutura financeira Swan BaaS",
+      "description": "Infraestrutura financeira Swan BaaS",
+      "longDetail": "Planned Q1 2027. Parceria Swan pendente de assinatura. Relatório estratégico Notion."
+    },
+    {
+      "id": "v10",
       "name": "Owners Club",
-      "status": "Foundation",
+      "status": "foundation",
       "color": "#534AB7",
-      "meta": "Tab V5 Sprint 1E — schema Q3 2026",
-      "detail": "Tab dedicada diferida para Sprint 1E. ADR-003 proposto (aguarda Mário).",
-      "description": "Tab dedicada diferida para Sprint 1E. ADR-003 proposto (aguarda Mário).",
-      "longDetail": "Horizontal de fidelidade. Tab V5 Sprint 1E (diferida de 1C). Schema v10_owners_club Q3 2026. Add-on pricing: €15–30/mês/edifício para gestoras V2."
+      "meta": "Tab V5 Sprint 1E",
+      "detail": "Fidelidade — tab dedicada planeada Sprint 1E",
+      "description": "Fidelidade — tab dedicada planeada Sprint 1E",
+      "longDetail": "Foundation. Tab dedicada Owners Club prevista para Sprint 1E. Integração V2 condomínios + V5 histórico. Q4 2026."
     }
   ],
   "_verticalsMeta": {
     "_source": ".claude/strategy/verticals-state.md",
     "_status": "live"
   },
-  "alerts": [
-    {
-      "id": "trigger-supabase-designer-supabase-designer-0",
-      "level": "warning",
-      "message": "supabase-designer → supabase-designer: quando Mário confirmar schema design — criar migration SQL real apps/v5-manutencao/sql/20260504_system_command_center_sc",
-      "since": "2026-05-04T23:00Z",
-      "source": "triggers.md"
-    },
-    {
-      "id": "trigger-architect-proptech-vertical-builder-1",
-      "level": "warning",
-      "message": "architect-proptech → vertical-builder: após migration system.* aplicada — Phase 1 do pivot requer 3 dependências novas em apps/dashboard/package.json: @supabas",
-      "since": "2026-05-04T22:00Z",
-      "source": "triggers.md"
-    }
-  ],
+  "alerts": [],
   "nextActions": [
     {
       "id": "opp-1",
@@ -414,10 +414,36 @@
         "mcp__notion"
       ],
       "promptPath": ".claude/agents/architect-proptech.md",
-      "task": "Review arquitectural D6+D7 — Command Center pivot: Supabase Phase 1 (ACCEPT) + Auth Phase 1.5 (ACCEPT). Schema system.* com inbox_items + approvals_queue. RLS via is_staff(). Triggers para supabase-designer.",
-      "last": "2026-05-04T22:00Z",
-      "nextSuggested": "supabase-designer criar migration para schema system + tabelas inbox_items/approvals_queue + RLS conforme review-command-center.md",
-      "worktree": "proptech-platform",
+      "task": "ADR-condo-001 — arquitectura AI-native V2 condomínios: Supabase Cron (recomendado), RLS por edificio_id, audit trail universal com severidade, custo LLM estimado $67/mês (5 edifícios piloto).",
+      "last": "2026-05-05T18:00Z",
+      "nextSuggested": "supabase-designer criar schema v2_condominios.* + audit_log conforme ADR-condo-001 + configurar 9 schedules em Supabase Cron",
+      "worktree": "proptech-v5-1b3",
+      "state": "idle"
+    },
+    {
+      "id": "assembleia-condo",
+      "name": "assembleia-condo",
+      "type": "technical",
+      "desc": "",
+      "tools": [],
+      "promptPath": "",
+      "task": "_n/a_",
+      "last": "_never_",
+      "nextSuggested": "_aguardar primeiro trigger_",
+      "worktree": "_n/a_",
+      "state": "idle"
+    },
+    {
+      "id": "atendimento-condo",
+      "name": "atendimento-condo",
+      "type": "technical",
+      "desc": "",
+      "tools": [],
+      "promptPath": "",
+      "task": "_n/a_",
+      "last": "_never_",
+      "nextSuggested": "_aguardar primeiro trigger_",
+      "worktree": "_n/a_",
       "state": "idle"
     },
     {
@@ -477,6 +503,45 @@
       "state": "idle"
     },
     {
+      "id": "code-reviewer",
+      "name": "code-reviewer",
+      "type": "technical",
+      "desc": "",
+      "tools": [],
+      "promptPath": "",
+      "task": "Revisão de 9861e39 — docs(claude): inter-agent protocol (Phase 2)",
+      "last": "2026-05-02T10:45Z",
+      "nextSuggested": "follow-up commit para alinhar \"5 vs 20 entradas\" e completar secção Sub-agents disponíveis",
+      "worktree": "proptech-v5-1b3",
+      "state": "stale"
+    },
+    {
+      "id": "compliance-condo",
+      "name": "compliance-condo",
+      "type": "technical",
+      "desc": "",
+      "tools": [],
+      "promptPath": "",
+      "task": "_n/a_",
+      "last": "_never_",
+      "nextSuggested": "_aguardar primeiro trigger_",
+      "worktree": "_n/a_",
+      "state": "idle"
+    },
+    {
+      "id": "comunicacao-condo",
+      "name": "comunicacao-condo",
+      "type": "technical",
+      "desc": "",
+      "tools": [],
+      "promptPath": "",
+      "task": "_n/a_",
+      "last": "_never_",
+      "nextSuggested": "_aguardar primeiro trigger_",
+      "worktree": "_n/a_",
+      "state": "idle"
+    },
+    {
       "id": "coo-agent",
       "name": "coo-agent",
       "type": "csuite",
@@ -503,12 +568,142 @@
       "state": "idle"
     },
     {
+      "id": "criativo-conteudo",
+      "name": "criativo-conteudo",
+      "type": "technical",
+      "desc": "",
+      "tools": [],
+      "promptPath": "",
+      "task": "_n/a_",
+      "last": "_never_",
+      "nextSuggested": "_aguardar brief do diretor-marketing para primeiro carousel V5 Manutenção_",
+      "worktree": "_n/a_",
+      "state": "idle"
+    },
+    {
       "id": "cto-agent",
       "name": "cto-agent",
       "type": "csuite",
       "desc": "Stack, segurança, débito técnico, decisões de infra.",
       "tools": [],
       "promptPath": ".claude/agents/csuite/cto-agent.md",
+      "task": "_n/a_",
+      "last": "_never_",
+      "nextSuggested": "_aguardar primeiro trigger_",
+      "worktree": "_n/a_",
+      "state": "idle"
+    },
+    {
+      "id": "diretor-marketing",
+      "name": "diretor-marketing",
+      "type": "technical",
+      "desc": "",
+      "tools": [],
+      "promptPath": "",
+      "task": "_n/a_",
+      "last": "_never_",
+      "nextSuggested": "_aguardar primeiro trigger — coordenar primeiro calendário editorial_",
+      "worktree": "_n/a_",
+      "state": "idle"
+    },
+    {
+      "id": "docs-condo",
+      "name": "docs-condo",
+      "type": "technical",
+      "desc": "",
+      "tools": [],
+      "promptPath": "",
+      "task": "_n/a_",
+      "last": "_never_",
+      "nextSuggested": "_aguardar primeiro trigger_",
+      "worktree": "_n/a_",
+      "state": "idle"
+    },
+    {
+      "id": "energia-condo",
+      "name": "energia-condo",
+      "type": "technical",
+      "desc": "",
+      "tools": [],
+      "promptPath": "",
+      "task": "_n/a_",
+      "last": "_never_",
+      "nextSuggested": "aguardar schema v4_energia.* no V1 Core Hub antes do primeiro run",
+      "worktree": "_n/a_",
+      "state": "idle"
+    },
+    {
+      "id": "financeiro-condo",
+      "name": "financeiro-condo",
+      "type": "technical",
+      "desc": "",
+      "tools": [],
+      "promptPath": "",
+      "task": "_n/a_",
+      "last": "_never_",
+      "nextSuggested": "_aguardar primeiro trigger_",
+      "worktree": "_n/a_",
+      "state": "idle"
+    },
+    {
+      "id": "frontend-builder",
+      "name": "frontend-builder",
+      "type": "technical",
+      "desc": "",
+      "tools": [],
+      "promptPath": "",
+      "task": "BiaScorecard Phase 5 refactor — single-col Cook.ai layout; bia.meta.json v2; useBiaMeta/useBiaInstructions/useBiaStats hooks; BiaHeader/BiaStats/BiaInstructions/BiaIntegrations components; edit mode state machine with sessionStorage draft",
+      "last": "2026-05-05T12:30Z",
+      "nextSuggested": "Smoke test /employees/bia — verify edit mode flow (Edit → draft → F5 → draft preserved → Cmd+S → mock save), stats load, integrations grid, then merge feat/command-center → main",
+      "worktree": "proptech-platform",
+      "state": "idle"
+    },
+    {
+      "id": "gestor-ads",
+      "name": "gestor-ads",
+      "type": "technical",
+      "desc": "",
+      "tools": [],
+      "promptPath": "",
+      "task": "_n/a_",
+      "last": "_never_",
+      "nextSuggested": "_aguardar aprovação de budget para primeira campanha V5 (Meta Lead Form)_",
+      "worktree": "_n/a_",
+      "state": "idle"
+    },
+    {
+      "id": "gestor-leads",
+      "name": "gestor-leads",
+      "type": "technical",
+      "desc": "",
+      "tools": [],
+      "promptPath": "",
+      "task": "_n/a_",
+      "last": "_never_",
+      "nextSuggested": "_aguardar primeira campanha activa para receber leads e iniciar scoring_",
+      "worktree": "_n/a_",
+      "state": "idle"
+    },
+    {
+      "id": "importador-v2",
+      "name": "importador-v2",
+      "type": "technical",
+      "desc": "",
+      "tools": [],
+      "promptPath": "",
+      "task": "_n/a_",
+      "last": "_never_",
+      "nextSuggested": "_aguardar primeiro trigger_",
+      "worktree": "_n/a_",
+      "state": "idle"
+    },
+    {
+      "id": "manutencao-condo",
+      "name": "manutencao-condo",
+      "type": "technical",
+      "desc": "",
+      "tools": [],
+      "promptPath": "",
       "task": "_n/a_",
       "last": "_never_",
       "nextSuggested": "_aguardar primeiro trigger_",
@@ -551,6 +746,45 @@
       "state": "idle"
     },
     {
+      "id": "orquestrador-condo",
+      "name": "orquestrador-condo",
+      "type": "technical",
+      "desc": "",
+      "tools": [],
+      "promptPath": "",
+      "task": "Arquitectura AI-native criada — 9 agentes definidos para administração de condomínios de raiz",
+      "last": "2026-05-05T17:00Z",
+      "nextSuggested": "supabase-designer criar schema v2_condominios.* no V1 Core Hub (hkmvszkpxjbxmnixzqbl)",
+      "worktree": "proptech-v5-1b3",
+      "state": "idle"
+    },
+    {
+      "id": "publisher-social",
+      "name": "publisher-social",
+      "type": "technical",
+      "desc": "",
+      "tools": [],
+      "promptPath": "",
+      "task": "_n/a_",
+      "last": "_never_",
+      "nextSuggested": "_aguardar primeiro post aprovado pelo diretor-marketing para publicar_",
+      "worktree": "_n/a_",
+      "state": "idle"
+    },
+    {
+      "id": "seguros-condo",
+      "name": "seguros-condo",
+      "type": "technical",
+      "desc": "",
+      "tools": [],
+      "promptPath": "",
+      "task": "_n/a_",
+      "last": "_never_",
+      "nextSuggested": "aguardar schema v3_seguros.* no V1 Core Hub antes do primeiro run",
+      "worktree": "_n/a_",
+      "state": "idle"
+    },
+    {
       "id": "supabase-designer",
       "name": "supabase-designer",
       "type": "technical",
@@ -561,9 +795,9 @@
         "Write"
       ],
       "promptPath": ".claude/agents/supabase-designer.md",
-      "task": "Designed Supabase schema for Command Center MVP (system.inbox_items + system.inbox_reads + system.approvals_queue) — DDL, RLS, indexes, Realtime, constraints",
-      "last": "2026-05-04T23:00Z",
-      "nextSuggested": "Criar migration SQL real 20260504_system_command_center_schema.sql quando Mário confirmar schema design",
+      "task": "aplicar v2_condominios (16 tabelas) + v3_seguros (4 tabelas) + v4_energia (6 tabelas novas) no V1 Core Hub hkmvszkpxjbxmnixzqbl — total 26 tabelas novas, 0 sem RLS",
+      "last": "2026-05-05T21:00Z",
+      "nextSuggested": "criar SOP docs para v3_seguros e v4_energia (equivalente a supabase-schema-v2-condominios.md) + aguardar activação agentes seguros-condo (Sofia) e energia-condo (Enzo)",
       "worktree": "proptech-v5-1b3",
       "state": "idle"
     },
@@ -580,152 +814,1893 @@
         "Glob"
       ],
       "promptPath": ".claude/agents/vertical-builder.md",
-      "task": "feat(parser v3.0) — 100% LIVE sources, gray-matter, SourceTag indicators, tabs reorder. Commits 7653ca5+d3f9d56+35470bb. Push sprint/v5-1b3.",
-      "last": "2026-05-04T00:00Z",
-      "nextSuggested": "Verificar proptech-agentic-ops.vercel.app após deploy automático — confirmar schemaVersion=3.0 e SourceTags visíveis nas tabs",
-      "worktree": "proptech-v5-1b3",
+      "task": "V2 Condomínios command centre dashboard — 7 ecrãs completos com mock data. Self-contained App.jsx 1346 linhas. Build 0 erros. Commit b0cd052.",
+      "last": "2026-05-05T18:30Z",
+      "nextSuggested": "Iniciar dev server (npm run dev porta 5176) para Mário validar visualmente os 7 ecrãs antes de merge para main",
+      "worktree": "proptech-v5-1b3 (branch sprint/v5-1b3)",
       "state": "idle"
+    }
+  ],
+  "employees": [
+    {
+      "id": "assembleia-condo",
+      "name": "Assie",
+      "role": "Secretária de Assembleia",
+      "vertical": "V2 Condomínios",
+      "department": "Condomínios",
+      "model": "claude-sonnet-4-6",
+      "version": "1.0",
+      "status": "active",
+      "color": "purple",
+      "avatarInitial": "AS",
+      "integrations": [
+        {
+          "id": "supabase_v2_assembleias",
+          "name": "v2_condominios — assembleias/atas",
+          "desc": "assembleias, atas, convocatórias, condóminos",
+          "icon": "SB",
+          "color": "emerald",
+          "enabled": true
+        },
+        {
+          "id": "docs_condo",
+          "name": "docs-condo (Dora)",
+          "desc": "arquivo de atas aprovadas no Drive",
+          "icon": "DC",
+          "color": "amber",
+          "enabled": true
+        },
+        {
+          "id": "resend",
+          "name": "Resend (via Cami)",
+          "desc": "envio de convocatórias após aprovação",
+          "icon": "RS",
+          "color": "cyan",
+          "enabled": true
+        }
+      ],
+      "skills": [
+        {
+          "id": "verificar-prazo-legal",
+          "desc": "Verifica data proposta ≥10 dias corridos (art. 1431º CC) — nunca negocia"
+        },
+        {
+          "id": "gerar-ordem-trabalhos",
+          "desc": "Compila pontos obrigatórios + inputs financeiro + manutencao + Mário"
+        },
+        {
+          "id": "draft-convocatoria",
+          "desc": "Gera texto legal de convocatória com lista de condóminos e permilagem"
+        },
+        {
+          "id": "verificar-quorum",
+          "desc": "Calcula permilagem presente e valida cada deliberação (maioria simples/unanimidade)"
+        },
+        {
+          "id": "redigir-ata",
+          "desc": "Estrutura ata com secções obrigatórias, votações por permilagem, deliberações"
+        }
+      ],
+      "recipes": [
+        {
+          "id": "alerta-assembleia-anual",
+          "trigger": "schedule",
+          "trigger_label": "0 8 1 * *",
+          "desc": "Mensal: verificar assembleias anuais não agendadas com prazo <60 dias"
+        },
+        {
+          "id": "convocar-assembleia",
+          "trigger": "event",
+          "trigger_label": "pedido_convocatoria",
+          "desc": "Input de data → draft convocatória → approvals_queue"
+        },
+        {
+          "id": "redigir-ata-pos-assembleia",
+          "trigger": "event",
+          "trigger_label": "assembleia_realizada",
+          "desc": "Input de notas → ata completa → approvals_queue"
+        }
+      ],
+      "peerReads": [
+        {
+          "stage": "current",
+          "value": "financeiro-condo (contas para OT), manutencao-condo (obras para OT), compliance-condo (mandatos)"
+        },
+        {
+          "stage": "sprint_next",
+          "value": "financeiro-condo + manutencao-condo + compliance-condo + docs-condo"
+        }
+      ],
+      "cost": {
+        "current": 6,
+        "currency": "USD",
+        "period": "30d",
+        "notes": "Sonnet — baixa frequência (1-2 assembleias/mês), documentos longos"
+      }
+    },
+    {
+      "id": "atendimento-condo",
+      "name": "Ana",
+      "role": "Atendimento & Triagem",
+      "vertical": "V2 Condomínios",
+      "department": "Condomínios",
+      "model": "claude-haiku-4-5",
+      "version": "1.0",
+      "status": "active",
+      "color": "cyan",
+      "avatarInitial": "A",
+      "integrations": [
+        {
+          "id": "supabase_core_pessoas",
+          "name": "core.pessoas",
+          "desc": "identificar remetente por email/tel",
+          "icon": "SB",
+          "color": "emerald",
+          "enabled": true
+        },
+        {
+          "id": "supabase_v2_historico",
+          "name": "v2_condominios.historico_pedidos",
+          "desc": "histórico de interacções do condómino",
+          "icon": "SB",
+          "color": "emerald",
+          "enabled": true
+        },
+        {
+          "id": "email_webhook",
+          "name": "Email Webhook",
+          "desc": "incoming email → inbox_item",
+          "icon": "EM",
+          "color": "blue",
+          "enabled": true
+        },
+        {
+          "id": "portal_webhook",
+          "name": "Portal Condómino",
+          "desc": "form submit → inbox_item",
+          "icon": "PW",
+          "color": "slate",
+          "enabled": false,
+          "planned": true
+        }
+      ],
+      "skills": [
+        {
+          "id": "identify-sender",
+          "desc": "Cruza email/tel com core.pessoas — retorna pessoa_id + edificio_id + fracção"
+        },
+        {
+          "id": "classify-intent",
+          "desc": "Classifica pedido em 12 categorias com score de confiança"
+        },
+        {
+          "id": "assess-urgency",
+          "desc": "Determina urgência: emergência/urgente/normal com base em conteúdo"
+        },
+        {
+          "id": "enrich-context",
+          "desc": "Adiciona histórico do condómino, OTs abertas, mora actual ao brief"
+        },
+        {
+          "id": "route-to-employee",
+          "desc": "Cria inbox_item para employee destino com brief completo e metadata"
+        }
+      ],
+      "recipes": [
+        {
+          "id": "email-intake",
+          "trigger": "event",
+          "trigger_label": "email_webhook",
+          "desc": "Processa email recebido, classifica e encaminha em <2 min"
+        },
+        {
+          "id": "portal-intake",
+          "trigger": "event",
+          "trigger_label": "portal_form_submit",
+          "desc": "Processa pedido do portal condómino, classifica e encaminha"
+        }
+      ],
+      "peerReads": [
+        {
+          "stage": "current",
+          "value": "manutencao-condo + financeiro-condo (contexto OTs e mora)"
+        },
+        {
+          "stage": "sprint_next",
+          "value": "manutencao-condo + financeiro-condo + seguros-condo"
+        }
+      ],
+      "cost": {
+        "current": 3,
+        "currency": "USD",
+        "period": "30d",
+        "notes": "Haiku — volume alto mas custo mínimo por classificação"
+      }
+    },
+    {
+      "id": "bia",
+      "name": "Bia",
+      "role": "Maintenance Concierge",
+      "vertical": "V5 PRATA",
+      "department": "Manutenção",
+      "model": "claude-sonnet-4-6",
+      "version": "1.1",
+      "status": "active",
+      "color": "purple",
+      "avatarInitial": "B",
+      "integrations": [
+        {
+          "id": "supabase_v1",
+          "name": "Supabase V1 Core",
+          "desc": "edge functions, RLS, auth",
+          "icon": "SB",
+          "color": "emerald",
+          "enabled": true
+        },
+        {
+          "id": "supabase_v5",
+          "name": "Supabase V5",
+          "desc": "manutencao schema · realtime",
+          "icon": "SB",
+          "color": "emerald",
+          "enabled": true
+        },
+        {
+          "id": "whatsapp",
+          "name": "WhatsApp Cloud",
+          "desc": "intake + outreach",
+          "icon": "WA",
+          "color": "green",
+          "enabled": true
+        },
+        {
+          "id": "resend",
+          "name": "Resend",
+          "desc": "transactional email",
+          "icon": "RS",
+          "color": "cyan",
+          "enabled": true
+        },
+        {
+          "id": "moloni",
+          "name": "Moloni",
+          "desc": "recibos fiscais PT",
+          "icon": "ML",
+          "color": "amber",
+          "enabled": true
+        },
+        {
+          "id": "stripe",
+          "name": "Stripe Connect",
+          "desc": "payments PT — sprint 1E",
+          "icon": "SC",
+          "color": "purple",
+          "enabled": false,
+          "planned": true
+        },
+        {
+          "id": "posthog",
+          "name": "PostHog",
+          "desc": "product analytics",
+          "icon": "PH",
+          "color": "amber",
+          "enabled": false,
+          "planned": true
+        }
+      ],
+      "skills": [
+        {
+          "id": "classify-problem-pt",
+          "desc": "Categoriza descrição em taxonomy V5 + retorna confiança"
+        },
+        {
+          "id": "match-prestador-geo",
+          "desc": "Filtra prestadores por concelho/freguesia + especialidade + rating"
+        },
+        {
+          "id": "compose-pedido-msg",
+          "desc": "Gera mensagem WhatsApp em PT-PT calibrada ao tom"
+        },
+        {
+          "id": "extract-magic-link-token",
+          "desc": "Gera magic-link único por pedido com expiry"
+        },
+        {
+          "id": "escalate-to-human",
+          "desc": "Sinaliza baixa confiança e pinga Mário no Discord"
+        },
+        {
+          "id": "vision-analyse-foto",
+          "desc": "Extrai dados de foto enviada pelo owner"
+        }
+      ],
+      "recipes": [
+        {
+          "id": "intake-conversation",
+          "trigger": "event",
+          "source": "whatsapp_cloud_webhook",
+          "trigger_type": "event",
+          "trigger_label": "whatsapp_cloud_webhook",
+          "desc": "Atende pedido novo de owner em PT-PT, classifica, propõe match"
+        },
+        {
+          "id": "daily-handoff-summary",
+          "trigger": "schedule",
+          "source": "cron 18:00 Lisboa",
+          "trigger_type": "schedule",
+          "trigger_label": "0 18 * * * Lisboa",
+          "desc": "Daily roundup às 18h00 com scorecard + flags + action items"
+        }
+      ],
+      "peerReads": [
+        {
+          "stage": "current",
+          "value": "— none"
+        },
+        {
+          "stage": "sprint_1f",
+          "value": "auditor"
+        },
+        {
+          "stage": "sprint_2a",
+          "value": "casa-advisor + auditor"
+        },
+        {
+          "stage": "sprint_2b",
+          "value": "matchmaker + auditor"
+        }
+      ],
+      "cost": {
+        "current": 5,
+        "currency": "USD",
+        "period": "30d",
+        "sprint_1e": "$5/mo",
+        "sprint_1f": "$25/mo",
+        "notes": "Prompt cache pode reduzir 60-70%"
+      }
+    },
+    {
+      "id": "compliance-condo",
+      "name": "Clara",
+      "role": "Compliance & Legal",
+      "vertical": "V2 Condomínios",
+      "department": "Condomínios",
+      "model": "claude-sonnet-4-6",
+      "version": "1.0",
+      "status": "active",
+      "color": "red",
+      "avatarInitial": "C",
+      "integrations": [
+        {
+          "id": "supabase_v2_compliance",
+          "name": "v2_condominios — financeiro + assembleias",
+          "desc": "recebimentos, assembleias, seguros",
+          "icon": "SB",
+          "color": "emerald",
+          "enabled": true
+        },
+        {
+          "id": "supabase_core",
+          "name": "core.imoveis",
+          "desc": "edifícios activos e metadata legal",
+          "icon": "SB",
+          "color": "emerald",
+          "enabled": true
+        },
+        {
+          "id": "resend",
+          "name": "Resend (via Cami)",
+          "desc": "cartas de interpelação após aprovação Mário",
+          "icon": "RS",
+          "color": "cyan",
+          "enabled": true
+        }
+      ],
+      "skills": [
+        {
+          "id": "monitorizar-prazos-legais",
+          "desc": "Verifica 8 tipos de prazo obrigatório por edifício — alertas em cascata 90/60/30/15 dias"
+        },
+        {
+          "id": "calcular-mora-grave",
+          "desc": "Capital + juros legais (Euribor 6M + 1pp) desde vencimento — para mora >60 dias"
+        },
+        {
+          "id": "draft-interpelacao-judicial",
+          "desc": "Carta formal de último aviso com cálculo de juros — submete approvals_queue"
+        },
+        {
+          "id": "verificar-rgpd",
+          "desc": "Responde pedidos RGPD em prazo (30 dias), verifica audit_log activo"
+        },
+        {
+          "id": "calendario-anual-obrigacoes",
+          "desc": "Gera calendário de todas as obrigações legais do ano para cada edifício"
+        }
+      ],
+      "recipes": [
+        {
+          "id": "weekly-compliance",
+          "trigger": "schedule",
+          "trigger_label": "0 6 * * 1",
+          "desc": "Segunda: relatório de prazos próximos 30 dias + mora grave por edifício"
+        },
+        {
+          "id": "mora-grave-intake",
+          "trigger": "event",
+          "trigger_label": "mora_acima_60_dias",
+          "desc": "Recebe de financeiro-condo: calcula juros + prepara carta interpelação"
+        }
+      ],
+      "peerReads": [
+        {
+          "stage": "current",
+          "value": "financeiro-condo (mora grave), seguros-condo (coberturas obrigatórias), assembleia-condo (mandatos)"
+        },
+        {
+          "stage": "sprint_next",
+          "value": "financeiro-condo + seguros-condo + assembleia-condo + auditor-agent"
+        }
+      ],
+      "cost": {
+        "current": 6,
+        "currency": "USD",
+        "period": "30d",
+        "notes": "Sonnet — 1 run semanal + ad-hoc mora grave (volume baixo por edifício)"
+      }
+    },
+    {
+      "id": "comunicacao-condo",
+      "name": "Cami",
+      "role": "Gestora de Comunicações",
+      "vertical": "V2 Condomínios",
+      "department": "Condomínios",
+      "model": "claude-haiku-4-5",
+      "version": "1.0",
+      "status": "active",
+      "color": "teal",
+      "avatarInitial": "CM",
+      "integrations": [
+        {
+          "id": "resend",
+          "name": "Resend",
+          "desc": "transactional email — avisos, quotas, convocatórias",
+          "icon": "RS",
+          "color": "cyan",
+          "enabled": true
+        },
+        {
+          "id": "supabase_v2_comunicacoes",
+          "name": "v2_condominios.comunicacoes",
+          "desc": "registo de todas as comunicações enviadas",
+          "icon": "SB",
+          "color": "emerald",
+          "enabled": true
+        },
+        {
+          "id": "supabase_core_pessoas",
+          "name": "core.pessoas",
+          "desc": "contactos dos destinatários",
+          "icon": "SB",
+          "color": "emerald",
+          "enabled": true
+        },
+        {
+          "id": "vonage_sms",
+          "name": "Vonage SMS",
+          "desc": "SMS para urgências (futuro sprint)",
+          "icon": "VM",
+          "color": "blue",
+          "enabled": false,
+          "planned": true
+        }
+      ],
+      "skills": [
+        {
+          "id": "personalizar-template",
+          "desc": "Injeta nome, fracção, valor, datas no template aprovado — nunca reescreve conteúdo"
+        },
+        {
+          "id": "enviar-email-batch",
+          "desc": "Chama Resend API para lista de destinatários, com anti-spam e horário correcto"
+        },
+        {
+          "id": "track-entrega",
+          "desc": "Regista sent/delivered/bounced por destinatário em v2_condominios.comunicacoes"
+        },
+        {
+          "id": "gerir-bounces",
+          "desc": "Para cada bounce: cria inbox_item para actualizar contacto na base de dados"
+        },
+        {
+          "id": "verificar-aprovacao",
+          "desc": "Verifica status='approved' em approvals_queue antes de qualquer envio — recusa se não aprovado"
+        }
+      ],
+      "recipes": [
+        {
+          "id": "execute-approved-send",
+          "trigger": "event",
+          "trigger_label": "approvals_queue_approved",
+          "desc": "Aprovação recebida → personaliza → envia → regista → confirma em <30 min"
+        },
+        {
+          "id": "quota-reminder-batch",
+          "trigger": "schedule",
+          "trigger_label": "0 8 5 * *",
+          "desc": "Dia 5: envia lembretes de quota de todos os edifícios (após aprovação automática do orquestrador)"
+        }
+      ],
+      "peerReads": [
+        {
+          "stage": "current",
+          "value": "todos os employees (executa os seus pedidos de comunicação)"
+        },
+        {
+          "stage": "sprint_next",
+          "value": "todos os employees + auditor-agent (auditoria de comunicações)"
+        }
+      ],
+      "cost": {
+        "current": 2,
+        "currency": "USD",
+        "period": "30d",
+        "notes": "Haiku — execução pura, sem raciocínio complexo. Custo dominado pela API Resend (€0.001/email)"
+      }
+    },
+    {
+      "id": "criativo-conteudo",
+      "name": "Cris",
+      "role": "Criativo de Conteúdo",
+      "vertical": "core",
+      "department": "Marketing",
+      "model": "claude-sonnet-4-6",
+      "version": "1.0",
+      "status": "active",
+      "color": "rose",
+      "avatarInitial": "CR",
+      "integrations": [
+        {
+          "id": "canva_mcp",
+          "name": "Canva MCP",
+          "desc": "criação e export de designs (carousels, stories, banners)",
+          "icon": "CA",
+          "color": "rose",
+          "enabled": true
+        },
+        {
+          "id": "google_drive_mcp",
+          "name": "Google Drive MCP",
+          "desc": "arquivo de assets por vertical/canal/data",
+          "icon": "GD",
+          "color": "blue",
+          "enabled": true
+        },
+        {
+          "id": "supabase_core_campanhas",
+          "name": "core.campanhas",
+          "desc": "histórico de peças criadas",
+          "icon": "SB",
+          "color": "emerald",
+          "enabled": true
+        },
+        {
+          "id": "system_inbox_items",
+          "name": "system.inbox_items",
+          "desc": "entrega de assets ao diretor-marketing",
+          "icon": "SB",
+          "color": "blue",
+          "enabled": true
+        }
+      ],
+      "skills": [
+        {
+          "id": "carousel-canva",
+          "desc": "5-7 slides via Canva MCP com design tokens PropTech (cores, tipografia, logo)"
+        },
+        {
+          "id": "copy-hormozi",
+          "desc": "Framework Hook→Pain→Solution→Outcome→CTA, hook em <6 palavras, PT-PT obrigatório"
+        },
+        {
+          "id": "ab-variants",
+          "desc": "2-3 variantes de headline por peça para teste (mesmo visual, copy diferente)"
+        },
+        {
+          "id": "adaptacao-multiplataforma",
+          "desc": "1:1 Instagram/Facebook, 9:16 Stories, 1.91:1 Feed ads, Google Display (300×250, 728×90)"
+        },
+        {
+          "id": "stories-sequence",
+          "desc": "3-5 slides sequenciais para Instagram Stories com CTA no final"
+        },
+        {
+          "id": "brief-review",
+          "desc": "Confirma elementos obrigatórios antes de criar: vertical + ICP + mensagem + formato + canal"
+        }
+      ],
+      "recipes": [
+        {
+          "id": "brief-to-assets",
+          "trigger": "manual",
+          "trigger_label": "on_brief",
+          "desc": "Brief recebido → assets entregues em <24h (urgente) ou <48h (normal)"
+        },
+        {
+          "id": "weekly-asset-library",
+          "trigger": "schedule",
+          "trigger_label": "0 16 * * 5",
+          "desc": "Sexta: organizar biblioteca por vertical/canal/data no Google Drive"
+        },
+        {
+          "id": "creative-refresh",
+          "trigger": "manual",
+          "trigger_label": "on_fatigue_alert",
+          "desc": "CTR <1% >7 dias → nova variante hook para campanha activa"
+        }
+      ],
+      "peerReads": [
+        {
+          "stage": "current",
+          "value": "diretor-marketing (brief) + gestor-ads (feedback CTR)"
+        },
+        {
+          "stage": "sprint_next",
+          "value": "publisher-social (formatos aprovados)"
+        }
+      ],
+      "cost": {
+        "current": 10,
+        "currency": "USD",
+        "period": "30d",
+        "notes": "Sonnet — múltiplos briefs mensais + iterações de copy + A/B variants"
+      }
+    },
+    {
+      "id": "diretor-marketing",
+      "name": "Diogo",
+      "role": "Director de Marketing",
+      "vertical": "core",
+      "department": "Marketing",
+      "model": "claude-opus-4-7",
+      "version": "1.0",
+      "status": "active",
+      "color": "slate",
+      "avatarInitial": "DM",
+      "integrations": [
+        {
+          "id": "supabase_core_leads",
+          "name": "core.leads",
+          "desc": "volume e qualidade de leads por vertical",
+          "icon": "SB",
+          "color": "emerald",
+          "enabled": true
+        },
+        {
+          "id": "supabase_core_campanhas",
+          "name": "core.campanhas",
+          "desc": "campanhas activas e seu status",
+          "icon": "SB",
+          "color": "emerald",
+          "enabled": true
+        },
+        {
+          "id": "system_inbox_items",
+          "name": "system.inbox_items",
+          "desc": "flags e digests para Mário",
+          "icon": "SB",
+          "color": "blue",
+          "enabled": true
+        },
+        {
+          "id": "system_approvals_queue",
+          "name": "system.approvals_queue",
+          "desc": "conteúdo e gasto para aprovação",
+          "icon": "SB",
+          "color": "amber",
+          "enabled": true
+        }
+      ],
+      "skills": [
+        {
+          "id": "briefing-vertical",
+          "desc": "Cria brief completo (ICP, mensagem, budget, canal) antes de invocar criativo-conteudo"
+        },
+        {
+          "id": "aprovacao-conteudo",
+          "desc": "Revê cada peça antes de submeter approvals_queue para Mário"
+        },
+        {
+          "id": "budget-discipline",
+          "desc": "Valida ROAS vs. target antes de escalar gasto; para campanha se CAC > limite"
+        },
+        {
+          "id": "calendario-editorial",
+          "desc": "Plano 4 semanas à frente: orgânico + pago por vertical"
+        },
+        {
+          "id": "digest-semanal",
+          "desc": "KPIs por vertical + recomendação de optimização ao cmo-agent"
+        }
+      ],
+      "recipes": [
+        {
+          "id": "weekly-kpi-digest",
+          "trigger": "schedule",
+          "trigger_label": "0 9 * * 1",
+          "desc": "Segunda 09h00: ROAS, CPL, impressões, leads por vertical"
+        },
+        {
+          "id": "monthly-editorial-calendar",
+          "trigger": "schedule",
+          "trigger_label": "0 10 1 * *",
+          "desc": "Dia 1: calendário editorial do próximo mês + report CAC para cmo-agent"
+        },
+        {
+          "id": "campaign-launch",
+          "trigger": "manual",
+          "trigger_label": "on_request",
+          "desc": "Brief → criativo → aprovação → gestor-ads/publisher-social"
+        }
+      ],
+      "peerReads": [
+        {
+          "stage": "current",
+          "value": "criativo-conteudo + gestor-ads + publisher-social + gestor-leads"
+        },
+        {
+          "stage": "sprint_next",
+          "value": "cmo-agent (estratégia) + auditor-agent"
+        }
+      ],
+      "cost": {
+        "current": 12,
+        "currency": "USD",
+        "period": "30d",
+        "notes": "Opus — coordenação semanal + revisão de conteúdo + planeamento mensal"
+      }
+    },
+    {
+      "id": "docs-condo",
+      "name": "Dora",
+      "role": "Gestora de Documentos",
+      "vertical": "V2 Condomínios",
+      "department": "Condomínios",
+      "model": "claude-sonnet-4-6",
+      "version": "1.0",
+      "status": "active",
+      "color": "amber",
+      "avatarInitial": "D",
+      "integrations": [
+        {
+          "id": "supabase_v2_docs",
+          "name": "v2_condominios — documentos",
+          "desc": "documentos, faturas_ocr, documentos_drive",
+          "icon": "SB",
+          "color": "emerald",
+          "enabled": true
+        },
+        {
+          "id": "google_drive",
+          "name": "Google Drive",
+          "desc": "arquivo estruturado por edifício/ano/tipo",
+          "icon": "GD",
+          "color": "blue",
+          "enabled": true
+        },
+        {
+          "id": "anthropic_vision",
+          "name": "Anthropic Vision API",
+          "desc": "OCR de PDFs e imagens de faturas",
+          "icon": "AI",
+          "color": "purple",
+          "enabled": true
+        },
+        {
+          "id": "email_attachments",
+          "name": "Email Attachments",
+          "desc": "processamento de anexos recebidos por email",
+          "icon": "EM",
+          "color": "slate",
+          "enabled": true
+        }
+      ],
+      "skills": [
+        {
+          "id": "ocr-fatura",
+          "desc": "Extrai fornecedor/valor/data/NIF com confiança quantificada — >90% auto, <90% flag"
+        },
+        {
+          "id": "classify-document",
+          "desc": "Classifica em 9 tipos (fatura/ata/contrato/apólice/extracto/certidão/planta/correspondência/outro)"
+        },
+        {
+          "id": "archive-drive",
+          "desc": "Upload Drive com path canónico [Edifício]/[Tipo]/[Ano]/[Mês]/[filename_normalizado]"
+        },
+        {
+          "id": "index-supabase",
+          "desc": "Regista metadados completos + link Drive permanente em v2_condominios.documentos"
+        },
+        {
+          "id": "notify-employees",
+          "desc": "Notifica employee relevante: fatura→financeiro, apólice→seguros, certidão→compliance"
+        }
+      ],
+      "recipes": [
+        {
+          "id": "email-attachment-intake",
+          "trigger": "event",
+          "trigger_label": "email_com_anexo",
+          "desc": "Processa anexo de email: OCR → classifica → arquiva → notifica employee"
+        },
+        {
+          "id": "upload-intake",
+          "trigger": "event",
+          "trigger_label": "documento_uploaded",
+          "desc": "Processa upload do portal: OCR → classifica → arquiva → notifica employee"
+        }
+      ],
+      "peerReads": [
+        {
+          "stage": "current",
+          "value": "financeiro-condo (faturas), seguros-condo (apólices), assembleia-condo (atas), compliance-condo (certidões)"
+        },
+        {
+          "stage": "sprint_next",
+          "value": "todos os employees (cross-domain document routing)"
+        }
+      ],
+      "cost": {
+        "current": 8,
+        "currency": "USD",
+        "period": "30d",
+        "notes": "Sonnet + Vision API — custo dominado por volume de OCR"
+      }
+    },
+    {
+      "id": "energia-condo",
+      "name": "Enzo",
+      "role": "Especialista de Energia",
+      "vertical": "V2+V4 Condomínios/Energia",
+      "department": "Condomínios",
+      "model": "claude-sonnet-4-6",
+      "version": "1.0",
+      "status": "active",
+      "color": "yellow",
+      "avatarInitial": "E",
+      "integrations": [
+        {
+          "id": "supabase_v4_energia",
+          "name": "v4_energia schema",
+          "desc": "contratos, tarifas, simulações",
+          "icon": "SB",
+          "color": "emerald",
+          "enabled": true
+        },
+        {
+          "id": "supabase_v2_ev",
+          "name": "v2_condominios.carregadores",
+          "desc": "contagens EV por posto e condómino",
+          "icon": "SB",
+          "color": "emerald",
+          "enabled": true
+        },
+        {
+          "id": "erse_api",
+          "name": "ERSE / Mercado PT",
+          "desc": "tarifas actuais do mercado liberalizado",
+          "icon": "ER",
+          "color": "orange",
+          "enabled": false,
+          "planned": true
+        },
+        {
+          "id": "resend",
+          "name": "Resend (via Cami)",
+          "desc": "comunicação com comercializadores após aprovação",
+          "icon": "RS",
+          "color": "cyan",
+          "enabled": true
+        }
+      ],
+      "skills": [
+        {
+          "id": "simular-tarifas",
+          "desc": "Compara contrato actual com mercado — calcula poupança €/ano + meses ROI"
+        },
+        {
+          "id": "iniciar-mudanca-comercializador",
+          "desc": "Prepara formulário ERSE de mudança + submete approvals_queue"
+        },
+        {
+          "id": "monitorizar-consumo",
+          "desc": "Detecta anomalias: consumo >baseline+2σ → flag com análise de causa"
+        },
+        {
+          "id": "gerir-carregadores-ev",
+          "desc": "Calcula kWh por condómino e draft facturação mensal EV"
+        },
+        {
+          "id": "alertar-renovacao-contrato",
+          "desc": "Monitora vencimentos 90/60/30 dias — com simulação já preparada"
+        },
+        {
+          "id": "certificacao-energetica",
+          "desc": "Monitoriza validade SCE (10 anos) e agenda renovação com antecedência"
+        }
+      ],
+      "recipes": [
+        {
+          "id": "monthly-energy-close",
+          "trigger": "schedule",
+          "trigger_label": "0 6 1 * *",
+          "desc": "Dia 1: fecho EV + verificar contratos a vencer"
+        },
+        {
+          "id": "quarterly-tariff-audit",
+          "trigger": "schedule",
+          "trigger_label": "0 8 1 1,4,7,10 *",
+          "desc": "Trimestral: simulação tarifária todos os edifícios"
+        },
+        {
+          "id": "anomaly-detection",
+          "trigger": "event",
+          "trigger_label": "fatura_energia_recebida",
+          "desc": "Após chegada de fatura: comparar com baseline e detectar anomalias"
+        }
+      ],
+      "peerReads": [
+        {
+          "stage": "current",
+          "value": "manutencao-condo (anomalias eléctricas), financeiro-condo (faturas EV)"
+        },
+        {
+          "stage": "sprint_next",
+          "value": "manutencao-condo + compliance-condo + auditor-agent"
+        }
+      ],
+      "cost": {
+        "current": 7,
+        "currency": "USD",
+        "period": "30d",
+        "notes": "Sonnet — 1 run mensal principal + 1 trimestral + ad-hoc anomalias"
+      }
+    },
+    {
+      "id": "financeiro-condo",
+      "name": "Fina",
+      "role": "Gestora Financeira",
+      "vertical": "V2 Condomínios",
+      "department": "Condomínios",
+      "model": "claude-sonnet-4-6",
+      "version": "1.0",
+      "status": "active",
+      "color": "green",
+      "avatarInitial": "F",
+      "integrations": [
+        {
+          "id": "supabase_v2_financeiro",
+          "name": "v2_condominios — financeiro",
+          "desc": "recebimentos, extrato, faturas",
+          "icon": "SB",
+          "color": "emerald",
+          "enabled": true
+        },
+        {
+          "id": "supabase_core",
+          "name": "core — imoveis + pessoas",
+          "desc": "edifícios e proprietários",
+          "icon": "SB",
+          "color": "emerald",
+          "enabled": true
+        },
+        {
+          "id": "toconline",
+          "name": "Toconline",
+          "desc": "contabilidade AT-compliant (Mário TOC)",
+          "icon": "TC",
+          "color": "blue",
+          "enabled": false,
+          "planned": true
+        },
+        {
+          "id": "resend",
+          "name": "Resend (via Cami)",
+          "desc": "avisos mora após aprovação",
+          "icon": "RS",
+          "color": "cyan",
+          "enabled": true
+        }
+      ],
+      "skills": [
+        {
+          "id": "gerar-quotas",
+          "desc": "Calcula quota_individual = quota_base × (permilagem/1000) e insere em recebimentos"
+        },
+        {
+          "id": "verificar-mora",
+          "desc": "Identifica pendentes >7 dias, classifica 1º/2º aviso/grave, gera drafts"
+        },
+        {
+          "id": "reconciliar-bancario",
+          "desc": "Cruza movimentos extrato_bancario com recebimentos — identifica não reconciliados"
+        },
+        {
+          "id": "relatorio-mensal",
+          "desc": "Agrega cobrança, pendentes com aging, pagamentos fornecedores por edifício"
+        },
+        {
+          "id": "calcular-juros-mora",
+          "desc": "Calcula juros legais (Euribor 6M + 1pp) desde data de vencimento"
+        },
+        {
+          "id": "draft-aviso-mora",
+          "desc": "Gera carta de aviso proporcional ao tempo em mora (cordial/formal/grave)"
+        }
+      ],
+      "recipes": [
+        {
+          "id": "quota-run",
+          "trigger": "schedule",
+          "trigger_label": "0 6 1 * *",
+          "desc": "Dia 1: gera quotas de todos os edifícios activos"
+        },
+        {
+          "id": "mora-run",
+          "trigger": "schedule",
+          "trigger_label": "0 9 15 * *",
+          "desc": "Dia 15: verifica mora e submete avisos à approvals_queue"
+        },
+        {
+          "id": "reconciliacao-run",
+          "trigger": "schedule",
+          "trigger_label": "0 7 1 * *",
+          "desc": "Dia 1: reconcilia extracto do mês anterior"
+        }
+      ],
+      "peerReads": [
+        {
+          "stage": "current",
+          "value": "compliance-condo (mora >60d)"
+        },
+        {
+          "stage": "sprint_next",
+          "value": "auditor-agent + compliance-condo"
+        }
+      ],
+      "cost": {
+        "current": 8,
+        "currency": "USD",
+        "period": "30d",
+        "notes": "Sonnet — 3 runs mensais principais + ad-hoc"
+      }
+    },
+    {
+      "id": "gestor-ads",
+      "name": "Gabi",
+      "role": "Gestora de Publicidade Paga",
+      "vertical": "core",
+      "department": "Marketing",
+      "model": "claude-sonnet-4-6",
+      "version": "1.0",
+      "status": "active",
+      "color": "blue",
+      "avatarInitial": "GA",
+      "integrations": [
+        {
+          "id": "facebook_ads_mcp",
+          "name": "Facebook Ads MCP",
+          "desc": "ads_create_campaign, ads_create_ad_set, ads_create_ad, ads_get_ad_entities, ads_insights_performance_trend, ads_insights_anomaly_signal, ads_get_opportunity_score",
+          "icon": "FB",
+          "color": "blue",
+          "enabled": true
+        },
+        {
+          "id": "supabase_core_campanhas",
+          "name": "core.campanhas",
+          "desc": "registo de campanhas activas e seu estado",
+          "icon": "SB",
+          "color": "emerald",
+          "enabled": true
+        },
+        {
+          "id": "supabase_core_leads",
+          "name": "core.leads",
+          "desc": "leads gerados por canal para calcular CPL real",
+          "icon": "SB",
+          "color": "emerald",
+          "enabled": true
+        },
+        {
+          "id": "system_approvals_queue",
+          "name": "system.approvals_queue",
+          "desc": "budget e optimizações para aprovação Mário",
+          "icon": "SB",
+          "color": "amber",
+          "enabled": true
+        },
+        {
+          "id": "system_inbox_items",
+          "name": "system.inbox_items",
+          "desc": "flags de performance e relatórios",
+          "icon": "SB",
+          "color": "blue",
+          "enabled": true
+        }
+      ],
+      "skills": [
+        {
+          "id": "criar-campanha",
+          "desc": "Estrutura Campanha→AdSet→Ad via MCP após approvals_queue aprovado"
+        },
+        {
+          "id": "targeting-preciso",
+          "desc": "Audiences por vertical: interesses, lookalike (após 100+ conversões), retargeting separado"
+        },
+        {
+          "id": "roas-guardian",
+          "desc": "Check diário; pausa automática se ROAS <2 após 7 dias; alerta se ROAS <1.5 há >3 dias"
+        },
+        {
+          "id": "escalonamento-disciplinado",
+          "desc": "+20% budget só se ROAS ≥3 nos últimos 7 dias, máx 1×/semana"
+        },
+        {
+          "id": "ab-testing",
+          "desc": "2-3 variantes de criativo; vencedor (≥100 impressões) recebe 80% do budget"
+        },
+        {
+          "id": "naming-convention",
+          "desc": "[VERTICAL]_[OBJECTIVO]_[MÊS-ANO] / [TARGETING]_[LOCALIZAÇÃO] / [CRIATIVO-ID]_[VARIANTE]"
+        }
+      ],
+      "recipes": [
+        {
+          "id": "daily-performance-check",
+          "trigger": "schedule",
+          "trigger_label": "0 8 * * *",
+          "desc": "08h00: ROAS, CTR, gasto → pausar se threshold atingido"
+        },
+        {
+          "id": "weekly-report",
+          "trigger": "schedule",
+          "trigger_label": "0 9 * * 1",
+          "desc": "Segunda: gasto vs. budget, ROAS e CPL, vencedores A/B, recomendações"
+        },
+        {
+          "id": "campaign-launch",
+          "trigger": "manual",
+          "trigger_label": "on_approval",
+          "desc": "Após approvals_queue aprovado: criar campanha Meta com assets do criativo-conteudo"
+        }
+      ],
+      "peerReads": [
+        {
+          "stage": "current",
+          "value": "criativo-conteudo (assets) + diretor-marketing (budget aprovado)"
+        },
+        {
+          "stage": "sprint_next",
+          "value": "gestor-leads (CPL real) + diretor-marketing (ROAS report)"
+        }
+      ],
+      "cost": {
+        "current": 9,
+        "currency": "USD",
+        "period": "30d",
+        "notes": "Sonnet — check diário (leve) + criação/optimização semanal de campanhas"
+      }
+    },
+    {
+      "id": "gestor-leads",
+      "name": "Leo",
+      "role": "Gestor de Leads",
+      "vertical": "core",
+      "department": "Marketing",
+      "model": "claude-sonnet-4-6",
+      "version": "1.0",
+      "status": "active",
+      "color": "emerald",
+      "avatarInitial": "GL",
+      "integrations": [
+        {
+          "id": "supabase_core_leads",
+          "name": "core.leads",
+          "desc": "SELECT/INSERT — base de dados de todos os leads",
+          "icon": "SB",
+          "color": "emerald",
+          "enabled": true
+        },
+        {
+          "id": "meta_leads_mcp",
+          "name": "Meta Leads MCP",
+          "desc": "leads de Meta Lead Form Ads em real-time",
+          "icon": "FB",
+          "color": "blue",
+          "enabled": true
+        },
+        {
+          "id": "supabase_core_campanhas",
+          "name": "core.campanhas",
+          "desc": "cruzar leads com campanhas para calcular CPL",
+          "icon": "SB",
+          "color": "emerald",
+          "enabled": true
+        },
+        {
+          "id": "resend",
+          "name": "Resend",
+          "desc": "envio de emails de nurturing (D+0, D+3, D+7)",
+          "icon": "RS",
+          "color": "cyan",
+          "enabled": true
+        },
+        {
+          "id": "system_inbox_items",
+          "name": "system.inbox_items",
+          "desc": "leads quentes + relatórios semanais",
+          "icon": "SB",
+          "color": "blue",
+          "enabled": true
+        },
+        {
+          "id": "system_approvals_queue",
+          "name": "system.approvals_queue",
+          "desc": "contactar lead quente — aprovação antes de qualquer contacto",
+          "icon": "SB",
+          "color": "amber",
+          "enabled": true
+        }
+      ],
+      "skills": [
+        {
+          "id": "captura-multicanal",
+          "desc": "Meta Lead Forms, Google, formulário website, input manual — com dedup por email"
+        },
+        {
+          "id": "scoring-automatico",
+          "desc": "0-100: vertical +20, email válido +15, telefone +10, cargo B2B +15, empresa >10 frac +20, intenção +20, email gratuito B2B -10, sem tel -5"
+        },
+        {
+          "id": "routing-inteligente",
+          "desc": "≥70 → employee operacional da vertical; 40-69 → nurturing; <40 → qualificar manualmente"
+        },
+        {
+          "id": "nurturing-sequence",
+          "desc": "3 emails em 7 dias por vertical (D+0, D+3, D+7) com conteúdo específico. RGPD obrigatório."
+        },
+        {
+          "id": "relatorio-cpl",
+          "desc": "CPL real por canal e vertical, cruzando gasto gestor-ads com leads gerados"
+        }
+      ],
+      "recipes": [
+        {
+          "id": "daily-lead-processing",
+          "trigger": "schedule",
+          "trigger_label": "0 8 30 * * *",
+          "desc": "08h30: processar leads das últimas 24h → score → routing"
+        },
+        {
+          "id": "weekly-cpl-report",
+          "trigger": "schedule",
+          "trigger_label": "0 17 * * 5",
+          "desc": "Sexta: volume por vertical/canal, CPL real, taxa de conversão, score médio por canal"
+        },
+        {
+          "id": "nurturing-trigger",
+          "trigger": "manual",
+          "trigger_label": "on_score_40_69",
+          "desc": "Lead score 40-69 → iniciar sequência D+0 via Resend após verificar gdpr_consent"
+        }
+      ],
+      "peerReads": [
+        {
+          "stage": "current",
+          "value": "gestor-ads (campanhas activas) + publisher-social (orgânico activo)"
+        },
+        {
+          "stage": "sprint_next",
+          "value": "financeiro-condo (Fina, leads V2) + diretor-marketing (CPL report)"
+        }
+      ],
+      "cost": {
+        "current": 8,
+        "currency": "USD",
+        "period": "30d",
+        "notes": "Sonnet — scoring diário + nurturing sequences + relatório semanal"
+      }
+    },
+    {
+      "id": "manutencao-condo",
+      "name": "Marco",
+      "role": "Gestor de Manutenção",
+      "vertical": "V2+V5 Condomínios/Manutenção",
+      "department": "Condomínios",
+      "model": "claude-sonnet-4-6",
+      "version": "1.0",
+      "status": "active",
+      "color": "orange",
+      "avatarInitial": "M",
+      "integrations": [
+        {
+          "id": "supabase_v5_manutencao",
+          "name": "v5_manutencao schema",
+          "desc": "OTs, prestadores, orçamentos",
+          "icon": "SB",
+          "color": "emerald",
+          "enabled": true
+        },
+        {
+          "id": "supabase_v2_fracoes",
+          "name": "v2_condominios.fracoes",
+          "desc": "localização das avarias",
+          "icon": "SB",
+          "color": "emerald",
+          "enabled": true
+        },
+        {
+          "id": "resend",
+          "name": "Resend (via Cami)",
+          "desc": "notificação a prestadores após aprovação",
+          "icon": "RS",
+          "color": "cyan",
+          "enabled": true
+        },
+        {
+          "id": "whatsapp",
+          "name": "WhatsApp (via Cami)",
+          "desc": "urgências a prestadores (futuro)",
+          "icon": "WA",
+          "color": "green",
+          "enabled": false,
+          "planned": true
+        },
+        {
+          "id": "moloni",
+          "name": "Moloni (futuro)",
+          "desc": "recibos fiscais de prestadores",
+          "icon": "ML",
+          "color": "amber",
+          "enabled": false,
+          "planned": true
+        }
+      ],
+      "skills": [
+        {
+          "id": "triage-avaria",
+          "desc": "Classifica tipo técnico + urgência (emergência/urgente/normal) com base em descrição"
+        },
+        {
+          "id": "score-prestador",
+          "desc": "Calcula score: rating×0.4 + taxa_prazo×0.3 + proximidade×0.2 + disponibilidade×0.1"
+        },
+        {
+          "id": "abrir-ot",
+          "desc": "Cria OT com contexto completo — adjudica <€200 ou submete approvals_queue"
+        },
+        {
+          "id": "acompanhar-ot",
+          "desc": "Verifica OTs abertas >48h sem update — cria flags proporcionais"
+        },
+        {
+          "id": "fechar-ot",
+          "desc": "Fecha OT, verifica valor final vs. orçamento, lança custo em financeiro-condo"
+        },
+        {
+          "id": "actualizar-rating-prestador",
+          "desc": "Actualiza score do prestador com base no resultado e prazo da OT"
+        }
+      ],
+      "recipes": [
+        {
+          "id": "avaria-intake",
+          "trigger": "event",
+          "trigger_label": "inbox_item_manutencao",
+          "desc": "Recebe avaria da Ana, classifica, selecciona prestador, abre OT"
+        },
+        {
+          "id": "ot-followup",
+          "trigger": "schedule",
+          "trigger_label": "0 9 * * *",
+          "desc": "Diário: verificar OTs abertas sem actualização >48h"
+        },
+        {
+          "id": "fecho-ot",
+          "trigger": "event",
+          "trigger_label": "prestador_confirmou_conclusao",
+          "desc": "Prestador confirma → fechar OT + lançar custo"
+        }
+      ],
+      "peerReads": [
+        {
+          "stage": "current",
+          "value": "atendimento-condo (avarias incoming), financeiro-condo (custos OT)"
+        },
+        {
+          "stage": "sprint_next",
+          "value": "atendimento-condo + financeiro-condo + compliance-condo (obras >€2k)"
+        }
+      ],
+      "cost": {
+        "current": 10,
+        "currency": "USD",
+        "period": "30d",
+        "notes": "Sonnet — volume event-driven (2-4 OTs/edifício/mês)"
+      }
+    },
+    {
+      "id": "orquestrador-condo",
+      "name": "Orquestrador",
+      "role": "Director Operacional",
+      "vertical": "V2 Condomínios",
+      "department": "Condomínios",
+      "model": "claude-opus-4-7",
+      "version": "1.0",
+      "status": "active",
+      "color": "slate",
+      "avatarInitial": "O",
+      "integrations": [
+        {
+          "id": "supabase_v1",
+          "name": "Supabase V1 Core",
+          "desc": "inbox_items, approvals_queue, imoveis",
+          "icon": "SB",
+          "color": "emerald",
+          "enabled": true
+        },
+        {
+          "id": "supabase_v2",
+          "name": "Schema v2_condominios",
+          "desc": "contexto edifícios activos",
+          "icon": "SB",
+          "color": "emerald",
+          "enabled": true
+        },
+        {
+          "id": "anthropic",
+          "name": "Anthropic API",
+          "desc": "raciocínio orquestração complexa",
+          "icon": "AI",
+          "color": "purple",
+          "enabled": true
+        }
+      ],
+      "skills": [
+        {
+          "id": "route-event",
+          "desc": "Classifica evento e delega ao employee correcto com contexto completo"
+        },
+        {
+          "id": "parallel-launch",
+          "desc": "Lança múltiplos employees em simultâneo para triggers globais (fecho mês)"
+        },
+        {
+          "id": "execute-approval",
+          "desc": "Executa aprovações pendentes na queue — invoca comunicacao-condo"
+        },
+        {
+          "id": "sla-monitor",
+          "desc": "Verifica SLAs e cria flags 🔴 para items sem resposta"
+        },
+        {
+          "id": "daily-digest",
+          "desc": "Consolida estado de todos os employees em inbox_item resumo para Mário"
+        }
+      ],
+      "recipes": [
+        {
+          "id": "monthly-close",
+          "trigger": "schedule",
+          "trigger_label": "0 6 1 * *",
+          "desc": "Dia 1: lança financeiro + energia + seguros + compliance em paralelo"
+        },
+        {
+          "id": "mora-run",
+          "trigger": "schedule",
+          "trigger_label": "0 9 15 * *",
+          "desc": "Dia 15: lança financeiro-condo verificação de mora"
+        },
+        {
+          "id": "daily-check",
+          "trigger": "schedule",
+          "trigger_label": "0 7 * * *",
+          "desc": "Verifica SLAs, executa aprovações pendentes, envia digest"
+        },
+        {
+          "id": "event-intake",
+          "trigger": "event",
+          "trigger_label": "inbox_item_created",
+          "desc": "Processa novo evento e faz routing imediato"
+        }
+      ],
+      "peerReads": [
+        {
+          "stage": "current",
+          "value": "todos os employees condo"
+        },
+        {
+          "stage": "sprint_next",
+          "value": "auditor-agent"
+        }
+      ],
+      "cost": {
+        "current": 15,
+        "currency": "USD",
+        "period": "30d",
+        "notes": "Opus — usado apenas para orquestração complexa, não per-message"
+      }
+    },
+    {
+      "id": "publisher-social",
+      "name": "Paula",
+      "role": "Publisher Social Media",
+      "vertical": "core",
+      "department": "Marketing",
+      "model": "claude-haiku-4-5-20251001",
+      "version": "1.0",
+      "status": "active",
+      "color": "pink",
+      "avatarInitial": "PS",
+      "integrations": [
+        {
+          "id": "facebook_ads_mcp",
+          "name": "Facebook Ads MCP",
+          "desc": "publicar em Instagram + Facebook via Meta API",
+          "icon": "FB",
+          "color": "blue",
+          "enabled": true
+        },
+        {
+          "id": "canva_mcp",
+          "name": "Canva MCP",
+          "desc": "exportar assets finais prontos para publicação",
+          "icon": "CA",
+          "color": "rose",
+          "enabled": true
+        },
+        {
+          "id": "supabase_core_publicacoes",
+          "name": "core.publicacoes",
+          "desc": "registo de publicações + URLs + engagement",
+          "icon": "SB",
+          "color": "emerald",
+          "enabled": true
+        },
+        {
+          "id": "supabase_core_campanhas",
+          "name": "core.campanhas",
+          "desc": "alinhar orgânico com campanhas pagas activas",
+          "icon": "SB",
+          "color": "emerald",
+          "enabled": true
+        },
+        {
+          "id": "system_approvals_queue",
+          "name": "system.approvals_queue",
+          "desc": "verificar aprovação antes de publicar",
+          "icon": "SB",
+          "color": "amber",
+          "enabled": true
+        },
+        {
+          "id": "system_inbox_items",
+          "name": "system.inbox_items",
+          "desc": "confirmações e flags de engagement",
+          "icon": "SB",
+          "color": "blue",
+          "enabled": true
+        }
+      ],
+      "skills": [
+        {
+          "id": "publicacao-peak-time",
+          "desc": "Instagram 19h-21h (seg-sex) / Facebook 13h-15h (seg-qui) / LinkedIn 08h-09h (ter-qui)"
+        },
+        {
+          "id": "hashtag-strategy",
+          "desc": "10-15 hashtags estratificadas por vertical: 3 nicho, 5 médio, 2 grande"
+        },
+        {
+          "id": "cross-posting",
+          "desc": "Adapta caption e formato por plataforma — nunca copia igual de Instagram para LinkedIn"
+        },
+        {
+          "id": "calendario-editorial",
+          "desc": "Mantém 4 semanas à frente: a criar / aprovado / agendado / publicado"
+        },
+        {
+          "id": "engagement-monitoring",
+          "desc": "Likes, shares, comentários, saves — flag ao diretor-marketing se outlier em <24h"
+        }
+      ],
+      "recipes": [
+        {
+          "id": "daily-publish",
+          "trigger": "schedule",
+          "trigger_label": "0 * * * *",
+          "desc": "Verificar calendário — algo a publicar hoje no horário definido (±15 min)"
+        },
+        {
+          "id": "weekly-engagement-digest",
+          "trigger": "schedule",
+          "trigger_label": "0 16 * * 5",
+          "desc": "Sexta 16h00: top 3 e bottom 3 posts por reach e engagement rate"
+        },
+        {
+          "id": "monthly-schedule-review",
+          "trigger": "schedule",
+          "trigger_label": "0 10 1 * *",
+          "desc": "Dia 1: propor ajuste de frequência ou horários com base em 30 dias de dados"
+        }
+      ],
+      "peerReads": [
+        {
+          "stage": "current",
+          "value": "diretor-marketing (calendário aprovado) + criativo-conteudo (assets)"
+        },
+        {
+          "stage": "sprint_next",
+          "value": "gestor-leads (engagement → leads orgânicos)"
+        }
+      ],
+      "cost": {
+        "current": 3,
+        "currency": "USD",
+        "period": "30d",
+        "notes": "Haiku — publicações simples, monitoring leve, alto volume baixo custo"
+      }
+    },
+    {
+      "id": "seguros-condo",
+      "name": "Sofia",
+      "role": "Especialista de Seguros",
+      "vertical": "V2+V3 Condomínios/Seguros",
+      "department": "Condomínios",
+      "model": "claude-sonnet-4-6",
+      "version": "1.0",
+      "status": "active",
+      "color": "indigo",
+      "avatarInitial": "S",
+      "integrations": [
+        {
+          "id": "supabase_v3_seguros",
+          "name": "v3_seguros schema",
+          "desc": "apólices, sinistros, seguradoras",
+          "icon": "SB",
+          "color": "emerald",
+          "enabled": true
+        },
+        {
+          "id": "supabase_v2_seguros",
+          "name": "v2_condominios.seguro_fracoes",
+          "desc": "seguros individuais das fracções",
+          "icon": "SB",
+          "color": "emerald",
+          "enabled": true
+        },
+        {
+          "id": "seguradoras_api",
+          "name": "Seguradoras PT",
+          "desc": "propostas e participações (futuro)",
+          "icon": "SG",
+          "color": "blue",
+          "enabled": false,
+          "planned": true
+        },
+        {
+          "id": "resend",
+          "name": "Resend (via Cami)",
+          "desc": "comunicação com seguradoras após aprovação",
+          "icon": "RS",
+          "color": "cyan",
+          "enabled": true
+        }
+      ],
+      "skills": [
+        {
+          "id": "auditar-cobertura",
+          "desc": "Verifica checklist legal de coberturas obrigatórias por edifício (DL 268/94)"
+        },
+        {
+          "id": "alertar-renovacao",
+          "desc": "Cascata 90/60/30/15 dias com simulação de mercado incorporada"
+        },
+        {
+          "id": "simular-seguro",
+          "desc": "Compara prémio actual com alternativas — ratio cobertura/prémio"
+        },
+        {
+          "id": "participar-sinistro",
+          "desc": "Prepara formulário completo + prazo legal 8 dias úteis → approvals_queue urgente"
+        },
+        {
+          "id": "acompanhar-sinistro",
+          "desc": "Monitoriza estado semanal, flag se sem movimento >15 dias"
+        },
+        {
+          "id": "gerir-seguro-fracoes",
+          "desc": "Verifica seguros individuais registados e alerta fracções sem cobertura"
+        }
+      ],
+      "recipes": [
+        {
+          "id": "monthly-insurance-check",
+          "trigger": "schedule",
+          "trigger_label": "0 7 1 * *",
+          "desc": "Dia 1: verificar apólices a vencer <90 dias"
+        },
+        {
+          "id": "annual-coverage-audit",
+          "trigger": "schedule",
+          "trigger_label": "0 8 1 1 *",
+          "desc": "Janeiro: auditoria de cobertura de todos os edifícios"
+        },
+        {
+          "id": "weekly-sinistros",
+          "trigger": "schedule",
+          "trigger_label": "0 9 * * 2",
+          "desc": "Terça: acompanhar sinistros em curso"
+        }
+      ],
+      "peerReads": [
+        {
+          "stage": "current",
+          "value": "compliance-condo (cobertura obrigatória em falta), manutencao-condo (sinistros com dano)"
+        },
+        {
+          "stage": "sprint_next",
+          "value": "compliance-condo + auditor-agent + docs-condo"
+        }
+      ],
+      "cost": {
+        "current": 7,
+        "currency": "USD",
+        "period": "30d",
+        "notes": "Sonnet — 1 run mensal + 1 anual + semanal sinistros (volume baixo)"
+      }
     }
   ],
   "recentActivity": [
     {
-      "ts": "2026-05-04T22:06Z",
+      "ts": "2026-05-05T22:07Z",
       "agent": "subagent",
       "worktree": "proptech-v5-1b3",
-      "action": "subagent stopped [session:cbd58b15]",
+      "action": "subagent stopped [session:d62fe085]",
       "refs": []
     },
     {
-      "ts": "2026-05-04T22:02Z",
+      "ts": "2026-05-05T21:52Z",
+      "agent": "subagent",
+      "worktree": "proptech-v5-1b3",
+      "action": "subagent stopped [session:d62fe085]",
+      "refs": []
+    },
+    {
+      "ts": "2026-05-05T21:35Z",
+      "agent": "subagent",
+      "worktree": "proptech-v5-1b3",
+      "action": "subagent stopped [session:d62fe085]",
+      "refs": []
+    },
+    {
+      "ts": "2026-05-05T20:55Z",
+      "agent": "subagent",
+      "worktree": "proptech-v5-1b3",
+      "action": "subagent stopped [session:d62fe085]",
+      "refs": []
+    },
+    {
+      "ts": "2026-05-05T20:51Z",
+      "agent": "general-purpose",
+      "worktree": "proptech-v5-1b3",
+      "action": "subagent stopped [session:d62fe085]",
+      "refs": []
+    },
+    {
+      "ts": "2026-05-05T20:49Z",
+      "agent": "subagent",
+      "worktree": "proptech-v5-1b3",
+      "action": "subagent stopped [session:a74b3960]",
+      "refs": []
+    },
+    {
+      "ts": "2026-05-05T20:48Z",
       "agent": "architect-proptech",
       "worktree": "proptech-v5-1b3",
-      "action": "subagent stopped [session:cbd58b15]",
+      "action": "subagent stopped [session:d62fe085]",
       "refs": []
     },
     {
-      "ts": "2026-05-04T21:46Z",
-      "agent": "subagent",
+      "ts": "2026-05-05T20:47Z",
+      "agent": "general-purpose",
       "worktree": "proptech-v5-1b3",
-      "action": "subagent stopped [session:cbd58b15]",
+      "action": "subagent stopped [session:d62fe085]",
       "refs": []
     },
     {
-      "ts": "2026-05-04T17:06Z",
-      "agent": "subagent",
-      "worktree": "proptech-v5-1b3",
-      "action": "subagent stopped [session:cbd58b15]",
-      "refs": []
-    },
-    {
-      "ts": "2026-05-04T16:31Z",
-      "agent": "subagent",
-      "worktree": "proptech-v5-1b3",
-      "action": "subagent stopped [session:cbd58b15]",
-      "refs": []
-    },
-    {
-      "ts": "2026-05-04T01:22Z",
-      "agent": "subagent",
-      "worktree": "proptech-v5-1b3",
-      "action": "subagent stopped [session:aff6d186]",
-      "refs": []
-    },
-    {
-      "ts": "2026-05-04T00:27Z",
-      "agent": "subagent",
-      "worktree": "proptech-v5-1b3",
-      "action": "subagent stopped [session:aff6d186]",
-      "refs": []
-    },
-    {
-      "ts": "2026-05-04T00:24Z",
+      "ts": "2026-05-05T20:47Z",
       "agent": "vertical-builder",
       "worktree": "proptech-v5-1b3",
-      "action": "subagent stopped [session:aff6d186]",
+      "action": "subagent stopped [session:d62fe085]",
       "refs": []
     },
     {
-      "ts": "2026-05-04T00:00Z",
+      "ts": "2026-05-05T20:47Z",
+      "agent": "supabase-designer",
+      "worktree": "proptech-v5-1b3",
+      "action": "subagent stopped [session:d62fe085]",
+      "refs": []
+    },
+    {
+      "ts": "2026-05-05T20:46Z",
+      "agent": "general-purpose",
+      "worktree": "proptech-v5-1b3",
+      "action": "subagent stopped [session:d62fe085]",
+      "refs": []
+    },
+    {
+      "ts": "2026-05-05T20:37Z",
+      "agent": "subagent",
+      "worktree": "proptech-v5-1b3",
+      "action": "subagent stopped [session:a74b3960]",
+      "refs": []
+    },
+    {
+      "ts": "2026-05-05T18:34Z",
+      "agent": "subagent",
+      "worktree": "proptech-v5-1b3",
+      "action": "subagent stopped [session:a74b3960]",
+      "refs": []
+    },
+    {
+      "ts": "2026-05-05T18:34Z",
+      "agent": "subagent",
+      "worktree": "proptech-v5-1b3",
+      "action": "subagent stopped [session:a74b3960]",
+      "refs": []
+    },
+    {
+      "ts": "2026-05-05T18:30Z",
+      "agent": "Explore",
+      "worktree": "proptech-v5-1b3",
+      "action": "subagent stopped [session:a74b3960]",
+      "refs": []
+    },
+    {
+      "ts": "2026-05-05T18:18Z",
+      "agent": "subagent",
+      "worktree": "proptech-v5-1b3",
+      "action": "subagent stopped [session:a74b3960]",
+      "refs": []
+    },
+    {
+      "ts": "2026-05-05T18:09Z",
       "agent": "vertical-builder",
       "worktree": "proptech-v5-1b3",
-      "action": "feat(parser v3.0) — 100% LIVE, gray-matter, SourceTag, tabs reorder. Audit 11 live/3 hardcoded. 42KB. 3 commits 7653ca5+d3f9d56+35470bb push sprint/v5-1b3 [ADR-005-v3]",
+      "action": "subagent stopped [session:a74b3960]",
       "refs": []
     },
     {
-      "ts": "2026-05-03T23:58Z",
-      "agent": "architect-proptech",
-      "worktree": "proptech-v5-1b3",
-      "action": "subagent stopped [session:aff6d186]",
-      "refs": []
-    },
-    {
-      "ts": "2026-05-03T23:51Z",
-      "agent": "subagent",
-      "worktree": "proptech-v5-1b3",
-      "action": "subagent stopped [session:aff6d186]",
-      "refs": []
-    },
-    {
-      "ts": "2026-05-03T23:48Z",
-      "agent": "architect-proptech",
-      "worktree": "proptech-v5-1b3",
-      "action": "subagent stopped [session:aff6d186]",
-      "refs": []
-    },
-    {
-      "ts": "2026-05-03T15:24Z",
-      "agent": "subagent",
-      "worktree": "proptech-v5-1b3",
-      "action": "subagent stopped [session:68445df3]",
-      "refs": []
-    },
-    {
-      "ts": "2026-05-03T15:21Z",
-      "agent": "subagent",
-      "worktree": "proptech-v5-1b3",
-      "action": "subagent stopped [session:68445df3]",
-      "refs": []
-    },
-    {
-      "ts": "2026-05-03T15:08Z",
-      "agent": "subagent",
-      "worktree": "proptech-v5-1b3",
-      "action": "subagent stopped [session:68445df3]",
-      "refs": []
-    },
-    {
-      "ts": "2026-05-03T14:56Z",
-      "agent": "subagent",
-      "worktree": "proptech-v5-1b3",
-      "action": "subagent stopped [session:aff6d186]",
-      "refs": []
-    },
-    {
-      "ts": "2026-05-03T14:51Z",
+      "ts": "2026-05-05T18:30Z",
       "agent": "vertical-builder",
       "worktree": "proptech-v5-1b3",
-      "action": "subagent stopped [session:aff6d186]",
+      "action": "V2 Condomínios dashboard — 7 ecrãs mock data, App.jsx self-contained 1346L, build 0 erros [commit:b0cd052]",
       "refs": []
     },
     {
-      "ts": "2026-05-03T16:30Z",
-      "agent": "vertical-builder",
+      "ts": "2026-05-05T17:26Z",
+      "agent": "Explore",
       "worktree": "proptech-v5-1b3",
-      "action": "feat(dashboard) schema v2.0 — DrawerContext+Competitors+Roadmap+theme toggle, commit 382b063, push sprint/v5-1b3 [ADR-005-v2]",
+      "action": "subagent stopped [session:a74b3960]",
       "refs": []
     },
     {
-      "ts": "2026-05-03T14:40Z",
-      "agent": "architect-proptech",
-      "worktree": "proptech-v5-1b3",
-      "action": "subagent stopped [session:aff6d186]",
-      "refs": []
-    },
-    {
-      "ts": "2026-05-03T14:29Z",
+      "ts": "2026-05-05T17:16Z",
       "agent": "subagent",
       "worktree": "proptech-v5-1b3",
-      "action": "subagent stopped [session:aff6d186]",
+      "action": "subagent stopped [session:a74b3960]",
       "refs": []
     }
   ],
@@ -733,16 +2708,16 @@
     {
       "id": "d-2026-05-03",
       "text": "Magic-link URL fix: getBaseUrl(req) + path /r/join/",
-      "urgency": "low",
+      "urgency": "medium",
       "meta": "2026-05-03 · V5",
-      "detail": "**Decisão:** Substituir constante `SHARE_BASE_URL` (hardcoded fallback `prataowners.pt`) por função `getBaseUrl(req)` que deriva o domínio do request origin em runtime.\r\n\r\n**Causa do bug (confirmado Mário mobile test 2026-05-02 19h):**\r\n1. `SHARE_BASE_URL` não estava definida como Supabase secret"
+      "detail": "**Decisão:** Substituir constante `SHARE_BASE_URL` (hardcoded fallback `prataowners.pt`) por função `getBaseUrl(req)` que deriva o domínio do request origin em runtime.\r\n\r\n**Causa do bug (confirmado Mário mobile test 2026-05-02 19h):**\r\n1. `SHARE_BASE_URL` não estava definida como Supabase secre"
     },
     {
       "id": "d-2026-05-02",
       "text": "R2 Alpha Outreach adiado indefinidamente",
-      "urgency": "low",
+      "urgency": "high",
       "meta": "2026-05-02 · V5",
-      "detail": "**Decisão:** Adiar o R2 alpha outreach (gate original 2026-05-04, Day 7 da Sprint 1D) até infra estar pronta.\r\n\r\n**Razões (Mário, 2026-05-02 ~13h):**\r\n1. App V5 nunca foi testada end-to-end em mobile real (apenas localhost desktop)\r\n2. Vercel deploy V5 alpha não está executado (URL público inexist"
+      "detail": "**Decisão:** Adiar o R2 alpha outreach (gate original 2026-05-04, Day 7 da Sprint 1D) até infra estar pronta.\r\n\r\n**Razões (Mário, 2026-05-02 ~13h):**\r\n1. App V5 nunca foi testada end-to-end em mobile real (apenas localhost desktop)\r\n2. Vercel deploy V5 alpha não está executado (URL público inexi"
     },
     {
       "id": "d-2026-05-02",
@@ -962,28 +2937,14 @@
     },
     {
       "wave": "1D",
-      "name": "Receipt Trojan Horse Alpha — backend 100% + frontend owner-side",
-      "status": "done",
-      "sprints": [
-        {
-          "id": "Sprint 1D",
-          "name": "Receipt Trojan Horse Alpha — backend 100% + frontend owner-s",
-          "status": "done",
-          "date": "2026-05-01 → 2026-05-03",
-          "tasks": []
-        }
-      ]
-    },
-    {
-      "wave": "1D-recovery",
-      "name": "Dashboard live + magic-link fix + prestador-app charter",
+      "name": "Receipt Trojan Horse Alpha — owner-first 14-day MVP",
       "status": "active",
       "sprints": [
         {
-          "id": "Sprint 1D-recovery",
-          "name": "Dashboard live + magic-link fix + prestador-app charter",
+          "id": "Sprint 1D",
+          "name": "Receipt Trojan Horse Alpha — owner-first 14-day MVP",
           "status": "active",
-          "date": "**2026-05-04 → 2026-05-18**",
+          "date": "**2026-05-01 → 2026-05-15**",
           "tasks": []
         }
       ]
@@ -997,7 +2958,7 @@
           "id": "Sprint 1E",
           "name": "Camada 2: dashboard prestador · Stripe Connect · Moloni · sc",
           "status": "planned",
-          "date": "Pós 2026-05-18",
+          "date": "Pós 2026-05-15",
           "tasks": []
         }
       ]

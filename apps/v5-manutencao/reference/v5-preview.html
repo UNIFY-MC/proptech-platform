@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>V5 Preview — Prototipo</title>
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;font-family:system-ui,-apple-system,sans-serif}
+body{background:#d8d8d6;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:14px 8px;gap:12px}
+button,input{font-family:inherit}
+::-webkit-scrollbar{width:0;height:0}
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" data-type="module">
+const {useState} = React;
+
+const C = {
+  green:"#1B4332",greenMid:"#2D6A4F",greenLt:"#52B788",greenXl:"#D8F3DC",
+  blue:"#185FA5",purple:"#534AB7",purpleDk:"#26215C",
+  amber:"#854F0B",amberLt:"#FAEEDA",red:"#A32D2D",redLt:"#FCEBEB",
+  border:"#e5e5e3",bg:"#f5f5f3",text:"#111",textS:"#555",textT:"#999"
+};
+
+const Ic = ({n, size=22, col="#888"}) => {
+  const p = {
+    home: <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" stroke={col} strokeWidth="1.5" fill="none"/>,
+    explore: <circle cx="12" cy="12" r="9" stroke={col} strokeWidth="1.5" fill="none"/>,
+    orders: <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" stroke={col} strokeWidth="1.5" fill="none"/>,
+    profile: <><circle cx="12" cy="8" r="4" stroke={col} strokeWidth="1.5" fill="none"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" stroke={col} strokeWidth="1.5" fill="none"/></>,
+    house: <><path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z" stroke={col} strokeWidth="1.5" fill="none"/><path d="M9 21V12h6v9" stroke={col} strokeWidth="1.5" fill="none"/></>,
+    plus: <><line x1="12" y1="5" x2="12" y2="19" stroke={col} strokeWidth="2" strokeLinecap="round"/><line x1="5" y1="12" x2="19" y2="12" stroke={col} strokeWidth="2" strokeLinecap="round"/></>
+  };
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none">{p[n]}</svg>;
+};
+
+const SBar = () => (
+  <div style={{background:C.green,padding:"10px 16px 8px",display:"flex",justifyContent:"space-between"}}>
+    <span style={{color:"#fff",fontSize:12,fontWeight:700}}>9:41</span>
+    <span style={{color:"rgba(255,255,255,.7)",fontSize:11}}>●●● WiFi 100%</span>
+  </div>
+);
+
+const BNav = ({active, go, variant="orig"}) => {
+  const tabs = variant==="casa"
+    ? [["Início",0,"home"],["Casa",10,"house"],null,["Pedidos",3,"orders"],["Perfil",4,"profile"]]
+    : [["Início",0,"home"],["Explorar",1,"explore"],null,["Pedidos",3,"orders"],["Perfil",4,"profile"]];
+  return (
+    <div style={{display:"flex",borderTop:`1px solid ${C.border}`,background:"#fff"}}>
+      {tabs.map((item,i) => {
+        if (!item) return (
+          <div key="fab" style={{flex:1,display:"flex",justifyContent:"center",alignItems:"center",paddingBottom:6}}>
+            <div onClick={()=>go(99)} style={{width:48,height:48,borderRadius:"50%",background:C.greenLt,display:"flex",alignItems:"center",justifyContent:"center",marginTop:-20,boxShadow:"0 4px 12px rgba(82,183,136,.4)",cursor:"pointer"}}>
+              <Ic n="plus" col="#fff" size={24}/>
+            </div>
+          </div>
+        );
+        const [label,idx,icon]=item, on=active===idx;
+        return (
+          <div key={label} onClick={()=>go(idx)} style={{flex:1,padding:"8px 2px 6px",textAlign:"center",cursor:"pointer"}}>
+            <div style={{display:"flex",justifyContent:"center",marginBottom:2}}>
+              <Ic n={icon} col={on?C.greenLt:"#bbb"} size={22}/>
+            </div>
+            <div style={{fontSize:10,color:on?C.greenLt:"#bbb",fontWeight:on?700:400}}>{label}</div>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
+const HomeScreen = ({go, showCard=false}) => (
+  <div>
+    <SBar/>
+    <div style={{padding:"14px 16px",display:"flex",justifyContent:"space-between",alignItems:"center",background:"#fff"}}>
+      <div style={{display:"flex",alignItems:"center",gap:10}}>
+        <div style={{width:40,height:40,borderRadius:"50%",background:C.greenLt,display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontWeight:700,fontSize:14}}>MS</div>
+        <div>
+          <div style={{fontSize:15,fontWeight:700}}>Maria Santos</div>
+          <div style={{fontSize:11,color:C.textS}}>cliente</div>
+        </div>
+      </div>
+      <div style={{width:36,height:36,borderRadius:"50%",background:C.bg,display:"flex",alignItems:"center",justifyContent:"center"}}>🔔</div>
+    </div>
+    <div style={{background:C.green,padding:"20px 16px 24px"}}>
+      <div style={{fontSize:10,color:C.greenLt,fontWeight:700,letterSpacing:1,marginBottom:10}}>🔒 REDE DE CONFIANÇA — TÉCNICOS NOMINAIS</div>
+      <div style={{fontSize:26,fontWeight:700,color:"#fff",fontFamily:"Georgia,serif",lineHeight:1.2,marginBottom:2}}>A sua equipa,</div>
+      <div style={{fontSize:26,fontStyle:"italic",color:C.greenLt,fontWeight:700,fontFamily:"Georgia,serif",lineHeight:1.2,marginBottom:12}}>sempre a mesma.</div>
+      <div style={{fontSize:12,color:"rgba(255,255,255,.75)",marginBottom:16}}>Técnico fixo. Relatório fotográfico. Preço garantido.</div>
+      <div style={{background:"#fff",borderRadius:14,padding:"10px 14px",display:"flex",alignItems:"center",gap:10}}>
+        <span style={{color:"#bbb",fontSize:18}}>🔍</span>
+        <span style={{flex:1,fontSize:13,color:"#bbb"}}>Como podemos ajudar?</span>
+        <div style={{width:34,height:34,borderRadius:9,background:C.greenLt,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16}}>✨</div>
+      </div>
+      <div style={{display:"flex",gap:14,marginTop:12}}>
+        {["⭐ 4.9/5","✓ +500 serviços","🔒 Técnico fixo"].map(s => <span key={s} style={{fontSize:10,color:"rgba(255,255,255,.8)",fontWeight:500}}>{s}</span>)}
+      </div>
+    </div>
+    {showCard && (
+      <div onClick={()=>go(10)} style={{margin:"12px 14px 0",background:`linear-gradient(135deg,${C.green},${C.greenMid})`,borderRadius:14,padding:"14px 16px",cursor:"pointer",display:"flex",alignItems:"center",gap:12}}>
+        <div style={{width:44,height:44,borderRadius:12,background:"rgba(255,255,255,.15)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontSize:24}}>🏡</div>
+        <div style={{flex:1}}>
+          <div style={{fontSize:13,fontWeight:700,color:"#fff"}}>A minha casa</div>
+          <div style={{fontSize:11,color:"rgba(255,255,255,.75)",marginTop:2}}>Score 74 · 6 equipamentos · 1 alerta</div>
+        </div>
+        <div style={{background:"rgba(255,255,255,.2)",borderRadius:8,padding:"5px 10px"}}>
+          <span style={{fontSize:11,color:"#fff",fontWeight:700}}>74 →</span>
+        </div>
+      </div>
+    )}
+    <div style={{padding:"16px 14px 8px"}}>
+      <div style={{fontSize:19,fontWeight:700,marginBottom:12,fontFamily:"Georgia,serif"}}>O que precisa?</div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:8}}>
+        {[["Limpeza","✨"],["Manutenção","🔧"],["Jardim","🌿"],["Piscina","🌊"],["Pintura","🖌️"],["Elétrica","⚡"],["Canalização","💧"],["Pós-Obra","🏗️"]].map(([l,ic]) => (
+          <div key={l} style={{background:"#fff",border:`1px solid ${C.border}`,borderRadius:13,padding:"11px 4px",textAlign:"center",cursor:"pointer"}}>
+            <div style={{fontSize:22,marginBottom:5}}>{ic}</div>
+            <div style={{fontSize:10,color:C.textS,fontWeight:500}}>{l}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+    <div style={{margin:"4px 14px 14px",background:C.green,borderRadius:13,padding:"13px 14px",display:"flex",alignItems:"center",gap:12,cursor:"pointer"}}>
+      <div style={{width:38,height:38,borderRadius:10,background:C.greenLt,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontSize:18}}>✨</div>
+      <div style={{flex:1}}>
+        <div style={{fontSize:13,fontWeight:700,color:"#fff"}}>Não encontra o que procura?</div>
+        <div style={{fontSize:11,color:"rgba(255,255,255,.7)",marginTop:1}}>Descreva o trabalho — enviamos o técnico certo</div>
+      </div>
+      <span style={{color:"rgba(255,255,255,.6)",fontSize:20}}>›</span>
+    </div>
+    <BNav active={0} go={go}/>
+  </div>
+);
+
+const CasaScreen = ({go}) => {
+  const dot = {ok:C.greenLt, warn:"#F59E0B", bad:"#EF4444", none:"#ccc"};
+  return (
+    <div>
+      <SBar/>
+      <div style={{background:C.green,padding:"14px 16px 20px"}}>
+        <div style={{fontSize:10,color:"rgba(255,255,255,.6)",cursor:"pointer",marginBottom:8}} onClick={()=>go(0)}>← Início</div>
+        <div style={{fontSize:10,color:C.greenLt,fontWeight:700,letterSpacing:1,marginBottom:10}}>A MINHA CASA</div>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+          <div>
+            <div style={{fontSize:13,color:"rgba(255,255,255,.7)",marginBottom:2}}>Casa Principal · Coimbra</div>
+            <div style={{fontSize:56,fontWeight:700,color:"#fff",lineHeight:1}}>74</div>
+            <div style={{fontSize:11,color:"rgba(255,255,255,.65)",marginTop:3}}>Home Score</div>
+          </div>
+          <div style={{display:"flex",flexDirection:"column",gap:5,paddingTop:10}}>
+            {[["AVAC",82],["Canaliz.",91],["Elétrica",70],["Estrutura",60],["Água",88]].map(([l,v]) => (
+              <div key={l} style={{display:"flex",alignItems:"center",gap:6}}>
+                <span style={{fontSize:9,color:"rgba(255,255,255,.6)",width:50,textAlign:"right"}}>{l}</span>
+                <div style={{width:46,height:4,background:"rgba(255,255,255,.2)",borderRadius:2,overflow:"hidden"}}>
+                  <div style={{width:`${v}%`,height:4,borderRadius:2,background:v>=85?C.greenLt:v>=70?"#FAC775":"#F9BABA"}}/>
+                </div>
+                <span style={{fontSize:9,color:"#fff",fontWeight:700,width:20}}>{v}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div style={{height:5,background:"rgba(255,255,255,.2)",borderRadius:3,marginTop:14,overflow:"hidden"}}>
+          <div style={{width:"74%",height:5,background:C.greenLt,borderRadius:3}}/>
+        </div>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:8,padding:"12px 12px 0"}}>
+        {[["📷","Câmara IA",8],["🏠","Locais",11],["📄","Docs",5],["⚡","Energia",6]].map(([ic,l,idx]) => (
+          <div key={l} onClick={()=>go(idx)} style={{background:"#fff",border:`1px solid ${C.border}`,borderRadius:11,padding:"10px 4px",textAlign:"center",cursor:"pointer"}}>
+            <div style={{fontSize:20,marginBottom:4}}>{ic}</div>
+            <div style={{fontSize:9,fontWeight:600,color:C.textS}}>{l}</div>
+          </div>
+        ))}
+      </div>
+      <div style={{margin:"10px 12px 0",background:C.amberLt,borderRadius:11,padding:"10px 12px",border:"1px solid #EF9F27",display:"flex",gap:10,alignItems:"flex-start"}}>
+        <span style={{fontSize:20,flexShrink:0}}>🌧️</span>
+        <div>
+          <div style={{fontSize:12,fontWeight:700,color:C.amber}}>Chuva intensa prevista — 48h</div>
+          <div style={{fontSize:11,color:C.amber,marginTop:2,lineHeight:1.45}}>IPMA: 35mm · Coimbra · Verificar caleiras e terraço</div>
+          <div style={{fontSize:11,color:C.blue,marginTop:6,fontWeight:600,cursor:"pointer"}} onClick={()=>go(7)}>Agendar vistoria →</div>
+        </div>
+      </div>
+      <div style={{padding:"12px 12px 0"}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+          <div style={{fontSize:14,fontWeight:700}}>Equipamentos</div>
+          <div style={{fontSize:11,color:C.greenLt,cursor:"pointer",fontWeight:600}} onClick={()=>go(12)}>Ver todos →</div>
+        </div>
+        {[
+          {name:"Caldeira Junkers ZWC 24",cat:"Aquecimento",st:"warn",score:52,next:"revisão em 18d"},
+          {name:"AC Daikin FTXC25",cat:"Climatização",st:"ok",score:88,next:"em dia"},
+          {name:"Telhado / Impermeab.",cat:"Estrutura",st:"bad",score:38,next:"inspecionar"}
+        ].map(eq => (
+          <div key={eq.name} onClick={()=>go(3)} style={{display:"flex",alignItems:"center",gap:10,background:"#fff",border:`1px solid ${C.border}`,borderRadius:11,padding:"10px 12px",marginBottom:7,cursor:"pointer"}}>
+            <div style={{width:9,height:9,borderRadius:"50%",background:dot[eq.st],flexShrink:0}}/>
+            <div style={{flex:1}}>
+              <div style={{fontSize:12,fontWeight:600}}>{eq.name}</div>
+              <div style={{fontSize:10,color:C.textT,marginTop:1}}>{eq.cat}</div>
+            </div>
+            <div style={{textAlign:"right"}}>
+              <div style={{fontSize:13,fontWeight:700}}>{eq.score}</div>
+              <div style={{fontSize:10,color:C.textT}}>{eq.next}</div>
+            </div>
+          </div>
+        ))}
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginTop:4,marginBottom:12}}>
+          <div style={{border:`1px solid ${C.greenLt}`,borderRadius:11,padding:10,background:C.greenXl,cursor:"pointer"}} onClick={()=>go(6)}>
+            <div style={{fontSize:9,background:C.greenLt,color:"#fff",padding:"2px 7px",borderRadius:8,display:"inline-block",marginBottom:4,fontWeight:600}}>Troca rentável</div>
+            <div style={{fontSize:10,color:C.textS,marginBottom:2}}>Caldeira Junkers</div>
+            <div style={{fontSize:18,fontWeight:700,color:C.green}}>-28%</div>
+            <div style={{fontSize:10,color:C.textS,marginTop:2}}>~10€/mês poupança</div>
+          </div>
+          <div style={{border:`1px solid ${C.border}`,borderRadius:11,padding:10,cursor:"pointer"}} onClick={()=>go(6)}>
+            <div style={{fontSize:9,background:"#FAC775",color:"#412402",padding:"2px 7px",borderRadius:8,display:"inline-block",marginBottom:4,fontWeight:600}}>Revisão urgente</div>
+            <div style={{fontSize:10,color:C.textS,marginBottom:2}}>AC Daikin sala</div>
+            <div style={{fontSize:18,fontWeight:700}}>-15%</div>
+            <div style={{fontSize:10,color:C.textS,marginTop:2}}>Limpeza filtros imediata</div>
+          </div>
+        </div>
+      </div>
+      <BNav active={10} go={go} variant="casa"/>
+    </div>
+  );
+};
+
+const EquipScreen = ({go}) => {
+  const dot = {ok:C.greenLt, warn:"#F59E0B", bad:"#EF4444", none:"#ccc"};
+  const grupos = [
+    {room:"Aquecimento", items:[{name:"Caldeira Junkers ZWC 24",meta:"2016 · Classe B · R/C",st:"warn",score:52,next:"revisão 18d"}]},
+    {room:"Climatização", items:[{name:"AC Daikin FTXC25",meta:"2022 · Classe A++ · Sala",st:"ok",score:88,next:"em dia"}]},
+    {room:"Águas Quentes", items:[{name:"Esquentador Vulcano 14L",meta:"2019 · Classe A · Cozinha",st:"ok",score:80,next:"em dia"}]},
+    {room:"Cobertura / Estrutura", items:[
+      {name:"Telhado / Impermeabilização",meta:"Data instalação desconhecida",st:"bad",score:38,next:"inspecionar"},
+      {name:"Painel Solar Hisolar 3.2kW",meta:"2021 · dados incompletos",st:"none",score:"—",next:"completar"}
+    ]}
+  ];
+  return (
+    <div>
+      <SBar/>
+      <div style={{background:C.green,padding:"11px 14px 14px",color:"#fff"}}>
+        <div style={{fontSize:10,opacity:.7,cursor:"pointer",marginBottom:4}} onClick={()=>go(10)}>← A minha casa</div>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+          <div style={{fontSize:15,fontWeight:700}}>Equipamentos</div>
+          <div onClick={()=>go(8)} style={{background:"rgba(255,255,255,.15)",borderRadius:9,padding:"5px 10px",cursor:"pointer",fontSize:11,color:"#fff",fontWeight:600}}>📷 Câmara IA</div>
+        </div>
+      </div>
+      <div style={{padding:"8px 12px 12px"}}>
+        {grupos.map(g => (
+          <div key={g.room}>
+            <div style={{fontSize:9,color:C.textT,textTransform:"uppercase",letterSpacing:.5,padding:"8px 2px 4px"}}>{g.room}</div>
+            {g.items.map(eq => (
+              <div key={eq.name} onClick={()=>go(3)} style={{display:"flex",alignItems:"center",gap:9,background:"#fff",border:`1px solid ${C.border}`,borderRadius:11,padding:"10px 12px",marginBottom:7,cursor:"pointer"}}>
+                <div style={{width:9,height:9,borderRadius:"50%",background:dot[eq.st],flexShrink:0}}/>
+                <div style={{flex:1}}>
+                  <div style={{fontSize:12,fontWeight:600}}>{eq.name}</div>
+                  <div style={{fontSize:10,color:C.textT,marginTop:1}}>{eq.meta}</div>
+                </div>
+                <div style={{textAlign:"right"}}>
+                  <div style={{fontSize:13,fontWeight:700}}>{eq.score}</div>
+                  <div style={{fontSize:10,color:C.textT}}>{eq.next}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ))}
+        <div onClick={()=>go(8)} style={{border:`1px dashed ${C.border}`,borderRadius:11,padding:11,textAlign:"center",color:C.greenLt,fontSize:12,fontWeight:600,cursor:"pointer"}}>+ Adicionar via câmara ou formulário</div>
+      </div>
+      <BNav active={10} go={go} variant="casa"/>
+    </div>
+  );
+};
+
+const FichaScreen = ({go}) => {
+  const [tab,setTab] = useState("detalhes");
+  const [editing,setEditing] = useState(false);
+  const [classe,setClasse] = useState("B");
+  const [del,setDel] = useState(null);
+  const tabs = ["Detalhes","Intervenções","Documentos","Fornecedor"];
+
+  return (
+    <div>
+      <SBar/>
+      <div style={{background:C.green,padding:"11px 14px",color:"#fff"}}>
+        <div style={{fontSize:10,opacity:.7,cursor:"pointer",marginBottom:4}} onClick={()=>go(10)}>← A minha casa</div>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+          <div>
+            <div style={{fontSize:15,fontWeight:700}}>Caldeira Junkers ZWC 24</div>
+            <div style={{fontSize:11,opacity:.75,marginTop:2}}>Aquecimento · Rés-do-chão</div>
+          </div>
+          <div onClick={()=>setEditing(!editing)} style={{background:"rgba(255,255,255,.2)",borderRadius:8,padding:"5px 11px",fontSize:11,color:"#fff",cursor:"pointer",fontWeight:600}}>
+            {editing ? "✓ Guardar" : "✎ Editar"}
+          </div>
+        </div>
+        <div style={{marginTop:8,display:"inline-flex",alignItems:"center",gap:6,background:"rgba(250,199,117,.25)",border:"1px solid rgba(250,199,117,.5)",borderRadius:12,padding:"4px 10px",fontSize:10}}>
+          <div style={{width:6,height:6,borderRadius:"50%",background:"#FAC775"}}/>Revisão recomendada em 18 dias
+        </div>
+      </div>
+
+      <div style={{display:"flex",borderBottom:`1px solid ${C.border}`,background:"#fff"}}>
+        {tabs.map(t => {
+          const k = t.toLowerCase();
+          const on = tab === k;
+          return (
+            <div key={t} onClick={()=>setTab(k)} style={{flex:1,padding:"9px 2px",textAlign:"center",fontSize:10,cursor:"pointer",color:on?C.greenLt:C.textT,fontWeight:on?700:400,borderBottom:`2px solid ${on?C.greenLt:"transparent"}`}}>{t}</div>
+          );
+        })}
+      </div>
+
+      {tab==="detalhes" && !editing && (
+        <div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr"}}>
+            {[
+              ["Instalação","Mar 2016",false],["Garantia","Jun 2021 ✕",true],
+              ["Última revisão","Nov 2023",false],["Técnico habitual","João Ferreira",false],
+              ["Consumo/mês","213kWh · 38€",true],["Health Score","52 / 100",true],
+              ["Classe energética","B",true],["Potência nominal","24 kW",false]
+            ].map(([l,v,w],i) => (
+              <div key={l} style={{padding:"9px 12px",borderRight:i%2===0?`1px solid ${C.border}`:"none",borderBottom:`1px solid ${C.border}`}}>
+                <div style={{fontSize:9,color:C.textT,textTransform:"uppercase",letterSpacing:.3,marginBottom:2}}>{l}</div>
+                <div style={{fontSize:12,fontWeight:600,color:w?C.amber:C.text}}>{v}</div>
+              </div>
+            ))}
+          </div>
+          <div style={{margin:"10px 12px",background:C.amberLt,borderRadius:11,padding:"10px 12px",border:"1px solid #EF9F27"}}>
+            <div style={{fontSize:11,fontWeight:700,color:C.amber,marginBottom:4}}>✨ Recomendação IA</div>
+            <div style={{fontSize:11,color:C.amber,lineHeight:1.55}}>Eficiência estimada ~82% (era 94%). Limpeza do queimador recupera 8-10% imediatamente. Considere substituição por modelo A-rated em 1-2 anos para poupar ~11€/mês.</div>
+          </div>
+          <div style={{display:"flex",gap:8,padding:"0 12px 14px"}}>
+            <button onClick={()=>go(7)} style={{flex:2,padding:12,borderRadius:11,border:"none",background:C.greenLt,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>Agendar revisão ↗</button>
+            <button onClick={()=>go(9)} style={{flex:1,padding:12,borderRadius:11,border:`1px solid ${C.border}`,background:C.bg,fontSize:13,cursor:"pointer"}}>AI Expert</button>
+          </div>
+        </div>
+      )}
+
+      {tab==="detalhes" && editing && (
+        <div style={{padding:12,display:"flex",flexDirection:"column",gap:10}}>
+          {[["Marca / Modelo","Junkers ZWC 24-2 DH"],["Localização","Rés-do-chão"],["Data instalação","Março 2016"],["Potência nominal (kW)","24"],["Número de série","JK2024-8871-PT"]].map(([l,v]) => (
+            <div key={l}>
+              <div style={{fontSize:9,color:C.textT,textTransform:"uppercase",letterSpacing:.3,marginBottom:4}}>{l}</div>
+              <input defaultValue={v} style={{width:"100%",padding:"8px 11px",borderRadius:9,border:`1px solid ${C.border}`,fontSize:12,background:"#fafafa",outline:"none"}}/>
+            </div>
+          ))}
+          <div>
+            <div style={{fontSize:9,color:C.textT,textTransform:"uppercase",letterSpacing:.3,marginBottom:6}}>Classe energética</div>
+            <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
+              {["A+++","A++","A+","A","B","C","D"].map(cl => {
+                const on = classe === cl;
+                const good = ["A+++","A++","A+","A"].includes(cl);
+                const bad = ["C","D"].includes(cl);
+                return (
+                  <div key={cl} onClick={()=>setClasse(cl)} style={{padding:"6px 12px",borderRadius:9,fontSize:11,fontWeight:700,cursor:"pointer",border:`2px solid ${on?C.greenLt:C.border}`,background:on?C.greenLt:C.bg,color:on?"#fff":good?C.green:bad?C.red:C.text}}>{cl}</div>
+                );
+              })}
+            </div>
+          </div>
+          <div style={{borderTop:`1px solid ${C.border}`,paddingTop:12,marginTop:4}}>
+            <div style={{fontSize:9,color:C.textT,textTransform:"uppercase",letterSpacing:.3,marginBottom:8}}>Ações de gestão</div>
+            <div style={{display:"flex",gap:8}}>
+              <div onClick={()=>setDel("abater")} style={{flex:1,padding:10,borderRadius:11,border:"1px solid #EF9F27",background:C.amberLt,textAlign:"center",cursor:"pointer"}}>
+                <div style={{fontSize:22,marginBottom:3}}>📦</div>
+                <div style={{fontSize:12,fontWeight:700,color:C.amber}}>Abater</div>
+                <div style={{fontSize:9,color:C.amber,marginTop:2}}>Manter histórico</div>
+              </div>
+              <div onClick={()=>setDel("apagar")} style={{flex:1,padding:10,borderRadius:11,border:"1px solid #F9BABA",background:C.redLt,textAlign:"center",cursor:"pointer"}}>
+                <div style={{fontSize:22,marginBottom:3}}>🗑️</div>
+                <div style={{fontSize:12,fontWeight:700,color:C.red}}>Apagar</div>
+                <div style={{fontSize:9,color:C.red,marginTop:2}}>Permanente</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {tab==="intervenções" && (
+        <div style={{padding:"8px 12px"}}>
+          {[
+            {date:"14 Nov 2023",act:"Revisão anual + limpeza queimador",tech:"João Ferreira · 1h30 · 85€",tags:["Relatório PDF","3 fotos"],novo:true},
+            {date:"22 Jan 2023",act:"Substituição válvula de segurança",tech:"João Ferreira · 45min · 120€",tags:["Fatura","Garantia peça"],novo:false},
+            {date:"Nov 2021",act:"Revisão anual",tech:"Serv. Vulcano · 1h · 75€",tags:[],novo:false}
+          ].map((t,i,arr) => (
+            <div key={t.date} style={{display:"flex",gap:9,padding:"10px 0",borderBottom:i<arr.length-1?`1px solid ${C.border}`:"none"}}>
+              <div style={{width:9,height:9,borderRadius:"50%",flexShrink:0,marginTop:3,background:t.novo?C.greenLt:"#ccc"}}/>
+              <div style={{flex:1}}>
+                <div style={{fontSize:10,color:C.textT}}>{t.date}</div>
+                <div style={{fontSize:12,fontWeight:600,marginTop:1}}>{t.act}</div>
+                <div style={{fontSize:10,color:C.textS,marginTop:2}}>{t.tech}</div>
+                <div style={{display:"flex",gap:5,marginTop:5,flexWrap:"wrap"}}>
+                  {t.tags.map(tag => <span key={tag} style={{fontSize:10,color:C.blue,background:"#E6F1FB",padding:"2px 7px",borderRadius:6}}>{tag}</span>)}
+                </div>
+              </div>
+            </div>
+          ))}
+          <button style={{width:"100%",marginTop:10,padding:11,borderRadius:11,border:`1px dashed ${C.border}`,background:C.bg,color:C.greenLt,fontSize:12,fontWeight:700,cursor:"pointer"}}>+ Registar nova intervenção</button>
+        </div>
+      )}
+
+      {tab==="documentos" && (
+        <div>
+          {[
+            {ic:"📋",bg:"#FAECE7",name:"Relatório revisão caldeira",meta:"Nov 2023 · João Ferreira"},
+            {ic:"🛡️",bg:C.greenXl,name:"Garantia — válvula segurança",meta:"Jan 2023 · 2 anos"},
+            {ic:"🧾",bg:"#E6F1FB",name:"Fatura intervenção Jan 2023",meta:"120€ · Pago"},
+            {ic:"📄",bg:C.amberLt,name:"Contrato manutenção anual",meta:"TecniGás · até Dez 2025"},
+            {ic:"📘",bg:"#EEEDFE",name:"Manual técnico Junkers ZWC",meta:"PDF · fabricante"}
+          ].map(d => (
+            <div key={d.name} style={{display:"flex",alignItems:"center",gap:10,padding:"11px 14px",borderBottom:`1px solid ${C.border}`,cursor:"pointer"}}>
+              <div style={{width:36,height:36,borderRadius:9,background:d.bg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0}}>{d.ic}</div>
+              <div style={{flex:1}}>
+                <div style={{fontSize:12,fontWeight:600}}>{d.name}</div>
+                <div style={{fontSize:10,color:C.textT,marginTop:1}}>{d.meta}</div>
+              </div>
+              <span style={{fontSize:10,color:C.textT}}>PDF ›</span>
+            </div>
+          ))}
+          <button style={{width:"calc(100% - 24px)",margin:12,padding:12,borderRadius:11,border:"none",background:C.greenLt,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>+ Adicionar documento</button>
+        </div>
+      )}
+
+      {tab==="fornecedor" && (
+        <div style={{padding:"10px 12px",display:"flex",flexDirection:"column",gap:10}}>
+          {[
+            {title:"Fabricante",rows:[["Marca","Junkers (Bosch)"],["Modelo","ZWC 24-2 DH"],["Website","junkers.com"],["Linha apoio","800 200 400"]]},
+            {title:"Técnico habitual",rows:[["Nome","João Ferreira"],["Empresa","TecniGás Lda"],["Contacto","966 123 456"],["Última visita","Nov 2023"]]},
+            {title:"Peças compatíveis",rows:[["Válvula segurança","ref. JK-8871"],["Anódo magnésio","ref. JK-4421"],["Kit juntas","ref. JK-9901"]]}
+          ].map(s => (
+            <div key={s.title} style={{background:"#fff",border:`1px solid ${C.border}`,borderRadius:12,padding:"12px 14px"}}>
+              <div style={{fontSize:10,color:C.textT,textTransform:"uppercase",letterSpacing:.3,marginBottom:8,fontWeight:600}}>{s.title}</div>
+              {s.rows.map(([l,v],i) => (
+                <div key={l} style={{display:"flex",justifyContent:"space-between",padding:"5px 0",borderBottom:i<s.rows.length-1?`1px solid ${C.border}`:"none"}}>
+                  <span style={{fontSize:11,color:C.textS}}>{l}</span>
+                  <span style={{fontSize:11,fontWeight:600,color:["Website","Contacto","Linha apoio"].includes(l)?C.blue:C.text}}>{v}</span>
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {del && (
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.55)",display:"flex",alignItems:"flex-end",justifyContent:"center",zIndex:200}}>
+          <div style={{background:"#fff",borderRadius:"18px 18px 0 0",padding:"22px 18px 32px",width:"100%",maxWidth:400}}>
+            <div style={{fontSize:28,textAlign:"center",marginBottom:8}}>{del==="apagar"?"🗑️":"📦"}</div>
+            <div style={{fontSize:15,fontWeight:700,textAlign:"center",marginBottom:6}}>{del==="apagar"?"Apagar equipamento?":"Abater equipamento?"}</div>
+            <div style={{fontSize:12,color:C.textS,textAlign:"center",lineHeight:1.6,marginBottom:20}}>
+              {del==="apagar"?"Remove permanentemente. Não pode ser revertido.":"Fica inativo mas mantém histórico e documentos."}
+            </div>
+            <div style={{display:"flex",gap:9}}>
+              <button onClick={()=>setDel(null)} style={{flex:1,padding:12,borderRadius:11,border:`1px solid ${C.border}`,background:C.bg,fontSize:13,fontWeight:600,cursor:"pointer"}}>Cancelar</button>
+              <button onClick={()=>{setDel(null);setEditing(false);go(10);}} style={{flex:1,padding:12,borderRadius:11,border:"none",background:del==="apagar"?"#EF4444":"#F59E0B",color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>{del==="apagar"?"Apagar":"Abater"}</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+const DocsScreen = ({go}) => (
+  <div>
+    <SBar/>
+    <div style={{background:C.green,padding:"11px 14px 14px",color:"#fff"}}>
+      <div style={{fontSize:10,opacity:.7,cursor:"pointer",marginBottom:4}} onClick={()=>go(10)}>← A minha casa</div>
+      <div style={{fontSize:15,fontWeight:700}}>Documentos</div>
+      <div style={{fontSize:11,opacity:.75,marginTop:2}}>Casa Principal · 12 ficheiros</div>
+    </div>
+    <div style={{display:"flex",gap:6,overflowX:"auto",padding:"8px 12px",borderBottom:`1px solid ${C.border}`}}>
+      {["Todos (12)","Faturas (4)","Garantias (3)","Contratos","Relatórios"].map((c,i) => (
+        <div key={c} style={{flexShrink:0,padding:"5px 11px",borderRadius:14,fontSize:10,cursor:"pointer",border:`1px solid ${i===0?C.greenLt:C.border}`,background:i===0?C.greenXl:"#fff",color:i===0?C.green:C.textS,fontWeight:i===0?700:400}}>{c}</div>
+      ))}
+    </div>
+    {[
+      {ic:"📋",bg:"#FAECE7",name:"Relatório revisão caldeira",meta:"Junkers · Nov 2023"},
+      {ic:"🛡️",bg:C.greenXl,name:"Garantia válvula segurança",meta:"Caldeira · Jan 2023"},
+      {ic:"🧾",bg:"#E6F1FB",name:"Fatura intervenção caldeira",meta:"120€ · Jan 2023 · Pago"},
+      {ic:"📄",bg:C.amberLt,name:"Contrato manutenção anual",meta:"TecniGás · até Dez 2025"},
+      {ic:"🛡️",bg:C.greenXl,name:"Manual + garantia AC Daikin",meta:"Sala · Jun 2022 · 5 anos"},
+      {ic:"🧾",bg:"#E6F1FB",name:"Fatura instalação AC Daikin",meta:"1.850€ · Jun 2022 · Pago"}
+    ].map(d => (
+      <div key={d.name} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 13px",borderBottom:`1px solid ${C.border}`,cursor:"pointer"}}>
+        <div style={{width:34,height:34,borderRadius:9,background:d.bg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>{d.ic}</div>
+        <div style={{flex:1}}>
+          <div style={{fontSize:12,fontWeight:600}}>{d.name}</div>
+          <div style={{fontSize:10,color:C.textT,marginTop:1}}>{d.meta}</div>
+        </div>
+        <span style={{fontSize:10,color:C.textT}}>PDF ›</span>
+      </div>
+    ))}
+    <BNav active={10} go={go} variant="casa"/>
+  </div>
+);
+
+const EnergiaScreen = ({go}) => (
+  <div>
+    <SBar/>
+    <div style={{background:C.green,padding:"11px 14px 14px",color:"#fff"}}>
+      <div style={{fontSize:10,opacity:.7,cursor:"pointer",marginBottom:4}} onClick={()=>go(10)}>← A minha casa</div>
+      <div style={{fontSize:15,fontWeight:700}}>Consumos energéticos</div>
+      <div style={{fontSize:11,opacity:.75,marginTop:2}}>Casa Principal · 287 kWh · ~51€ · Abril 2026</div>
+    </div>
+    <div style={{padding:"8px 12px"}}>
+      {[
+        {bar:"#378ADD",name:"Caldeira Junkers ZWC 24",type:"Aquecimento · 2016 · Classe B",kwh:"213 kWh",eur:"~38€",pct:"74%",hi:true},
+        {bar:"#1D9E75",name:"Esquentador Vulcano 14L",type:"Águas quentes · 2019",kwh:"40 kWh",eur:"~7€",pct:"14%",hi:false},
+        {bar:"#EF9F27",name:"AC Daikin FTXC25",type:"Climatização · 2022 · A++",kwh:"26 kWh",eur:"~5€",pct:"9%",hi:false}
+      ].map(d => (
+        <div key={d.name} onClick={()=>go(3)} style={{display:"flex",alignItems:"center",gap:9,border:`1px solid ${C.border}`,borderRadius:11,padding:"10px 11px",marginBottom:8,cursor:"pointer"}}>
+          <div style={{width:4,height:40,borderRadius:2,background:d.bar,flexShrink:0}}/>
+          <div style={{flex:1}}>
+            <div style={{fontSize:12,fontWeight:600}}>{d.name}</div>
+            <div style={{fontSize:10,color:C.textT,marginTop:1}}>{d.type}</div>
+          </div>
+          <div style={{textAlign:"right"}}>
+            <div style={{fontSize:13,fontWeight:700}}>{d.kwh}</div>
+            <div style={{fontSize:10,color:C.textS}}>{d.eur}</div>
+            <div style={{fontSize:9,padding:"1px 6px",borderRadius:6,marginTop:2,display:"inline-block",background:d.hi?C.amberLt:C.greenXl,color:d.hi?C.amber:C.green,fontWeight:600}}>{d.pct}</div>
+          </div>
+        </div>
+      ))}
+    </div>
+    <div style={{margin:"0 12px 10px",background:C.greenXl,border:`1px solid ${C.greenLt}`,borderRadius:12,padding:"12px 14px"}}>
+      <div style={{fontSize:12,fontWeight:700,color:C.green,marginBottom:6}}>Poupança potencial — caldeira A-rated</div>
+      {[["Consumo atual/mês","213kWh · 38€"],["Com novo modelo","153kWh · 27€"],["Poupança mensal","~11€"],["Custo substituição","1.800–2.400€"]].map(([l,v]) => (
+        <div key={l} style={{display:"flex",justifyContent:"space-between",fontSize:11,color:C.greenMid,padding:"3px 0"}}>
+          <span>{l}</span><b>{v}</b>
+        </div>
+      ))}
+    </div>
+    <button style={{width:"calc(100% - 24px)",margin:"0 12px 14px",padding:12,borderRadius:11,border:"none",background:C.greenLt,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}} onClick={()=>go(7)}>Pedir orçamento substituição ↗</button>
+    <BNav active={10} go={go} variant="casa"/>
+  </div>
+);
+
+const AgendarScreen = ({go}) => {
+  const [selT,setSelT] = useState(0);
+  const [selS,setSelS] = useState(0);
+  const tecs = [
+    {ini:"JF",cor:"#B5D4F4",cT:"#0C447C",nome:"João Ferreira",spec:"Caldeiras · AVAC",badges:["Técnico habitual","Cert. Junkers","4.9★"],slots:["Hoje 14h30","Amanhã 9h","Sex 10h"]},
+    {ini:"RC",cor:"#C0DD97",cT:"#27500A",nome:"Rui Costa",spec:"Caldeiras · Renováveis",badges:["Cert. Viessmann","4.7★"],slots:["Amanhã 11h","Qui 9h30"]}
+  ];
+  return (
+    <div>
+      <SBar/>
+      <div style={{background:C.green,padding:"11px 14px 14px",color:"#fff"}}>
+        <div style={{fontSize:10,opacity:.7,cursor:"pointer",marginBottom:4}} onClick={()=>go(3)}>← Caldeira Junkers ZWC 24</div>
+        <div style={{fontSize:15,fontWeight:700}}>Agendar revisão anual</div>
+        <div style={{fontSize:11,opacity:.75,marginTop:2}}>Casa Principal · Coimbra</div>
+      </div>
+      <div style={{padding:"10px 12px"}}>
+        {tecs.map((t,ti) => (
+          <div key={t.nome} onClick={()=>{setSelT(ti);setSelS(0);}} style={{border:`${selT===ti?2:1}px solid ${selT===ti?C.greenLt:C.border}`,borderRadius:13,padding:12,marginBottom:10,cursor:"pointer",background:selT===ti?C.greenXl:"#fff"}}>
+            <div style={{display:"flex",gap:10,marginBottom:10}}>
+              <div style={{width:40,height:40,borderRadius:"50%",background:t.cor,color:t.cT,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:700,flexShrink:0}}>{t.ini}</div>
+              <div>
+                <div style={{fontSize:13,fontWeight:700}}>{t.nome}</div>
+                <div style={{fontSize:10,color:C.textS,marginTop:1}}>{t.spec}</div>
+                <div style={{display:"flex",gap:4,flexWrap:"wrap",marginTop:5}}>
+                  {t.badges.map(b => <span key={b} style={{fontSize:9,padding:"2px 7px",borderRadius:7,fontWeight:600,background:b.includes("habitual")?C.greenXl:b.includes("Cert")?"#EEEDFE":C.amberLt,color:b.includes("habitual")?C.green:b.includes("Cert")?"#3C3489":C.amber}}>{b}</span>)}
+                </div>
+              </div>
+            </div>
+            <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+              {t.slots.map((sl,si) => (
+                <div key={sl} onClick={e=>{e.stopPropagation();setSelT(ti);setSelS(si);}} style={{fontSize:10,padding:"6px 10px",borderRadius:8,cursor:"pointer",fontWeight:600,border:`1px solid ${selT===ti&&selS===si?C.greenLt:C.border}`,background:selT===ti&&selS===si?C.greenLt:"#fff",color:selT===ti&&selS===si?"#fff":C.textS}}>{sl}</div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+      <button style={{width:"calc(100% - 24px)",margin:"0 12px 14px",padding:13,borderRadius:12,border:"none",background:C.greenLt,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>Confirmar · {tecs[selT].slots[selS]} · {tecs[selT].nome.split(" ")[0]} ↗</button>
+    </div>
+  );
+};
+
+const CameraScreen = ({go}) => {
+  const [scanned,setScanned] = useState(false);
+  if (scanned) return (
+    <div>
+      <SBar/>
+      <div style={{background:C.green,padding:"11px 14px 14px",color:"#fff"}}>
+        <div style={{fontSize:10,opacity:.7,cursor:"pointer",marginBottom:4}} onClick={()=>setScanned(false)}>← Câmara</div>
+        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}>
+          <div style={{width:8,height:8,borderRadius:"50%",background:C.greenLt}}/>
+          <span style={{fontSize:11,opacity:.8}}>Identificado com 94% de confiança</span>
+        </div>
+        <div style={{fontSize:15,fontWeight:700}}>Caldeira Junkers ZWC 24-2 DH</div>
+        <div style={{fontSize:11,opacity:.75,marginTop:2}}>Ano estimado: 2016 · Gás natural · 24kW</div>
+      </div>
+      <div style={{padding:"10px 12px"}}>
+        {[["Marca","Junkers (Bosch)"],["Modelo","ZWC 24-2 DH"],["Eficiência","Classe B"],["Idade","9 anos — revisão urgente"],["Manual","Encontrado ✓"]].map(([l,v]) => (
+          <div key={l} style={{display:"flex",justifyContent:"space-between",padding:"6px 0",borderBottom:`1px solid ${C.border}`,fontSize:11}}>
+            <span style={{color:C.textS}}>{l}</span>
+            <span style={{fontWeight:600,color:v.includes("urgente")?C.amber:v.includes("✓")?C.green:C.text}}>{v}</span>
+          </div>
+        ))}
+      </div>
+      <button style={{width:"calc(100% - 24px)",margin:"12px",padding:13,borderRadius:12,border:"none",background:C.greenLt,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}} onClick={()=>go(3)}>Guardar equipamento + agendar revisão ↗</button>
+    </div>
+  );
+  return (
+    <div style={{background:"#111",minHeight:580,display:"flex",flexDirection:"column"}}>
+      <div style={{background:"rgba(0,0,0,.6)",padding:"12px 16px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+        <span style={{color:"rgba(255,255,255,.8)",fontSize:12}}>Identificar equipamento</span>
+        <span style={{color:"rgba(255,255,255,.6)",fontSize:13,cursor:"pointer"}} onClick={()=>go(10)}>✕ fechar</span>
+      </div>
+      <div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:14}}>
+        <div style={{fontSize:11,color:"rgba(255,255,255,.5)",background:"rgba(0,0,0,.4)",padding:"5px 14px",borderRadius:20}}>IA a analisar em tempo real</div>
+        <div style={{width:200,height:200,position:"relative"}}>
+          <div style={{position:"absolute",top:-1,left:-1,width:22,height:22,borderTop:`3px solid ${C.greenLt}`,borderLeft:`3px solid ${C.greenLt}`,borderRadius:"4px 0 0 0"}}/>
+          <div style={{position:"absolute",top:-1,right:-1,width:22,height:22,borderTop:`3px solid ${C.greenLt}`,borderRight:`3px solid ${C.greenLt}`,borderRadius:"0 4px 0 0"}}/>
+          <div style={{position:"absolute",bottom:-1,left:-1,width:22,height:22,borderBottom:`3px solid ${C.greenLt}`,borderLeft:`3px solid ${C.greenLt}`,borderRadius:"0 0 0 4px"}}/>
+          <div style={{position:"absolute",bottom:-1,right:-1,width:22,height:22,borderBottom:`3px solid ${C.greenLt}`,borderRight:`3px solid ${C.greenLt}`,borderRadius:"0 0 4px 0"}}/>
+          <div style={{position:"absolute",top:"50%",left:8,right:8,height:1,background:"rgba(82,183,136,.6)"}}/>
+          <div style={{width:"100%",height:"100%",display:"flex",alignItems:"center",justifyContent:"center"}}>
+            <span style={{fontSize:48,opacity:.3}}>🔧</span>
+          </div>
+        </div>
+        <div style={{color:"rgba(255,255,255,.75)",fontSize:13}}>Aponta para a placa de dados</div>
+      </div>
+      <div style={{background:"rgba(0,0,0,.7)",padding:"14px 24px",display:"flex",alignItems:"center",justifyContent:"center"}}>
+        <div onClick={()=>setScanned(true)} style={{width:58,height:58,borderRadius:"50%",background:"#fff",border:"3px solid rgba(255,255,255,.3)",cursor:"pointer"}}/>
+      </div>
+    </div>
+  );
+};
+
+const AIScreen = ({go}) => {
+  const [msgs,setMsgs] = useState([
+    {role:"ai",text:"Olá! Tenho acesso completo à tua casa em Coimbra. Li os manuais da Junkers, Daikin e Vulcano. Com o que te posso ajudar?",card:[["Caldeira Junkers (2016)","Atenção",C.amber],["AC Daikin (2022)","Em dia",C.green],["Consumo/mês","287kWh · 51€",C.text]]},
+    {role:"user",text:"Como funciona a minha caldeira e porque consome tanto?"},
+    {role:"ai",text:"A tua Junkers ZWC 24 é de condensação a gás, 24kW. Com 9 anos e eficiência caída para ~82% (era 94%), precisa de mais gás. Limpeza do queimador recupera 8-10% imediatamente."}
+  ]);
+  const [inp,setInp] = useState("");
+  const send = txt => {
+    if (!txt.trim()) return;
+    setMsgs(m => [...m, {role:"user",text:txt}, {role:"ai",text:`Sobre "${txt}": com base nos dados da tua casa e nos manuais, posso ajudar-te a perceber melhor. Queres que aprofunde algum aspeto?`}]);
+    setInp("");
+  };
+  return (
+    <div style={{display:"flex",flexDirection:"column"}}>
+      <div style={{background:C.purpleDk,padding:"10px 14px",display:"flex",justifyContent:"space-between"}}>
+        <span style={{color:"rgba(255,255,255,.6)",fontSize:10,cursor:"pointer"}} onClick={()=>go(10)}>← Início</span>
+        <span style={{color:"rgba(255,255,255,.6)",fontSize:10}}>9:41</span>
+      </div>
+      <div style={{background:`linear-gradient(135deg,${C.purpleDk},${C.purple})`,padding:"12px 14px"}}>
+        <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:6}}>
+          <div style={{width:36,height:36,borderRadius:"50%",background:"rgba(255,255,255,.15)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}>★</div>
+          <div>
+            <div style={{fontSize:14,fontWeight:700,color:"#fff"}}>AI Expert</div>
+            <div style={{fontSize:10,color:"rgba(255,255,255,.65)",marginTop:1}}>Leu os manuais · conhece os consumos</div>
+          </div>
+        </div>
+        <div style={{background:"rgba(255,255,255,.1)",borderRadius:9,padding:"6px 10px",fontSize:10,color:"rgba(255,255,255,.8)"}}><b>Contexto:</b> Casa Principal · 6 equip. · 287kWh/mês</div>
+      </div>
+      <div style={{overflowY:"auto",padding:"10px 12px",display:"flex",flexDirection:"column",gap:10,background:"#fafafa",maxHeight:280}}>
+        {msgs.map((m,i) => (
+          <div key={i}>
+            {m.role === "user" ? (
+              <div style={{display:"flex",justifyContent:"flex-end"}}>
+                <div style={{background:C.purple,color:"#fff",borderRadius:"11px 0 11px 11px",padding:"9px 12px",fontSize:11,maxWidth:230,lineHeight:1.5}}>{m.text}</div>
+              </div>
+            ) : (
+              <div style={{display:"flex",gap:8}}>
+                <div style={{width:26,height:26,borderRadius:"50%",background:"#EEEDFE",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:2,fontSize:13}}>★</div>
+                <div>
+                  <div style={{background:"#fff",border:`1px solid ${C.border}`,borderRadius:"0 11px 11px 11px",padding:"9px 12px",fontSize:11,maxWidth:230,lineHeight:1.5}}>{m.text}</div>
+                  {m.card && (
+                    <div style={{background:"#fff",border:`1px solid ${C.border}`,borderRadius:9,padding:"8px 11px",marginTop:6,maxWidth:230}}>
+                      <div style={{fontSize:9,color:C.textT,textTransform:"uppercase",letterSpacing:.3,marginBottom:5,fontWeight:600}}>Dados da casa</div>
+                      {m.card.map(([l,v,col]) => (
+                        <div key={l} style={{display:"flex",justifyContent:"space-between",fontSize:10,padding:"2px 0"}}>
+                          <span style={{color:C.textS}}>{l}</span>
+                          <span style={{fontWeight:600,color:col}}>{v}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+      <div style={{display:"flex",gap:6,overflowX:"auto",padding:"8px 12px",borderTop:`1px solid ${C.border}`,background:"#fff"}}>
+        {["Caleiras antes da chuva?","Vale trocar a caldeira?","Ver manual Daikin"].map(c => (
+          <div key={c} onClick={()=>send(c)} style={{flexShrink:0,fontSize:10,padding:"5px 10px",borderRadius:14,border:`1px solid ${C.border}`,background:C.bg,color:C.textS,cursor:"pointer",whiteSpace:"nowrap"}}>{c}</div>
+        ))}
+      </div>
+      <div style={{display:"flex",gap:8,padding:"8px 12px 12px",background:"#fff",borderTop:`1px solid ${C.border}`}}>
+        <input value={inp} onChange={e=>setInp(e.target.value)} onKeyDown={e=>e.key==="Enter"&&send(inp)} placeholder="Pergunta..." style={{flex:1,padding:"9px 12px",borderRadius:20,border:`1px solid ${C.border}`,fontSize:12,outline:"none",background:C.bg}}/>
+        <div onClick={()=>send(inp)} style={{width:36,height:36,borderRadius:"50%",background:C.purple,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:16,flexShrink:0}}>→</div>
+      </div>
+      <BNav active={10} go={go} variant="casa"/>
+    </div>
+  );
+};
+
+const LocaisScreen = ({go}) => (
+  <div>
+    <SBar/>
+    <div style={{background:C.green,padding:"11px 14px 14px",color:"#fff"}}>
+      <div style={{fontSize:10,opacity:.7,cursor:"pointer",marginBottom:4}} onClick={()=>go(10)}>← A minha casa</div>
+      <div style={{fontSize:15,fontWeight:700}}>As minhas localizações</div>
+    </div>
+    <div style={{padding:"10px 12px"}}>
+      {[
+        {nome:"Casa Principal",tipo:"Habitação",tC:"#E6F1FB",tT:"#0C447C",addr:"R. da Saudade, 12 · Coimbra",eq:6,docs:12,al:1,pts:74},
+        {nome:"Apartamento Porto",tipo:"Habitação",tC:"#E6F1FB",tT:"#0C447C",addr:"Av. dos Aliados, 45 · Porto",eq:4,docs:7,al:0,pts:61},
+        {nome:"Bloco Estrela · Cond.",tipo:"Condomínio",tC:C.greenXl,tT:C.green,addr:"R. das Flores, 8 · Lisboa",eq:12,docs:0,al:3,pts:88}
+      ].map(l => (
+        <div key={l.nome} onClick={()=>go(10)} style={{background:"#fff",border:`1px solid ${C.border}`,borderRadius:13,padding:"12px 13px",marginBottom:9,cursor:"pointer"}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:6}}>
+            <div style={{fontSize:14,fontWeight:700}}>{l.nome}</div>
+            <div style={{fontSize:9,padding:"3px 8px",borderRadius:8,background:l.tC,color:l.tT,fontWeight:600}}>{l.tipo}</div>
+          </div>
+          <div style={{fontSize:11,color:C.textS,marginBottom:8}}>{l.addr}</div>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+            <div style={{display:"flex",gap:10}}>
+              <span style={{fontSize:10,color:C.textT}}><b style={{color:C.text}}>{l.eq}</b> equip.</span>
+              {l.docs > 0 && <span style={{fontSize:10,color:C.textT}}><b style={{color:C.text}}>{l.docs}</b> docs</span>}
+              {l.al > 0 && <span style={{fontSize:10,color:C.amber}}><b>{l.al}</b> alerta{l.al>1?"s":""}</span>}
+            </div>
+            <div style={{fontSize:14,fontWeight:700,color:C.green}}>{l.pts} pts</div>
+          </div>
+        </div>
+      ))}
+    </div>
+    <BNav active={10} go={go} variant="casa"/>
+  </div>
+);
+
+const TecnicoScreen = ({go}) => (
+  <div>
+    <div style={{background:"#1a1a18",padding:"12px 14px",color:"#fff"}}>
+      <div style={{fontSize:9,opacity:.5,textTransform:"uppercase",letterSpacing:.5,marginBottom:3}}>Visita agendada</div>
+      <div style={{fontSize:15,fontWeight:700}}>Mário Carvalho</div>
+      <div style={{fontSize:11,opacity:.65,marginTop:2}}>R. da Saudade, 12 · Coimbra · R/C</div>
+      <div style={{display:"flex",gap:6,marginTop:8,flexWrap:"wrap"}}>
+        {["Hoje 14h30","~2h","93€"].map(b => <div key={b} style={{background:"rgba(255,255,255,.12)",borderRadius:7,padding:"3px 9px",fontSize:10}}>{b}</div>)}
+      </div>
+    </div>
+    <div style={{padding:"8px 10px 4px",fontSize:9,color:C.textT,textTransform:"uppercase",letterSpacing:.5}}>Equipamentos nesta visita</div>
+    <div style={{padding:"0 10px 10px"}}>
+      {[
+        {nome:"Caldeira Junkers ZWC 24",st:"warn",hist:"Última: Nov 2023 · 3 visitas",nota:'"queimador com depósito — limpeza urgente"'},
+        {nome:"AC Daikin FTXC25",st:"ok",hist:"Jun 2022 · filtros limpos",nota:null},
+        {nome:"Esquentador Vulcano 14L",st:"none",hist:"Sem histórico — sugerir registo",nota:null}
+      ].map(eq => (
+        <div key={eq.nome} style={{background:"#fff",border:`1px solid ${C.border}`,borderRadius:11,padding:"10px 12px",marginBottom:7}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:5}}>
+            <div style={{fontSize:12,fontWeight:700}}>{eq.nome}</div>
+            <div style={{fontSize:9,padding:"2px 7px",borderRadius:7,fontWeight:600,background:eq.st==="ok"?C.greenXl:eq.st==="warn"?C.amberLt:C.bg,color:eq.st==="ok"?C.green:eq.st==="warn"?C.amber:C.textT}}>{eq.st==="ok"?"Em dia":eq.st==="warn"?"Revisão anual":"Sem visita"}</div>
+          </div>
+          <div style={{fontSize:10,color:C.textS}}>{eq.hist}</div>
+          {eq.nota && <div style={{fontSize:10,color:C.blue,marginTop:4,fontStyle:"italic"}}>{eq.nota}</div>}
+        </div>
+      ))}
+    </div>
+    <div style={{display:"flex",gap:8,padding:"0 10px 14px"}}>
+      <button style={{flex:2,padding:12,borderRadius:11,border:"none",background:C.greenLt,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>Iniciar intervenção ↗</button>
+      <button style={{flex:1,padding:12,borderRadius:11,border:`1px solid ${C.border}`,background:C.bg,fontSize:13,cursor:"pointer"}}>Contactar</button>
+    </div>
+  </div>
+);
+
+const PILLS = [
+  {label:"V5 Home",idx:0},{label:"+ Card Casa",idx:20},{label:"Módulo Casa",idx:10},
+  {label:"Equipamentos",idx:12},{label:"Ficha (4 tabs)",idx:3},{label:"Docs",idx:5},
+  {label:"Energia",idx:6},{label:"Agendar",idx:7},{label:"Câmara IA",idx:8},
+  {label:"AI Expert",idx:9},{label:"Locais",idx:11},{label:"Vista Técnico",idx:99}
+];
+
+function App() {
+  const [cur,setCur] = useState(0);
+  const screens = {
+    0:  <HomeScreen go={setCur}/>,
+    20: <HomeScreen go={setCur} showCard={true}/>,
+    10: <CasaScreen go={setCur}/>,
+    12: <EquipScreen go={setCur}/>,
+    3:  <FichaScreen go={setCur}/>,
+    5:  <DocsScreen go={setCur}/>,
+    6:  <EnergiaScreen go={setCur}/>,
+    7:  <AgendarScreen go={setCur}/>,
+    8:  <CameraScreen go={setCur}/>,
+    9:  <AIScreen go={setCur}/>,
+    11: <LocaisScreen go={setCur}/>,
+    99: <TecnicoScreen go={setCur}/>
+  };
+  return (
+    <>
+      <div style={{display:"flex",gap:5,flexWrap:"wrap",justifyContent:"center",maxWidth:520}}>
+        {PILLS.map(p => (
+          <div key={p.idx} onClick={()=>setCur(p.idx)} style={{fontSize:11,padding:"5px 11px",borderRadius:14,cursor:"pointer",fontWeight:600,border:`1px solid ${cur===p.idx?C.greenLt:C.border}`,background:cur===p.idx?C.greenLt:"#fff",color:cur===p.idx?"#fff":C.textS}}>{p.label}</div>
+        ))}
+      </div>
+      <div style={{width:360,background:"#fff",borderRadius:40,border:"8px solid #2a2a28",overflow:"hidden",boxShadow:"0 20px 60px rgba(0,0,0,.3)",maxHeight:700,overflowY:"auto"}}>
+        {screens[cur] || screens[0]}
+      </div>
+      <div style={{fontSize:10,color:"#999",textAlign:"center"}}>V5 Preview · Navega pelos ecrãs nas pills acima</div>
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>

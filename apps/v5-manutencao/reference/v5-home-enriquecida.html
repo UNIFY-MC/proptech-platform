@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>V5 Home Enriquecida — Proposta</title>
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;font-family:system-ui,-apple-system,sans-serif}
+body{background:#d8d8d6;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:14px 8px;gap:12px}
+button,input{font-family:inherit;border:none;background:none;cursor:pointer}
+::-webkit-scrollbar{width:0;height:0}
+.scrollH{overflow-x:auto;-webkit-overflow-scrolling:touch}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" data-type="module">
+const {useState} = React;
+
+const C = {
+  green:"#1B4332",greenMid:"#2D6A4F",greenLt:"#52B788",greenXl:"#D8F3DC",
+  blue:"#185FA5",purple:"#534AB7",purpleDk:"#26215C",
+  amber:"#854F0B",amberLt:"#FAEEDA",red:"#A32D2D",redLt:"#FCEBEB",
+  border:"#e5e5e3",bg:"#f5f5f3",text:"#111",textS:"#555",textT:"#999",
+  gold:"#D4A72C",goldLt:"#FFF4D6",coral:"#E76F51",coralLt:"#FDE4DC"
+};
+
+// ── STATUS BAR
+const SBar = ({dark}) => (
+  <div style={{background:dark?"#0a0a08":C.green,padding:"10px 16px 8px",display:"flex",justifyContent:"space-between"}}>
+    <span style={{color:"#fff",fontSize:12,fontWeight:700}}>9:41</span>
+    <span style={{color:"rgba(255,255,255,.7)",fontSize:11}}>●●● WiFi 100%</span>
+  </div>
+);
+
+// ── BNAV
+const BNav = ({active,go}) => (
+  <div style={{display:"flex",borderTop:`1px solid ${C.border}`,background:"#fff"}}>
+    {[["Início",0,"🏠"],["Casa",1,"🏡"],null,["Pedidos",3,"📋"],["Perfil",4,"👤"]].map((it,i)=>{
+      if(!it) return (
+        <div key="fab" style={{flex:1,display:"flex",justifyContent:"center",alignItems:"center",paddingBottom:6}}>
+          <div onClick={()=>go(99)} style={{width:48,height:48,borderRadius:"50%",background:C.greenLt,display:"flex",alignItems:"center",justifyContent:"center",marginTop:-20,boxShadow:"0 4px 12px rgba(82,183,136,.4)",cursor:"pointer",fontSize:22,color:"#fff"}}>✨</div>
+        </div>
+      );
+      const [label,idx,ic]=it, on=active===idx;
+      return (
+        <div key={label} onClick={()=>go(idx)} style={{flex:1,padding:"8px 2px 6px",textAlign:"center",cursor:"pointer"}}>
+          <div style={{fontSize:20,marginBottom:2,filter:on?"none":"grayscale(1) opacity(.5)"}}>{ic}</div>
+          <div style={{fontSize:10,color:on?C.greenLt:"#bbb",fontWeight:on?700:400}}>{label}</div>
+        </div>
+      );
+    })}
+  </div>
+);
+
+/* ═══════════════════════════════════════════════════════════
+   ECRÃ 1 — HOME V5 ENRIQUECIDA
+═══════════════════════════════════════════════════════════ */
+const HomeEnriquecida = ({go}) => {
+  const [saudacao] = useState(() => {
+    const h = new Date().getHours();
+    return h<12?"Bom dia":h<19?"Boa tarde":"Boa noite";
+  });
+
+  return (
+    <div>
+      <SBar/>
+
+      {/* HERO personalizado — saudação + temperatura + localização */}
+      <div style={{background:`linear-gradient(145deg,${C.green} 0%,${C.greenMid} 100%)`,padding:"16px 16px 20px",color:"#fff"}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+          <div style={{fontSize:10,color:"rgba(255,255,255,.6)",fontWeight:600,letterSpacing:.8}}>📍 R. PALMIRA BASTOS, 2 · COIMBRA</div>
+          <div style={{display:"flex",gap:10}}>
+            <div style={{width:32,height:32,borderRadius:"50%",background:"rgba(255,255,255,.1)",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}>💬</div>
+            <div style={{width:32,height:32,borderRadius:"50%",background:"rgba(255,255,255,.1)",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",position:"relative"}}>
+              🔔<div style={{position:"absolute",top:4,right:4,width:8,height:8,borderRadius:"50%",background:"#EF4444"}}/>
+            </div>
+          </div>
+        </div>
+
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10}}>
+          <div>
+            <div style={{fontSize:12,color:"rgba(255,255,255,.75)",marginBottom:2}}>{saudacao}</div>
+            <div style={{fontSize:26,fontWeight:700,fontFamily:"Georgia,serif",lineHeight:1.1}}>Mário 👋</div>
+          </div>
+          <div style={{textAlign:"right"}}>
+            <div style={{display:"flex",alignItems:"center",gap:4,justifyContent:"flex-end"}}>
+              <span style={{fontSize:18}}>🌧️</span>
+              <span style={{fontSize:22,fontWeight:700}}>18°</span>
+            </div>
+            <div style={{fontSize:10,color:"rgba(255,255,255,.65)"}}>chuva 85% · Coimbra</div>
+          </div>
+        </div>
+
+        {/* CARD Score casa — gamificação leve, identidade V5 */}
+        <div onClick={()=>go(2)} style={{background:"rgba(0,0,0,.25)",borderRadius:14,padding:"12px 14px",cursor:"pointer",border:"1px solid rgba(255,255,255,.1)"}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+            <div style={{display:"flex",alignItems:"center",gap:12}}>
+              <div style={{position:"relative",width:54,height:54}}>
+                <svg width="54" height="54" style={{transform:"rotate(-90deg)"}}>
+                  <circle cx="27" cy="27" r="22" stroke="rgba(255,255,255,.15)" strokeWidth="4" fill="none"/>
+                  <circle cx="27" cy="27" r="22" stroke={C.greenLt} strokeWidth="4" fill="none" strokeDasharray="138" strokeDashoffset="36" strokeLinecap="round"/>
+                </svg>
+                <div style={{position:"absolute",top:0,left:0,width:54,height:54,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
+                  <div style={{fontSize:16,fontWeight:700,color:"#fff",lineHeight:1}}>74</div>
+                  <div style={{fontSize:7,color:"rgba(255,255,255,.6)"}}>SCORE</div>
+                </div>
+              </div>
+              <div>
+                <div style={{fontSize:13,fontWeight:700,color:"#fff"}}>Casa Saudável 🌱</div>
+                <div style={{fontSize:10,color:"rgba(255,255,255,.7)",marginTop:2}}>faltam 11 pts p/ nível Gold</div>
+              </div>
+            </div>
+            <span style={{color:"rgba(255,255,255,.6)",fontSize:16}}>›</span>
+          </div>
+          <div style={{display:"flex",gap:14,marginTop:10,fontSize:11}}>
+            <div style={{color:"#fff",fontWeight:600}}>⭐ 1.240 <span style={{color:"rgba(255,255,255,.6)",fontWeight:400}}>pontos</span></div>
+            <div style={{color:"#fff",fontWeight:600}}>🔥 22 <span style={{color:"rgba(255,255,255,.6)",fontWeight:400}}>dias</span></div>
+            <div style={{color:C.goldLt,fontWeight:600}}>🏆 Silver</div>
+          </div>
+        </div>
+      </div>
+
+      {/* ALERTA METEO contextual — clicável, gera ação */}
+      <div onClick={()=>go(3)} style={{margin:"10px 12px 0",background:"linear-gradient(90deg,#E6F1FB,#F4F9FE)",border:"1px solid #85B7EB",borderRadius:12,padding:"11px 13px",cursor:"pointer",display:"flex",gap:11,alignItems:"center"}}>
+        <div style={{fontSize:26,flexShrink:0}}>🌧️</div>
+        <div style={{flex:1}}>
+          <div style={{fontSize:12,fontWeight:700,color:"#0C447C"}}>Chuva forte prevista — próximas 48h</div>
+          <div style={{fontSize:10.5,color:C.textS,marginTop:2,lineHeight:1.4}}>3 sugestões de manutenção preventiva · +200 pts se concluíres</div>
+        </div>
+        <div style={{background:"#185FA5",color:"#fff",borderRadius:8,padding:"5px 10px",fontSize:11,fontWeight:700}}>Ver</div>
+      </div>
+
+      {/* BANNER CAROUSEL — promos rotativas */}
+      <div style={{padding:"12px 12px 0",display:"flex",gap:9,overflow:"hidden"}}>
+        <div style={{minWidth:"85%",background:"linear-gradient(135deg,#FCEBEB,#FDE4DC)",borderRadius:14,padding:"12px 14px",position:"relative",overflow:"hidden"}}>
+          <div style={{fontSize:9,color:C.coral,fontWeight:700,letterSpacing:.5,marginBottom:4}}>🌸 RESET DE PRIMAVERA</div>
+          <div style={{fontSize:17,fontWeight:700,color:C.text,lineHeight:1.15,fontFamily:"Georgia,serif"}}>Até <span style={{color:C.coral}}>50% OFF</span> em limpezas profundas</div>
+          <div style={{fontSize:11,color:C.textS,marginTop:3}}>Válido até 31 Maio · 8 serviços</div>
+          <button style={{background:C.coral,color:"#fff",padding:"7px 13px",borderRadius:9,fontSize:11,fontWeight:700,marginTop:10}}>Explorar →</button>
+          <div style={{position:"absolute",right:-10,bottom:-10,fontSize:90,opacity:.12}}>🌸</div>
+        </div>
+      </div>
+
+      {/* MISSÕES DA SEMANA — gamificação aplicada à manutenção */}
+      <div style={{padding:"14px 14px 4px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+        <div style={{fontSize:16,fontWeight:700,fontFamily:"Georgia,serif"}}>Missões da semana</div>
+        <div style={{fontSize:11,color:C.greenLt,fontWeight:700}}>+550 pts disp.</div>
+      </div>
+      <div style={{padding:"0 14px"}}>
+        {[
+          {ic:"🌧️",titulo:"Verificar caleiras",sub:"Antes da chuva · ganha 200 pts",pts:200,urg:true,estado:"open"},
+          {ic:"🔥",titulo:"Revisão anual da caldeira",sub:"Há 5 meses em atraso",pts:250,urg:false,estado:"open"},
+          {ic:"💧",titulo:"Trocar filtro da máquina de lavar",sub:"Poupa 8% energia",pts:100,urg:false,estado:"done"},
+        ].map((m,i)=>(
+          <div key={i} style={{background:"#fff",border:`1px solid ${C.border}`,borderRadius:12,padding:"11px 12px",marginBottom:7,display:"flex",gap:11,alignItems:"center",cursor:"pointer"}}>
+            <div style={{fontSize:22,opacity:m.estado==="done"?.4:1}}>{m.ic}</div>
+            <div style={{flex:1}}>
+              <div style={{display:"flex",alignItems:"center",gap:6}}>
+                <div style={{fontSize:13,fontWeight:600,color:m.estado==="done"?C.textT:C.text,textDecoration:m.estado==="done"?"line-through":"none"}}>{m.titulo}</div>
+                {m.urg&&<span style={{fontSize:9,background:C.coralLt,color:C.coral,padding:"1px 6px",borderRadius:5,fontWeight:700}}>URGENTE</span>}
+              </div>
+              <div style={{fontSize:11,color:C.textT,marginTop:1}}>{m.sub}</div>
+            </div>
+            {m.estado==="done"?<div style={{color:C.greenLt,fontSize:18}}>✓</div>:
+              <div style={{fontSize:11,fontWeight:700,color:C.gold,background:C.goldLt,padding:"4px 9px",borderRadius:8}}>+{m.pts}</div>}
+          </div>
+        ))}
+      </div>
+
+      {/* CATEGORIAS — manter as 8 categorias V5 */}
+      <div style={{padding:"14px 14px 4px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+        <div style={{fontSize:16,fontWeight:700,fontFamily:"Georgia,serif"}}>O que precisa?</div>
+        <div style={{fontSize:11,color:C.greenLt,fontWeight:700,cursor:"pointer"}}>Ver todos →</div>
+      </div>
+      <div style={{padding:"0 14px",display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:8}}>
+        {[["Limpeza","✨","#E8F5D8"],["Manutenção","🔧","#E0ECF8"],["Jardim","🌿","#E0F2E0"],["Piscina","🌊","#E0F2F7"],["Pintura","🖌️","#F7E0F0"],["Elétrica","⚡","#FAEEDA"],["Canalização","💧","#E0E8FA"],["Pós-Obra","🏗️","#F2EDE0"]].map(([l,ic,bg])=>(
+          <div key={l} style={{background:"#fff",border:`1px solid ${C.border}`,borderRadius:13,padding:"10px 4px",textAlign:"center",cursor:"pointer"}}>
+            <div style={{width:38,height:38,borderRadius:10,background:bg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,margin:"0 auto 5px"}}>{ic}</div>
+            <div style={{fontSize:10,color:C.textS,fontWeight:600}}>{l}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* COMBOS POPULARES — secção temática */}
+      <div style={{padding:"16px 14px 4px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+        <div style={{fontSize:16,fontWeight:700,fontFamily:"Georgia,serif"}}>🔥 Combos populares</div>
+        <div style={{fontSize:11,color:C.greenLt,fontWeight:700,cursor:"pointer"}}>Ver todos →</div>
+      </div>
+      <div style={{padding:"0 0 0 14px",display:"flex",gap:10,overflowX:"auto"}} className="scrollH">
+        {[
+          {t:"Pack Inverno",sub:"Caldeira + caleiras + cobertura",p:"185€",o:"229€",bg:"#E6F1FB"},
+          {t:"Reset Primavera",sub:"Limpeza profunda + jardim",p:"129€",o:"175€",bg:"#FCEBEB"},
+          {t:"Pré-venda casa",sub:"Tudo em 48h",p:"399€",o:"520€",bg:C.greenXl},
+        ].map((b,i)=>(
+          <div key={i} style={{minWidth:160,background:b.bg,border:`1px solid ${C.border}`,borderRadius:13,padding:"12px 13px",cursor:"pointer"}}>
+            <div style={{fontSize:9,color:C.coral,fontWeight:700,marginBottom:3}}>-{Math.round((1-parseFloat(b.p)/parseFloat(b.o))*100)}%</div>
+            <div style={{fontSize:13,fontWeight:700,color:C.text}}>{b.t}</div>
+            <div style={{fontSize:10,color:C.textS,marginTop:2,minHeight:26}}>{b.sub}</div>
+            <div style={{display:"flex",alignItems:"baseline",gap:6,marginTop:6}}>
+              <span style={{fontSize:16,fontWeight:700,color:C.green}}>{b.p}</span>
+              <span style={{fontSize:10,color:C.textT,textDecoration:"line-through"}}>{b.o}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* CROSS-SELL HUB — Owners Club (seguros + energia + manutenção) */}
+      <div onClick={()=>go(4)} style={{margin:"16px 14px 0",background:`linear-gradient(135deg,${C.purpleDk},${C.purple})`,borderRadius:14,padding:"14px 16px",cursor:"pointer",color:"#fff",position:"relative",overflow:"hidden"}}>
+        <div style={{fontSize:9,color:"rgba(255,255,255,.7)",fontWeight:700,letterSpacing:.8,marginBottom:4}}>🏡 OWNERS CLUB — PACK CASA</div>
+        <div style={{fontSize:16,fontWeight:700,marginBottom:4,fontFamily:"Georgia,serif"}}>Poupa até <span style={{color:"#FFD166"}}>180€/ano</span> em casa</div>
+        <div style={{fontSize:11,color:"rgba(255,255,255,.75)",marginBottom:10}}>Manutenção + Energia + Seguro multirriscos integrados no mesmo painel</div>
+        <div style={{display:"flex",gap:10,marginBottom:10}}>
+          <div style={{background:"rgba(255,255,255,.1)",borderRadius:9,padding:"6px 10px",fontSize:10}}>🔧 Manutenção</div>
+          <div style={{background:"rgba(255,255,255,.1)",borderRadius:9,padding:"6px 10px",fontSize:10}}>⚡ Energia</div>
+          <div style={{background:"rgba(255,255,255,.1)",borderRadius:9,padding:"6px 10px",fontSize:10}}>🛡️ Seguro</div>
+        </div>
+        <div style={{background:"#fff",color:C.purpleDk,padding:"7px 12px",borderRadius:8,fontSize:11,fontWeight:700,display:"inline-block"}}>Simular agora →</div>
+      </div>
+
+      {/* DICA IA DA SEMANA — tips de manutenção */}
+      <div style={{padding:"16px 14px 4px"}}>
+        <div style={{fontSize:16,fontWeight:700,fontFamily:"Georgia,serif"}}>💡 Dica IA da semana</div>
+      </div>
+      <div style={{margin:"0 14px",background:C.goldLt,border:`1px solid ${C.gold}`,borderRadius:12,padding:"12px 14px"}}>
+        <div style={{display:"flex",gap:10,alignItems:"flex-start"}}>
+          <div style={{fontSize:26,flexShrink:0}}>🌡️</div>
+          <div style={{flex:1}}>
+            <div style={{fontSize:12,fontWeight:700,color:C.text,marginBottom:3}}>Como reduzir 15% da fatura do AC este verão</div>
+            <div style={{fontSize:11,color:C.textS,lineHeight:1.5}}>Limpa os filtros agora (demora 5 min), mantém a temperatura a 25°C e fecha as portas. A tua Daikin FTXC25 tem um modo "eco" que poucos conhecem.</div>
+            <div style={{display:"flex",gap:10,marginTop:8}}>
+              <span style={{fontSize:11,color:C.amber,fontWeight:700,cursor:"pointer"}}>Ler mais →</span>
+              <span style={{fontSize:11,color:C.textT}}>·</span>
+              <span style={{fontSize:11,color:C.amber,fontWeight:700,cursor:"pointer"}}>💬 Perguntar à IA</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* EQUIPA — mantém carrossel V5 atual */}
+      <div style={{padding:"16px 14px 4px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+        <div style={{fontSize:16,fontWeight:700,fontFamily:"Georgia,serif"}}>A sua equipa</div>
+        <div style={{fontSize:11,color:C.greenLt,fontWeight:700}}>Ver todos →</div>
+      </div>
+      <div style={{padding:"0 14px 14px",display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
+        {[["AF","António Ferreira","Canaliz · Elétrica","4.9",12],["RG","Ricardo Gomes","Manut · Pintura","5.0",8],["SM","Sandra Matos","Limpeza · Obras","4.9",15]].map(([i,n,s,r,v])=>(
+          <div key={n} style={{background:"#fff",border:`1px solid ${C.border}`,borderRadius:12,padding:"11px 6px",textAlign:"center",cursor:"pointer",position:"relative"}}>
+            {v===15&&<div style={{position:"absolute",top:6,right:6,fontSize:9,background:C.greenLt,color:"#fff",padding:"1px 6px",borderRadius:6,fontWeight:700}}>🏆</div>}
+            <div style={{width:38,height:38,borderRadius:"50%",background:C.greenLt,color:"#fff",fontWeight:700,fontSize:13,display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 6px"}}>{i}</div>
+            <div style={{fontSize:11,fontWeight:700}}>{n.split(" ")[0]}</div>
+            <div style={{fontSize:9,color:C.textT,margin:"2px 0 3px"}}>{s}</div>
+            <div style={{fontSize:11,color:"#F59E0B"}}>{"★".repeat(5)}</div>
+            <div style={{fontSize:9,color:C.textT,marginTop:2}}>{r} · {v} visitas</div>
+          </div>
+        ))}
+      </div>
+
+      <BNav active={0} go={go}/>
+    </div>
+  );
+};
+
+/* ═══════════════════════════════════════════════════════════
+   ECRÃ 2 — DETALHE SCORE / GAMIFICAÇÃO
+═══════════════════════════════════════════════════════════ */
+const ScoreDetail = ({go}) => (
+  <div>
+    <SBar/>
+    <div style={{background:`linear-gradient(145deg,${C.green},${C.greenMid})`,padding:"12px 16px 22px",color:"#fff"}}>
+      <div style={{fontSize:10,opacity:.7,cursor:"pointer",marginBottom:10}} onClick={()=>go(0)}>← Início</div>
+      <div style={{fontSize:10,color:C.greenLt,fontWeight:700,letterSpacing:.8,marginBottom:12}}>A MINHA CASA SAUDÁVEL</div>
+
+      {/* Score central */}
+      <div style={{display:"flex",alignItems:"center",gap:16,marginBottom:14}}>
+        <div style={{position:"relative",width:90,height:90}}>
+          <svg width="90" height="90" style={{transform:"rotate(-90deg)"}}>
+            <circle cx="45" cy="45" r="38" stroke="rgba(255,255,255,.15)" strokeWidth="6" fill="none"/>
+            <circle cx="45" cy="45" r="38" stroke={C.greenLt} strokeWidth="6" fill="none" strokeDasharray="239" strokeDashoffset="62" strokeLinecap="round"/>
+          </svg>
+          <div style={{position:"absolute",top:0,left:0,width:90,height:90,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
+            <div style={{fontSize:30,fontWeight:700,lineHeight:1}}>74</div>
+            <div style={{fontSize:9,color:"rgba(255,255,255,.6)"}}>/ 100</div>
+          </div>
+        </div>
+        <div>
+          <div style={{fontSize:13,color:"rgba(255,255,255,.7)"}}>Nível atual</div>
+          <div style={{fontSize:22,fontWeight:700,fontFamily:"Georgia,serif"}}>🌱 Silver</div>
+          <div style={{fontSize:11,color:"rgba(255,255,255,.65)",marginTop:2}}>11 pts p/ Gold 🏆</div>
+        </div>
+      </div>
+
+      {/* Evolução níveis */}
+      <div style={{background:"rgba(0,0,0,.2)",borderRadius:12,padding:"10px 12px"}}>
+        <div style={{fontSize:9,color:"rgba(255,255,255,.6)",fontWeight:700,letterSpacing:.5,marginBottom:8}}>A TUA EVOLUÇÃO</div>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",position:"relative"}}>
+          {[["🏚️","Precário"],["🔨","Em cuidados"],["🌱","Saudável"],["🏆","Premium"],["💎","Excelência"]].map(([ic,l],i)=>(
+            <div key={l} style={{display:"flex",flexDirection:"column",alignItems:"center",zIndex:1,flex:1}}>
+              <div style={{fontSize:20,marginBottom:3,opacity:i<=2?1:.4}}>{ic}</div>
+              <div style={{fontSize:8,color:i===2?C.greenLt:"rgba(255,255,255,.5)",fontWeight:i===2?700:400}}>{l}</div>
+            </div>
+          ))}
+          <div style={{position:"absolute",top:10,left:"10%",right:"10%",height:2,background:"rgba(255,255,255,.15)"}}/>
+          <div style={{position:"absolute",top:10,left:"10%",width:"40%",height:2,background:C.greenLt}}/>
+        </div>
+        <div style={{background:"rgba(255,255,255,.1)",borderRadius:4,height:6,marginTop:10,overflow:"hidden"}}>
+          <div style={{width:"62%",height:6,background:C.greenLt}}/>
+        </div>
+        <div style={{display:"flex",justifyContent:"space-between",marginTop:4,fontSize:9,color:"rgba(255,255,255,.6)"}}>
+          <span>1.240 / 2.000 pts</span><span>Silver</span>
+        </div>
+      </div>
+    </div>
+
+    {/* Stats cards */}
+    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,padding:"10px 12px 0"}}>
+      <div style={{background:"#fff",border:`1px solid ${C.border}`,borderRadius:12,padding:"10px 12px"}}>
+        <div style={{fontSize:9,color:C.textT,textTransform:"uppercase",letterSpacing:.3,marginBottom:3}}>Pontos total</div>
+        <div style={{fontSize:22,fontWeight:700,color:C.gold}}>⭐ 1.240</div>
+        <div style={{fontSize:10,color:C.textS,marginTop:2}}>+150 esta semana</div>
+      </div>
+      <div style={{background:"#fff",border:`1px solid ${C.border}`,borderRadius:12,padding:"10px 12px"}}>
+        <div style={{fontSize:9,color:C.textT,textTransform:"uppercase",letterSpacing:.3,marginBottom:3}}>Sequência</div>
+        <div style={{fontSize:22,fontWeight:700,color:C.coral}}>🔥 22 dias</div>
+        <div style={{fontSize:10,color:C.textS,marginTop:2}}>Recorde: 31 dias</div>
+      </div>
+    </div>
+
+    {/* DETALHE POR SISTEMA (inspiração pinto-app, estilo V5) */}
+    <div style={{padding:"14px 12px 4px",fontSize:9,color:C.textT,textTransform:"uppercase",letterSpacing:.4,fontWeight:700}}>Detalhe por sistema da casa</div>
+    <div style={{padding:"0 12px"}}>
+      {[
+        {ic:"❄️",nome:"Climatização & AVAC",score:90,st:"good",nota:"Filtros mudados há 2 meses · Excelente"},
+        {ic:"💧",nome:"Canalização",score:65,st:"warn",nota:"Caleiras por verificar · Chuva prevista"},
+        {ic:"⚡",nome:"Instalação Elétrica",score:80,st:"good",nota:"Quadro revisto em Jan · Bom"},
+        {ic:"🏠",nome:"Estrutura & Isolamento",score:50,st:"bad",nota:"Janelas com folga · Agendar revisão"},
+        {ic:"🧼",nome:"Limpeza & Higiene",score:68,st:"warn",nota:"Última limpeza há 3 semanas · Agendar"}
+      ].map((s,i)=>{
+        const col = s.st==="good"?C.green:s.st==="warn"?C.amber:C.red;
+        return (
+          <div key={i} style={{background:"#fff",border:`1px solid ${C.border}`,borderRadius:12,padding:"11px 13px",marginBottom:7,cursor:"pointer"}}>
+            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:6}}>
+              <div style={{fontSize:22}}>{s.ic}</div>
+              <div style={{flex:1}}>
+                <div style={{fontSize:12,fontWeight:700}}>{s.nome}</div>
+                <div style={{fontSize:10,color:C.textS,marginTop:2}}>{s.nota}</div>
+              </div>
+              <div style={{fontSize:22,fontWeight:700,color:col}}>{s.score}</div>
+            </div>
+            <div style={{height:4,background:C.border,borderRadius:2,overflow:"hidden"}}>
+              <div style={{width:`${s.score}%`,height:4,background:col}}/>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+
+    {/* Desbloqueios / recompensas */}
+    <div style={{padding:"14px 12px 4px",fontSize:9,color:C.textT,textTransform:"uppercase",letterSpacing:.4,fontWeight:700}}>Prémios disponíveis</div>
+    <div style={{padding:"0 12px 14px"}}>
+      {[
+        {ic:"🛡️",t:"Escudo Casa",sub:"15% off no seguro multirriscos",custo:800,locked:false},
+        {ic:"🎁",t:"Pack Premium 1 mês",sub:"AI Expert + relatórios ilimitados",custo:1500,locked:false},
+        {ic:"⚡",t:"Revisão elétrica grátis",sub:"Técnico certificado em casa",custo:2500,locked:true}
+      ].map((p,i)=>(
+        <div key={i} style={{background:p.locked?C.bg:"#fff",border:`1px solid ${p.locked?C.border:C.gold}`,borderRadius:12,padding:"11px 13px",marginBottom:7,display:"flex",alignItems:"center",gap:11,opacity:p.locked?.6:1}}>
+          <div style={{fontSize:28}}>{p.ic}</div>
+          <div style={{flex:1}}>
+            <div style={{fontSize:12,fontWeight:700}}>{p.t}</div>
+            <div style={{fontSize:10,color:C.textS,marginTop:1}}>{p.sub}</div>
+          </div>
+          <div style={{textAlign:"right"}}>
+            <div style={{fontSize:12,fontWeight:700,color:C.gold}}>⭐ {p.custo}</div>
+            <div style={{fontSize:9,color:p.locked?C.textT:C.greenLt,fontWeight:600,marginTop:2}}>{p.locked?"Bloqueado":"Resgatar"}</div>
+          </div>
+        </div>
+      ))}
+    </div>
+    <BNav active={1} go={go}/>
+  </div>
+);
+
+/* ═══════════════════════════════════════════════════════════
+   ECRÃ 3 — ALERTA METEO + SUGESTÕES IA
+═══════════════════════════════════════════════════════════ */
+const MeteoAlert = ({go}) => (
+  <div>
+    <SBar/>
+    <div style={{background:`linear-gradient(145deg,#0C447C,#185FA5)`,padding:"12px 16px 18px",color:"#fff"}}>
+      <div style={{fontSize:10,opacity:.7,cursor:"pointer",marginBottom:10}} onClick={()=>go(0)}>← Início</div>
+      <div style={{display:"flex",alignItems:"center",gap:14}}>
+        <div style={{fontSize:46}}>🌧️</div>
+        <div>
+          <div style={{fontSize:10,color:"rgba(255,255,255,.7)",fontWeight:700,letterSpacing:.5}}>ALERTA IPMA · COIMBRA</div>
+          <div style={{fontSize:18,fontWeight:700,fontFamily:"Georgia,serif",lineHeight:1.2}}>Chuva forte próximas 48h</div>
+          <div style={{fontSize:11,opacity:.8,marginTop:2}}>Acumulado esperado: 35–50mm · Vento 40 km/h</div>
+        </div>
+      </div>
+    </div>
+
+    <div style={{padding:"12px 12px 4px",fontSize:9,color:C.textT,textTransform:"uppercase",letterSpacing:.4,fontWeight:700}}>A IA analisou a tua casa — 3 ações sugeridas</div>
+    <div style={{padding:"0 12px"}}>
+      {[
+        {ic:"🌊",t:"Verificar caleiras e algerozes",sub:"Telhado score 38/100 · risco alto de entupimento",tempo:"15 min self-check",pts:200,impacto:"alto"},
+        {ic:"🚪",t:"Fechar janelas do sótão",sub:"Previsão de rajadas a Norte · baixa vedação registada",tempo:"5 min",pts:50,impacto:"medio"},
+        {ic:"🔌",t:"Desligar equipamentos ext. no jardim",sub:"Iluminação exterior e bomba piscina",tempo:"2 min",pts:50,impacto:"medio"}
+      ].map((a,i)=>(
+        <div key={i} style={{background:"#fff",border:`1px solid ${C.border}`,borderRadius:12,padding:"12px 13px",marginBottom:8}}>
+          <div style={{display:"flex",gap:10,alignItems:"flex-start"}}>
+            <div style={{fontSize:26}}>{a.ic}</div>
+            <div style={{flex:1}}>
+              <div style={{fontSize:13,fontWeight:700,color:C.text}}>{a.t}</div>
+              <div style={{fontSize:11,color:C.textS,marginTop:3,lineHeight:1.45}}>{a.sub}</div>
+              <div style={{display:"flex",gap:8,marginTop:7,alignItems:"center"}}>
+                <span style={{fontSize:9,color:C.textT,background:C.bg,padding:"2px 7px",borderRadius:5}}>⏱ {a.tempo}</span>
+                <span style={{fontSize:9,color:C.gold,background:C.goldLt,padding:"2px 7px",borderRadius:5,fontWeight:700}}>+{a.pts} pts</span>
+                {a.impacto==="alto"&&<span style={{fontSize:9,color:C.coral,background:C.coralLt,padding:"2px 7px",borderRadius:5,fontWeight:700}}>IMPACTO ALTO</span>}
+              </div>
+            </div>
+          </div>
+          <div style={{display:"flex",gap:7,marginTop:10}}>
+            <button style={{flex:1,background:C.green,color:"#fff",padding:"8px",borderRadius:8,fontSize:11,fontWeight:700}}>✓ Já fiz</button>
+            <button style={{flex:1,background:C.bg,color:C.text,padding:"8px",borderRadius:8,fontSize:11,fontWeight:600,border:`1px solid ${C.border}`}}>Pedir técnico</button>
+          </div>
+        </div>
+      ))}
+    </div>
+
+    {/* CHAT IA */}
+    <div style={{margin:"12px 12px",background:`linear-gradient(135deg,${C.purpleDk},${C.purple})`,borderRadius:12,padding:"12px 14px",color:"#fff",cursor:"pointer"}}>
+      <div style={{display:"flex",alignItems:"center",gap:10}}>
+        <div style={{fontSize:26}}>🤖</div>
+        <div style={{flex:1}}>
+          <div style={{fontSize:12,fontWeight:700}}>Pergunta à IA sobre tempestades</div>
+          <div style={{fontSize:10.5,color:"rgba(255,255,255,.75)",marginTop:2}}>"O que devo proteger esta noite?" "A minha cobertura aguenta?"</div>
+        </div>
+        <span style={{fontSize:18}}>💬</span>
+      </div>
+    </div>
+
+    <BNav active={1} go={go}/>
+  </div>
+);
+
+/* ═══════════════════════════════════════════════════════════
+   ECRÃ 4 — OWNERS CLUB / CROSS-SELL HUB
+═══════════════════════════════════════════════════════════ */
+const OwnersClub = ({go}) => (
+  <div>
+    <SBar/>
+    <div style={{background:`linear-gradient(145deg,${C.purpleDk},${C.purple})`,padding:"14px 16px 22px",color:"#fff"}}>
+      <div style={{fontSize:10,opacity:.7,cursor:"pointer",marginBottom:10}} onClick={()=>go(0)}>← Início</div>
+      <div style={{fontSize:10,color:"rgba(255,255,255,.7)",fontWeight:700,letterSpacing:1,marginBottom:6}}>🏡 OWNERS CLUB</div>
+      <div style={{fontSize:24,fontWeight:700,fontFamily:"Georgia,serif",marginBottom:6}}>Uma casa. Um painel.</div>
+      <div style={{fontSize:13,color:"rgba(255,255,255,.75)",marginBottom:14}}>Manutenção, energia e seguro na mesma app. Poupa até <b style={{color:"#FFD166"}}>180€/ano</b>.</div>
+
+      <div style={{background:"rgba(0,0,0,.25)",borderRadius:12,padding:"12px 13px"}}>
+        <div style={{fontSize:10,color:"rgba(255,255,255,.6)",fontWeight:700,letterSpacing:.4,marginBottom:6}}>A TUA POUPANÇA ESTIMADA</div>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline"}}>
+          <div style={{fontSize:32,fontWeight:700,color:"#FFD166",fontFamily:"Georgia,serif"}}>184€</div>
+          <div style={{fontSize:11,color:"rgba(255,255,255,.7)"}}>/ ano</div>
+        </div>
+        <div style={{fontSize:10,color:"rgba(255,255,255,.5)",marginTop:3}}>Baseado no teu perfil · Simulação</div>
+      </div>
+    </div>
+
+    {/* Os 3 pilares */}
+    <div style={{padding:"12px 12px 4px",fontSize:9,color:C.textT,textTransform:"uppercase",letterSpacing:.4,fontWeight:700}}>Os 3 pilares da tua casa</div>
+    <div style={{padding:"0 12px"}}>
+      {[
+        {ic:"🔧",t:"Manutenção",sub:"A tua equipa fixa · 22 dias no streak",st:"ativo",cor:C.green,corBg:C.greenXl,prog:"Ativo desde Jan 2025",botao:"Gerir"},
+        {ic:"⚡",t:"Energia",sub:"Atualmente com EDP · 51€/mês",st:"oportunidade",cor:C.amber,corBg:C.amberLt,prog:"Poupas 12€/mês se mudares",botao:"Simular"},
+        {ic:"🛡️",t:"Seguro Multirriscos",sub:"Score 74 dá-te -15% nas ofertas",st:"novo",cor:C.purple,corBg:"#EEEDFE",prog:"3 seguradoras à tua espera",botao:"Descobrir"}
+      ].map((p,i)=>(
+        <div key={i} style={{background:"#fff",border:`1px solid ${C.border}`,borderRadius:14,padding:"13px 14px",marginBottom:9,position:"relative",overflow:"hidden"}}>
+          <div style={{position:"absolute",top:0,left:0,bottom:0,width:4,background:p.cor}}/>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8,paddingLeft:8}}>
+            <div style={{display:"flex",gap:11,alignItems:"center"}}>
+              <div style={{width:42,height:42,borderRadius:11,background:p.corBg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22}}>{p.ic}</div>
+              <div>
+                <div style={{fontSize:14,fontWeight:700,color:C.text}}>{p.t}</div>
+                <div style={{fontSize:11,color:C.textS,marginTop:1}}>{p.sub}</div>
+              </div>
+            </div>
+            <div style={{fontSize:9,padding:"3px 8px",borderRadius:6,fontWeight:700,background:p.corBg,color:p.cor,textTransform:"uppercase",letterSpacing:.3}}>
+              {p.st==="ativo"?"Ativo":p.st==="oportunidade"?"Poupa":"Novo"}
+            </div>
+          </div>
+          <div style={{paddingLeft:8,display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:6}}>
+            <div style={{fontSize:10.5,color:C.textT}}>{p.prog}</div>
+            <button style={{background:p.cor,color:"#fff",padding:"6px 12px",borderRadius:8,fontSize:11,fontWeight:700}}>{p.botao} →</button>
+          </div>
+        </div>
+      ))}
+    </div>
+
+    {/* Benefícios */}
+    <div style={{padding:"14px 12px 4px",fontSize:9,color:C.textT,textTransform:"uppercase",letterSpacing:.4,fontWeight:700}}>Porquê juntar tudo num sítio?</div>
+    <div style={{padding:"0 12px 14px",display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+      {[
+        {ic:"📊",t:"Painel único",sub:"Tudo num lugar"},
+        {ic:"💰",t:"Preços melhores",sub:"Descontos acumulados"},
+        {ic:"🎯",t:"IA proativa",sub:"Antecipa problemas"},
+        {ic:"🏆",t:"+ Pontos",sub:"Cada ação soma"}
+      ].map((b,i)=>(
+        <div key={i} style={{background:"#fff",border:`1px solid ${C.border}`,borderRadius:11,padding:"10px 11px"}}>
+          <div style={{fontSize:20,marginBottom:5}}>{b.ic}</div>
+          <div style={{fontSize:11,fontWeight:700}}>{b.t}</div>
+          <div style={{fontSize:10,color:C.textS,marginTop:1}}>{b.sub}</div>
+        </div>
+      ))}
+    </div>
+
+    <BNav active={1} go={go}/>
+  </div>
+);
+
+/* ═══════════════════════════════════════════════════════════
+   ECRÃ 5 — CHAT COM PRESTADOR + LOCALIZAÇÃO (anti-fraude)
+═══════════════════════════════════════════════════════════ */
+const ChatPrestador = ({go}) => (
+  <div style={{display:"flex",flexDirection:"column",height:"100%"}}>
+    <SBar/>
+    {/* Header prestador */}
+    <div style={{background:"#fff",padding:"10px 14px",borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center",gap:11}}>
+      <div style={{fontSize:18,color:C.textT,cursor:"pointer"}} onClick={()=>go(0)}>←</div>
+      <div style={{width:40,height:40,borderRadius:"50%",background:C.greenLt,color:"#fff",fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13}}>JF</div>
+      <div style={{flex:1}}>
+        <div style={{fontSize:13,fontWeight:700}}>João Ferreira</div>
+        <div style={{display:"flex",alignItems:"center",gap:5,marginTop:1}}>
+          <div style={{width:6,height:6,borderRadius:"50%",background:C.greenLt}}/>
+          <span style={{fontSize:10,color:C.textS}}>A caminho · chega em 18 min</span>
+        </div>
+      </div>
+      <button style={{width:34,height:34,borderRadius:"50%",background:C.green,color:"#fff",fontSize:16}}>📞</button>
+    </div>
+
+    {/* Badge verificação */}
+    <div style={{margin:"10px 12px 0",background:C.greenXl,border:`1px solid ${C.greenLt}`,borderRadius:11,padding:"9px 12px",display:"flex",gap:9,alignItems:"center"}}>
+      <div style={{fontSize:18}}>✅</div>
+      <div style={{flex:1}}>
+        <div style={{fontSize:11,fontWeight:700,color:C.green}}>Técnico verificado OSCAR</div>
+        <div style={{fontSize:10,color:C.greenMid,marginTop:1}}>NIF validado · Seguro RC · 87 visitas · 4.9★</div>
+      </div>
+    </div>
+
+    {/* Localização live */}
+    <div style={{margin:"8px 12px 0",background:"#fff",border:`1px solid ${C.border}`,borderRadius:11,padding:"10px 12px",position:"relative"}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:7}}>
+        <div style={{fontSize:10,color:C.textT,fontWeight:700,letterSpacing:.4,textTransform:"uppercase"}}>🗺️ Localização em tempo real</div>
+        <div style={{fontSize:10,color:C.greenLt,fontWeight:700}}>ao vivo · 18 min</div>
+      </div>
+      {/* Mock mapa */}
+      <div style={{background:"#E0E8D5",height:100,borderRadius:8,position:"relative",overflow:"hidden"}}>
+        <svg width="100%" height="100" style={{position:"absolute"}}>
+          <path d="M 20 90 Q 80 40, 150 60 T 280 30" stroke={C.greenLt} strokeWidth="2.5" fill="none" strokeDasharray="4 3"/>
+        </svg>
+        <div style={{position:"absolute",bottom:8,left:15,fontSize:20}}>🚐</div>
+        <div style={{position:"absolute",top:15,right:20,fontSize:20}}>🏠</div>
+        <div style={{position:"absolute",bottom:8,right:8,background:"rgba(255,255,255,.9)",padding:"3px 8px",borderRadius:6,fontSize:9,fontWeight:700,color:C.textS}}>~18 min</div>
+      </div>
+    </div>
+
+    {/* Chat mensagens */}
+    <div style={{flex:1,padding:"10px 12px",display:"flex",flexDirection:"column",gap:8,background:C.bg,minHeight:180}}>
+      <div style={{fontSize:9,color:C.textT,textAlign:"center",marginBottom:4}}>Hoje, 14:12</div>
+
+      <div style={{display:"flex",gap:7,maxWidth:"85%"}}>
+        <div style={{width:24,height:24,borderRadius:"50%",background:C.greenLt,color:"#fff",fontSize:10,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:3}}>JF</div>
+        <div>
+          <div style={{background:"#fff",borderRadius:"3px 12px 12px 12px",padding:"8px 11px",fontSize:12,color:C.text,border:`1px solid ${C.border}`}}>Olá Mário! Já saí. Chego em ~20 min ✌️</div>
+          <div style={{fontSize:9,color:C.textT,marginTop:3,marginLeft:4}}>14:12</div>
+        </div>
+      </div>
+
+      <div style={{display:"flex",justifyContent:"flex-end"}}>
+        <div style={{maxWidth:"85%"}}>
+          <div style={{background:C.green,color:"#fff",borderRadius:"12px 3px 12px 12px",padding:"8px 11px",fontSize:12}}>Perfeito. Vou-lhe abrir o portão. É preciso trazer alguma ferramenta específica?</div>
+          <div style={{fontSize:9,color:C.textT,marginTop:3,textAlign:"right"}}>14:13 ✓✓</div>
+        </div>
+      </div>
+
+      <div style={{display:"flex",gap:7,maxWidth:"85%"}}>
+        <div style={{width:24,height:24,borderRadius:"50%",background:C.greenLt,color:"#fff",fontSize:10,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:3}}>JF</div>
+        <div>
+          <div style={{background:"#fff",borderRadius:"3px 12px 12px 12px",padding:"8px 11px",fontSize:12,color:C.text,border:`1px solid ${C.border}`}}>Trago tudo. Já fiz a revisão desta caldeira há 2 anos, conheço o sistema 👍</div>
+          <div style={{fontSize:9,color:C.textT,marginTop:3,marginLeft:4}}>14:13</div>
+        </div>
+      </div>
+    </div>
+
+    {/* Chips ações rápidas anti-fraude */}
+    <div style={{display:"flex",gap:6,overflowX:"auto",padding:"8px 12px",background:"#fff",borderTop:`1px solid ${C.border}`}}>
+      {["📸 Enviar foto","📄 Ver orçamento acordado","🚨 Reportar problema","⭐ Avaliar no fim"].map(c=>(
+        <div key={c} style={{flexShrink:0,fontSize:10,padding:"5px 10px",borderRadius:14,border:`1px solid ${C.border}`,background:C.bg,color:C.textS,cursor:"pointer",whiteSpace:"nowrap",fontWeight:600}}>{c}</div>
+      ))}
+    </div>
+
+    {/* Input */}
+    <div style={{display:"flex",gap:7,padding:"8px 12px 12px",background:"#fff"}}>
+      <button style={{width:34,height:34,borderRadius:"50%",background:C.bg,color:C.textS,fontSize:18,flexShrink:0}}>📎</button>
+      <input placeholder="Escrever mensagem..." style={{flex:1,padding:"9px 12px",borderRadius:20,border:`1px solid ${C.border}`,fontSize:12,background:C.bg,outline:"none"}}/>
+      <button style={{width:34,height:34,borderRadius:"50%",background:C.green,color:"#fff",fontSize:14,flexShrink:0}}>→</button>
+    </div>
+
+    {/* Aviso antifraude rodapé */}
+    <div style={{padding:"8px 12px",background:C.amberLt,borderTop:`1px solid #F0CC5A`,display:"flex",gap:8,alignItems:"center"}}>
+      <div style={{fontSize:14}}>🔒</div>
+      <div style={{fontSize:9.5,color:C.amber,lineHeight:1.4}}>
+        <b>Nunca pagues fora da app.</b> Todos os pagamentos são garantidos e registados aqui.
+      </div>
+    </div>
+  </div>
+);
+
+/* ═══════════════════════════════════════════════════════════
+   ROUTER
+═══════════════════════════════════════════════════════════ */
+const PILLS = [
+  {l:"1. Home Enriquecida",i:0},
+  {l:"2. Score / Gamificação",i:2},
+  {l:"3. Alerta Meteo + IA",i:3},
+  {l:"4. Owners Club (cross-sell)",i:4},
+  {l:"5. Chat Prestador",i:5},
+];
+
+function App() {
+  const [cur,setCur] = useState(0);
+  const screens = {
+    0:<HomeEnriquecida go={setCur}/>,
+    2:<ScoreDetail go={setCur}/>,
+    3:<MeteoAlert go={setCur}/>,
+    4:<OwnersClub go={setCur}/>,
+    5:<ChatPrestador go={setCur}/>
+  };
+  return (
+    <>
+      <div style={{display:"flex",gap:5,flexWrap:"wrap",justifyContent:"center",maxWidth:520}}>
+        {PILLS.map(p=>(
+          <div key={p.i} onClick={()=>setCur(p.i)} style={{fontSize:11,padding:"5px 11px",borderRadius:14,cursor:"pointer",fontWeight:600,border:`1px solid ${cur===p.i?"#52B788":"#e5e5e3"}`,background:cur===p.i?"#52B788":"#fff",color:cur===p.i?"#fff":"#555"}}>{p.l}</div>
+        ))}
+      </div>
+      <div style={{width:360,background:"#fff",borderRadius:40,border:"8px solid #2a2a28",overflow:"hidden",boxShadow:"0 20px 60px rgba(0,0,0,.3)",maxHeight:720,overflowY:"auto"}}>
+        {screens[cur]||screens[0]}
+      </div>
+      <div style={{fontSize:10,color:"#999",textAlign:"center",maxWidth:420,lineHeight:1.5}}>V5 — Proposta com gamificação leve, banners promo, cross-sell Owners Club, chat antifraude e alerta meteo com IA</div>
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>

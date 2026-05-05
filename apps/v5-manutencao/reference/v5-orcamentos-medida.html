@@ -1,0 +1,879 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>V5 — Orçamentos à medida + Landing + AlertActions</title>
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;font-family:system-ui,-apple-system,sans-serif}
+body{background:#d8d8d6;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:14px 8px;gap:12px}
+button,input,textarea{font-family:inherit;border:none;background:none;cursor:pointer}
+::-webkit-scrollbar{width:0;height:0}
+.scrollH{overflow-x:auto;-webkit-overflow-scrolling:touch}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" data-type="module">
+const {useState} = React;
+
+const C = {
+  green:"#1B4332",greenMid:"#2D6A4F",greenLt:"#52B788",greenXl:"#D8F3DC",
+  blue:"#185FA5",blueLt:"#E6F1FB",purple:"#534AB7",purpleDk:"#26215C",
+  amber:"#854F0B",amberLt:"#FAEEDA",red:"#A32D2D",redLt:"#FCEBEB",
+  border:"#e5e5e3",bg:"#f5f5f3",text:"#111",textS:"#555",textT:"#999",
+  gold:"#D4A72C",goldLt:"#FFF4D6",coral:"#E76F51",coralLt:"#FDE4DC"
+};
+
+const SBar = () => (
+  <div style={{background:C.green,padding:"10px 16px 8px",display:"flex",justifyContent:"space-between"}}>
+    <span style={{color:"#fff",fontSize:12,fontWeight:700}}>9:41</span>
+    <span style={{color:"rgba(255,255,255,.7)",fontSize:11}}>●●● WiFi 100%</span>
+  </div>
+);
+
+const BNav = ({active,go}) => (
+  <div style={{display:"flex",borderTop:`1px solid ${C.border}`,background:"#fff"}}>
+    {[["Início",0,"🏠"],["Serviços",1,"🛠️"],null,["Casa",3,"🏡"],["Pedidos",4,"📋"]].map((it,i)=>{
+      if(!it) return (
+        <div key="fab" style={{flex:1,display:"flex",justifyContent:"center",alignItems:"center",paddingBottom:6}}>
+          <div onClick={()=>go(20)} style={{width:52,height:52,borderRadius:"50%",background:`linear-gradient(135deg,${C.greenLt},${C.greenMid})`,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",marginTop:-22,boxShadow:"0 6px 18px rgba(82,183,136,.5)",cursor:"pointer",color:"#fff"}}>
+            <span style={{fontSize:18,lineHeight:1}}>✨</span>
+            <span style={{fontSize:7,marginTop:1,letterSpacing:.3,fontWeight:700}}>PEDIR</span>
+          </div>
+        </div>
+      );
+      const [l,idx,ic]=it, on=active===idx;
+      return (
+        <div key={l} onClick={()=>go(idx)} style={{flex:1,padding:"8px 2px 6px",textAlign:"center",cursor:"pointer"}}>
+          <div style={{fontSize:20,marginBottom:2,filter:on?"none":"grayscale(1) opacity(.5)"}}>{ic}</div>
+          <div style={{fontSize:10,color:on?C.greenLt:"#bbb",fontWeight:on?700:400}}>{l}</div>
+        </div>
+      );
+    })}
+  </div>
+);
+
+/* ═══════════════════════════════════════════════
+   ECRÃ 1 — SERVIÇOS com 8 categorias (nova: "Orçamentos à medida")
+═══════════════════════════════════════════════ */
+const Servicos = ({go}) => (
+  <div>
+    <SBar/>
+    <div style={{background:C.green,padding:"12px 14px 14px",color:"#fff"}}>
+      <div style={{fontSize:10,color:C.greenLt,fontWeight:700,letterSpacing:.6,marginBottom:4}}>SERVIÇOS · 177 DISPONÍVEIS</div>
+      <div style={{fontSize:18,fontWeight:700,fontFamily:"Georgia,serif"}}>O que precisa hoje?</div>
+      <div style={{background:"rgba(0,0,0,.2)",borderRadius:10,padding:"8px 12px",marginTop:10,display:"flex",alignItems:"center",gap:9}}>
+        <span style={{color:"rgba(255,255,255,.6)"}}>🔍</span>
+        <span style={{flex:1,fontSize:12,color:"rgba(255,255,255,.6)"}}>Procurar serviço ou descrever trabalho...</span>
+      </div>
+    </div>
+
+    {/* Banner signup bonus + referral */}
+    <div style={{margin:"10px 12px 0",background:"linear-gradient(90deg,#FAEEDA,#FFF4D6)",border:`1px solid ${C.gold}`,borderRadius:11,padding:"10px 13px",display:"flex",gap:9,alignItems:"center"}}>
+      <div style={{fontSize:22}}>🎁</div>
+      <div style={{flex:1}}>
+        <div style={{fontSize:11,fontWeight:700,color:C.amber}}>Convida amigos · ganha 15€ por cada um</div>
+        <div style={{fontSize:10,color:C.amber,marginTop:1}}>Até 300€ em créditos · partilha o teu código</div>
+      </div>
+      <div style={{background:C.amber,color:"#fff",padding:"5px 10px",borderRadius:7,fontSize:11,fontWeight:700}}>Partilhar</div>
+    </div>
+
+    {/* Categorias — 8 com a nova "Orçamentos à medida" */}
+    <div style={{padding:"14px 14px 4px",fontSize:14,fontWeight:700,fontFamily:"Georgia,serif"}}>Categorias</div>
+    <div style={{padding:"0 14px",display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:8}}>
+      {[
+        ["Limpeza","✨","#E8F5D8"],
+        ["Manutenção","🔧","#E0ECF8"],
+        ["Jardim","🌿","#E0F2E0"],
+        ["Piscina","🌊","#E0F2F7"],
+        ["Pintura","🖌️","#F7E0F0"],
+        ["Elétrica","⚡","#FAEEDA"],
+        ["Canalização","💧","#E0E8FA"],
+        ["À medida","📋","#EEEDFE",true]
+      ].map(([l,ic,bg,nova])=>(
+        <div key={l} onClick={l==="À medida"?()=>go(10):null} style={{background:"#fff",border:`1px solid ${nova?C.purple:C.border}`,borderRadius:12,padding:"10px 4px",textAlign:"center",cursor:"pointer",position:"relative"}}>
+          {nova&&<div style={{position:"absolute",top:-5,right:-3,background:C.purple,color:"#fff",fontSize:8,padding:"2px 6px",borderRadius:5,fontWeight:700,letterSpacing:.3}}>NOVO</div>}
+          <div style={{width:38,height:38,borderRadius:10,background:bg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,margin:"0 auto 5px"}}>{ic}</div>
+          <div style={{fontSize:10,color:C.textS,fontWeight:600}}>{l}</div>
+        </div>
+      ))}
+    </div>
+
+    {/* Destaque da nova categoria */}
+    <div onClick={()=>go(10)} style={{margin:"14px 14px 0",background:`linear-gradient(135deg,${C.purpleDk},${C.purple})`,borderRadius:14,padding:"14px 16px",cursor:"pointer",color:"#fff",position:"relative",overflow:"hidden"}}>
+      <div style={{display:"flex",gap:12,alignItems:"center"}}>
+        <div style={{width:44,height:44,borderRadius:11,background:"rgba(255,255,255,.15)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:24,flexShrink:0}}>📋</div>
+        <div style={{flex:1}}>
+          <div style={{fontSize:9,color:"#FFD166",fontWeight:700,letterSpacing:.6,marginBottom:3}}>NOVO · ORÇAMENTOS À MEDIDA</div>
+          <div style={{fontSize:14,fontWeight:700,lineHeight:1.2}}>Não encontras o serviço?</div>
+          <div style={{fontSize:11,color:"rgba(255,255,255,.75)",marginTop:3,lineHeight:1.4}}>Descreve o trabalho · até 10 orçamentos grátis · sem compromisso</div>
+        </div>
+      </div>
+    </div>
+
+    {/* Landings de categorias populares */}
+    <div style={{padding:"14px 14px 4px",display:"flex",justifyContent:"space-between"}}>
+      <div style={{fontSize:14,fontWeight:700,fontFamily:"Georgia,serif"}}>🔥 Populares esta semana</div>
+      <div onClick={()=>go(30)} style={{fontSize:10,color:C.greenLt,fontWeight:700,cursor:"pointer"}}>Ver landing →</div>
+    </div>
+    <div style={{padding:"0 14px 14px"}}>
+      {[
+        {ic:"🧹",t:"Limpeza manutenção apartamento",cat:"Limpeza · 2h",p:"42€",de:"48€",v:[30]},
+        {ic:"💧",t:"Desentupimento canalização",cat:"Canalização · urgência",p:"65€",v:[30]},
+        {ic:"🔧",t:"Revisão anual caldeira",cat:"Manutenção · 90min",p:"75€",v:[30]},
+      ].map((s,i)=>(
+        <div key={i} onClick={()=>go(30)} style={{background:"#fff",border:`1px solid ${C.border}`,borderRadius:11,padding:"10px 12px",marginBottom:7,display:"flex",gap:11,alignItems:"center",cursor:"pointer"}}>
+          <div style={{fontSize:24}}>{s.ic}</div>
+          <div style={{flex:1}}>
+            <div style={{fontSize:12,fontWeight:600}}>{s.t}</div>
+            <div style={{fontSize:10,color:C.textT,marginTop:1}}>{s.cat}</div>
+          </div>
+          <div style={{textAlign:"right"}}>
+            {s.de&&<div style={{fontSize:9,color:C.textT,textDecoration:"line-through"}}>{s.de}</div>}
+            <div style={{fontSize:14,fontWeight:700,color:C.green}}>{s.p}</div>
+          </div>
+        </div>
+      ))}
+    </div>
+    <BNav active={1} go={go}/>
+  </div>
+);
+
+/* ═══════════════════════════════════════════════
+   ECRÃ 10 — ORÇAMENTOS À MEDIDA (landing da categoria)
+═══════════════════════════════════════════════ */
+const CustomLanding = ({go}) => (
+  <div>
+    <SBar/>
+    <div style={{background:`linear-gradient(135deg,${C.purpleDk},${C.purple})`,padding:"12px 16px 22px",color:"#fff"}}>
+      <div style={{fontSize:10,opacity:.7,cursor:"pointer",marginBottom:10}} onClick={()=>go(1)}>← Serviços</div>
+      <div style={{fontSize:9,color:"#FFD166",fontWeight:700,letterSpacing:.6,marginBottom:5}}>📋 ORÇAMENTOS À MEDIDA</div>
+      <div style={{fontSize:22,fontWeight:700,fontFamily:"Georgia,serif",lineHeight:1.2,marginBottom:6}}>Descreve o trabalho. Recebe propostas.</div>
+      <div style={{fontSize:12,color:"rgba(255,255,255,.8)",lineHeight:1.5}}>Para projetos complexos, obras grandes ou situações fora do catálogo.</div>
+    </div>
+
+    <div style={{margin:"-14px 12px 0",background:"#fff",borderRadius:14,padding:"14px 14px",boxShadow:"0 4px 12px rgba(0,0,0,.06)",border:`1px solid ${C.border}`}}>
+      <div style={{fontSize:13,fontWeight:700,marginBottom:11}}>Como funciona</div>
+      {[
+        {n:"1",t:"Descreve o projeto",s:"Fotos, vídeos, orçamentos anteriores. Até 3 áreas de trabalho."},
+        {n:"2",t:"Escolhe como recebes orçamentos",s:"Videochamada, só online, ou vistoria agendada. Podes escolher várias."},
+        {n:"3",t:"Recebe até 10 propostas",s:"Compara preços, ratings, histórico. Sem compromisso."},
+        {n:"4",t:"Escolhe e agenda",s:"Tudo registado. Chat e pagamento seguros na app."},
+      ].map((p,i,arr)=>(
+        <div key={i} style={{display:"flex",gap:11,marginBottom:i<arr.length-1?10:0}}>
+          <div style={{width:24,height:24,borderRadius:"50%",background:C.purple,color:"#fff",fontWeight:700,fontSize:12,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{p.n}</div>
+          <div style={{flex:1}}>
+            <div style={{fontSize:12,fontWeight:700}}>{p.t}</div>
+            <div style={{fontSize:11,color:C.textS,marginTop:2,lineHeight:1.5}}>{p.s}</div>
+          </div>
+        </div>
+      ))}
+    </div>
+
+    {/* Badges garantia */}
+    <div style={{padding:"12px 12px 0",display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+      {[
+        {ic:"✅",t:"Técnicos verificados",s:"NIF + seguro + 4.5★ mín"},
+        {ic:"💰",t:"Preços transparentes",s:"Sem surpresas · tudo na app"},
+        {ic:"⚡",t:"Respostas rápidas",s:"Primeiro orçamento em ~2h"},
+        {ic:"🛡️",t:"Qualidade garantida",s:"Reparação grátis se falhar"},
+      ].map(b=>(
+        <div key={b.t} style={{background:"#fff",border:`1px solid ${C.border}`,borderRadius:10,padding:"10px 11px"}}>
+          <div style={{fontSize:18,marginBottom:3}}>{b.ic}</div>
+          <div style={{fontSize:11,fontWeight:700}}>{b.t}</div>
+          <div style={{fontSize:10,color:C.textS,marginTop:1,lineHeight:1.3}}>{b.s}</div>
+        </div>
+      ))}
+    </div>
+
+    {/* Exemplos */}
+    <div style={{padding:"14px 12px 4px",fontSize:12,fontWeight:700,fontFamily:"Georgia,serif"}}>Tipo de pedidos à medida</div>
+    <div style={{padding:"0 12px",display:"flex",gap:7,flexWrap:"wrap"}}>
+      {["Obra cozinha","Reabilitação","Mudança casa","Impermeab. telhado","Pintura exterior","Pest control","Janelas","Isolamento","Fossa séptica","AVAC completo","Piscina nova","Segurança"].map(e=>(
+        <div key={e} style={{fontSize:10.5,padding:"5px 11px",borderRadius:14,background:C.bg,border:`1px solid ${C.border}`,color:C.textS,fontWeight:600}}>{e}</div>
+      ))}
+    </div>
+
+    {/* Reviews */}
+    <div style={{padding:"14px 12px 4px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+      <div style={{fontSize:12,fontWeight:700,fontFamily:"Georgia,serif"}}>⭐ O que dizem os clientes</div>
+      <div style={{fontSize:10,color:C.greenLt,fontWeight:700}}>Ver todas →</div>
+    </div>
+    <div style={{margin:"0 12px",background:"#fff",border:`1px solid ${C.border}`,borderRadius:12,padding:"11px 13px"}}>
+      <div style={{display:"flex",gap:10,alignItems:"center",marginBottom:6}}>
+        <div style={{width:32,height:32,borderRadius:"50%",background:C.coral,color:"#fff",fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12}}>RM</div>
+        <div>
+          <div style={{fontSize:11,fontWeight:700}}>Rita Martins · Coimbra</div>
+          <div style={{fontSize:10,color:"#F59E0B"}}>{"★".repeat(5)}</div>
+        </div>
+      </div>
+      <div style={{fontSize:11,color:C.textS,lineHeight:1.5}}>"Remodelei a cozinha. Recebi 6 orçamentos em 48h, escolhi o melhor. O técnico já chegou com o plano todo na app, não tive de explicar nada."</div>
+    </div>
+
+    <button onClick={()=>go(11)} style={{margin:"14px 12px",padding:"13px",borderRadius:12,background:C.purple,color:"#fff",fontSize:14,fontWeight:700,width:"calc(100% - 24px)",boxShadow:"0 4px 12px rgba(83,74,183,.3)"}}>
+      Começar · Orçamentos grátis ↗
+    </button>
+    <div style={{textAlign:"center",fontSize:10,color:C.textT,marginBottom:14}}>Sem compromisso · Compara · Decide</div>
+
+    <BNav active={1} go={go}/>
+  </div>
+);
+
+/* ═══════════════════════════════════════════════
+   ECRÃ 11 — FLOW ORÇAMENTO PASSO 1 (Categorias)
+═══════════════════════════════════════════════ */
+const Quote1 = ({go}) => {
+  const [sel,setSel] = useState(["reabilitacao"]);
+  const toggle = (id) => {
+    setSel(s => s.includes(id) ? s.filter(x=>x!==id) : (s.length<3 ? [...s,id] : s));
+  };
+  const cats = [
+    {id:"canalizacao",l:"Canalização",ic:"💧"},
+    {id:"eletrica",l:"Elétrica",ic:"⚡"},
+    {id:"pintura",l:"Pintura",ic:"🖌️"},
+    {id:"hvac",l:"AVAC",ic:"❄️"},
+    {id:"telhado",l:"Telhado",ic:"🏠"},
+    {id:"reabilitacao",l:"Reabilitação",ic:"🔨"},
+    {id:"jardim",l:"Jardim",ic:"🌿"},
+    {id:"piscina",l:"Piscina",ic:"🏊"},
+    {id:"mudancas",l:"Mudanças",ic:"📦"},
+    {id:"pest",l:"Pest control",ic:"🐜"},
+    {id:"seguranca",l:"Segurança",ic:"🔒"},
+    {id:"outro",l:"Outro",ic:"❓"},
+  ];
+  return (
+    <div>
+      <SBar/>
+      <div style={{background:C.purple,padding:"10px 14px",color:"#fff"}}>
+        <div style={{fontSize:10,opacity:.7,cursor:"pointer",marginBottom:3}} onClick={()=>go(10)}>← Voltar</div>
+        <div style={{fontSize:13,fontWeight:700}}>Pedir orçamento à medida</div>
+      </div>
+
+      {/* Stepper */}
+      <div style={{padding:"12px 14px",background:"#fff",borderBottom:`1px solid ${C.border}`}}>
+        <div style={{display:"flex",alignItems:"center",gap:4}}>
+          {[1,2,3,4].map((n,i)=>{
+            const active = n===1, done = n<1;
+            return (
+              <React.Fragment key={n}>
+                <div style={{width:24,height:24,borderRadius:"50%",background:active?C.purple:done?C.greenLt:"#eee",color:active||done?"#fff":C.textT,fontSize:11,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center"}}>{done?"✓":n}</div>
+                {i<3&&<div style={{flex:1,height:2,background:n<1?C.greenLt:"#eee"}}/>}
+              </React.Fragment>
+            );
+          })}
+        </div>
+        <div style={{display:"flex",justifyContent:"space-between",marginTop:6,fontSize:9,color:C.textT}}>
+          <span style={{color:C.purple,fontWeight:700}}>Áreas</span><span>Descrição</span><span>Formato</span><span>Confirmar</span>
+        </div>
+      </div>
+
+      <div style={{padding:"14px 14px 4px"}}>
+        <div style={{fontSize:16,fontWeight:700,fontFamily:"Georgia,serif"}}>Que áreas envolve?</div>
+        <div style={{fontSize:11,color:C.textS,marginTop:3}}>Podes escolher até <b>3 áreas</b> para receberes mais orçamentos.</div>
+      </div>
+
+      <div style={{padding:"12px 12px 0",display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:7}}>
+        {cats.map(c=>{
+          const on = sel.includes(c.id);
+          const disabled = !on && sel.length>=3;
+          return (
+            <div key={c.id} onClick={()=>!disabled&&toggle(c.id)} style={{background:on?"#EEEDFE":"#fff",border:`${on?2:1}px solid ${on?C.purple:C.border}`,borderRadius:11,padding:"11px 4px",textAlign:"center",cursor:disabled?"not-allowed":"pointer",opacity:disabled?.4:1,position:"relative"}}>
+              {on&&<div style={{position:"absolute",top:5,right:5,width:16,height:16,borderRadius:"50%",background:C.purple,color:"#fff",fontSize:10,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700}}>✓</div>}
+              <div style={{fontSize:22,marginBottom:3}}>{c.ic}</div>
+              <div style={{fontSize:10,color:on?C.purple:C.textS,fontWeight:on?700:500}}>{c.l}</div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div style={{margin:"14px 12px 0",background:C.blueLt,border:`1px solid #85B7EB`,borderRadius:10,padding:"9px 12px",display:"flex",gap:8,alignItems:"center"}}>
+        <div style={{fontSize:18}}>💡</div>
+        <div style={{fontSize:10.5,color:"#0C447C",lineHeight:1.4}}>Quanto mais áreas escolheres, mais orçamentos recebes. A IA agrupa pedidos compatíveis num só técnico.</div>
+      </div>
+
+      <div style={{padding:"14px 12px 14px"}}>
+        <button onClick={()=>sel.length&&go(12)} style={{width:"100%",padding:13,borderRadius:12,background:sel.length?C.purple:"#eee",color:sel.length?"#fff":C.textT,fontSize:14,fontWeight:700,cursor:sel.length?"pointer":"not-allowed"}}>
+          Continuar · {sel.length}/3 áreas
+        </button>
+      </div>
+    </div>
+  );
+};
+
+/* ═══════════════════════════════════════════════
+   ECRÃ 12 — FLOW ORÇAMENTO PASSO 2 (Descrição + Media)
+═══════════════════════════════════════════════ */
+const Quote2 = ({go}) => {
+  const [txt,setTxt] = useState("Cozinha dos anos 90 com azulejos antigos, bancada em pedra. Quero renovar completamente: armários novos, bancada em quartzo, eletrodomésticos embutidos, novo pavimento. Área ~18m². Preciso manter a instalação de gás na mesma posição.");
+  const [fotos] = useState([1,2,3]);
+  return (
+    <div>
+      <SBar/>
+      <div style={{background:C.purple,padding:"10px 14px",color:"#fff"}}>
+        <div style={{fontSize:10,opacity:.7,cursor:"pointer",marginBottom:3}} onClick={()=>go(11)}>← Áreas</div>
+        <div style={{fontSize:13,fontWeight:700}}>Descreve o projeto</div>
+      </div>
+
+      <div style={{padding:"12px 14px",background:"#fff",borderBottom:`1px solid ${C.border}`}}>
+        <div style={{display:"flex",alignItems:"center",gap:4}}>
+          {[1,2,3,4].map((n,i)=>{
+            const active = n===2, done = n<2;
+            return (
+              <React.Fragment key={n}>
+                <div style={{width:24,height:24,borderRadius:"50%",background:active?C.purple:done?C.greenLt:"#eee",color:active||done?"#fff":C.textT,fontSize:11,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center"}}>{done?"✓":n}</div>
+                {i<3&&<div style={{flex:1,height:2,background:n<2?C.greenLt:"#eee"}}/>}
+              </React.Fragment>
+            );
+          })}
+        </div>
+        <div style={{display:"flex",justifyContent:"space-between",marginTop:6,fontSize:9,color:C.textT}}>
+          <span>Áreas</span><span style={{color:C.purple,fontWeight:700}}>Descrição</span><span>Formato</span><span>Confirmar</span>
+        </div>
+      </div>
+
+      <div style={{padding:"14px 14px"}}>
+        <div style={{fontSize:16,fontWeight:700,fontFamily:"Georgia,serif",marginBottom:3}}>Descreve o que precisas</div>
+        <div style={{fontSize:11,color:C.textS,marginBottom:10}}>Quanto mais detalhes, melhores orçamentos. A IA pode ajudar a completar.</div>
+
+        <textarea value={txt} onChange={e=>setTxt(e.target.value)} style={{width:"100%",minHeight:120,padding:"10px 12px",borderRadius:11,border:`1px solid ${C.border}`,fontSize:12,outline:"none",background:"#fafafa",resize:"vertical",lineHeight:1.5}}/>
+
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:5}}>
+          <div onClick={()=>{}} style={{fontSize:11,color:C.purple,fontWeight:700,cursor:"pointer"}}>✨ Melhorar descrição com IA</div>
+          <div style={{fontSize:10,color:C.textT}}>{txt.length} / 2000</div>
+        </div>
+      </div>
+
+      {/* Upload fotos */}
+      <div style={{padding:"0 14px 4px"}}>
+        <div style={{fontSize:12,fontWeight:700,marginBottom:8}}>📸 Fotos do local ({fotos.length}/5)</div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr 1fr",gap:6}}>
+          {fotos.map(i=>(
+            <div key={i} style={{aspectRatio:"1",background:"#E0E8D5",borderRadius:9,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,position:"relative"}}>
+              📷
+              <div style={{position:"absolute",top:2,right:2,width:16,height:16,borderRadius:"50%",background:"rgba(0,0,0,.5)",color:"#fff",fontSize:11,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}>×</div>
+            </div>
+          ))}
+          {[...Array(5-fotos.length)].map((_,i)=>(
+            <div key={"e"+i} style={{aspectRatio:"1",background:"#fff",border:`1px dashed ${C.border}`,borderRadius:9,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,color:C.textT,cursor:"pointer"}}>+</div>
+          ))}
+        </div>
+        <div style={{fontSize:10,color:C.textT,marginTop:6}}>💡 Fotos claras aumentam em 70% a precisão dos orçamentos</div>
+      </div>
+
+      {/* Vídeo opcional */}
+      <div style={{margin:"12px 14px 0",background:"#fff",border:`1px dashed ${C.border}`,borderRadius:10,padding:"11px 13px",display:"flex",gap:10,alignItems:"center",cursor:"pointer"}}>
+        <div style={{fontSize:22}}>🎥</div>
+        <div style={{flex:1}}>
+          <div style={{fontSize:11,fontWeight:700}}>Adicionar vídeo (opcional)</div>
+          <div style={{fontSize:10,color:C.textS,marginTop:1}}>Max. 60s · ajuda técnico a preparar visita</div>
+        </div>
+        <span style={{color:C.textT,fontSize:16}}>›</span>
+      </div>
+
+      {/* Docs */}
+      <div style={{margin:"8px 14px 0",background:"#fff",border:`1px dashed ${C.border}`,borderRadius:10,padding:"11px 13px",display:"flex",gap:10,alignItems:"center",cursor:"pointer"}}>
+        <div style={{fontSize:22}}>📄</div>
+        <div style={{flex:1}}>
+          <div style={{fontSize:11,fontWeight:700}}>Orçamentos anteriores (opcional)</div>
+          <div style={{fontSize:10,color:C.textS,marginTop:1}}>Tira uma foto ou carrega PDF · só tu vês</div>
+        </div>
+        <span style={{color:C.textT,fontSize:16}}>›</span>
+      </div>
+
+      <div style={{padding:"14px 12px"}}>
+        <button onClick={()=>go(13)} style={{width:"100%",padding:13,borderRadius:12,background:C.purple,color:"#fff",fontSize:14,fontWeight:700}}>Continuar →</button>
+      </div>
+    </div>
+  );
+};
+
+/* ═══════════════════════════════════════════════
+   ECRÃ 13 — FLOW ORÇAMENTO PASSO 3 (Formato)
+═══════════════════════════════════════════════ */
+const Quote3 = ({go}) => {
+  const [sel,setSel] = useState(["instant","scheduled"]);
+  const toggle = (id) => setSel(s => s.includes(id) ? s.filter(x=>x!==id) : [...s,id]);
+  const opts = [
+    {id:"instant",ic:"⚡",t:"Orçamento instantâneo",s:"Videochamada em 15-30min · útil para urgências e diagnósticos rápidos",max:"Até 5 orçamentos"},
+    {id:"online",ic:"💻",t:"Orçamento online",s:"Só com fotos e vídeos · sem visita · resposta em 24h",max:"Até 10 orçamentos"},
+    {id:"scheduled",ic:"📅",t:"Vistoria agendada",s:"Técnico em casa à hora que marcares · mais preciso para obras grandes",max:"Até 3 orçamentos"}
+  ];
+  return (
+    <div>
+      <SBar/>
+      <div style={{background:C.purple,padding:"10px 14px",color:"#fff"}}>
+        <div style={{fontSize:10,opacity:.7,cursor:"pointer",marginBottom:3}} onClick={()=>go(12)}>← Descrição</div>
+        <div style={{fontSize:13,fontWeight:700}}>Como queres receber orçamentos?</div>
+      </div>
+
+      <div style={{padding:"12px 14px",background:"#fff",borderBottom:`1px solid ${C.border}`}}>
+        <div style={{display:"flex",alignItems:"center",gap:4}}>
+          {[1,2,3,4].map((n,i)=>{
+            const active = n===3, done = n<3;
+            return (
+              <React.Fragment key={n}>
+                <div style={{width:24,height:24,borderRadius:"50%",background:active?C.purple:done?C.greenLt:"#eee",color:active||done?"#fff":C.textT,fontSize:11,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center"}}>{done?"✓":n}</div>
+                {i<3&&<div style={{flex:1,height:2,background:n<3?C.greenLt:"#eee"}}/>}
+              </React.Fragment>
+            );
+          })}
+        </div>
+        <div style={{display:"flex",justifyContent:"space-between",marginTop:6,fontSize:9,color:C.textT}}>
+          <span>Áreas</span><span>Descrição</span><span style={{color:C.purple,fontWeight:700}}>Formato</span><span>Confirmar</span>
+        </div>
+      </div>
+
+      <div style={{padding:"14px 14px 8px"}}>
+        <div style={{fontSize:15,fontWeight:700,fontFamily:"Georgia,serif"}}>Escolhe um ou mais formatos</div>
+        <div style={{fontSize:11,color:C.textS,marginTop:3}}>Quantos mais, mais orçamentos recebes.</div>
+      </div>
+
+      <div style={{padding:"0 12px"}}>
+        {opts.map(o=>{
+          const on = sel.includes(o.id);
+          return (
+            <div key={o.id} onClick={()=>toggle(o.id)} style={{background:on?"#EEEDFE":"#fff",border:`${on?2:1}px solid ${on?C.purple:C.border}`,borderRadius:12,padding:"13px 14px",marginBottom:9,cursor:"pointer",position:"relative"}}>
+              <div style={{display:"flex",gap:11,alignItems:"flex-start"}}>
+                <div style={{width:22,height:22,borderRadius:6,border:`2px solid ${on?C.purple:C.border}`,background:on?C.purple:"#fff",display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:12,flexShrink:0,marginTop:2}}>{on?"✓":""}</div>
+                <div style={{flex:1}}>
+                  <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:3}}>
+                    <span style={{fontSize:20}}>{o.ic}</span>
+                    <span style={{fontSize:13,fontWeight:700}}>{o.t}</span>
+                  </div>
+                  <div style={{fontSize:11,color:C.textS,lineHeight:1.5}}>{o.s}</div>
+                  <div style={{fontSize:10,color:C.purple,fontWeight:700,marginTop:5}}>📊 {o.max}</div>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div style={{margin:"4px 12px 0",background:C.goldLt,border:`1px solid ${C.gold}`,borderRadius:10,padding:"10px 12px",display:"flex",gap:9,alignItems:"center"}}>
+        <div style={{fontSize:18}}>🎯</div>
+        <div style={{fontSize:10.5,color:C.amber,lineHeight:1.4}}><b>Selecionados: {sel.length}/3</b> · vais receber até <b>{sel.length*5}</b> orçamentos · sem compromisso</div>
+      </div>
+
+      <div style={{padding:"14px 12px"}}>
+        <button onClick={()=>sel.length&&go(14)} style={{width:"100%",padding:13,borderRadius:12,background:sel.length?C.purple:"#eee",color:sel.length?"#fff":C.textT,fontSize:14,fontWeight:700}}>
+          Continuar →
+        </button>
+      </div>
+    </div>
+  );
+};
+
+/* ═══════════════════════════════════════════════
+   ECRÃ 14 — PASSO 4 (Confirmar)
+═══════════════════════════════════════════════ */
+const Quote4 = ({go}) => (
+  <div>
+    <SBar/>
+    <div style={{background:C.purple,padding:"10px 14px",color:"#fff"}}>
+      <div style={{fontSize:10,opacity:.7,cursor:"pointer",marginBottom:3}} onClick={()=>go(13)}>← Formato</div>
+      <div style={{fontSize:13,fontWeight:700}}>Confirma e envia</div>
+    </div>
+
+    <div style={{padding:"12px 14px",background:"#fff",borderBottom:`1px solid ${C.border}`}}>
+      <div style={{display:"flex",alignItems:"center",gap:4}}>
+        {[1,2,3,4].map((n,i)=>{
+          const done = n<4;
+          return (
+            <React.Fragment key={n}>
+              <div style={{width:24,height:24,borderRadius:"50%",background:done?C.greenLt:C.purple,color:"#fff",fontSize:11,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center"}}>{done?"✓":n}</div>
+              {i<3&&<div style={{flex:1,height:2,background:C.greenLt}}/>}
+            </React.Fragment>
+          );
+        })}
+      </div>
+    </div>
+
+    <div style={{padding:"14px 12px 0"}}>
+      <div style={{background:"#fff",border:`1px solid ${C.border}`,borderRadius:12,padding:"13px 14px",marginBottom:10}}>
+        <div style={{fontSize:10,color:C.textT,textTransform:"uppercase",letterSpacing:.4,fontWeight:700,marginBottom:8}}>O teu pedido</div>
+        <div style={{display:"flex",justifyContent:"space-between",padding:"4px 0",borderBottom:`1px solid ${C.border}`,fontSize:11}}>
+          <span style={{color:C.textS}}>Áreas</span><b>Reabilitação</b>
+        </div>
+        <div style={{display:"flex",justifyContent:"space-between",padding:"4px 0",borderBottom:`1px solid ${C.border}`,fontSize:11}}>
+          <span style={{color:C.textS}}>Fotos</span><b>3 anexadas</b>
+        </div>
+        <div style={{display:"flex",justifyContent:"space-between",padding:"4px 0",borderBottom:`1px solid ${C.border}`,fontSize:11}}>
+          <span style={{color:C.textS}}>Formato</span><b>Instantâneo + Agendado</b>
+        </div>
+        <div style={{display:"flex",justifyContent:"space-between",padding:"4px 0",fontSize:11}}>
+          <span style={{color:C.textS}}>Orçamentos esperados</span><b style={{color:C.purple}}>Até 8</b>
+        </div>
+      </div>
+
+      <div style={{background:C.greenXl,border:`1px solid ${C.greenLt}`,borderRadius:12,padding:"11px 13px",marginBottom:10}}>
+        <div style={{fontSize:11,fontWeight:700,color:C.green,marginBottom:5}}>📍 Local do trabalho</div>
+        <div style={{fontSize:12}}>R. Palmira Bastos, 2 · Coimbra</div>
+        <div style={{fontSize:10,color:C.greenMid,marginTop:2,cursor:"pointer"}}>Trocar morada →</div>
+      </div>
+
+      <div style={{background:C.blueLt,border:`1px solid #85B7EB`,borderRadius:12,padding:"11px 13px",marginBottom:10}}>
+        <div style={{fontSize:11,fontWeight:700,color:"#0C447C",marginBottom:5}}>📱 Contacto preferido</div>
+        <div style={{display:"flex",gap:7,marginTop:6}}>
+          {["💬 App","📞 Telemóvel","📧 Email"].map((c,i)=>(
+            <div key={c} style={{flex:1,padding:"7px",borderRadius:8,border:`1px solid ${i===0?C.blue:"#85B7EB"}`,background:i===0?C.blue:"#fff",color:i===0?"#fff":C.blue,fontSize:10.5,textAlign:"center",fontWeight:600,cursor:"pointer"}}>{c}</div>
+          ))}
+        </div>
+      </div>
+
+      <div style={{background:C.amberLt,border:`1px solid #F0CC5A`,borderRadius:12,padding:"11px 13px",marginBottom:14,display:"flex",gap:9,alignItems:"flex-start"}}>
+        <div style={{fontSize:18}}>🎁</div>
+        <div>
+          <div style={{fontSize:11,fontWeight:700,color:C.amber}}>+50 pontos ao enviar</div>
+          <div style={{fontSize:10,color:C.amber,marginTop:1}}>Ganhas +100 se contratares pela app</div>
+        </div>
+      </div>
+    </div>
+
+    <div style={{padding:"0 12px 14px"}}>
+      <button onClick={()=>go(15)} style={{width:"100%",padding:14,borderRadius:12,background:C.purple,color:"#fff",fontSize:14,fontWeight:700,boxShadow:"0 4px 12px rgba(83,74,183,.3)"}}>Enviar pedido ✨</button>
+      <div style={{fontSize:10,color:C.textT,textAlign:"center",marginTop:7}}>Sem compromisso · Compara · Decide</div>
+    </div>
+  </div>
+);
+
+/* ═══════════════════════════════════════════════
+   ECRÃ 15 — CONFIRMAÇÃO + Timeline
+═══════════════════════════════════════════════ */
+const QuoteOk = ({go}) => (
+  <div>
+    <SBar/>
+    <div style={{background:`linear-gradient(135deg,${C.green},${C.greenMid})`,padding:"14px 14px 24px",color:"#fff",textAlign:"center"}}>
+      <div style={{fontSize:54,marginBottom:8}}>🎉</div>
+      <div style={{fontSize:20,fontWeight:700,fontFamily:"Georgia,serif",marginBottom:4}}>Pedido enviado!</div>
+      <div style={{fontSize:12,color:"rgba(255,255,255,.8)"}}>Até 8 técnicos vão responder-te nas próximas horas</div>
+    </div>
+
+    <div style={{margin:"-16px 12px 0",background:"#fff",borderRadius:14,padding:"14px 14px",boxShadow:"0 4px 12px rgba(0,0,0,.06)",border:`1px solid ${C.border}`}}>
+      <div style={{fontSize:10,color:C.textT,textTransform:"uppercase",letterSpacing:.4,fontWeight:700,marginBottom:10}}>Pedido #ORD-2894 · O que se segue</div>
+      {[
+        {ic:"✅",t:"Pedido registado",s:"Agora · distribuído a técnicos",now:true},
+        {ic:"⚡",t:"Primeiras videochamadas",s:"~2h · 3-5 orçamentos instantâneos"},
+        {ic:"📅",t:"Confirma vistorias agendadas",s:"~24h · escolhe data"},
+        {ic:"🎯",t:"Compara e escolhe",s:"48-72h · todos recebidos"}
+      ].map((s,i,arr)=>(
+        <div key={i} style={{display:"flex",gap:11,marginBottom:i<arr.length-1?10:0,opacity:s.now?1:.55}}>
+          <div style={{fontSize:20,flexShrink:0,width:24}}>{s.ic}</div>
+          <div style={{flex:1}}>
+            <div style={{fontSize:12,fontWeight:700}}>{s.t}</div>
+            <div style={{fontSize:10,color:C.textS,marginTop:1}}>{s.s}</div>
+          </div>
+          {s.now&&<div style={{fontSize:9,background:C.greenXl,color:C.green,padding:"2px 7px",borderRadius:5,fontWeight:700,height:"fit-content"}}>AGORA</div>}
+        </div>
+      ))}
+    </div>
+
+    <div style={{padding:"14px 12px 14px"}}>
+      <button onClick={()=>go(4)} style={{width:"100%",padding:13,borderRadius:12,background:C.green,color:"#fff",fontSize:14,fontWeight:700}}>Ver pedido em "Pedidos"</button>
+      <button onClick={()=>go(0)} style={{width:"100%",padding:13,borderRadius:12,background:C.bg,color:C.text,fontSize:14,fontWeight:600,marginTop:7,border:`1px solid ${C.border}`}}>Voltar ao Início</button>
+    </div>
+  </div>
+);
+
+/* ═══════════════════════════════════════════════
+   ECRÃ 30 — LANDING DE CATEGORIA (estilo InstaService Roofing)
+═══════════════════════════════════════════════ */
+const CategoryLanding = ({go}) => (
+  <div>
+    <SBar/>
+    <div style={{background:"#fff",padding:"10px 14px",borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center",gap:10}}>
+      <div style={{fontSize:18,cursor:"pointer"}} onClick={()=>go(1)}>←</div>
+      <div style={{fontSize:14,fontWeight:700}}>Canalização</div>
+    </div>
+
+    {/* Hero */}
+    <div style={{background:`linear-gradient(135deg,#85B7EB,${C.blue})`,padding:"16px 16px 20px",color:"#fff",position:"relative",overflow:"hidden"}}>
+      <div style={{fontSize:9,color:"rgba(255,255,255,.7)",fontWeight:700,letterSpacing:.6,marginBottom:4}}>CANALIZAÇÃO · 24 SERVIÇOS</div>
+      <div style={{fontSize:20,fontWeight:700,fontFamily:"Georgia,serif",lineHeight:1.2,marginBottom:5}}>Técnicos certificados em minutos</div>
+      <div style={{fontSize:11.5,color:"rgba(255,255,255,.85)",lineHeight:1.5,marginBottom:12}}>Urgências, desentupimentos, reparações e instalações. Tudo com preço à cabeça.</div>
+      <div style={{position:"absolute",right:-20,bottom:-20,fontSize:120,opacity:.15}}>💧</div>
+    </div>
+
+    {/* Badges de confiança (como InstaService) */}
+    <div style={{padding:"12px 12px 0",display:"grid",gridTemplateColumns:"1fr 1fr",gap:7}}>
+      {[
+        {ic:"✅",t:"Verificados",s:"NIF + seguro RC"},
+        {ic:"💰",t:"Preço à cabeça",s:"Sem surpresas"},
+        {ic:"⚡",t:"Urgência 2h",s:"Mesmo dia"},
+        {ic:"🛡️",t:"Garantia",s:"Reparação grátis"}
+      ].map(b=>(
+        <div key={b.t} style={{background:"#fff",border:`1px solid ${C.border}`,borderRadius:10,padding:"9px 11px"}}>
+          <div style={{fontSize:16,marginBottom:2}}>{b.ic}</div>
+          <div style={{fontSize:11,fontWeight:700}}>{b.t}</div>
+          <div style={{fontSize:10,color:C.textS,marginTop:1}}>{b.s}</div>
+        </div>
+      ))}
+    </div>
+
+    {/* CTA principal */}
+    <div style={{margin:"14px 12px 0",background:C.green,borderRadius:12,padding:"13px 14px",color:"#fff",cursor:"pointer"}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+        <div>
+          <div style={{fontSize:13,fontWeight:700}}>Pedir orçamento grátis</div>
+          <div style={{fontSize:10.5,color:"rgba(255,255,255,.75)",marginTop:2}}>Sem compromisso · compara · decide</div>
+        </div>
+        <div style={{background:"rgba(255,255,255,.2)",borderRadius:8,padding:"7px 11px",fontSize:13}}>→</div>
+      </div>
+    </div>
+
+    {/* Serviços mais comuns */}
+    <div style={{padding:"14px 14px 4px",fontSize:13,fontWeight:700,fontFamily:"Georgia,serif"}}>Serviços populares</div>
+    <div style={{padding:"0 14px"}}>
+      {[
+        {t:"Desentupimento",s:"Lava-loiça · urgência 2h",p:"65€"},
+        {t:"Reparar autoclismo",s:"Peças incluídas",p:"42€"},
+        {t:"Fuga na cozinha",s:"Diagnóstico + reparação",p:"85€"},
+        {t:"Instalação nova torneira",s:"Fornece ou compra-se",p:"55€"}
+      ].map((s,i)=>(
+        <div key={i} style={{background:"#fff",border:`1px solid ${C.border}`,borderRadius:11,padding:"10px 12px",marginBottom:7,display:"flex",alignItems:"center",gap:10,cursor:"pointer"}}>
+          <div style={{width:36,height:36,borderRadius:9,background:C.blueLt,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}>💧</div>
+          <div style={{flex:1}}>
+            <div style={{fontSize:12,fontWeight:600}}>{s.t}</div>
+            <div style={{fontSize:10,color:C.textT,marginTop:1}}>{s.s}</div>
+          </div>
+          <div style={{fontSize:14,fontWeight:700,color:C.green}}>{s.p}</div>
+        </div>
+      ))}
+    </div>
+
+    {/* Descrição */}
+    <div style={{padding:"14px 14px 4px",fontSize:13,fontWeight:700,fontFamily:"Georgia,serif"}}>Sobre este serviço</div>
+    <div style={{padding:"0 14px",fontSize:11.5,color:C.textS,lineHeight:1.6}}>
+      Canalização é um dos serviços mais requisitados em casa. Fugas, desentupimentos, instalações e reparações podem todas ser resolvidas pelos nossos técnicos certificados.
+      <span style={{color:C.blue,fontWeight:700,cursor:"pointer"}}> Ler mais ›</span>
+    </div>
+
+    {/* Cross-sell "More services" */}
+    <div style={{padding:"14px 14px 4px",fontSize:13,fontWeight:700,fontFamily:"Georgia,serif"}}>Serviços relacionados</div>
+    <div style={{padding:"0 0 0 14px",display:"flex",gap:8,overflowX:"auto"}} className="scrollH">
+      {[
+        {ic:"⚡",l:"Elétrica",bg:"#FAEEDA"},
+        {ic:"🔧",l:"Manutenção",bg:"#E0ECF8"},
+        {ic:"🖌️",l:"Pintura",bg:"#F7E0F0"}
+      ].map(c=>(
+        <div key={c.l} style={{minWidth:90,background:"#fff",border:`1px solid ${C.border}`,borderRadius:11,padding:"10px 6px",textAlign:"center",cursor:"pointer"}}>
+          <div style={{width:34,height:34,borderRadius:9,background:c.bg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,margin:"0 auto 5px"}}>{c.ic}</div>
+          <div style={{fontSize:10,fontWeight:600}}>{c.l}</div>
+        </div>
+      ))}
+    </div>
+
+    {/* Reviews */}
+    <div style={{padding:"14px 14px 4px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+      <div style={{fontSize:13,fontWeight:700,fontFamily:"Georgia,serif"}}>⭐ Avaliações</div>
+      <div style={{fontSize:10,color:C.greenLt,fontWeight:700}}>Ver todas →</div>
+    </div>
+    <div style={{padding:"0 14px"}}>
+      <div style={{background:"#fff",border:`1px solid ${C.border}`,borderRadius:11,padding:"11px 13px",marginBottom:7}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:5}}>
+          <div style={{display:"flex",alignItems:"center",gap:8}}>
+            <div style={{width:28,height:28,borderRadius:"50%",background:C.coral,color:"#fff",fontWeight:700,fontSize:10,display:"flex",alignItems:"center",justifyContent:"center"}}>JS</div>
+            <div>
+              <div style={{fontSize:11,fontWeight:700}}>João S.</div>
+              <div style={{fontSize:10,color:"#F59E0B"}}>{"★".repeat(5)}</div>
+            </div>
+          </div>
+          <div style={{fontSize:9,color:C.textT}}>há 2 dias</div>
+        </div>
+        <div style={{fontSize:11,color:C.textS,lineHeight:1.5}}>"Tinha um autoclismo há 3 dias a correr. Chegou em 1h30, resolveu em 20 min, preço exato do orçamento."</div>
+      </div>
+    </div>
+
+    {/* FAQ */}
+    <div style={{padding:"14px 14px 4px",fontSize:13,fontWeight:700,fontFamily:"Georgia,serif"}}>❓ Perguntas frequentes</div>
+    <div style={{padding:"0 14px 4px"}}>
+      {["Como sei quanto vai custar?","E se o técnico não aparecer?","Posso cancelar?","Como funciona a garantia?"].map((q,i)=>(
+        <div key={i} style={{background:"#fff",border:`1px solid ${C.border}`,borderRadius:10,padding:"11px 13px",marginBottom:6,display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer"}}>
+          <span style={{fontSize:11.5}}>{q}</span>
+          <span style={{color:C.textT,fontSize:16}}>+</span>
+        </div>
+      ))}
+    </div>
+
+    <div style={{height:14}}/>
+    <BNav active={1} go={go}/>
+  </div>
+);
+
+/* ═══════════════════════════════════════════════
+   ECRÃ 40 — ALERTACTIONS (inspiração Shipshape)
+═══════════════════════════════════════════════ */
+const AlertActions = ({go}) => (
+  <div>
+    <SBar/>
+    <div style={{background:`linear-gradient(135deg,${C.green},${C.greenMid})`,padding:"12px 14px 18px",color:"#fff"}}>
+      <div style={{fontSize:10,opacity:.7,cursor:"pointer",marginBottom:10}} onClick={()=>go(3)}>← Casa</div>
+      <div style={{fontSize:10,color:C.greenLt,fontWeight:700,letterSpacing:.6,marginBottom:4}}>🔔 ALERTAS INTELIGENTES · 5 ATIVOS</div>
+      <div style={{fontSize:19,fontWeight:700,fontFamily:"Georgia,serif",lineHeight:1.2}}>A tua casa tem coisas a dizer-te</div>
+      <div style={{fontSize:11,color:"rgba(255,255,255,.75)",marginTop:4}}>Alertas em linguagem simples · ação com 1 toque</div>
+    </div>
+
+    <div style={{padding:"12px 12px 0"}}>
+      {[
+        {
+          cor:"#EF4444",corBg:"#FCEBEB",ic:"🌧️",nivel:"URGENTE",
+          t:"A tua cobertura vai ter problemas se chover",
+          s:"A IA detectou que a revisão do telhado é de 2021. Com 35mm previstos, há 68% de risco de infiltração na sala. Já aconteceu a 3 vizinhos este mês.",
+          acoes:["Agendar técnico","Já verifiquei"]
+        },
+        {
+          cor:"#F59E0B",corBg:C.amberLt,ic:"🔥",nivel:"ATENÇÃO",
+          t:"A tua caldeira está a gastar 12% a mais do que devia",
+          s:"Junkers ZWC 24, 9 anos. Consumo subiu de 187 para 213 kWh/mês. Limpeza do queimador recupera 8-10% imediatamente. Custo: 85€. Retorno: 3-4 meses.",
+          acoes:["Pedir orçamento","Perguntar à IA"]
+        },
+        {
+          cor:C.blue,corBg:C.blueLt,ic:"💧",nivel:"INFO",
+          t:"Filtro do AC: 2 meses de uso intenso",
+          s:"A tua Daikin FTXC25 está em modo verão. Filtros sujos perdem 15% de eficiência. Limpeza: 15 min em casa (tutorial vídeo) ou 25€ com técnico.",
+          acoes:["Ver tutorial","Pedir técnico"]
+        },
+        {
+          cor:C.greenLt,corBg:C.greenXl,ic:"✅",nivel:"BOAS NOTÍCIAS",
+          t:"Esquentador Vulcano em ótimo estado",
+          s:"Score subiu 3 pontos. Consumo abaixo da média. Próxima revisão sugerida em Maio 2027.",
+          acoes:["Ver detalhe"]
+        }
+      ].map((a,i)=>(
+        <div key={i} style={{background:"#fff",border:`1px solid ${C.border}`,borderRadius:12,padding:"13px 14px",marginBottom:9,borderLeft:`4px solid ${a.cor}`}}>
+          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
+            <div style={{fontSize:20}}>{a.ic}</div>
+            <div style={{fontSize:9,padding:"3px 8px",borderRadius:5,background:a.corBg,color:a.cor,fontWeight:700,letterSpacing:.3}}>{a.nivel}</div>
+          </div>
+          <div style={{fontSize:13,fontWeight:700,marginBottom:5,lineHeight:1.3}}>{a.t}</div>
+          <div style={{fontSize:11,color:C.textS,lineHeight:1.6,marginBottom:10}}>{a.s}</div>
+          <div style={{display:"flex",gap:7}}>
+            {a.acoes.map((ac,j)=>(
+              <button key={j} style={{flex:1,padding:"8px 10px",borderRadius:8,fontSize:11,fontWeight:700,border:j===0?"none":`1px solid ${C.border}`,background:j===0?a.cor:"#fff",color:j===0?"#fff":C.text}}>{ac}</button>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+
+    <div style={{margin:"4px 12px 14px",background:C.bg,borderRadius:11,padding:"10px 12px",display:"flex",gap:8,alignItems:"center"}}>
+      <div style={{fontSize:18}}>🤖</div>
+      <div style={{fontSize:10.5,color:C.textS,lineHeight:1.4,flex:1}}>A IA monitoriza a tua casa 24/7 e só te avisa quando vale a pena. Sem ruído.</div>
+    </div>
+    <BNav active={3} go={go}/>
+  </div>
+);
+
+/* ═══════════════════════════════════════════════
+   ECRÃ 0 — INÍCIO (placeholder)
+═══════════════════════════════════════════════ */
+const Inicio = ({go}) => (
+  <div>
+    <SBar/>
+    <div style={{background:C.green,padding:"20px 16px",color:"#fff"}}>
+      <div style={{fontSize:11,color:C.greenLt,fontWeight:700,marginBottom:4}}>Bom dia</div>
+      <div style={{fontSize:22,fontWeight:700,fontFamily:"Georgia,serif"}}>Mário 👋</div>
+      <div style={{fontSize:11,color:"rgba(255,255,255,.7)",marginTop:3}}>Coimbra · 🌧 18°</div>
+    </div>
+    <div style={{padding:20,textAlign:"center"}}>
+      <div style={{fontSize:12,color:C.textS,lineHeight:1.6}}>Este é o ecrã de Início (já desenhado no protótipo v5-nova-estrutura.html). Este protótipo foca-se nos <b>novos ecrãs</b>: Orçamentos à medida e AlertActions.</div>
+      <button onClick={()=>go(1)} style={{marginTop:16,padding:"10px 18px",borderRadius:10,background:C.green,color:"#fff",fontSize:12,fontWeight:700}}>Ir para Serviços →</button>
+    </div>
+    <BNav active={0} go={go}/>
+  </div>
+);
+
+const Casa = ({go}) => (
+  <div>
+    <SBar/>
+    <div style={{background:C.green,padding:"14px 14px",color:"#fff"}}>
+      <div style={{fontSize:10,opacity:.7,cursor:"pointer",marginBottom:4}} onClick={()=>go(0)}>← Início</div>
+      <div style={{fontSize:15,fontWeight:700}}>A minha casa</div>
+    </div>
+    <div style={{padding:16}}>
+      <div onClick={()=>go(40)} style={{background:"#fff",border:`1px solid ${C.border}`,borderRadius:12,padding:"14px 14px",cursor:"pointer",display:"flex",alignItems:"center",gap:12}}>
+        <div style={{fontSize:26}}>🔔</div>
+        <div style={{flex:1}}>
+          <div style={{fontSize:13,fontWeight:700}}>Alertas inteligentes</div>
+          <div style={{fontSize:10.5,color:C.textS,marginTop:2}}>5 ativos · linguagem simples · 1 toque para ação</div>
+        </div>
+        <div style={{fontSize:9,background:"#EF4444",color:"#fff",padding:"2px 6px",borderRadius:5,fontWeight:700}}>2 URG</div>
+      </div>
+    </div>
+    <BNav active={3} go={go}/>
+  </div>
+);
+
+const Pedidos = ({go}) => (
+  <div>
+    <SBar/>
+    <div style={{background:C.green,padding:"14px 14px",color:"#fff"}}>
+      <div style={{fontSize:15,fontWeight:700}}>Pedidos</div>
+    </div>
+    <div style={{padding:14}}>
+      <div style={{background:"#fff",border:`2px solid ${C.purple}`,borderRadius:12,padding:"13px 14px"}}>
+        <div style={{fontSize:9,background:"#EEEDFE",color:C.purple,padding:"2px 7px",borderRadius:5,fontWeight:700,display:"inline-block",marginBottom:7}}>ORÇAMENTOS À MEDIDA · AGUARDA</div>
+        <div style={{fontSize:13,fontWeight:700,marginBottom:3}}>Reabilitação cozinha</div>
+        <div style={{fontSize:11,color:C.textS,marginBottom:8}}>Enviado há 12min · 2 propostas recebidas · 6 em falta</div>
+        <div style={{height:5,background:C.bg,borderRadius:3,overflow:"hidden"}}>
+          <div style={{width:"25%",height:5,background:C.purple,borderRadius:3}}/>
+        </div>
+      </div>
+    </div>
+    <BNav active={4} go={go}/>
+  </div>
+);
+
+/* ═══════════════════════════════════════════════
+   ROUTER
+═══════════════════════════════════════════════ */
+const PILLS = [
+  {l:"Serviços",i:1},
+  {l:"Custom Landing",i:10},
+  {l:"Quote 1 (áreas)",i:11},
+  {l:"Quote 2 (descrição)",i:12},
+  {l:"Quote 3 (formato)",i:13},
+  {l:"Quote 4 (confirmar)",i:14},
+  {l:"Confirmação",i:15},
+  {l:"Landing categoria",i:30},
+  {l:"AlertActions",i:40}
+];
+
+function App() {
+  const [cur,setCur] = useState(1);
+  const screens = {
+    0:<Inicio go={setCur}/>,
+    1:<Servicos go={setCur}/>,
+    3:<Casa go={setCur}/>,
+    4:<Pedidos go={setCur}/>,
+    10:<CustomLanding go={setCur}/>,
+    11:<Quote1 go={setCur}/>,
+    12:<Quote2 go={setCur}/>,
+    13:<Quote3 go={setCur}/>,
+    14:<Quote4 go={setCur}/>,
+    15:<QuoteOk go={setCur}/>,
+    30:<CategoryLanding go={setCur}/>,
+    40:<AlertActions go={setCur}/>
+  };
+  return (
+    <>
+      <div style={{display:"flex",gap:5,flexWrap:"wrap",justifyContent:"center",maxWidth:540}}>
+        {PILLS.map(p=>(
+          <div key={p.i} onClick={()=>setCur(p.i)} style={{fontSize:11,padding:"5px 11px",borderRadius:14,cursor:"pointer",fontWeight:600,border:`1px solid ${cur===p.i?"#534AB7":"#e5e5e3"}`,background:cur===p.i?"#534AB7":"#fff",color:cur===p.i?"#fff":"#555"}}>{p.l}</div>
+        ))}
+      </div>
+      <div style={{width:360,background:"#fff",borderRadius:40,border:"8px solid #2a2a28",overflow:"hidden",boxShadow:"0 20px 60px rgba(0,0,0,.3)",maxHeight:740,overflowY:"auto"}}>
+        {screens[cur]||screens[1]}
+      </div>
+      <div style={{fontSize:10,color:"#999",textAlign:"center",maxWidth:440,lineHeight:1.5}}><b>Orçamentos à medida</b> (flow 4 passos) · <b>Landing de categoria</b> (estilo InstaService) · <b>AlertActions</b> (estilo Shipshape)</div>
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
