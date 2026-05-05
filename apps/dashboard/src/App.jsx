@@ -12,6 +12,7 @@ import Competitors from './components/Competitors.jsx'
 import InboxView from './views/InboxView.jsx'
 import ApprovalsView from './views/ApprovalsView.jsx'
 import BiaPlaceholder from './views/BiaPlaceholder.jsx'
+import BiaScorecard from './views/BiaScorecard.jsx'
 import LoginView from './views/LoginView.jsx'
 import ToastContainer from './components/ToastContainer.jsx'
 
@@ -49,7 +50,7 @@ export default function App() {
             <Route path="/competitors" element={<Competitors data={data} />} />
             <Route path="/activity" element={<Activity data={data} />} />
             <Route path="/agents" element={<Agents data={data} />} />
-            <Route path="/employees/bia" element={<BiaPlaceholder />} />
+            <Route path="/employees/bia" element={<BiaScorecard />} />
             <Route
               path="*"
               element={

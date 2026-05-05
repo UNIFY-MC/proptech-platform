@@ -78,7 +78,11 @@ export default function Sidebar({ theme, setTheme, data }) {
       {/* Equipa */}
       <div className="sidebar-section-label">Equipa</div>
       <nav>
-        <NavLink to="/employees/bia" className={({ isActive }) => 'sidebar-link' + (isActive ? ' active' : '')}>
+        <NavLink
+          to="/employees/bia"
+          className={({ isActive }) => 'sidebar-link' + (isActive ? ' active' : '')}
+          style={activeVertical === 'v5' ? { background: 'rgba(83,74,183,0.08)', color: 'var(--text)' } : undefined}
+        >
           Bia (V5)
         </NavLink>
       </nav>
