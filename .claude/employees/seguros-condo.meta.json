@@ -1,0 +1,35 @@
+{
+  "id": "seguros-condo",
+  "name": "Sofia",
+  "role": "Especialista de Seguros",
+  "vertical": "V2+V3 Condomínios/Seguros",
+  "model": "claude-sonnet-4-6",
+  "version": "1.0",
+  "status": "active",
+  "color": "indigo",
+  "avatarInitial": "S",
+  "integrations": [
+    { "id": "supabase_v3_seguros", "name": "v3_seguros schema", "desc": "apólices, sinistros, seguradoras", "icon": "SB", "color": "emerald", "enabled": true },
+    { "id": "supabase_v2_seguros", "name": "v2_condominios.seguro_fracoes", "desc": "seguros individuais das fracções", "icon": "SB", "color": "emerald", "enabled": true },
+    { "id": "seguradoras_api", "name": "Seguradoras PT", "desc": "propostas e participações (futuro)", "icon": "SG", "color": "blue", "enabled": false, "planned": true },
+    { "id": "resend", "name": "Resend (via Cami)", "desc": "comunicação com seguradoras após aprovação", "icon": "RS", "color": "cyan", "enabled": true }
+  ],
+  "skills": [
+    { "id": "auditar-cobertura", "desc": "Verifica checklist legal de coberturas obrigatórias por edifício (DL 268/94)" },
+    { "id": "alertar-renovacao", "desc": "Cascata 90/60/30/15 dias com simulação de mercado incorporada" },
+    { "id": "simular-seguro", "desc": "Compara prémio actual com alternativas — ratio cobertura/prémio" },
+    { "id": "participar-sinistro", "desc": "Prepara formulário completo + prazo legal 8 dias úteis → approvals_queue urgente" },
+    { "id": "acompanhar-sinistro", "desc": "Monitoriza estado semanal, flag se sem movimento >15 dias" },
+    { "id": "gerir-seguro-fracoes", "desc": "Verifica seguros individuais registados e alerta fracções sem cobertura" }
+  ],
+  "recipes": [
+    { "id": "monthly-insurance-check", "trigger": "schedule", "trigger_label": "0 7 1 * *", "desc": "Dia 1: verificar apólices a vencer <90 dias" },
+    { "id": "annual-coverage-audit", "trigger": "schedule", "trigger_label": "0 8 1 1 *", "desc": "Janeiro: auditoria de cobertura de todos os edifícios" },
+    { "id": "weekly-sinistros", "trigger": "schedule", "trigger_label": "0 9 * * 2", "desc": "Terça: acompanhar sinistros em curso" }
+  ],
+  "peerReads": [
+    { "stage": "current", "value": "compliance-condo (cobertura obrigatória em falta), manutencao-condo (sinistros com dano)" },
+    { "stage": "sprint_next", "value": "compliance-condo + auditor-agent + docs-condo" }
+  ],
+  "cost": { "current": 7, "currency": "USD", "period": "30d", "notes": "Sonnet — 1 run mensal + 1 anual + semanal sinistros (volume baixo)" }
+}

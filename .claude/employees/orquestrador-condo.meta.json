@@ -1,0 +1,34 @@
+{
+  "id": "orquestrador-condo",
+  "name": "Orquestrador",
+  "role": "Director Operacional",
+  "vertical": "V2 Condomínios",
+  "model": "claude-opus-4-7",
+  "version": "1.0",
+  "status": "active",
+  "color": "slate",
+  "avatarInitial": "O",
+  "integrations": [
+    { "id": "supabase_v1", "name": "Supabase V1 Core", "desc": "inbox_items, approvals_queue, imoveis", "icon": "SB", "color": "emerald", "enabled": true },
+    { "id": "supabase_v2", "name": "Schema v2_condominios", "desc": "contexto edifícios activos", "icon": "SB", "color": "emerald", "enabled": true },
+    { "id": "anthropic", "name": "Anthropic API", "desc": "raciocínio orquestração complexa", "icon": "AI", "color": "purple", "enabled": true }
+  ],
+  "skills": [
+    { "id": "route-event", "desc": "Classifica evento e delega ao employee correcto com contexto completo" },
+    { "id": "parallel-launch", "desc": "Lança múltiplos employees em simultâneo para triggers globais (fecho mês)" },
+    { "id": "execute-approval", "desc": "Executa aprovações pendentes na queue — invoca comunicacao-condo" },
+    { "id": "sla-monitor", "desc": "Verifica SLAs e cria flags 🔴 para items sem resposta" },
+    { "id": "daily-digest", "desc": "Consolida estado de todos os employees em inbox_item resumo para Mário" }
+  ],
+  "recipes": [
+    { "id": "monthly-close", "trigger": "schedule", "trigger_label": "0 6 1 * *", "desc": "Dia 1: lança financeiro + energia + seguros + compliance em paralelo" },
+    { "id": "mora-run", "trigger": "schedule", "trigger_label": "0 9 15 * *", "desc": "Dia 15: lança financeiro-condo verificação de mora" },
+    { "id": "daily-check", "trigger": "schedule", "trigger_label": "0 7 * * *", "desc": "Verifica SLAs, executa aprovações pendentes, envia digest" },
+    { "id": "event-intake", "trigger": "event", "trigger_label": "inbox_item_created", "desc": "Processa novo evento e faz routing imediato" }
+  ],
+  "peerReads": [
+    { "stage": "current", "value": "todos os employees condo" },
+    { "stage": "sprint_next", "value": "auditor-agent" }
+  ],
+  "cost": { "current": 15, "currency": "USD", "period": "30d", "notes": "Opus — usado apenas para orquestração complexa, não per-message" }
+}

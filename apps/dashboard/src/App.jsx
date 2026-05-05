@@ -7,8 +7,9 @@ import Agents from './components/Agents.jsx'
 import Roadmap from './components/Roadmap.jsx'
 import Watchers from './components/Watchers.jsx'
 import Competitors from './components/Competitors.jsx'
+import Verticais from './components/Verticais.jsx'
 
-const TABS = ['Overview', 'Roadmap', 'Watchers', 'Competitors', 'Actividade', 'Agentes']
+const TABS = ['Overview', 'Roadmap', 'Watchers', 'Competitors', 'Actividade', 'Agentes', 'Verticais']
 
 const TAB_COMPONENTS = {
   Overview,
@@ -17,6 +18,7 @@ const TAB_COMPONENTS = {
   Competitors,
   Actividade: Activity,
   Agentes: Agents,
+  Verticais,
 }
 
 function tabLabel(name, data) {

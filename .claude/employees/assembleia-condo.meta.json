@@ -1,0 +1,33 @@
+{
+  "id": "assembleia-condo",
+  "name": "Assie",
+  "role": "Secretária de Assembleia",
+  "vertical": "V2 Condomínios",
+  "model": "claude-sonnet-4-6",
+  "version": "1.0",
+  "status": "active",
+  "color": "purple",
+  "avatarInitial": "AS",
+  "integrations": [
+    { "id": "supabase_v2_assembleias", "name": "v2_condominios — assembleias/atas", "desc": "assembleias, atas, convocatórias, condóminos", "icon": "SB", "color": "emerald", "enabled": true },
+    { "id": "docs_condo", "name": "docs-condo (Dora)", "desc": "arquivo de atas aprovadas no Drive", "icon": "DC", "color": "amber", "enabled": true },
+    { "id": "resend", "name": "Resend (via Cami)", "desc": "envio de convocatórias após aprovação", "icon": "RS", "color": "cyan", "enabled": true }
+  ],
+  "skills": [
+    { "id": "verificar-prazo-legal", "desc": "Verifica data proposta ≥10 dias corridos (art. 1431º CC) — nunca negocia" },
+    { "id": "gerar-ordem-trabalhos", "desc": "Compila pontos obrigatórios + inputs financeiro + manutencao + Mário" },
+    { "id": "draft-convocatoria", "desc": "Gera texto legal de convocatória com lista de condóminos e permilagem" },
+    { "id": "verificar-quorum", "desc": "Calcula permilagem presente e valida cada deliberação (maioria simples/unanimidade)" },
+    { "id": "redigir-ata", "desc": "Estrutura ata com secções obrigatórias, votações por permilagem, deliberações" }
+  ],
+  "recipes": [
+    { "id": "alerta-assembleia-anual", "trigger": "schedule", "trigger_label": "0 8 1 * *", "desc": "Mensal: verificar assembleias anuais não agendadas com prazo <60 dias" },
+    { "id": "convocar-assembleia", "trigger": "event", "trigger_label": "pedido_convocatoria", "desc": "Input de data → draft convocatória → approvals_queue" },
+    { "id": "redigir-ata-pos-assembleia", "trigger": "event", "trigger_label": "assembleia_realizada", "desc": "Input de notas → ata completa → approvals_queue" }
+  ],
+  "peerReads": [
+    { "stage": "current", "value": "financeiro-condo (contas para OT), manutencao-condo (obras para OT), compliance-condo (mandatos)" },
+    { "stage": "sprint_next", "value": "financeiro-condo + manutencao-condo + compliance-condo + docs-condo" }
+  ],
+  "cost": { "current": 6, "currency": "USD", "period": "30d", "notes": "Sonnet — baixa frequência (1-2 assembleias/mês), documentos longos" }
+}

@@ -1,2 +1,6 @@
-- [V4 Energia — Schema e Edge Function](project_v4_energia_schema.md) — Schema v4_energia aplicado + Edge Function v4-energia-lead criada (não deployada) em 2026-04-19
+- [V4 Energia — Schema e Edge Function (legacy)](project_v4_energia_schema.md) — Schema v4_energia inicial + Edge Function v4-energia-lead criada em 2026-04-19
 - [Edge Functions — Convenções e Estado](project_edge_functions.md) — Naming (dashes), estrutura de pastas, 7 funções activas + v4-energia-lead a deployar
+- [V2 Condominios — Schema Aplicado](project_v2_condominios_schema.md) — 16 tabelas v2_condominios aplicadas em 2026-05-05, 2 erros resolvidos (plpgsql + enum convocatoria)
+- [V3 Seguros — Schema Aplicado](project_v3_seguros_schema.md) — 4 tabelas v3_seguros para Sofia (seguros-condo), prazo_participacao GENERATED, RLS staff+condóminos
+- [V4 Energia — Schema Completo](project_v4_energia_schema_updated.md) — 6 tabelas novas v4_energia para Enzo (energia-condo), cups ERSE, preco_kwh 6 decimais, total 8 tabelas
+- [LANGUAGE plpgsql vs sql — Forward References](feedback_plpgsql_vs_sql_language.md) — Funções helper em migrations devem usar plpgsql (late binding) para evitar 42P01

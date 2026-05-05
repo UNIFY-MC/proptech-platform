@@ -1,8 +1,8 @@
 {
   "meta": {
     "schemaVersion": "3.0",
-    "lastSync": "2026-05-04T22:06:07.472Z",
-    "generatedAt": "2026-05-04T22:06:07.472Z",
+    "lastSync": "2026-05-05T18:34:24.473Z",
+    "generatedAt": "2026-05-05T18:34:24.473Z",
     "branch": "sprint/v5-1b3",
     "worktree": "proptech-v5-1b3",
     "generator": "scripts/dashboard-data-build.js"
@@ -17,11 +17,11 @@
     "startDate": "2026-05-01",
     "target": "2026-05-15",
     "endDate": "2026-05-15",
-    "day": 3,
+    "day": 4,
     "totalDays": 14,
-    "progress": 21,
+    "progress": 29,
     "hypothesis": "Owner→link→prestador 48h: se proporcionarmos a um owner PT proprietário 40-65 anos um link partilhável que dispara recibo digital + ficha mínima do prestador, então pelo menos 1 em 5 owners convidados completa o fluxo end-to-end",
-    "daysToGate": 3,
+    "daysToGate": 2,
     "gateName": "≥1 owner externo aceitou convite; flow funciona no telefone",
     "gates": [
       {
@@ -83,7 +83,7 @@
     ],
     "_source": ".claude/current/current-sprint-state.md",
     "_status": "live",
-    "_lastParsed": "2026-05-04T22:06:07.478Z"
+    "_lastParsed": "2026-05-05T18:34:24.520Z"
   },
   "verticals": [
     {
@@ -191,22 +191,7 @@
     "_source": ".claude/strategy/verticals-state.md",
     "_status": "live"
   },
-  "alerts": [
-    {
-      "id": "trigger-architect-proptech-supabase-designer-0",
-      "level": "warning",
-      "message": "architect-proptech → supabase-designer: criar migration schema system + tabelas inbox_items e approvals_queue com RLS via is_staff() conforme DDL em .claude/str",
-      "since": "2026-05-04T22:00Z",
-      "source": "triggers.md"
-    },
-    {
-      "id": "trigger-architect-proptech-vertical-builder-1",
-      "level": "warning",
-      "message": "architect-proptech → vertical-builder: após migration system.* aplicada — Phase 1 do pivot requer 3 dependências novas em apps/dashboard/package.json: @supabas",
-      "since": "2026-05-04T22:00Z",
-      "source": "triggers.md"
-    }
-  ],
+  "alerts": [],
   "nextActions": [
     {
       "id": "opp-1",
@@ -429,10 +414,36 @@
         "mcp__notion"
       ],
       "promptPath": ".claude/agents/architect-proptech.md",
-      "task": "Review arquitectural D6+D7 — Command Center pivot: Supabase Phase 1 (ACCEPT) + Auth Phase 1.5 (ACCEPT). Schema system.* com inbox_items + approvals_queue. RLS via is_staff(). Triggers para supabase-designer.",
-      "last": "2026-05-04T22:00Z",
-      "nextSuggested": "supabase-designer criar migration para schema system + tabelas inbox_items/approvals_queue + RLS conforme review-command-center.md",
-      "worktree": "proptech-platform",
+      "task": "ADR-condo-001 — arquitectura AI-native V2 condomínios: Supabase Cron (recomendado), RLS por edificio_id, audit trail universal com severidade, custo LLM estimado $67/mês (5 edifícios piloto).",
+      "last": "2026-05-05T18:00Z",
+      "nextSuggested": "supabase-designer criar schema v2_condominios.* + audit_log conforme ADR-condo-001 + configurar 9 schedules em Supabase Cron",
+      "worktree": "proptech-v5-1b3",
+      "state": "idle"
+    },
+    {
+      "id": "assembleia-condo",
+      "name": "assembleia-condo",
+      "type": "technical",
+      "desc": "",
+      "tools": [],
+      "promptPath": "",
+      "task": "_n/a_",
+      "last": "_never_",
+      "nextSuggested": "_aguardar primeiro trigger_",
+      "worktree": "_n/a_",
+      "state": "idle"
+    },
+    {
+      "id": "atendimento-condo",
+      "name": "atendimento-condo",
+      "type": "technical",
+      "desc": "",
+      "tools": [],
+      "promptPath": "",
+      "task": "_n/a_",
+      "last": "_never_",
+      "nextSuggested": "_aguardar primeiro trigger_",
+      "worktree": "_n/a_",
       "state": "idle"
     },
     {
@@ -492,6 +503,45 @@
       "state": "idle"
     },
     {
+      "id": "code-reviewer",
+      "name": "code-reviewer",
+      "type": "technical",
+      "desc": "",
+      "tools": [],
+      "promptPath": "",
+      "task": "Revisão de 9861e39 — docs(claude): inter-agent protocol (Phase 2)",
+      "last": "2026-05-02T10:45Z",
+      "nextSuggested": "follow-up commit para alinhar \"5 vs 20 entradas\" e completar secção Sub-agents disponíveis",
+      "worktree": "proptech-v5-1b3",
+      "state": "stale"
+    },
+    {
+      "id": "compliance-condo",
+      "name": "compliance-condo",
+      "type": "technical",
+      "desc": "",
+      "tools": [],
+      "promptPath": "",
+      "task": "_n/a_",
+      "last": "_never_",
+      "nextSuggested": "_aguardar primeiro trigger_",
+      "worktree": "_n/a_",
+      "state": "idle"
+    },
+    {
+      "id": "comunicacao-condo",
+      "name": "comunicacao-condo",
+      "type": "technical",
+      "desc": "",
+      "tools": [],
+      "promptPath": "",
+      "task": "_n/a_",
+      "last": "_never_",
+      "nextSuggested": "_aguardar primeiro trigger_",
+      "worktree": "_n/a_",
+      "state": "idle"
+    },
+    {
       "id": "coo-agent",
       "name": "coo-agent",
       "type": "csuite",
@@ -518,12 +568,142 @@
       "state": "idle"
     },
     {
+      "id": "criativo-conteudo",
+      "name": "criativo-conteudo",
+      "type": "technical",
+      "desc": "",
+      "tools": [],
+      "promptPath": "",
+      "task": "_n/a_",
+      "last": "_never_",
+      "nextSuggested": "_aguardar brief do diretor-marketing para primeiro carousel V5 Manutenção_",
+      "worktree": "_n/a_",
+      "state": "idle"
+    },
+    {
       "id": "cto-agent",
       "name": "cto-agent",
       "type": "csuite",
       "desc": "Stack, segurança, débito técnico, decisões de infra.",
       "tools": [],
       "promptPath": ".claude/agents/csuite/cto-agent.md",
+      "task": "_n/a_",
+      "last": "_never_",
+      "nextSuggested": "_aguardar primeiro trigger_",
+      "worktree": "_n/a_",
+      "state": "idle"
+    },
+    {
+      "id": "diretor-marketing",
+      "name": "diretor-marketing",
+      "type": "technical",
+      "desc": "",
+      "tools": [],
+      "promptPath": "",
+      "task": "_n/a_",
+      "last": "_never_",
+      "nextSuggested": "_aguardar primeiro trigger — coordenar primeiro calendário editorial_",
+      "worktree": "_n/a_",
+      "state": "idle"
+    },
+    {
+      "id": "docs-condo",
+      "name": "docs-condo",
+      "type": "technical",
+      "desc": "",
+      "tools": [],
+      "promptPath": "",
+      "task": "_n/a_",
+      "last": "_never_",
+      "nextSuggested": "_aguardar primeiro trigger_",
+      "worktree": "_n/a_",
+      "state": "idle"
+    },
+    {
+      "id": "energia-condo",
+      "name": "energia-condo",
+      "type": "technical",
+      "desc": "",
+      "tools": [],
+      "promptPath": "",
+      "task": "_n/a_",
+      "last": "_never_",
+      "nextSuggested": "aguardar schema v4_energia.* no V1 Core Hub antes do primeiro run",
+      "worktree": "_n/a_",
+      "state": "idle"
+    },
+    {
+      "id": "financeiro-condo",
+      "name": "financeiro-condo",
+      "type": "technical",
+      "desc": "",
+      "tools": [],
+      "promptPath": "",
+      "task": "_n/a_",
+      "last": "_never_",
+      "nextSuggested": "_aguardar primeiro trigger_",
+      "worktree": "_n/a_",
+      "state": "idle"
+    },
+    {
+      "id": "frontend-builder",
+      "name": "frontend-builder",
+      "type": "technical",
+      "desc": "",
+      "tools": [],
+      "promptPath": "",
+      "task": "BiaScorecard Phase 5 refactor — single-col Cook.ai layout; bia.meta.json v2; useBiaMeta/useBiaInstructions/useBiaStats hooks; BiaHeader/BiaStats/BiaInstructions/BiaIntegrations components; edit mode state machine with sessionStorage draft",
+      "last": "2026-05-05T12:30Z",
+      "nextSuggested": "Smoke test /employees/bia — verify edit mode flow (Edit → draft → F5 → draft preserved → Cmd+S → mock save), stats load, integrations grid, then merge feat/command-center → main",
+      "worktree": "proptech-platform",
+      "state": "idle"
+    },
+    {
+      "id": "gestor-ads",
+      "name": "gestor-ads",
+      "type": "technical",
+      "desc": "",
+      "tools": [],
+      "promptPath": "",
+      "task": "_n/a_",
+      "last": "_never_",
+      "nextSuggested": "_aguardar aprovação de budget para primeira campanha V5 (Meta Lead Form)_",
+      "worktree": "_n/a_",
+      "state": "idle"
+    },
+    {
+      "id": "gestor-leads",
+      "name": "gestor-leads",
+      "type": "technical",
+      "desc": "",
+      "tools": [],
+      "promptPath": "",
+      "task": "_n/a_",
+      "last": "_never_",
+      "nextSuggested": "_aguardar primeira campanha activa para receber leads e iniciar scoring_",
+      "worktree": "_n/a_",
+      "state": "idle"
+    },
+    {
+      "id": "importador-v2",
+      "name": "importador-v2",
+      "type": "technical",
+      "desc": "",
+      "tools": [],
+      "promptPath": "",
+      "task": "_n/a_",
+      "last": "_never_",
+      "nextSuggested": "_aguardar primeiro trigger_",
+      "worktree": "_n/a_",
+      "state": "idle"
+    },
+    {
+      "id": "manutencao-condo",
+      "name": "manutencao-condo",
+      "type": "technical",
+      "desc": "",
+      "tools": [],
+      "promptPath": "",
       "task": "_n/a_",
       "last": "_never_",
       "nextSuggested": "_aguardar primeiro trigger_",
@@ -566,6 +746,45 @@
       "state": "idle"
     },
     {
+      "id": "orquestrador-condo",
+      "name": "orquestrador-condo",
+      "type": "technical",
+      "desc": "",
+      "tools": [],
+      "promptPath": "",
+      "task": "Arquitectura AI-native criada — 9 agentes definidos para administração de condomínios de raiz",
+      "last": "2026-05-05T17:00Z",
+      "nextSuggested": "supabase-designer criar schema v2_condominios.* no V1 Core Hub (hkmvszkpxjbxmnixzqbl)",
+      "worktree": "proptech-v5-1b3",
+      "state": "idle"
+    },
+    {
+      "id": "publisher-social",
+      "name": "publisher-social",
+      "type": "technical",
+      "desc": "",
+      "tools": [],
+      "promptPath": "",
+      "task": "_n/a_",
+      "last": "_never_",
+      "nextSuggested": "_aguardar primeiro post aprovado pelo diretor-marketing para publicar_",
+      "worktree": "_n/a_",
+      "state": "idle"
+    },
+    {
+      "id": "seguros-condo",
+      "name": "seguros-condo",
+      "type": "technical",
+      "desc": "",
+      "tools": [],
+      "promptPath": "",
+      "task": "_n/a_",
+      "last": "_never_",
+      "nextSuggested": "aguardar schema v3_seguros.* no V1 Core Hub antes do primeiro run",
+      "worktree": "_n/a_",
+      "state": "idle"
+    },
+    {
       "id": "supabase-designer",
       "name": "supabase-designer",
       "type": "technical",
@@ -576,10 +795,10 @@
         "Write"
       ],
       "promptPath": ".claude/agents/supabase-designer.md",
-      "task": "_n/a_",
-      "last": "_never_",
-      "nextSuggested": "_aguardar primeiro trigger ou pedido directo do Mário_",
-      "worktree": "_n/a_",
+      "task": "aplicar v2_condominios (16 tabelas) + v3_seguros (4 tabelas) + v4_energia (6 tabelas novas) no V1 Core Hub hkmvszkpxjbxmnixzqbl — total 26 tabelas novas, 0 sem RLS",
+      "last": "2026-05-05T21:00Z",
+      "nextSuggested": "criar SOP docs para v3_seguros e v4_energia (equivalente a supabase-schema-v2-condominios.md) + aguardar activação agentes seguros-condo (Sofia) e energia-condo (Enzo)",
+      "worktree": "proptech-v5-1b3",
       "state": "idle"
     },
     {
@@ -595,152 +814,152 @@
         "Glob"
       ],
       "promptPath": ".claude/agents/vertical-builder.md",
-      "task": "feat(parser v3.0) — 100% LIVE sources, gray-matter, SourceTag indicators, tabs reorder. Commits 7653ca5+d3f9d56+35470bb. Push sprint/v5-1b3.",
-      "last": "2026-05-04T00:00Z",
-      "nextSuggested": "Verificar proptech-agentic-ops.vercel.app após deploy automático — confirmar schemaVersion=3.0 e SourceTags visíveis nas tabs",
-      "worktree": "proptech-v5-1b3",
+      "task": "V2 Condomínios command centre dashboard — 7 ecrãs completos com mock data. Self-contained App.jsx 1346 linhas. Build 0 erros. Commit b0cd052.",
+      "last": "2026-05-05T18:30Z",
+      "nextSuggested": "Iniciar dev server (npm run dev porta 5176) para Mário validar visualmente os 7 ecrãs antes de merge para main",
+      "worktree": "proptech-v5-1b3 (branch sprint/v5-1b3)",
       "state": "idle"
     }
   ],
   "recentActivity": [
     {
-      "ts": "2026-05-04T22:06Z",
+      "ts": "2026-05-05T18:34Z",
       "agent": "subagent",
       "worktree": "proptech-v5-1b3",
-      "action": "subagent stopped [session:cbd58b15]",
+      "action": "subagent stopped [session:a74b3960]",
       "refs": []
     },
     {
-      "ts": "2026-05-04T22:02Z",
-      "agent": "architect-proptech",
-      "worktree": "proptech-v5-1b3",
-      "action": "subagent stopped [session:cbd58b15]",
-      "refs": []
-    },
-    {
-      "ts": "2026-05-04T21:46Z",
+      "ts": "2026-05-05T18:34Z",
       "agent": "subagent",
       "worktree": "proptech-v5-1b3",
-      "action": "subagent stopped [session:cbd58b15]",
+      "action": "subagent stopped [session:a74b3960]",
       "refs": []
     },
     {
-      "ts": "2026-05-04T17:06Z",
+      "ts": "2026-05-05T18:30Z",
+      "agent": "Explore",
+      "worktree": "proptech-v5-1b3",
+      "action": "subagent stopped [session:a74b3960]",
+      "refs": []
+    },
+    {
+      "ts": "2026-05-05T18:18Z",
       "agent": "subagent",
       "worktree": "proptech-v5-1b3",
-      "action": "subagent stopped [session:cbd58b15]",
+      "action": "subagent stopped [session:a74b3960]",
       "refs": []
     },
     {
-      "ts": "2026-05-04T16:31Z",
-      "agent": "subagent",
-      "worktree": "proptech-v5-1b3",
-      "action": "subagent stopped [session:cbd58b15]",
-      "refs": []
-    },
-    {
-      "ts": "2026-05-04T01:22Z",
-      "agent": "subagent",
-      "worktree": "proptech-v5-1b3",
-      "action": "subagent stopped [session:aff6d186]",
-      "refs": []
-    },
-    {
-      "ts": "2026-05-04T00:27Z",
-      "agent": "subagent",
-      "worktree": "proptech-v5-1b3",
-      "action": "subagent stopped [session:aff6d186]",
-      "refs": []
-    },
-    {
-      "ts": "2026-05-04T00:24Z",
+      "ts": "2026-05-05T18:09Z",
       "agent": "vertical-builder",
       "worktree": "proptech-v5-1b3",
-      "action": "subagent stopped [session:aff6d186]",
+      "action": "subagent stopped [session:a74b3960]",
       "refs": []
     },
     {
-      "ts": "2026-05-04T00:00Z",
+      "ts": "2026-05-05T18:30Z",
       "agent": "vertical-builder",
       "worktree": "proptech-v5-1b3",
-      "action": "feat(parser v3.0) — 100% LIVE, gray-matter, SourceTag, tabs reorder. Audit 11 live/3 hardcoded. 42KB. 3 commits 7653ca5+d3f9d56+35470bb push sprint/v5-1b3 [ADR-005-v3]",
+      "action": "V2 Condomínios dashboard — 7 ecrãs mock data, App.jsx self-contained 1346L, build 0 erros [commit:b0cd052]",
       "refs": []
     },
     {
-      "ts": "2026-05-03T23:58Z",
+      "ts": "2026-05-05T17:26Z",
+      "agent": "Explore",
+      "worktree": "proptech-v5-1b3",
+      "action": "subagent stopped [session:a74b3960]",
+      "refs": []
+    },
+    {
+      "ts": "2026-05-05T17:16Z",
+      "agent": "subagent",
+      "worktree": "proptech-v5-1b3",
+      "action": "subagent stopped [session:a74b3960]",
+      "refs": []
+    },
+    {
+      "ts": "2026-05-05T17:01Z",
+      "agent": "Explore",
+      "worktree": "proptech-v5-1b3",
+      "action": "subagent stopped [session:a74b3960]",
+      "refs": []
+    },
+    {
+      "ts": "2026-05-05T17:00Z",
+      "agent": "subagent",
+      "worktree": "proptech-v5-1b3",
+      "action": "subagent stopped [session:a74b3960]",
+      "refs": []
+    },
+    {
+      "ts": "2026-05-05T16:56Z",
+      "agent": "supabase-designer",
+      "worktree": "proptech-v5-1b3",
+      "action": "subagent stopped [session:a74b3960]",
+      "refs": []
+    },
+    {
+      "ts": "2026-05-05T16:53Z",
+      "agent": "subagent",
+      "worktree": "proptech-v5-1b3",
+      "action": "subagent stopped [session:a74b3960]",
+      "refs": []
+    },
+    {
+      "ts": "2026-05-05T16:29Z",
+      "agent": "subagent",
+      "worktree": "proptech-v5-1b3",
+      "action": "subagent stopped [session:a74b3960]",
+      "refs": []
+    },
+    {
+      "ts": "2026-05-05T16:15Z",
+      "agent": "subagent",
+      "worktree": "proptech-v5-1b3",
+      "action": "subagent stopped [session:a74b3960]",
+      "refs": []
+    },
+    {
+      "ts": "2026-05-05T16:12Z",
+      "agent": "supabase-designer",
+      "worktree": "proptech-v5-1b3",
+      "action": "subagent stopped [session:a74b3960]",
+      "refs": []
+    },
+    {
+      "ts": "2026-05-05T16:09Z",
       "agent": "architect-proptech",
       "worktree": "proptech-v5-1b3",
-      "action": "subagent stopped [session:aff6d186]",
+      "action": "subagent stopped [session:a74b3960]",
       "refs": []
     },
     {
-      "ts": "2026-05-03T23:51Z",
+      "ts": "2026-05-05T15:51Z",
+      "agent": "Explore",
+      "worktree": "proptech-v5-1b3",
+      "action": "subagent stopped [session:a74b3960]",
+      "refs": []
+    },
+    {
+      "ts": "2026-05-05T15:16Z",
       "agent": "subagent",
       "worktree": "proptech-v5-1b3",
-      "action": "subagent stopped [session:aff6d186]",
+      "action": "subagent stopped [session:a74b3960]",
       "refs": []
     },
     {
-      "ts": "2026-05-03T23:48Z",
-      "agent": "architect-proptech",
-      "worktree": "proptech-v5-1b3",
-      "action": "subagent stopped [session:aff6d186]",
-      "refs": []
-    },
-    {
-      "ts": "2026-05-03T15:24Z",
+      "ts": "2026-05-05T15:12Z",
       "agent": "subagent",
       "worktree": "proptech-v5-1b3",
-      "action": "subagent stopped [session:68445df3]",
+      "action": "subagent stopped [session:5c9ae4eb]",
       "refs": []
     },
     {
-      "ts": "2026-05-03T15:21Z",
+      "ts": "2026-05-05T13:10Z",
       "agent": "subagent",
       "worktree": "proptech-v5-1b3",
-      "action": "subagent stopped [session:68445df3]",
-      "refs": []
-    },
-    {
-      "ts": "2026-05-03T15:08Z",
-      "agent": "subagent",
-      "worktree": "proptech-v5-1b3",
-      "action": "subagent stopped [session:68445df3]",
-      "refs": []
-    },
-    {
-      "ts": "2026-05-03T14:56Z",
-      "agent": "subagent",
-      "worktree": "proptech-v5-1b3",
-      "action": "subagent stopped [session:aff6d186]",
-      "refs": []
-    },
-    {
-      "ts": "2026-05-03T14:51Z",
-      "agent": "vertical-builder",
-      "worktree": "proptech-v5-1b3",
-      "action": "subagent stopped [session:aff6d186]",
-      "refs": []
-    },
-    {
-      "ts": "2026-05-03T16:30Z",
-      "agent": "vertical-builder",
-      "worktree": "proptech-v5-1b3",
-      "action": "feat(dashboard) schema v2.0 — DrawerContext+Competitors+Roadmap+theme toggle, commit 382b063, push sprint/v5-1b3 [ADR-005-v2]",
-      "refs": []
-    },
-    {
-      "ts": "2026-05-03T14:40Z",
-      "agent": "architect-proptech",
-      "worktree": "proptech-v5-1b3",
-      "action": "subagent stopped [session:aff6d186]",
-      "refs": []
-    },
-    {
-      "ts": "2026-05-03T14:29Z",
-      "agent": "subagent",
-      "worktree": "proptech-v5-1b3",
-      "action": "subagent stopped [session:aff6d186]",
+      "action": "subagent stopped [session:5c9ae4eb]",
       "refs": []
     }
   ],
