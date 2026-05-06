@@ -1,4 +1,11 @@
 import { NavLink } from 'react-router-dom'
+import {
+  Inbox, MessageSquare, Folder,
+  Users, Building2, FolderKanban, CheckSquare,
+  ChefHat, Sparkles, Plug,
+  LayoutDashboard, Map, Eye, Swords, Layers,
+  Bot,
+} from 'lucide-react'
 import { useVerticalStore } from '../store'
 import { useInboxItems, useApprovals } from '../hooks/useSupabase'
 import { useInboxReads } from '../hooks/useInboxReads'
@@ -9,14 +16,21 @@ const DEPT_COLORS = {
   'Marketing':   '#3b82f6',
 }
 
-function NavItem({ to, label, badge, end }) {
+const IC = ({ icon: Icon }) => (
+  <Icon size={16} style={{ color: 'var(--text-dim)', flexShrink: 0, marginRight: 8 }} />
+)
+
+function NavItem({ to, label, icon, badge, end }) {
   return (
     <NavLink
       to={to}
       end={end}
       className={({ isActive }) => 'sidebar-link' + (isActive ? ' active' : '')}
     >
-      <span>{label}</span>
+      <span style={{ display: 'flex', alignItems: 'center', flex: 1, minWidth: 0 }}>
+        {icon && <IC icon={icon} />}
+        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label}</span>
+      </span>
       {badge > 0 && <span className="sidebar-badge">{badge}</span>}
     </NavLink>
   )
@@ -48,6 +62,7 @@ export default function Sidebar({ theme, setTheme, data, lastSync, loading, refr
           value={activeVertical}
           onChange={(e) => setVertical(e.target.value)}
         >
+          <option value="all">Todas as verticais</option>
           <option value="v1">V1 Core</option>
           <option value="v2">V2 Condomínios</option>
           <option value="v4">V4 Energia</option>
@@ -58,28 +73,33 @@ export default function Sidebar({ theme, setTheme, data, lastSync, loading, refr
       {/* Nav sections */}
       <div className="sidebar-nav">
         <div className="sidebar-section-label">Daily</div>
-        <NavItem to="/inbox" label="Inbox" badge={unreadCount} />
-        <NavItem to="/chat" label="Chat" />
-        <NavItem to="/files" label="Files" />
+        <NavItem to="/inbox"  label="Inbox"  icon={Inbox}        badge={unreadCount} />
+        <NavItem to="/chat"   label="Chat"   icon={MessageSquare} />
+        <NavItem to="/files"  label="Files"  icon={Folder} />
 
         <div className="sidebar-section-label">Manage</div>
-        <NavItem to="/employees" label="Employees" />
-        <NavItem to="/agentes" label="Agentes" />
+        <NavItem to="/employees" label="Employees" icon={Users} />
+        <NavItem to="/clients"   label="Clients"   icon={Building2} />
+        <NavItem to="/projects"  label="Projects"  icon={FolderKanban} />
+        <NavItem to="/tasks"     label="Tasks"     icon={CheckSquare} />
 
         <div className="sidebar-section-label">Build</div>
-        <NavItem to="/recipes" label="Recipes" />
-        <NavItem to="/skills" label="Skills" />
-        <NavItem to="/integrations" label="Integrations" />
+        <NavItem to="/recipes"      label="Recipes"      icon={ChefHat} />
+        <NavItem to="/skills"       label="Skills"       icon={Sparkles} />
+        <NavItem to="/integrations" label="Integrations" icon={Plug} />
 
         <div className="sidebar-section-label">Strategy</div>
-        <NavItem to="/" label="Overview" end />
-        <NavItem to="/roadmap" label="Roadmap" />
-        <NavItem to="/watchers" label="Watchers" />
-        <NavItem to="/competitors" label="Competitors" />
-        <NavItem to="/verticais" label="Verticais" />
+        <NavItem to="/"           label="Overview"    icon={LayoutDashboard} end />
+        <NavItem to="/roadmap"    label="Roadmap"     icon={Map} />
+        <NavItem to="/watchers"   label="Watchers"    icon={Eye} />
+        <NavItem to="/competitors" label="Competitors" icon={Swords} />
+        <NavItem to="/verticais"  label="Verticais"   icon={Layers} />
+
+        <div className="sidebar-section-label">Dev</div>
+        <NavItem to="/agentes" label="Agentes" icon={Bot} />
       </div>
 
-      {/* TASKS · CHATS — 16 employees scrollable */}
+      {/* TASKS · CHATS — employees scrollable */}
       {employees.length > 0 && (
         <div className="sidebar-tasks">
           <div className="sidebar-section-label">Tasks · Chats</div>

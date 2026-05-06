@@ -10,11 +10,13 @@ import Roadmap from './components/Roadmap.jsx'
 import Watchers from './components/Watchers.jsx'
 import Competitors from './components/Competitors.jsx'
 import Verticais from './components/Verticais.jsx'
-import BiaScorecard from './views/BiaScorecard.jsx'
 import InboxView from './views/InboxView.jsx'
 import ApprovalsView from './views/ApprovalsView.jsx'
 import EmployeesPage from './views/EmployeesPage.jsx'
 import EmployeePage from './views/EmployeePage.jsx'
+import SkillsPage from './views/SkillsPage.jsx'
+import RecipesPage from './views/RecipesPage.jsx'
+import IntegrationsPage from './views/IntegrationsPage.jsx'
 import StubView from './views/StubView.jsx'
 
 export default function App() {
@@ -50,24 +52,27 @@ export default function App() {
 
           {data && (
             <Routes>
-              <Route path="/"            element={<Overview data={data} />} />
-              <Route path="/inbox"       element={<Activity data={data} />} />
-              <Route path="/employees"   element={<EmployeesPage data={data} />} />
+              <Route path="/"             element={<Overview data={data} />} />
+              <Route path="/inbox"        element={<Activity data={data} />} />
+              <Route path="/employees"    element={<EmployeesPage data={data} />} />
               <Route path="/employees/:slug" element={<EmployeePage data={data} />} />
-              <Route path="/agentes"     element={<Agents data={data} />} />
-              <Route path="/roadmap"     element={<Roadmap data={data} />} />
-              <Route path="/watchers"    element={<Watchers data={data} />} />
-              <Route path="/competitors" element={<Competitors data={data} />} />
-              <Route path="/verticais"   element={<Verticais data={data} />} />
-              <Route path="/chat"        element={<StubView title="Chat" />} />
-              <Route path="/files"       element={<StubView title="Files" />} />
-              <Route path="/recipes"     element={<StubView title="Recipes" />} />
-              <Route path="/skills"      element={<StubView title="Skills" />} />
-              <Route path="/integrations" element={<StubView title="Integrations" />} />
-              {/* Legacy live views — not in sidebar but preserved */}
-              <Route path="/live-inbox"  element={<InboxView />} />
-              <Route path="/approvals"   element={<ApprovalsView />} />
-              <Route path="*"            element={<Navigate to="/" replace />} />
+              <Route path="/agentes"      element={<Agents data={data} />} />
+              <Route path="/roadmap"      element={<Roadmap data={data} />} />
+              <Route path="/watchers"     element={<Watchers data={data} />} />
+              <Route path="/competitors"  element={<Competitors data={data} />} />
+              <Route path="/verticais"    element={<Verticais data={data} />} />
+              <Route path="/skills"       element={<SkillsPage data={data} />} />
+              <Route path="/recipes"      element={<RecipesPage data={data} />} />
+              <Route path="/integrations" element={<IntegrationsPage data={data} />} />
+              <Route path="/chat"         element={<StubView title="Chat" />} />
+              <Route path="/files"        element={<StubView title="Files" />} />
+              <Route path="/clients"      element={<StubView title="Clients" />} />
+              <Route path="/projects"     element={<StubView title="Projects" />} />
+              <Route path="/tasks"        element={<StubView title="Tasks" />} />
+              {/* Legacy live views */}
+              <Route path="/live-inbox"   element={<InboxView />} />
+              <Route path="/approvals"    element={<ApprovalsView />} />
+              <Route path="*"             element={<Navigate to="/" replace />} />
             </Routes>
           )}
         </main>
