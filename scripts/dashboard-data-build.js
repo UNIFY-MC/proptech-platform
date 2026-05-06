@@ -128,10 +128,7 @@ function readFile(path) {
 }
 
 function stripFrontmatter(md) {
-  if (!md.startsWith('---\n')) return md
-  const end = md.indexOf('\n---\n', 4)
-  if (end === -1) return md
-  return md.slice(end + 5)
+  return md.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n+/, '')
 }
 
 function parseKV(content) {
