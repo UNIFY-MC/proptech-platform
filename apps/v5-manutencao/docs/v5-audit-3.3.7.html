@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Auditoria 3.3.7 · V5 Manutenção</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; background: #f5f5f3; color: #111; padding: 20px; max-width: 1200px; margin: 0 auto; }
+h1 { font-family: Georgia, serif; font-size: 22px; font-weight: 700; color: #1B4332; margin-bottom: 4px; }
+.subtitle { font-size: 13px; color: #555; margin-bottom: 20px; }
+
+.stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 16px; }
+.stat { background: #fff; border-radius: 10px; padding: 12px 14px; border: 1px solid #e5e5e3; }
+.stat-num { font-size: 26px; font-weight: 700; line-height: 1; }
+.stat-label { font-size: 11px; color: #555; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.6px; }
+
+.filters { display: flex; gap: 6px; margin-bottom: 18px; flex-wrap: wrap; }
+.filter { padding: 7px 14px; font-size: 12px; background: #fff; border: 1px solid #e5e5e3; border-radius: 18px; cursor: pointer; font-family: inherit; color: #555; transition: all 0.1s; }
+.filter:hover { border-color: #888; }
+.filter.active { background: #1B4332; color: #fff; border-color: #1B4332; }
+
+.tools { display: flex; gap: 8px; margin-bottom: 18px; }
+.tool-btn { padding: 6px 12px; font-size: 11px; background: #fff; border: 1px solid #e5e5e3; border-radius: 6px; cursor: pointer; color: #555; font-family: inherit; }
+.tool-btn:hover { background: #f5f5f3; }
+.tool-btn.danger { color: #A32D2D; }
+
+.section { margin-bottom: 18px; }
+.section h3 { font-size: 11px; font-weight: 700; color: #555; text-transform: uppercase; letter-spacing: 0.7px; margin-bottom: 8px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; }
+
+.card { background: #fff; border: 1px solid #e5e5e3; border-radius: 8px; padding: 10px 12px; cursor: pointer; transition: all 0.1s; position: relative; }
+.card:hover { border-color: #888; }
+.card.selected { border: 2px solid #1B4332; padding: 9px 11px; }
+.card.ok { background: #E1F5EE; border-color: #5DCAA5; }
+.card.bug { background: #FCEBEB; border-color: #F09595; }
+.card-icon { position: absolute; top: 8px; right: 10px; font-weight: 700; font-size: 14px; }
+.card.ok .card-icon { color: #0F6E56; }
+.card.bug .card-icon { color: #A32D2D; }
+.card-name { font-size: 13px; font-weight: 600; line-height: 1.25; padding-right: 16px; }
+.card-meta { font-size: 11px; color: #999; margin-top: 4px; }
+
+.detail { background: #fff; border: 1px solid #e5e5e3; border-radius: 12px; padding: 18px 22px; margin-top: 20px; }
+.detail.empty { color: #999; font-style: italic; font-size: 13px; }
+.detail-header { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; flex-wrap: wrap; }
+.detail-name { font-family: Georgia, serif; font-size: 18px; font-weight: 700; color: #111; }
+.detail-section-tag { font-size: 11px; padding: 3px 8px; border-radius: 4px; background: #FAC775; color: #412402; font-weight: 600; }
+.detail-section-name { font-size: 12px; color: #555; margin-bottom: 14px; }
+.detail-block-label { font-size: 11px; font-weight: 700; color: #555; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; margin-top: 14px; }
+.spec-list { list-style: none; padding: 0; margin: 0; }
+.spec-list li { font-size: 13px; line-height: 1.55; margin-bottom: 6px; padding-left: 16px; position: relative; }
+.spec-list li::before { content: "·"; position: absolute; left: 0; color: #1B4332; font-weight: 700; }
+.links { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 6px; }
+.links-list { font-size: 13px; color: #444; line-height: 1.5; }
+.notes-input { width: 100%; padding: 10px 12px; font-family: inherit; font-size: 13px; border: 1px solid #e5e5e3; border-radius: 6px; resize: vertical; min-height: 50px; margin-top: 4px; }
+.actions { display: flex; gap: 8px; margin-top: 16px; padding-top: 14px; border-top: 1px solid #e5e5e3; }
+.action-btn { flex: 1; padding: 10px; font-size: 13px; font-weight: 600; border-radius: 6px; cursor: pointer; border: 1px solid; font-family: inherit; transition: all 0.1s; }
+.action-btn.ok { color: #0F6E56; border-color: #5DCAA5; background: #fff; }
+.action-btn.ok:hover, .action-btn.ok.active { background: #0F6E56; color: #fff; border-color: #0F6E56; }
+.action-btn.bug { color: #A32D2D; border-color: #F09595; background: #fff; }
+.action-btn.bug:hover, .action-btn.bug.active { background: #A32D2D; color: #fff; border-color: #A32D2D; }
+.action-btn.clear { color: #555; border-color: #e5e5e3; background: #fff; }
+.action-btn.clear:hover { background: #f5f5f3; }
+.timestamp { font-size: 11px; color: #999; margin-top: 8px; }
+
+.legend { display: flex; gap: 16px; flex-wrap: wrap; padding: 10px 14px; background: #fff; border-radius: 8px; border: 1px solid #e5e5e3; margin-bottom: 18px; }
+.legend-item { font-size: 12px; display: flex; align-items: center; gap: 6px; color: #555; }
+.legend-dot { width: 12px; height: 12px; border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<h1>Auditoria 3.3.7 — V5 Manutenção</h1>
+<div class="subtitle">22 ecrãs visuais a construir · click num card para ver a spec esperada · marca OK ou Bug · estado guarda automaticamente</div>
+
+<div class="stats">
+  <div class="stat"><div class="stat-num" id="cnt-total">22</div><div class="stat-label">Total ecrãs</div></div>
+  <div class="stat"><div class="stat-num" style="color:#0F6E56;" id="cnt-ok">0</div><div class="stat-label">Validados OK</div></div>
+  <div class="stat"><div class="stat-num" style="color:#A32D2D;" id="cnt-bug">0</div><div class="stat-label">Com bug</div></div>
+  <div class="stat"><div class="stat-num" style="color:#999;" id="cnt-pend">22</div><div class="stat-label">Por validar</div></div>
+  <div class="stat"><div class="stat-num" id="cnt-pct">0%</div><div class="stat-label">Progresso</div></div>
+</div>
+
+<div class="legend">
+  <div class="legend-item"><span class="legend-dot" style="background:#fff; border:1px solid #e5e5e3;"></span>Por validar</div>
+  <div class="legend-item"><span class="legend-dot" style="background:#E1F5EE; border:1px solid #5DCAA5;"></span>Validado OK</div>
+  <div class="legend-item"><span class="legend-dot" style="background:#FCEBEB; border:1px solid #F09595;"></span>Tem bug</div>
+</div>
+
+<div class="filters">
+  <button class="filter active" data-f="all">Todos · 22</button>
+  <button class="filter" data-f="pending">Por validar</button>
+  <button class="filter" data-f="ok">OK</button>
+  <button class="filter" data-f="bug">Com bug</button>
+</div>
+
+<div class="tools">
+  <button class="tool-btn" id="export">📥 Exportar relatório</button>
+  <button class="tool-btn danger" id="reset">🔄 Limpar todos</button>
+</div>
+
+<div id="grid"></div>
+
+<div class="detail empty" id="detail">Toca num ecrã para ver a spec esperada</div>
+
+<script>
+const STORAGE_KEY = 'v5-audit-3.3.7';
+
+const SCREENS = [
+  { id:'sobre_mim', name:'Sobre mim', sec:'Identidade · Avatar', specs:[
+    'Hero: avatar 80x80 + nome 20px Georgia + chip nível dourado',
+    'Stats grid 2x2: Membro desde · Total pedidos · Pontos · Streak',
+    'Card "Como me podes melhorar" com 2 sugestões + botão "Fazer →"',
+    'Botão "Editar dados pessoais →" no fim, navega para dados_pessoais'
+  ], outs:['dados_pessoais'], ins:['avatar'] },
+  { id:'dados_pessoais', name:'Dados pessoais & NIF', sec:'Identidade · Avatar', specs:[
+    'Foto 100x100 circular + botão "Mudar foto" (mock alert por agora)',
+    'Form: Nome (text), Data nascimento (date), Telefone (tel)',
+    'Section FACTURAÇÃO: NIF (input maxLength 9)',
+    'Section PREFERÊNCIAS: Idioma select pt-PT/en-EN/es-ES',
+    'Botão "Guardar alterações" verde fixed bottom (toast fake "Guardado!")'
+  ], outs:[], ins:['avatar','sobre_mim'] },
+  { id:'login_seguranca', name:'Login & segurança', sec:'Identidade · Avatar', specs:[
+    'Section EMAIL: mostra actual + botão "Mudar email →"',
+    'Section TELEMÓVEL: mostra actual + botão "Mudar telemóvel →"',
+    'Section PASSWORD: botão "Alterar palavra-passe →"',
+    'Section 2FA: toggle on/off + descrição',
+    'Section SESSÕES ACTIVAS: 2-3 mock items (iPhone Safari · Chrome Windows) com botão "Terminar"',
+    'Section ZONA PERIGOSA: botão "Eliminar conta" vermelho #A32D2D'
+  ], outs:[], ins:['avatar'] },
+  { id:'moradas', name:'Moradas / Imóveis', sec:'Identidade · Avatar', specs:[
+    'Header "{N} imóveis · 1 principal"',
+    'Botão "+ Adicionar imóvel" verde no topo',
+    'Lista 3 cards: nome + chip PRINCIPAL verde + morada + Home Score chip + tipo',
+    'Cada card com botões "Editar" + "Tornar principal" (se não é) + "Apagar" (se não é principal)',
+    'Mock: 3 imóveis (Coimbra principal · Lisboa · Algarve)'
+  ], outs:[], ins:['avatar'] },
+  { id:'codigo_promocional', name:'Código promocional', sec:'Identidade · Avatar', specs:[
+    'Hero "O TEU CÓDIGO PROMOCIONAL" small caps',
+    'Card dourado #FFF4D6 com código grande 28px bold "MARIA-ARIA" + botões 📋 Copiar e 📤 Partilhar',
+    'Section INTRODUZIR CÓDIGO: input + botão Aplicar (mock aceita TESTE25 → "✓ +25€ aplicado")',
+    'Section REGRAS: "Ganha 25€ quando o teu amigo completa o primeiro serviço · Sem limite"'
+  ], outs:[], ins:['avatar'] },
+  { id:'referral', name:'Convida amigos', sec:'Identidade · Avatar', specs:[
+    'Hero "Convida os teus amigos · ganha até 100€/mês"',
+    'Card share roxo gradient: link "https://oscar.app/r/MARIA-ARIA" + 3 botões (WhatsApp, Email, Mais)',
+    'Stats grid 3 cols: Convidados (3) · Activos (2) · Crédito ganho (50€)',
+    'Lista 3 referidos: nome + estado (Pendente âmbar / Completou verde) + crédito + data',
+    'Empty state se 0 referidos: "Convida o primeiro amigo →"'
+  ], outs:[], ins:['avatar'] },
+  { id:'historico_pontos', name:'Histórico pontos', sec:'Atalhos · Hambúrguer', specs:[
+    'Hero: total pontos 1420 + nível Prata + progress bar para Ouro (1500)',
+    'Tabs: Todos · Esta semana · Este mês',
+    'Lista pontos_historico agrupada por mês com header "ABRIL 2026" small caps',
+    'Cada item: emoji 22px + motivo + data + pts dourado direita (#D4A72C bg #FFF4D6)',
+    'Empty state se 0 pontos'
+  ], outs:[], ins:['hamb'] },
+  { id:'avaliacoes', name:'Avaliações', sec:'Atalhos · Hambúrguer', specs:[
+    'Tabs: "Que dei" · "Que recebi"',
+    'Lista 5 cards mock: avatar prestador + nome + serviço + rating ★★★★★ + texto + data',
+    'Cada card com botão "Editar" (mock) e "Ver pedido →" (navega para pedido)',
+    'Empty state'
+  ], outs:['pedido'], ins:['hamb'] },
+  { id:'pagamentos', name:'Métodos de pagamento', sec:'Atalhos · Hambúrguer', specs:[
+    'Lista 2 cards mock: Cartão "Visa •••• 4242 · 12/27" + chip PRINCIPAL · MBWay "+351 912 ••• 678"',
+    'Cada card com botões "Tornar principal" + "Apagar"',
+    'Botão "+ Adicionar método" verde → alert "Activado na Fase 5 com Stripe"',
+    'Footer info: "Pagamentos seguros · Stripe · Disponível Fase 5"'
+  ], outs:[], ins:['hamb'] },
+  { id:'notificacoes', name:'Notificações', sec:'Atalhos · Hambúrguer', specs:[
+    'Tabs: Todas · Não lidas (com badge count)',
+    'Lista 8 mock notificações: emoji + título bold + sub + tempo direita',
+    'Border-left 3px colorido por tipo (urgente coral · info azul · sucesso verde)',
+    'Indicador 6x6 azul direita se não lida',
+    'onClick item → marca lido + navega para alerta',
+    'Botão topo "Marcar todas como lidas"'
+  ], outs:['alerta'], ins:['hamb','home'] },
+  { id:'definicoes', name:'Definições', sec:'Atalhos · Hambúrguer', specs:[
+    'APARÊNCIA: select Tema (auto/claro/escuro), select Idioma',
+    'PRIVACIDADE: toggle Analytics + toggle Personalização IA + botão "Política de privacidade →"',
+    'DADOS: botão "Exportar os meus dados" + botão "Apagar histórico"',
+    'CONTA: botão "Eliminar conta permanentemente" vermelho',
+    'Footer: versão app "v0.5.3 · build dev"'
+  ], outs:[], ins:['hamb'] },
+  { id:'ajuda', name:'Ajuda & Suporte', sec:'Atalhos · Hambúrguer', specs:[
+    'Hero "Como te podemos ajudar?"',
+    'Search box "Pesquisar ajuda..."',
+    'CATEGORIAS QUICK LINKS: 4 cards 2x2 (Pedidos · Pagamentos · Conta · Subscrição)',
+    'FAQ ACCORDION: 8 perguntas expandable',
+    'CONTACTO: 3 botões "📧 Email suporte" "💬 Chat ao vivo" "📞 Telefone"'
+  ], outs:[], ins:['hamb'] },
+  { id:'imoveis', name:'Imóveis (alias Moradas)', sec:'App geral', specs:[
+    'REUTILIZAR componente MoradasScreen (mesmo conteúdo)',
+    'Routing: "imoveis" === "moradas" → mesmo componente',
+    '// TODO(mario): unificar nomenclatura "Os meus imóveis" vs "Moradas"'
+  ], outs:[], ins:['hamb','casa'] },
+  { id:'equipa', name:'Equipa', sec:'App geral', specs:[
+    'Header "{N} prestadores · {N} contratos completos"',
+    'Filtros chips: Todos · Canalização · Eléctrica · Limpeza · Manutenção',
+    'Grid 2 colunas cards: avatar 50x50 redondo verde + iniciais + nome + chips categorias + rating ★ + N visitas',
+    'Trofeu pequeno top-right se principal',
+    'onClick → navega para prestador detalhe',
+    'Empty state'
+  ], outs:['prestador'], ins:['home'] },
+  { id:'prestador', name:'Prestador detalhe', sec:'App geral', specs:[
+    'Hero verde: avatar 80x80 + nome 22px Georgia + chips categorias + rating grande + N visitas',
+    'Section SOBRE: descrição mock',
+    'Section AVALIAÇÕES: 3-4 últimas avaliações de outros clientes',
+    'Section AGENDA: chips dias semana com slots disponíveis',
+    'Botões fixed bottom: "💬 Mensagem" + "📞 Ligar" + "Pedir agora →" verde'
+  ], outs:[], ins:['equipa','home'] },
+  { id:'home_assessment', name:'Home Assessment', sec:'App geral', specs:[
+    'Header com progress bar "Pergunta {N}/12"',
+    'Body: pergunta grande Georgia + 2-4 opções tappable',
+    'Mock 3 perguntas (Tipo habitação · Idade casa · Equipamentos AVAC)',
+    'Botão "Continuar →" verde + "Voltar" cinzento',
+    'Última pergunta: "Concluído! +300 pts ganhos" + botão "Ver Home Score →" navega para score_detail'
+  ], outs:['score_detail'], ins:['casa'] },
+  { id:'categoria', name:'Categoria · lista', sec:'Catálogo', specs:[
+    'Header verde: emoji + nome categoria + "{N} serviços disponíveis"',
+    'Filtros chips topo: Tudo · Mais contratados · Mais recentes · Preço ↓',
+    'Lista cards horizontais: emoji + nome + duração + preço verde direita',
+    'onClick → navega para servico detalhe'
+  ], outs:['servico'], ins:['servicos'] },
+  { id:'servico', name:'Serviço detalhe', sec:'Catálogo', specs:[
+    'Hero verde: emoji 48px + categoria small caps + nome 22px Georgia',
+    'Stats chips horizontais: ⏱ duração · ⭐ rating · 🛡 garantia',
+    'Section DESCRIÇÃO: texto longo mock',
+    'Section O QUE ESTÁ INCLUÍDO: 4-5 bullets verdes',
+    'Section AVALIAÇÕES: 2 reviews mock',
+    'Card preço FIXED BOTTOM: preço grande verde + "+IVA" + botões "Adicionar à lista" cinzento + "Pedir agora" verde'
+  ], outs:[], ins:['servicos','home','categoria','combo','mais_contratados'] },
+  { id:'combo', name:'Combo detalhe', sec:'Catálogo', specs:[
+    'Hero gradient cor do combo (azul/coral/verde) + título + sub',
+    'Section "Inclui {N} serviços" — lista cards compactos',
+    'Section poupança: card amarelo "Poupas {N}€ vs comprar separadamente"',
+    'Card preço FIXED BOTTOM: preço normal riscado + preço combo + botão "Pedir combo" verde'
+  ], outs:['servico'], ins:['servicos','combos'] },
+  { id:'combos', name:'Lista combos', sec:'Catálogo', specs:[
+    'Header "🔥 Combos populares"',
+    'Grid 1 col (mobile) com todos combos hardcoded',
+    'onClick cada combo → navega para combo detalhe'
+  ], outs:['combo'], ins:['servicos'] },
+  { id:'promocao', name:'Promoção detalhe', sec:'Catálogo', specs:[
+    'Hero gradient promo + nome + emoji grande',
+    'Banner countdown "Termina em XX dias" coral',
+    'Section "Serviços com desconto" — lista filtrada',
+    'Card preço discount visualization',
+    'Botão "Ver todos os serviços" verde'
+  ], outs:[], ins:['servicos','home'] },
+  { id:'mais_contratados', name:'Mais contratados', sec:'Catálogo', specs:[
+    'Header "⭐ Mais contratados"',
+    'Lista vertical compacta',
+    'Cada item: ranking #N + emoji + nome + duração + preço + N contratações'
+  ], outs:['servico'], ins:['servicos'] }
+];
+
+let state = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+SCREENS.forEach(s => { if (!state[s.id]) state[s.id] = { status: 'pending', notes: '', timestamp: null }; });
+let filter = 'all';
+let selectedId = null;
+
+function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+
+function updateCounters() {
+  let ok = 0, bug = 0;
+  Object.values(state).forEach(s => { if (s.status === 'ok') ok++; if (s.status === 'bug') bug++; });
+  const pend = 22 - ok - bug;
+  const pct = Math.round((ok / 22) * 100);
+  document.getElementById('cnt-ok').textContent = ok;
+  document.getElementById('cnt-bug').textContent = bug;
+  document.getElementById('cnt-pend').textContent = pend;
+  document.getElementById('cnt-pct').textContent = pct + '%';
+}
+
+function render() {
+  const grid = document.getElementById('grid');
+  grid.innerHTML = '';
+  
+  const sections = [...new Set(SCREENS.map(s => s.sec))];
+  
+  sections.forEach(sec => {
+    const screensInSec = SCREENS.filter(s => s.sec === sec).filter(s => {
+      if (filter === 'all') return true;
+      return state[s.id].status === filter;
+    });
+    
+    if (screensInSec.length === 0) return;
+    
+    const wrap = document.createElement('div');
+    wrap.className = 'section';
+    wrap.innerHTML = '<h3>' + sec + ' · ' + screensInSec.length + '</h3>';
+    
+    const g = document.createElement('div');
+    g.className = 'grid';
+    
+    screensInSec.forEach(s => {
+      const st = state[s.id];
+      const card = document.createElement('div');
+      card.className = 'card ' + (st.status === 'ok' ? 'ok' : st.status === 'bug' ? 'bug' : '') + (s.id === selectedId ? ' selected' : '');
+      card.dataset.id = s.id;
+      const icon = st.status === 'ok' ? '✓' : st.status === 'bug' ? '✗' : '';
+      card.innerHTML = 
+        (icon ? '<div class="card-icon">' + icon + '</div>' : '') +
+        '<div class="card-name">' + s.name + '</div>' +
+        '<div class="card-meta">→' + s.outs.length + ' linka · ' + s.ins.length + ' linkado por</div>';
+      card.addEventListener('click', () => showDetail(s.id));
+      g.appendChild(card);
+    });
+    
+    wrap.appendChild(g);
+    grid.appendChild(wrap);
+  });
+  
+  updateCounters();
+}
+
+function showDetail(id) {
+  selectedId = id;
+  const s = SCREENS.find(x => x.id === id);
+  const st = state[id];
+  const detail = document.getElementById('detail');
+  detail.classList.remove('empty');
+  
+  const specs = s.specs.map(sp => '<li>' + sp + '</li>').join('');
+  const outs = s.outs.length ? s.outs.join(' · ') : '<span style="color:#999;">— nenhum</span>';
+  const ins = s.ins.length ? s.ins.join(' · ') : '<span style="color:#A32D2D;">— nenhum (orfão!)</span>';
+  
+  detail.innerHTML = 
+    '<div class="detail-header">' +
+    '<div class="detail-name">' + s.name + '</div>' +
+    '<div class="detail-section-tag">A fazer 3.3.7</div>' +
+    '</div>' +
+    '<div class="detail-section-name">' + s.sec + '</div>' +
+    
+    '<div class="detail-block-label">Spec esperada (' + s.specs.length + ' items)</div>' +
+    '<ul class="spec-list">' + specs + '</ul>' +
+    
+    '<div class="links">' +
+    '<div><div class="detail-block-label" style="margin-top:0;">Linka para (' + s.outs.length + ')</div>' +
+    '<div class="links-list">' + outs + '</div></div>' +
+    '<div><div class="detail-block-label" style="margin-top:0;">Linkado por (' + s.ins.length + ')</div>' +
+    '<div class="links-list">' + ins + '</div></div>' +
+    '</div>' +
+    
+    '<div class="detail-block-label">Notas (opcional)</div>' +
+    '<textarea class="notes-input" id="notes-' + id + '" placeholder="Ex: \'banner promo coral parece pequeno demais\'">' + (st.notes || '') + '</textarea>' +
+    
+    '<div class="actions">' +
+    '<button class="action-btn ok ' + (st.status === 'ok' ? 'active' : '') + '" data-act="ok">✓ Validei OK</button>' +
+    '<button class="action-btn bug ' + (st.status === 'bug' ? 'active' : '') + '" data-act="bug">✗ Tem bug</button>' +
+    '<button class="action-btn clear" data-act="pending">Limpar</button>' +
+    '</div>' +
+    
+    (st.timestamp ? '<div class="timestamp">Última actualização: ' + new Date(st.timestamp).toLocaleString('pt-PT') + '</div>' : '');
+  
+  detail.querySelectorAll('button[data-act]').forEach(b => {
+    b.addEventListener('click', e => {
+      const act = e.currentTarget.dataset.act;
+      const notesEl = document.getElementById('notes-' + id);
+      state[id] = {
+        status: act,
+        notes: notesEl ? notesEl.value : '',
+        timestamp: act !== 'pending' ? Date.now() : null
+      };
+      save();
+      render();
+      showDetail(id);
+    });
+  });
+  
+  const notesEl = document.getElementById('notes-' + id);
+  if (notesEl) {
+    notesEl.addEventListener('blur', () => {
+      state[id].notes = notesEl.value;
+      save();
+    });
+  }
+}
+
+document.querySelectorAll('.filter').forEach(b => {
+  b.addEventListener('click', () => {
+    document.querySelectorAll('.filter').forEach(x => x.classList.remove('active'));
+    b.classList.add('active');
+    filter = b.dataset.f;
+    render();
+  });
+});
+
+document.getElementById('export').addEventListener('click', () => {
+  const ok = SCREENS.filter(s => state[s.id].status === 'ok').map(s => '✓ ' + s.name);
+  const bug = SCREENS.filter(s => state[s.id].status === 'bug').map(s => {
+    const n = state[s.id].notes ? ' — ' + state[s.id].notes : '';
+    return '✗ ' + s.name + n;
+  });
+  const pending = SCREENS.filter(s => state[s.id].status === 'pending').map(s => '· ' + s.name);
+  
+  const report = 
+    'AUDITORIA 3.3.7 V5 MANUTENÇÃO\n' +
+    'Gerado: ' + new Date().toLocaleString('pt-PT') + '\n\n' +
+    'RESUMO:\n' +
+    '  OK: ' + ok.length + '/22\n' +
+    '  Bugs: ' + bug.length + '/22\n' +
+    '  Por validar: ' + pending.length + '/22\n\n' +
+    (ok.length ? 'VALIDADOS OK:\n' + ok.join('\n') + '\n\n' : '') +
+    (bug.length ? 'COM BUG:\n' + bug.join('\n') + '\n\n' : '') +
+    (pending.length ? 'POR VALIDAR:\n' + pending.join('\n') + '\n' : '');
+  
+  const blob = new Blob([report], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'v5-audit-3.3.7-' + new Date().toISOString().slice(0,10) + '.txt';
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+document.getElementById('reset').addEventListener('click', () => {
+  if (confirm('Apagar todos os checkboxes e notas? Esta acção não pode ser desfeita.')) {
+    state = {};
+    SCREENS.forEach(s => { state[s.id] = { status: 'pending', notes: '', timestamp: null }; });
+    save();
+    selectedId = null;
+    document.getElementById('detail').className = 'detail empty';
+    document.getElementById('detail').textContent = 'Toca num ecrã para ver a spec esperada';
+    render();
+  }
+});
+
+render();
+</script>
+
+</body>
+</html>

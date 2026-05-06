@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>v4 · Energia · Simulador</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f7f6f3;color:#1a1a18;min-height:100vh;padding:24px 16px 60px}
+  #root{max-width:840px;margin:0 auto}
+  input,select{font-family:inherit;outline:none}
+  input:focus,select:focus{box-shadow:0 0 0 2px rgba(239,159,39,0.3)}
+  button{font-family:inherit}
+  input[type=range]{accent-color:#EF9F27}
+  ::-webkit-scrollbar{width:4px} ::-webkit-scrollbar-thumb{background:#ccc;border-radius:2px}
+
+  /* light/dark */
+  :root{
+    --bg:#ffffff; --bg2:#f7f6f3; --bg3:#efede8;
+    --text:#1a1a18; --text2:#5f5e5a; --text3:#8f8e8a;
+    --border:rgba(0,0,0,0.12); --border2:rgba(0,0,0,0.22);
+    --shadow:0 1px 4px rgba(0,0,0,0.08);
+    --amber:#EF9F27; --amber-light:#FAEEDA; --amber-dark:#633806; --amber-mid:#BA7517;
+    --teal:#1D9E75; --teal-light:#E1F5EE; --teal-dark:#085041;
+    --blue-light:#E6F1FB; --blue-dark:#042C53;
+    --green-light:#EAF3DE; --green-dark:#27500A;
+    --gray-light:#F1EFE8; --gray-dark:#5F5E5A;
+    --red:#E24B4A; --red-light:#FCEBEB;
+    --radius:10px; --radius-sm:7px;
+  }
+  @media(prefers-color-scheme:dark){
+    :root{
+      --bg:#1c1c1a; --bg2:#252523; --bg3:#2e2e2b;
+      --text:#f0ede8; --text2:#a8a6a0; --text3:#6e6c68;
+      --border:rgba(255,255,255,0.1); --border2:rgba(255,255,255,0.2);
+      --shadow:0 1px 4px rgba(0,0,0,0.4);
+      --amber-light:#3d2e0a; --amber-dark:#fac75a;
+      --teal-light:#0a2e1e; --teal-dark:#5DCAA5;
+      --blue-light:#0a1e2e; --blue-dark:#85B7EB;
+      --green-light:#0e2408; --green-dark:#97C459;
+      --gray-light:#2c2c2a; --gray-dark:#B4B2A9;
+      --red-light:#2e0a0a;
+    }
+  }
+  body{background:var(--bg2);color:var(--text)}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+const {useState,useEffect} = React;
+const h = React.createElement;
+
+// ═══════════════════════════════════════════════════════════════
+// MOTOR DE COMPARAÇÃO TARIFÁRIA — TAR 2026 ERSE + 8 Comercializadoras
+// Fórmula: (TAR_fixo_kVA + (TAR_energia + spread_comercial) × kWh + CAV + IEC) × 1.23 IVA
+// ═══════════════════════════════════════════════════════════════
+const TAR_FIXED_MENSAL = {
+  1.15:1.22, 2.3:2.44, 3.45:3.65, 4.6:4.87, 5.75:6.09,
+  6.9:7.31, 10.35:10.96, 13.8:14.62, 17.25:18.27,
+  20.7:21.93, 27.6:29.24, 34.5:36.55, 41.4:43.86
+};
+const TAR_ENERGIA = 0.0689; // €/kWh regulado ERSE 2026 — igual para todos
+const CAV = 2.85;           // Contribuição Audiovisual €/mês
+const IEC_KWH = 0.001;      // Imposto Especial Consumo €/kWh
+const IVA = 1.23;
+const KVA_LIST = [3.45,6.9,10.35,13.8,20.7,27.6,41.4];
+
+const COMERZ = [
+  {id:"edp",  name:"EDP Comercial",  spread:0.1062, green:false, fid:true},
+  {id:"galp", name:"Galp Power",     spread:0.0880, green:false, fid:false},
+  {id:"ibel", name:"Ibelectra",      spread:0.0690, green:true,  fid:false},
+  {id:"gold", name:"Goldenergy",     spread:0.0740, green:false, fid:false},
+  {id:"end",  name:"Endesa",         spread:0.0820, green:false, fid:true},
+  {id:"eni",  name:"Eni Plenitude",  spread:0.0600, green:true,  fid:false},
+  {id:"luz",  name:"Luzboa",         spread:0.0630, green:true,  fid:false},
+  {id:"coop", name:"Coopernico",     spread:0.0710, green:true,  fid:false},
+];
+
+function calcMensal(kwh, kva, c, grupo) {
+  const fixed = TAR_FIXED_MENSAL[kva] || 7.31;
+  const energy = (TAR_ENERGIA + c.spread) * kwh;
+  const taxes = CAV + IEC_KWH * kwh;
+  const net = (fixed + energy + taxes) * (grupo ? 0.95 : 1);
+  return +(net * IVA).toFixed(2);
+}
+function runMotor(kwh, kva, currentPrice, seg) {
+  return COMERZ.map(c => {
+    const m = calcMensal(kwh, kva, c, seg === "condominio");
+    return {...c, mensal: m, saving: +(currentPrice - m).toFixed(2), annual: +((currentPrice - m) * 12).toFixed(0)};
+  }).sort((a,b) => a.mensal - b.mensal);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MOCK LEADS ADMIN
+// ═══════════════════════════════════════════════════════════════
+const LEADS0 = [
+  {id:1,nome:"Ana Ferreira",        seg:"Particular",  kwh:210,  kva:6.9,  status:"Proposta enviada",current:"EDP Comercial",mensal:67.4, alvo:44.2,com:45, date:"13 Abr",cpe:"PT0002000000123456789"},
+  {id:2,nome:"Jardins do Tejo",     seg:"Condomínio",  kwh:680,  kva:20.7, status:"Assinado",        current:"Galp Power",   mensal:198,  alvo:135, com:90, date:"10 Abr",cpe:"PT0002000000987654321"},
+  {id:3,nome:"Construções Bela Lda",seg:"Empresa",     kwh:1250, kva:27.6, status:"A analisar",      current:"EDP Comercial",mensal:398,  alvo:295, com:100,date:"12 Abr",cpe:"PT0002000000112233445"},
+  {id:4,nome:"Carlos Matos",        seg:"Particular",  kwh:180,  kva:6.9,  status:"Activo",          current:"Endesa",       mensal:61.2, alvo:41.8,com:40, date:"28 Mar",cpe:"PT0002000000556677889"},
+  {id:5,nome:"Rogério Silva",       seg:"Particular",  kwh:320,  kva:10.35,status:"Novo",            current:"EDP Comercial",mensal:98.5, alvo:68.2,com:55, date:"13 Abr",cpe:"PT0002000000998877665"},
+  {id:6,nome:"Edifício Central SA", seg:"Condomínio",  kwh:920,  kva:27.6, status:"Proposta enviada",current:"EDP Comercial",mensal:285,  alvo:199, com:90, date:"11 Abr",cpe:"PT0002000000334455667"},
+  {id:7,nome:"Farmácia Saúde",      seg:"Empresa",     kwh:580,  kva:13.8, status:"Activo",          current:"Goldenergy",   mensal:165,  alvo:122, com:75, date:"15 Mar",cpe:"PT0002000000778899001"},
+];
+const STATUS_LIST = ["Novo","A analisar","Proposta enviada","Assinado","Activo"];
+const STC = {"Novo":"var(--amber-light)","A analisar":"var(--blue-light)","Proposta enviada":"var(--teal-light)","Assinado":"var(--green-light)","Activo":"var(--gray-light)"};
+const STT = {"Novo":"var(--amber-dark)","A analisar":"var(--blue-dark)","Proposta enviada":"var(--teal-dark)","Assinado":"var(--green-dark)","Activo":"var(--gray-dark)"};
+const SEG_ICON = {"Particular":"👤","Empresa":"🏢","Condomínio":"🏗️"};
+
+// ═══════════════════════════════════════════════════════════════
+// DESIGN SYSTEM helpers
+// ═══════════════════════════════════════════════════════════════
+const S = {
+  card: {background:"var(--bg)",border:"0.5px solid var(--border)",borderRadius:"var(--radius)",padding:"14px 16px",boxShadow:"var(--shadow)"},
+  inp: {width:"100%",padding:"8px 10px",fontSize:13,border:"0.5px solid var(--border2)",borderRadius:"var(--radius-sm)",background:"var(--bg2)",color:"var(--text)",outline:"none"},
+  lbl: {fontSize:12,color:"var(--text2)",marginBottom:4,display:"block"},
+  row2: {display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:12},
+};
+const pill = (bg,tc,txt) => h("span",{style:{fontSize:11,padding:"2px 9px",borderRadius:5,background:bg,color:tc,fontWeight:500,display:"inline-block",whiteSpace:"nowrap"}},txt);
+
+function Btn({children,onClick,primary,danger,outline,disabled,full,small,color}) {
+  const bg = primary ? (color||"var(--amber)") : danger ? "var(--red)" : "transparent";
+  const bc = primary ? (color||"var(--amber)") : danger ? "var(--red)" : "var(--border2)";
+  const tc = primary||danger ? "#fff" : "var(--text2)";
+  return h("button",{onClick,disabled,style:{
+    padding: small?"5px 10px":"8px 18px", fontSize: small?11:13, fontWeight:500,
+    cursor:disabled?"not-allowed":"pointer", borderRadius:"var(--radius-sm)",
+    border:`0.5px solid ${bc}`, background:bg, color:tc,
+    width:full?"100%":"auto", opacity:disabled?0.45:1, transition:"opacity 0.15s"
+  }},children);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// STEP BAR
+// ═══════════════════════════════════════════════════════════════
+function StepBar({step,steps}) {
+  return h("div",{style:{display:"flex",alignItems:"center",marginBottom:20}},
+    steps.map((s,i) => h("div",{key:i,style:{display:"flex",alignItems:"center",flex:i<steps.length-1?1:"none"}},
+      h("div",{style:{display:"flex",alignItems:"center",gap:6}},
+        h("div",{style:{
+          width:22,height:22,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",
+          fontSize:10,fontWeight:500,flexShrink:0,
+          background:i<step-1?"var(--teal)":i===step-1?"var(--amber)":"var(--bg3)",
+          color:i<=step-1?"#fff":"var(--text3)",
+          border:`0.5px solid ${i<step-1?"var(--teal)":i===step-1?"var(--amber)":"var(--border)"}`
+        }},i<step-1?"✓":i+1),
+        h("span",{style:{fontSize:12,color:i===step-1?"var(--text)":"var(--text3)",fontWeight:i===step-1?500:400,whiteSpace:"nowrap"}},s)
+      ),
+      i<steps.length-1&&h("div",{style:{flex:1,height:"0.5px",background:"var(--border)",margin:"0 10px"}})
+    ))
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// INFO BOX
+// ═══════════════════════════════════════════════════════════════
+function Info({color,children}) {
+  const bg = color==="green"?"var(--teal-light)":color==="amber"?"var(--amber-light)":"var(--blue-light)";
+  const tc = color==="green"?"var(--teal-dark)":color==="amber"?"var(--amber-dark)":"var(--blue-dark)";
+  return h("div",{style:{background:bg,borderRadius:"var(--radius-sm)",padding:"10px 14px",marginBottom:14,color:tc}},children);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CLIENT VIEW
+// ═══════════════════════════════════════════════════════════════
+function ClientView() {
+  const [seg,setSeg]=useState("particular");
+  const [step,setStep]=useState(1);
+  const [parsing,setParsing]=useState(false);
+  const [parsed,setParsed]=useState(false);
+  const [results,setResults]=useState([]);
+  const [selIdx,setSelIdx]=useState(0);
+  const [pct,setPct]=useState(0);
+  const [form,setForm]=useState({kwh:210,kva:6.9,currentPrice:67.4,cpe:"PT0002000000123456789"});
+
+  const segs=["particular","empresa","condominio"];
+  const segL={"particular":"Particular","empresa":"Empresa","condominio":"Condomínio"};
+  const steps=["Dados","Extraído","Comparação","Confirmar"];
+
+  useEffect(()=>{if(parsing){let n=0;const t=setInterval(()=>{n+=Math.random()*25;if(n>=100){n=100;clearInterval(t);}setPct(Math.min(100,Math.round(n)));},120);return()=>clearInterval(t);}else setPct(0);},[parsing]);
+
+  const doUpload=()=>{setParsing(true);setTimeout(()=>{setParsed(true);setParsing(false);setStep(2);},2600);};
+  const doCompare=()=>{setResults(runMotor(form.kwh,form.kva,form.currentPrice,seg));setSelIdx(0);setStep(3);};
+  const upd=k=>e=>setForm(f=>({...f,[k]:typeof form[k]==="number"?parseFloat(e.target.value)||0:e.target.value}));
+
+  return h("div",null,
+    // Segment selector
+    h("div",{style:{display:"flex",gap:6,marginBottom:20}},
+      segs.map(s=>h(Btn,{key:s,primary:seg===s,onClick:()=>{setSeg(s);setStep(1);setParsed(false);},full:false,style:{flex:1}},segL[s]))
+    ),
+    h(StepBar,{step,steps}),
+
+    // ── STEP 1 ──────────────────────────────────────────────
+    step===1&&h("div",null,
+      seg==="condominio"&&h(Info,{color:"green"},
+        h("p",{style:{fontSize:11,fontWeight:500,margin:"0 0 2px"}},"Dados da plataforma carregados"),
+        h("p",{style:{fontSize:14,fontWeight:500,margin:"0 0 2px"}},"Jardins do Tejo · 24 fracções · Admin verificado"),
+        h("p",{style:{fontSize:12,margin:0}},"Desconto de grupo 5% aplicável automaticamente")
+      ),
+      // Upload zone
+      h("div",{onClick:parsing?null:doUpload,style:{
+        border:`1.5px dashed ${parsing?"var(--amber)":"var(--border2)"}`,
+        borderRadius:"var(--radius)",padding:"30px 0",textAlign:"center",
+        cursor:parsing?"default":"pointer",
+        background:parsing?"var(--amber-light)":"var(--bg2)",marginBottom:14
+      }},
+        parsing
+          ?h("div",null,
+            h("p",{style:{fontSize:12,fontWeight:500,margin:"0 0 12px",color:"var(--amber-dark)"}},"A ler fatura PDF…"),
+            h("div",{style:{width:200,height:5,background:"var(--bg3)",borderRadius:3,margin:"0 auto 10px"}},
+              h("div",{style:{height:5,background:"var(--amber)",borderRadius:3,width:pct+"%",transition:"width 0.15s"}})
+            ),
+            h("p",{style:{fontSize:11,color:"var(--amber-mid)",margin:0}},pct+"% · A extrair CPE, kVA, kWh, preço…")
+          )
+          :h("div",null,
+            h("svg",{width:28,height:28,viewBox:"0 0 24 24",fill:"none",style:{marginBottom:10,opacity:0.5}},
+              h("path",{d:"M12 3v12M9 8l3-5 3 5",stroke:"var(--text)",strokeWidth:"1.5",strokeLinecap:"round",strokeLinejoin:"round"}),
+              h("path",{d:"M4 17h16",stroke:"var(--text)",strokeWidth:"1.5",strokeLinecap:"round"})
+            ),
+            h("p",{style:{fontSize:14,fontWeight:500,margin:"0 0 4px"}},"Carregar fatura PDF"),
+            h("p",{style:{fontSize:11,color:"var(--text3)",margin:0}},"extracção automática em <3s · sem conta necessária · como o Manie, mas com contexto do edifício")
+          )
+      ),
+      h("p",{style:{fontSize:11,color:"var(--text3)",textAlign:"center",marginBottom:14}},"ou preencher manualmente"),
+      h("div",{style:S.row2},
+        h("div",null,h("label",{style:S.lbl},"CPE / CUPE"),h("input",{style:S.inp,value:form.cpe,onChange:upd("cpe")})),
+        h("div",null,h("label",{style:S.lbl},"Potência (kVA)"),
+          h("select",{style:S.inp,value:form.kva,onChange:e=>setForm(f=>({...f,kva:parseFloat(e.target.value)}))},
+            KVA_LIST.map(k=>h("option",{key:k,value:k},k+" kVA"))
+          )
+        )
+      ),
+      h("div",{style:{marginBottom:14}},
+        h("label",{style:S.lbl},"Consumo médio mensal (kWh)"),
+        h("div",{style:{display:"flex",alignItems:"center",gap:12,marginTop:4}},
+          h("input",{type:"range",min:50,max:seg==="condominio"?3000:seg==="empresa"?5000:600,step:10,value:form.kwh,style:{flex:1,accentColor:"var(--amber)"},onChange:e=>setForm(f=>({...f,kwh:+e.target.value}))}),
+          h("span",{style:{fontSize:13,fontWeight:500,minWidth:72,color:"var(--text)"}},form.kwh+" kWh")
+        )
+      ),
+      h("div",{style:{marginBottom:20}},
+        h("label",{style:S.lbl},"Valor actual na fatura (€/mês com IVA)"),
+        h("input",{style:{...S.inp,maxWidth:180},type:"number",step:"0.01",value:form.currentPrice,onChange:upd("currentPrice")})
+      ),
+      h("div",{style:{display:"flex",justifyContent:"flex-end"}},
+        h(Btn,{primary:true,onClick:doCompare},"Ver poupança possível →")
+      )
+    ),
+
+    // ── STEP 2 ──────────────────────────────────────────────
+    step===2&&h("div",null,
+      h(Info,{color:"green"},
+        h("div",{style:{display:"flex",alignItems:"center",gap:8}},
+          h("svg",{width:16,height:16,viewBox:"0 0 16 16",fill:"none"},
+            h("circle",{cx:8,cy:8,r:7,stroke:"var(--teal-dark)",strokeWidth:"1.2"}),
+            h("path",{d:"M5 8l2 2 4-4",stroke:"var(--teal-dark)",strokeWidth:"1.3",strokeLinecap:"round",strokeLinejoin:"round"})
+          ),
+          h("p",{style:{fontSize:12,fontWeight:500,margin:0}},"Fatura lida em 2.6s · dados extraídos e verificados — confira antes de comparar")
+        )
+      ),
+      h("div",{style:S.row2},
+        h("div",null,h("label",{style:S.lbl},"CPE extraído"),h("input",{style:S.inp,value:form.cpe,onChange:upd("cpe")})),
+        h("div",null,h("label",{style:S.lbl},"Comercializadora actual"),h("input",{style:{...S.inp,color:"var(--text3)"},value:"EDP Comercial",readOnly:true}))
+      ),
+      h("div",{style:S.row2},
+        h("div",null,h("label",{style:S.lbl},"Potência contratada"),
+          h("select",{style:S.inp,value:form.kva,onChange:e=>setForm(f=>({...f,kva:parseFloat(e.target.value)}))},
+            KVA_LIST.map(k=>h("option",{key:k,value:k},k+" kVA"))
+          )
+        ),
+        h("div",null,h("label",{style:S.lbl},"Consumo no período (kWh)"),
+          h("input",{style:S.inp,type:"number",value:form.kwh,onChange:e=>setForm(f=>({...f,kwh:+e.target.value}))})
+        )
+      ),
+      h("div",{style:S.row2},
+        h("div",null,h("label",{style:S.lbl},"Opção tarifária"),
+          h("select",{style:S.inp},h("option",null,"Simples"),h("option",null,"Bi-horário"),h("option",null,"Tri-horário"))
+        ),
+        h("div",null,h("label",{style:S.lbl},"Valor pago (€/mês c/ IVA)"),
+          h("input",{style:S.inp,type:"number",step:"0.01",value:form.currentPrice,onChange:upd("currentPrice")})
+        )
+      ),
+      h("div",{style:{display:"flex",justifyContent:"space-between",marginTop:8}},
+        h(Btn,{outline:true,onClick:()=>setStep(1)},"← Corrigir"),
+        h(Btn,{primary:true,onClick:doCompare},"Comparar agora →")
+      )
+    ),
+
+    // ── STEP 3 ──────────────────────────────────────────────
+    step===3&&results.length>0&&h("div",null,
+      h("div",{style:{...S.card,background:"var(--amber-light)",borderColor:"var(--amber)",marginBottom:14}},
+        h("p",{style:{fontSize:11,fontWeight:500,color:"var(--amber-mid)",margin:"0 0 3px"}},"Melhor alternativa — motor de comparação próprio · TAR 2026 ERSE"),
+        h("p",{style:{fontSize:20,fontWeight:500,color:"var(--amber-dark)",margin:"0 0 3px"}},results[0].name+" · €"+results[0].mensal.toFixed(2)+"/mês"),
+        h("p",{style:{fontSize:13,color:"var(--amber-dark)",margin:0}},"Poupança anual estimada: ",
+          h("strong",null,"€"+(results[0].annual>0?results[0].annual:0)),
+          seg==="condominio"&&h("span",{style:{marginLeft:8}},pill("var(--teal-light)","var(--teal-dark)","desconto grupo 5% incluído"))
+        )
+      ),
+      // Current contract
+      h("div",{style:{...S.card,background:"var(--bg2)",marginBottom:10}},
+        h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center"}},
+          h("div",null,
+            h("p",{style:{fontSize:11,color:"var(--text2)",margin:"0 0 2px"}},"Contrato actual — EDP Comercial"),
+            h("p",{style:{fontSize:18,fontWeight:500,margin:0}},"€"+form.currentPrice.toFixed(2)+"/mês")
+          ),
+          h("div",{style:{textAlign:"right"}},
+            h("p",{style:{fontSize:11,color:"var(--text2)",margin:"0 0 2px"}},"por ano"),
+            h("p",{style:{fontSize:16,fontWeight:500,margin:0}},"€"+(form.currentPrice*12).toFixed(0))
+          )
+        )
+      ),
+      // Results list
+      results.map((r,i)=>h("div",{key:r.id,onClick:()=>setSelIdx(i),style:{
+        ...S.card,marginBottom:8,cursor:"pointer",display:"flex",alignItems:"center",gap:14,
+        borderColor:selIdx===i?"var(--amber)":"var(--border)",borderWidth:selIdx===i?1.5:0.5,
+        background:selIdx===i?"var(--amber-light)":"var(--bg)"
+      }},
+        h("div",{style:{flex:1}},
+          h("div",{style:{display:"flex",alignItems:"center",gap:6,marginBottom:6,flexWrap:"wrap"}},
+            h("p",{style:{fontSize:13,fontWeight:500,margin:0}},r.name),
+            i===0&&pill("var(--teal-light)","var(--teal-dark)","Melhor preço"),
+            r.green&&pill("var(--green-light)","var(--green-dark)","Verde"),
+            r.fid&&pill("var(--gray-light)","var(--gray-dark)","Fidelização")
+          ),
+          h("div",{style:{height:4,background:"var(--bg3)",borderRadius:2}},
+            h("div",{style:{height:4,width:Math.min(100,Math.round(r.mensal/form.currentPrice*100))+"%",background:i===0?"var(--amber)":"var(--border2)",borderRadius:2}})
+          )
+        ),
+        h("div",{style:{textAlign:"right",minWidth:105}},
+          h("p",{style:{fontSize:19,fontWeight:500,margin:0}},"€"+r.mensal.toFixed(2)),
+          r.saving>0
+            ?h("p",{style:{fontSize:12,color:"var(--teal)",margin:0,fontWeight:500}},"−€"+r.saving.toFixed(2)+"/mês")
+            :h("p",{style:{fontSize:12,color:"var(--text3)",margin:0}},"sem poupança"),
+          r.saving>0&&h("p",{style:{fontSize:11,color:"var(--text2)",margin:0}},"−€"+r.annual+"/ano")
+        )
+      )),
+      h("p",{style:{fontSize:11,color:"var(--text3)",margin:"8px 0 14px"}},"Calculado com TAR 2026 ERSE + preços de 8 comercializadoras. Motor próprio, actualizado mensalmente."),
+      h("div",{style:{display:"flex",justifyContent:"space-between"}},
+        h(Btn,{onClick:()=>setStep(parsed?2:1)},"← Voltar"),
+        h(Btn,{primary:true,onClick:()=>setStep(4),disabled:!results[selIdx]||results[selIdx].saving<=0},
+          results[selIdx]&&results[selIdx].saving>0?"Quero mudar — tratam de tudo →":"Sem poupança nesta opção"
+        )
+      )
+    ),
+
+    // ── STEP 4 ──────────────────────────────────────────────
+    step===4&&results.length>0&&h("div",null,
+      h("div",{style:{...S.card,borderColor:"var(--teal)",background:"var(--teal-light)",marginBottom:16}},
+        h("p",{style:{fontSize:11,fontWeight:500,color:"var(--teal-dark)",margin:"0 0 4px"}},"Pedido submetido com sucesso"),
+        h("p",{style:{fontSize:19,fontWeight:500,color:"var(--teal-dark)",margin:"0 0 4px"}},results[selIdx].name+" · €"+results[selIdx].mensal.toFixed(2)+"/mês"),
+        h("p",{style:{fontSize:13,color:"var(--teal-dark)",margin:0}},"Poupança estimada: ",h("strong",null,"€"+results[selIdx].annual+"/ano")," · Sem custo para si")
+      ),
+      h("div",{style:S.card},
+        h("p",{style:{fontSize:13,fontWeight:500,margin:"0 0 16px"}},"O que acontece agora"),
+        [
+          {l:"Pedido recebido e validado",s:"Hoje · automático",done:true},
+          {l:"Contactamos a comercializadora",s:"Próximas 24h úteis",done:false},
+          {l:"Proposta + assinatura digital",s:"Enviada por email/SMS",done:false},
+          {l:"Mudança processada",s:"7–14 dias úteis · sem cortes de energia",done:false},
+          {l:"Contrato activo — poupança começa",s:"Notificação imediata",done:false},
+        ].map((t,i,arr)=>h("div",{key:i,style:{display:"flex",gap:14,alignItems:"flex-start"}},
+          h("div",{style:{flexShrink:0}},
+            h("div",{style:{width:9,height:9,borderRadius:"50%",background:t.done?"var(--amber)":"var(--border2)",marginTop:4}}),
+            i<arr.length-1&&h("div",{style:{width:1,height:24,background:"var(--border)",marginLeft:4,marginTop:2}})
+          ),
+          h("div",{style:{paddingBottom:i<arr.length-1?6:0}},
+            h("p",{style:{fontSize:13,fontWeight:t.done?500:400,margin:0,color:"var(--text)"}},t.l),
+            h("p",{style:{fontSize:11,color:"var(--text2)",margin:0}},t.s)
+          )
+        ))
+      ),
+      h("div",{style:{display:"flex",gap:10,marginTop:16}},
+        h(Btn,{onClick:()=>{setStep(1);setParsed(false);}},"Nova simulação"),
+        h(Btn,{onClick:()=>setStep(3)},"Ver outras opções")
+      )
+    ),
+
+    // ── VS MANIE ────────────────────────────────────────────
+    h("div",{style:{marginTop:28,borderTop:"0.5px solid var(--border)",paddingTop:16}},
+      h("p",{style:{fontSize:11,color:"var(--text3)",fontWeight:500,marginBottom:10}},"Comparação funcional vs. Manie.pt"),
+      h("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:0}},
+        [
+          ["Sem conta para simular","✓ Ambos (copiámos)"],
+          ["Upload fatura PDF (<3s)","✓ Ambos (copiámos)"],
+          ["AutoSwitch automático","Manie agora · Nós Fase 3"],
+          ["Contexto do edifício/condomínio","✓ Só nós"],
+          ["Desconto de grupo para fracções","✓ Só nós"],
+          ["Admin + pipeline de leads","✓ Só nós"],
+          ["Integrado com portal PropTech","✓ Só nós"],
+          ["Comissão via Swan.io","✓ Só nós"],
+        ].map(([f,v],i)=>h("div",{key:i,style:{display:"flex",justifyContent:"space-between",fontSize:11,padding:"5px 0",borderBottom:"0.5px solid var(--border)"}},
+          h("span",{style:{color:"var(--text2)"}},f),
+          h("span",{style:{fontWeight:500,color:v.includes("Só nós")?"var(--teal)":v.includes("Ambos")?"var(--text)":"var(--text3)"}},v)
+        ))
+      )
+    )
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ADMIN VIEW
+// ═══════════════════════════════════════════════════════════════
+function AdminView() {
+  const [leads,setLeads]=useState(LEADS0);
+  const [fSt,setFSt]=useState("Todos");
+  const [fSeg,setFSeg]=useState("Todos");
+  const [sel,setSel]=useState(null);
+
+  const totalCom=leads.filter(l=>["Assinado","Activo"].includes(l.status)).reduce((s,l)=>s+l.com,0);
+  const active=leads.filter(l=>l.status==="Activo").length;
+  const pipeline=leads.filter(l=>l.status!=="Activo").length;
+  const totalSave=leads.reduce((s,l)=>s+(l.mensal-l.alvo)*12,0);
+
+  const statuses=["Todos",...STATUS_LIST];
+  const segsF=["Todos","Particular","Empresa","Condomínio"];
+  const filtered=leads.filter(l=>(fSt==="Todos"||l.status===fSt)&&(fSeg==="Todos"||l.seg===fSeg));
+
+  const updStatus=(id,ns)=>{setLeads(ls=>ls.map(l=>l.id===id?{...l,status:ns}:l));setSel(s=>s&&s.id===id?{...s,status:ns}:s);};
+
+  return h("div",null,
+    // Metrics
+    h("div",{style:{display:"grid",gridTemplateColumns:"repeat(4,minmax(0,1fr))",gap:10,marginBottom:20}},
+      [{l:"Em pipeline",v:pipeline},{l:"Activos",v:active},{l:"Comissões",v:"€"+totalCom},{l:"Poupança/ano",v:"€"+Math.round(totalSave)}]
+      .map(m=>h("div",{key:m.l,style:{background:"var(--bg2)",border:"0.5px solid var(--border)",borderRadius:"var(--radius-sm)",padding:"10px 12px"}},
+        h("p",{style:{fontSize:11,color:"var(--text2)",margin:"0 0 4px"}},m.l),
+        h("p",{style:{fontSize:20,fontWeight:500,margin:0}},m.v)
+      ))
+    ),
+    // Filters
+    h("div",{style:{display:"flex",gap:5,flexWrap:"wrap",marginBottom:12,alignItems:"center"}},
+      statuses.map(s=>h(Btn,{key:s,primary:fSt===s,small:true,onClick:()=>setFSt(s)},s)),
+      h("div",{style:{width:"0.5px",height:20,background:"var(--border)",margin:"0 4px"}}),
+      segsF.map(s=>h(Btn,{key:s,primary:fSeg===s,color:"var(--teal)",small:true,onClick:()=>setFSeg(s)},s))
+    ),
+    // Table
+    h("div",{style:{borderRadius:"var(--radius)",border:"0.5px solid var(--border)",overflow:"hidden",marginBottom:16}},
+      h("div",{style:{display:"grid",gridTemplateColumns:"2fr 1fr 1fr 1fr 1fr",padding:"8px 14px",background:"var(--bg2)",borderBottom:"0.5px solid var(--border)"}},
+        ["Cliente","Segmento","Consumo","Poupança/ano","Estado"].map(h2=>h("span",{key:h2,style:{fontSize:11,color:"var(--text2)",fontWeight:500}},h2))
+      ),
+      filtered.length===0&&h("div",{style:{padding:"24px",textAlign:"center",fontSize:13,color:"var(--text3)"}},"Sem resultados para este filtro"),
+      filtered.map(l=>h("div",{key:l.id,
+        onClick:()=>setSel(sel?.id===l.id?null:l),
+        style:{
+          display:"grid",gridTemplateColumns:"2fr 1fr 1fr 1fr 1fr",
+          padding:"10px 14px",borderBottom:"0.5px solid var(--border)",cursor:"pointer",
+          background:sel?.id===l.id?"var(--bg2)":"var(--bg)",
+          transition:"background 0.1s"
+        }},
+        h("div",null,
+          h("p",{style:{fontSize:13,fontWeight:500,margin:0}},l.nome),
+          h("p",{style:{fontSize:11,color:"var(--text3)",margin:0}},l.date+" · com. €"+l.com)
+        ),
+        h("span",{style:{fontSize:12,alignSelf:"center"}},SEG_ICON[l.seg]+" "+l.seg),
+        h("span",{style:{fontSize:12,alignSelf:"center"}},l.kwh+" kWh · "+l.kva+" kVA"),
+        h("span",{style:{fontSize:13,fontWeight:500,alignSelf:"center",color:"var(--teal)"}},"€"+Math.round((l.mensal-l.alvo)*12)+"/ano"),
+        h("span",{style:{alignSelf:"center"}},
+          h("span",{style:{fontSize:11,padding:"2px 8px",borderRadius:5,background:STC[l.status],color:STT[l.status],fontWeight:500,whiteSpace:"nowrap"}},l.status)
+        )
+      ))
+    ),
+    // Lead detail
+    sel&&h("div",{style:{...S.card,borderColor:"var(--amber)",borderWidth:1.5}},
+      h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:14}},
+        h("div",null,
+          h("p",{style:{fontSize:16,fontWeight:500,margin:"0 0 3px"}},sel.nome),
+          h("p",{style:{fontSize:12,color:"var(--text2)",margin:0}},sel.seg+" · "+sel.cpe)
+        ),
+        h("span",{style:{fontSize:12,padding:"3px 10px",borderRadius:6,background:STC[sel.status],color:STT[sel.status],fontWeight:500}},sel.status)
+      ),
+      h("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:16}},
+        [
+          {l:"Contrato actual",v:sel.current,s:"€"+sel.mensal.toFixed(2)+"/mês"},
+          {l:"Melhor alternativa",v:"Eni Plenitude",s:"€"+sel.alvo.toFixed(2)+"/mês"},
+          {l:"Poupança anual",v:"€"+Math.round((sel.mensal-sel.alvo)*12),s:"€"+(sel.mensal-sel.alvo).toFixed(2)+"/mês"}
+        ].map(m=>h("div",{key:m.l,style:{background:"var(--bg2)",borderRadius:"var(--radius-sm)",border:"0.5px solid var(--border)",padding:"10px 12px"}},
+          h("p",{style:{fontSize:11,color:"var(--text2)",margin:"0 0 2px"}},m.l),
+          h("p",{style:{fontSize:14,fontWeight:500,margin:"0 0 1px"}},m.v),
+          h("p",{style:{fontSize:11,color:"var(--text3)",margin:0}},m.s)
+        ))
+      ),
+      h("div",null,
+        h("p",{style:{fontSize:12,fontWeight:500,color:"var(--text2)",marginBottom:8}},"Actualizar estado do processo"),
+        h("div",{style:{display:"flex",gap:5,flexWrap:"wrap"}},
+          STATUS_LIST.map(s=>h(Btn,{key:s,primary:sel.status===s,small:true,onClick:()=>updStatus(sel.id,s)},s))
+        )
+      )
+    )
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ROOT APP
+// ═══════════════════════════════════════════════════════════════
+function App() {
+  const [view,setView]=useState("client");
+  const [pin,setPin]=useState("");
+  const [unlocked,setUnlocked]=useState(false);
+  const [pinErr,setPinErr]=useState(false);
+
+  const tryPin=()=>{if(pin==="1234"){setUnlocked(true);setPinErr(false);}else{setPinErr(true);setPin("");}};
+
+  return h("div",{style:{fontFamily:"inherit"}},
+    // Top nav
+    h("div",{style:{display:"flex",alignItems:"center",gap:12,padding:"14px 0 18px",borderBottom:"0.5px solid var(--border)",marginBottom:22}},
+      h("div",{style:{width:32,height:32,borderRadius:9,background:"var(--amber)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}},
+        h("svg",{width:16,height:16,viewBox:"0 0 16 16",fill:"none"},
+          h("path",{d:"M8 1.5L2 5.5v9h5V11h2v3.5h5v-9L8 1.5z",stroke:"#fff",strokeWidth:"1.3",strokeLinejoin:"round"})
+        )
+      ),
+      h("div",{style:{flex:1}},
+        h("span",{style:{fontSize:14,fontWeight:500,color:"var(--text)"}},"PropTech Energia"),
+        h("span",{style:{fontSize:10,color:"var(--text3)",marginLeft:8,background:"var(--bg3)",padding:"2px 7px",borderRadius:4}},"v4 · beta")
+      ),
+      h("div",{style:{display:"flex",gap:4}},
+        h(Btn,{primary:view==="client",onClick:()=>setView("client")},"Simulador"),
+        h(Btn,{primary:view==="admin",color:"var(--teal)",onClick:()=>setView("admin")},"Área Profissional")
+      )
+    ),
+    view==="client"
+      ?h(ClientView)
+      :unlocked
+        ?h(AdminView)
+        :h("div",{style:{maxWidth:280,margin:"60px auto",textAlign:"center"}},
+          h("div",{style:{fontSize:40,marginBottom:14}},"🔐"),
+          h("p",{style:{fontSize:16,fontWeight:500,margin:"0 0 6px"}},"Área Profissional"),
+          h("p",{style:{fontSize:12,color:"var(--text2)",margin:"0 0 22px"}},"Acesso restrito a gestores de contratos de energia"),
+          h("input",{type:"password",placeholder:"PIN de acesso",value:pin,
+            onChange:e=>setPin(e.target.value),
+            onKeyDown:e=>e.key==="Enter"&&tryPin(),
+            style:{...S.inp,textAlign:"center",letterSpacing:8,fontSize:20,marginBottom:10,border:`0.5px solid ${pinErr?"var(--red)":"var(--border2)"}`}
+          }),
+          pinErr&&h("p",{style:{fontSize:12,color:"var(--red)",marginBottom:10}},"PIN incorrecto"),
+          h(Btn,{primary:true,full:true,onClick:tryPin},"Entrar"),
+          h("p",{style:{fontSize:11,color:"var(--text3)",marginTop:14}},"PIN demo: 1234")
+        )
+  );
+}
+
+ReactDOM.render(h(App), document.getElementById("root"));
+</script>
+</body>
+</html>

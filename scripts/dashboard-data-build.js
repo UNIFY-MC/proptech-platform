@@ -96,11 +96,39 @@ const AGENT_META = {
 }
 
 // ---------------------------------------------------------------------------
+// Skill tag classification (module-level so parseEmployees can use it)
+// ---------------------------------------------------------------------------
+
+const SKILL_TAGS = {
+  'classify': 'CLASSIFICATION', 'match': 'MATCHING',    'triage': 'TRIAGE',
+  'score':    'SCORING',        'compose': 'COMPOSE',    'extract': 'EXTRACT',
+  'escalate': 'ESCALATE',       'vision': 'VISION',      'simul': 'SIMULATION',
+  'abrir':    'ACTION',         'fechar': 'ACTION',       'iniciar': 'ACTION',
+  'gerir':    'MANAGE',         'monitoriz': 'MONITOR',   'alert': 'ALERT',
+  'auditar':  'AUDIT',          'participar': 'ACTION',   'acompanhar': 'MONITOR',
+  'actualiz': 'ACTION',         'publicar': 'PUBLISH',    'redigir': 'COMPOSE',
+  'analis':   'ANALYSIS',       'gerar': 'GENERATE',      'import': 'IMPORT',
+  'sincroniz':'SYNC',           'certific': 'COMPLIANCE',
+}
+
+function getTag(id) {
+  const lower = id.toLowerCase()
+  for (const [key, tag] of Object.entries(SKILL_TAGS)) {
+    if (lower.includes(key)) return tag
+  }
+  return 'CORE'
+}
+
+// ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
 function readFile(path) {
   try { return readFileSync(path, 'utf8') } catch { return '' }
+}
+
+function stripFrontmatter(md) {
+  return md.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n+/, '')
 }
 
 function parseKV(content) {
@@ -510,6 +538,105 @@ function parseAgents() {
   return agents
 }
 
+function parseEmployees() {
+  const employeeDir = join(ROOT, '.claude', 'employees')
+  if (!existsSync(employeeDir)) return []
+  const files = readdirSync(employeeDir).filter(f => f.endsWith('.meta.json'))
+  const employees = []
+  for (const file of files) {
+    try {
+      const raw = readFileSync(join(employeeDir, file), 'utf8')
+      const meta = JSON.parse(raw)
+      const mdPath = join(employeeDir, file.replace('.meta.json', '.md'))
+      const mdRaw = existsSync(mdPath) ? readFileSync(mdPath, 'utf8') : ''
+      employees.push({
+        id: meta.id,
+        name: meta.name,
+        role: meta.role,
+        department: meta.department,
+        vertical: meta.vertical,
+        secondary_verticals: meta.secondary_verticals || [],
+        model: meta.model || '',
+        version: meta.version || '',
+        status: meta.status || 'draft',
+        avatarInitial: meta.avatarInitial || (meta.name?.[0]?.toUpperCase() ?? '?'),
+        color: meta.color || '',
+        cost: meta.cost || null,
+        skills: (meta.skills || []).map(s => ({ ...s, tag: getTag(s.id) })),
+        recipes: meta.recipes || [],
+        integrations: meta.integrations || [],
+        peerReads: meta.peerReads || [],
+        _mdRaw: stripFrontmatter(mdRaw),
+      })
+    } catch { /* skip malformed file */ }
+  }
+  employees.sort((a, b) => {
+    const DEPT_ORDER = ['Manutenção', 'Condomínios', 'Marketing']
+    const da = DEPT_ORDER.indexOf(a.department)
+    const db = DEPT_ORDER.indexOf(b.department)
+    if (da !== db) return (da === -1 ? 99 : da) - (db === -1 ? 99 : db)
+    return a.name.localeCompare(b.name)
+  })
+  return employees
+}
+
+function parseBia() {
+  const biaMetaPath = join(ROOT, '.claude', 'employees', 'bia.meta.json')
+  const biaMdPath   = join(ROOT, '.claude', 'employees', 'bia.md')
+  try {
+    const meta  = JSON.parse(readFileSync(biaMetaPath, 'utf8'))
+    const mdRaw = existsSync(biaMdPath) ? readFileSync(biaMdPath, 'utf8') : ''
+    return {
+      id:      meta.id,
+      name:    meta.name,
+      role:    meta.role,
+      version: meta.version,
+      model:   meta.model,
+      status:  meta.status,
+      integrations: meta.integrations || [],
+      skills:       meta.skills       || [],
+      recipes:      meta.recipes      || [],
+      peer_reads: (meta.peerReads || []).map(p => ({
+        sprint: p.stage,
+        agents: !p.value || p.value === '— none' ? [] : p.value.split(' + '),
+      })),
+      cost:         meta.cost         || {},
+      _mdRaw:       stripFrontmatter(mdRaw),
+      _source:      '.claude/employees/bia.meta.json',
+      _status:      'live',
+      _lastParsed:  new Date().toISOString(),
+    }
+  } catch (e) {
+    return { _source: '.claude/employees/bia.meta.json', _status: 'missing', _error: e.message }
+  }
+}
+
+function parseSkills() {
+  const skillsMap = new Map()
+  const employeeDir = join(ROOT, '.claude', 'employees')
+  if (!existsSync(employeeDir)) return []
+  const files = readdirSync(employeeDir).filter(f => f.endsWith('.meta.json'))
+  for (const file of files) {
+    try {
+      const raw = readFileSync(join(employeeDir, file), 'utf8')
+      const meta = JSON.parse(raw)
+      for (const skill of (meta.skills || [])) {
+        if (!skillsMap.has(skill.id)) {
+          skillsMap.set(skill.id, {
+            id: skill.id,
+            desc: skill.desc || '',
+            tag: getTag(skill.id),
+            usedBy: [{ id: meta.id, name: meta.name }],
+          })
+        } else {
+          skillsMap.get(skill.id).usedBy.push({ id: meta.id, name: meta.name })
+        }
+      }
+    } catch { /* skip malformed file */ }
+  }
+  return Array.from(skillsMap.values()).sort((a, b) => a.id.localeCompare(b.id))
+}
+
 function parseCompetitors(filePath) {
   const competitors = []
   const content = readFile(filePath)
@@ -596,6 +723,9 @@ const decisionsResult   = parseDecisions(decisionsFile)
 const roadmapResult     = parseRoadmap(sprintFile)
 const watchersResult    = parseWatchers(watchersFile)
 const agentsResult      = parseAgents()
+const employeesResult   = parseEmployees()
+const biaResult         = parseBia()
+const skillsResult      = parseSkills()
 const activityResult    = parseActivity(activityContent)
 const alertsResult      = parseAlerts(triggersContent)
 const competitorsResult = parseCompetitors(competitorsFile)
@@ -632,6 +762,9 @@ const data = {
   },
   watchers: watchersResult,
   agents: agentsResult,
+  employees: employeesResult,
+  bia: biaResult,
+  skills: skillsResult,
   recentActivity: activityResult.slice(0, 20),
   decisions: decisionsResult.decisions,
   _decisionsMeta: {
@@ -664,6 +797,9 @@ const sections = [
   { name: 'Roadmap',      status: roadmapResult._status,     n: roadmapResult.roadmap?.length || 0 },
   { name: 'Watchers',     status: 'live',                    n: watchersResult.length },
   { name: 'Agents',       status: 'live',                    n: agentsResult.length },
+  { name: 'Employees',    status: 'live',                    n: employeesResult.length },
+  { name: 'Bia',          status: biaResult._status,         n: biaResult.skills?.length || 0 },
+  { name: 'Skills',       status: 'live',                    n: skillsResult.length },
   { name: 'Activity',     status: 'live',                    n: activityResult.length },
   { name: 'Alerts',       status: 'live',                    n: alertsResult.length },
   { name: 'Competitors',  status: 'live',                    n: competitorsResult.length },

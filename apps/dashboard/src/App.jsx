@@ -1,39 +1,26 @@
 import { useState, useEffect } from 'react'
+import { Routes, Route, Navigate } from 'react-router-dom'
 import { useData } from './hooks/useData.js'
 import { DrawerProvider } from './context/DrawerContext.jsx'
+import Sidebar from './components/Sidebar.jsx'
 import Overview from './components/Overview.jsx'
 import Activity from './components/Activity.jsx'
 import Agents from './components/Agents.jsx'
 import Roadmap from './components/Roadmap.jsx'
 import Watchers from './components/Watchers.jsx'
 import Competitors from './components/Competitors.jsx'
-
-const TABS = ['Overview', 'Roadmap', 'Watchers', 'Competitors', 'Actividade', 'Agentes']
-
-const TAB_COMPONENTS = {
-  Overview,
-  Roadmap,
-  Watchers,
-  Competitors,
-  Actividade: Activity,
-  Agentes: Agents,
-}
-
-function tabLabel(name, data) {
-  if (!data) return name
-  const counts = {
-    'Roadmap':     data.roadmap?.length,
-    'Watchers':    data.watchers?.filter(w => w.status !== 'never').length,
-    'Competitors': data.competitors?.length,
-    'Actividade':  data.recentActivity?.length,
-    'Agentes':     data.agents?.length,
-  }
-  const c = counts[name]
-  return (c && c > 0) ? `${name} · ${c}` : name
-}
+import Verticais from './components/Verticais.jsx'
+import InboxView from './views/InboxView.jsx'
+import ApprovalsView from './views/ApprovalsView.jsx'
+import EmployeesPage from './views/EmployeesPage.jsx'
+import EmployeePage from './views/EmployeePage.jsx'
+import BiaScorecard from './views/BiaScorecard.jsx'
+import SkillsPage from './views/SkillsPage.jsx'
+import RecipesPage from './views/RecipesPage.jsx'
+import IntegrationsPage from './views/IntegrationsPage.jsx'
+import StubView from './views/StubView.jsx'
 
 export default function App() {
-  const [tab, setTab] = useState('Overview')
   const { data, loading, error, lastSync, refresh } = useData()
 
   const [theme, setTheme] = useState(() => localStorage.getItem('dashboard-theme') || 'dark')
@@ -43,54 +30,53 @@ export default function App() {
     localStorage.setItem('dashboard-theme', theme)
   }, [theme])
 
-  const ActiveComponent = TAB_COMPONENTS[tab]
-
   return (
     <DrawerProvider>
-      <div className="app">
-        <header className="app-header">
-          <div>
-            <h1>PropTech Platform</h1>
-            <span className="last-sync">
-              {lastSync ? `Actualizado ${lastSync}` : 'A carregar…'}
-            </span>
-          </div>
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <button
-              onClick={() => setTheme(t => t === 'dark' ? 'light' : 'dark')}
-              className="btn-theme"
-              title={theme === 'dark' ? 'Mudar para tema claro' : 'Mudar para tema escuro'}
-            >
-              {theme === 'dark' ? '☀️' : '🌙'}
-            </button>
-            <button onClick={refresh} className="btn-refresh" disabled={loading}>
-              {loading ? '⏳ A actualizar…' : '🔄 Refresh'}
-            </button>
-          </div>
-        </header>
+      <div className="app-layout">
+        <Sidebar
+          theme={theme}
+          setTheme={setTheme}
+          data={data}
+          lastSync={lastSync}
+          loading={loading}
+          refresh={refresh}
+        />
 
-        <nav className="tabs">
-          {TABS.map(t => (
-            <button
-              key={t}
-              className={`tab ${tab === t ? 'active' : ''}`}
-              onClick={() => setTab(t)}
-            >
-              {tabLabel(t, data)}
-            </button>
-          ))}
-        </nav>
-
-        <main className="content">
+        <main className="app-main">
           {error && (
-            <div className="error-banner">
-              Erro ao carregar dados: {error}
-            </div>
+            <div className="error-banner">Erro ao carregar dados: {error}</div>
           )}
+
           {!data && !error && (
             <div className="loading">A carregar dados do dashboard…</div>
           )}
-          {data && <ActiveComponent data={data} />}
+
+          {data && (
+            <Routes>
+              <Route path="/"             element={<Overview data={data} />} />
+              <Route path="/inbox"        element={<Activity data={data} />} />
+              <Route path="/employees"         element={<EmployeesPage data={data} />} />
+              <Route path="/employees/bia"    element={<BiaScorecard />} />
+              <Route path="/employees/:slug"  element={<EmployeePage data={data} />} />
+              <Route path="/agentes"      element={<Agents data={data} />} />
+              <Route path="/roadmap"      element={<Roadmap data={data} />} />
+              <Route path="/watchers"     element={<Watchers data={data} />} />
+              <Route path="/competitors"  element={<Competitors data={data} />} />
+              <Route path="/verticais"    element={<Verticais data={data} />} />
+              <Route path="/skills"       element={<SkillsPage data={data} />} />
+              <Route path="/recipes"      element={<RecipesPage data={data} />} />
+              <Route path="/integrations" element={<IntegrationsPage data={data} />} />
+              <Route path="/chat"         element={<StubView title="Chat" />} />
+              <Route path="/files"        element={<StubView title="Files" />} />
+              <Route path="/clients"      element={<StubView title="Clients" />} />
+              <Route path="/projects"     element={<StubView title="Projects" />} />
+              <Route path="/tasks"        element={<StubView title="Tasks" />} />
+              {/* Legacy live views */}
+              <Route path="/live-inbox"   element={<InboxView />} />
+              <Route path="/approvals"    element={<ApprovalsView />} />
+              <Route path="*"             element={<Navigate to="/" replace />} />
+            </Routes>
+          )}
         </main>
       </div>
     </DrawerProvider>

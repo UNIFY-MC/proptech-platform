@@ -1,6 +1,9 @@
 import { useState, useEffect, useCallback } from 'react'
 
-export function useData() {
+// Hook principal — faz fetch polling de /data.json a cada 60s.
+// Renomeado para useStaticData para distinguir da camada Supabase (useSupabase.js).
+// Re-export useData mantém compatibilidade com App.jsx sem mudanças.
+export function useStaticData() {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -30,3 +33,6 @@ export function useData() {
 
   return { data, loading, error, lastSync, refresh: load }
 }
+
+// Backward compat — App.jsx importa useData sem precisar de mudanças
+export const useData = useStaticData

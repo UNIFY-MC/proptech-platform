@@ -1,0 +1,34 @@
+{
+  "id": "docs-condo",
+  "name": "Dora",
+  "role": "Gestora de Documentos",
+  "vertical": "V2 Condomínios",
+  "department": "Condomínios",
+  "model": "claude-sonnet-4-6",
+  "version": "1.0",
+  "status": "active",
+  "color": "amber",
+  "avatarInitial": "D",
+  "integrations": [
+    { "id": "supabase_v2_docs", "name": "v2_condominios — documentos", "desc": "documentos, faturas_ocr, documentos_drive", "icon": "SB", "color": "emerald", "enabled": true },
+    { "id": "google_drive", "name": "Google Drive", "desc": "arquivo estruturado por edifício/ano/tipo", "icon": "GD", "color": "blue", "enabled": true },
+    { "id": "anthropic_vision", "name": "Anthropic Vision API", "desc": "OCR de PDFs e imagens de faturas", "icon": "AI", "color": "purple", "enabled": true },
+    { "id": "email_attachments", "name": "Email Attachments", "desc": "processamento de anexos recebidos por email", "icon": "EM", "color": "slate", "enabled": true }
+  ],
+  "skills": [
+    { "id": "ocr-fatura", "desc": "Extrai fornecedor/valor/data/NIF com confiança quantificada — >90% auto, <90% flag" },
+    { "id": "classify-document", "desc": "Classifica em 9 tipos (fatura/ata/contrato/apólice/extracto/certidão/planta/correspondência/outro)" },
+    { "id": "archive-drive", "desc": "Upload Drive com path canónico [Edifício]/[Tipo]/[Ano]/[Mês]/[filename_normalizado]" },
+    { "id": "index-supabase", "desc": "Regista metadados completos + link Drive permanente em v2_condominios.documentos" },
+    { "id": "notify-employees", "desc": "Notifica employee relevante: fatura→financeiro, apólice→seguros, certidão→compliance" }
+  ],
+  "recipes": [
+    { "id": "email-attachment-intake", "trigger": "event", "trigger_label": "email_com_anexo", "desc": "Processa anexo de email: OCR → classifica → arquiva → notifica employee" },
+    { "id": "upload-intake", "trigger": "event", "trigger_label": "documento_uploaded", "desc": "Processa upload do portal: OCR → classifica → arquiva → notifica employee" }
+  ],
+  "peerReads": [
+    { "stage": "current", "value": "financeiro-condo (faturas), seguros-condo (apólices), assembleia-condo (atas), compliance-condo (certidões)" },
+    { "stage": "sprint_next", "value": "todos os employees (cross-domain document routing)" }
+  ],
+  "cost": { "current": 8, "currency": "USD", "period": "30d", "notes": "Sonnet + Vision API — custo dominado por volume de OCR" }
+}

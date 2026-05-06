@@ -43,3 +43,16 @@ desktop.ini
 # Runtime state (lives in ../proptech-state, junctioned)
 .claude/state/
 
+
+# Locks e cache
+**/scheduled_tasks.lock
+**/settings.local.json
+**/.temp/
+__pycache__/
+*.pyc
+__MACOSX/
+
+# Vídeos de research (demasiado grandes para GitHub)
+*.mp4
+*.mov
+*.avi

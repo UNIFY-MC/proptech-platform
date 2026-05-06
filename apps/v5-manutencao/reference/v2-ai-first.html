@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<title>V2 AI-First — Ask · Command Center · Smart Inbox</title>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, sans-serif; }
+body { background: #e5e5e3; min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 14px 8px; gap: 12px; }
+button, input, textarea { font-family: inherit; border: none; background: none; }
+.pills { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.pill { font-size: 12px; padding: 7px 14px; border-radius: 16px; cursor: pointer; font-weight: 600; border: 1px solid #e5e5e3; background: #fff; color: #555; }
+.pill.on { border-color: #534AB7; background: #534AB7; color: #fff; }
+.app { width: 100%; max-width: 1280px; height: 740px; background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,.18); display: flex; }
+.sidebar { width: 220px; background: #0a0a14; color: #fff; display: flex; flex-direction: column; flex-shrink: 0; }
+.logo { padding: 14px 18px; border-bottom: 1px solid rgba(255,255,255,.08); display: flex; align-items: center; gap: 10px; }
+.logo-box { width: 32px; height: 32px; border-radius: 8px; background: linear-gradient(135deg,#FFD166,#F9A03F); color: #0a0a14; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; }
+.logo-title { font-size: 12px; font-weight: 700; }
+.logo-sub { font-size: 9px; color: rgba(255,255,255,.5); letter-spacing: .3px; }
+.ask-input-side { margin: 10px 14px; background: rgba(83,74,183,.15); border: 1px solid rgba(255,209,102,.3); border-radius: 10px; padding: 8px 11px; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+.ask-input-side:hover { background: rgba(83,74,183,.25); }
+.ask-ic { font-size: 15px; }
+.ask-placeholder { font-size: 11px; color: rgba(255,255,255,.55); flex: 1; }
+.ask-shortcut { font-size: 9px; color: rgba(255,255,255,.4); border: 1px solid rgba(255,255,255,.2); padding: 1px 5px; border-radius: 4px; }
+.nav { flex: 1; overflow-y: auto; padding: 4px 0; }
+.nav-gt { font-size: 9px; color: rgba(255,255,255,.35); font-weight: 700; letter-spacing: .8px; padding: 10px 18px 5px; }
+.nav-item { padding: 7px 18px; display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 11.5px; color: rgba(255,255,255,.72); border-left: 3px solid transparent; }
+.nav-item:hover { color: #fff; background: rgba(255,255,255,.04); }
+.nav-item.on { background: rgba(255,255,255,.08); color: #fff; font-weight: 600; border-left-color: #FFD166; }
+.nav-ic { font-size: 14px; }
+.nav-badge { margin-left: auto; font-size: 9px; padding: 1px 6px; border-radius: 3px; font-weight: 700; background: rgba(255,209,102,.2); color: #FFD166; }
+.user-card { padding: 10px 16px; border-top: 1px solid rgba(255,255,255,.08); display: flex; align-items: center; gap: 10px; }
+.user-avatar { width: 30px; height: 30px; border-radius: 50%; background: #FFD166; color: #0a0a14; font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+.user-name { font-size: 11px; font-weight: 700; }
+.user-sub { font-size: 9px; color: rgba(255,255,255,.5); }
+.main { flex: 1; overflow: auto; background: #f7f7f5; display: flex; flex-direction: column; }
+.topbar { background: #fff; border-bottom: 1px solid #e5e5e3; padding: 11px 22px; display: flex; align-items: center; justify-content: space-between; }
+.topbar-label { font-size: 10px; color: #999; font-weight: 700; letter-spacing: .5px; }
+.topbar-title { font-size: 17px; font-weight: 700; color: #111; font-family: Georgia, serif; margin-top: 2px; }
+.btn { padding: 7px 13px; border-radius: 7px; font-size: 12px; font-weight: 700; cursor: pointer; }
+.btn-dark { background: #0a0a14; color: #fff; }
+.btn-purple { background: #534AB7; color: #fff; }
+.btn-ghost { background: #f5f5f3; color: #111; border: 1px solid #e5e5e3; font-weight: 600; }
+
+/* ASK screen */
+.ask-hero { background: linear-gradient(135deg,#0a0a14 0%,#26215C 100%); padding: 30px 22px; color: #fff; }
+.ask-hero-t { font-size: 10px; color: #FFD166; font-weight: 700; letter-spacing: .5px; }
+.ask-hero-h { font-size: 24px; font-weight: 700; font-family: Georgia, serif; margin-top: 4px; }
+.ask-hero-s { font-size: 12px; color: rgba(255,255,255,.7); margin-top: 5px; }
+.ask-main-box { background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.15); border-radius: 12px; padding: 14px 16px; margin-top: 16px; display: flex; align-items: center; gap: 12px; }
+.ask-main-ic { font-size: 22px; }
+.ask-main-input { flex: 1; background: transparent; color: #fff; font-size: 13px; outline: none; border: none; }
+.ask-main-send { background: #FFD166; color: #0a0a14; padding: 7px 14px; border-radius: 8px; font-weight: 700; font-size: 11px; }
+.ask-sections { padding: 18px 22px; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.ask-sec-title { font-size: 13px; font-weight: 700; font-family: Georgia, serif; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+.q-item { background: #fff; border: 1px solid #e5e5e3; border-radius: 9px; padding: 10px 13px; margin-bottom: 7px; cursor: pointer; display: flex; align-items: center; gap: 10px; }
+.q-item:hover { border-color: #534AB7; }
+.q-ic { font-size: 16px; }
+.q-t { font-size: 11.5px; flex: 1; }
+.q-time { font-size: 9px; color: #999; }
+.q-fav { color: #FFD166; }
+
+.ask-result { background: #fff; margin: 0 22px 18px; border: 1px solid #e5e5e3; border-radius: 10px; overflow: hidden; }
+.ask-q-shown { padding: 11px 15px; background: #f7f7f5; border-bottom: 1px solid #e5e5e3; display: flex; align-items: center; gap: 9px; }
+.ask-q-label { font-size: 9px; background: #534AB7; color: #fff; padding: 2px 7px; border-radius: 4px; font-weight: 700; letter-spacing: .3px; }
+.ask-q-text { font-size: 12px; flex: 1; font-weight: 600; }
+.ask-res-body { padding: 14px 16px; }
+.ask-res-label { font-size: 9px; color: #999; font-weight: 700; letter-spacing: .4px; margin-bottom: 6px; }
+.ask-tbl { width: 100%; font-size: 11px; margin-top: 8px; }
+.ask-tbl th { text-align: left; padding: 7px 8px; background: #f7f7f5; font-weight: 700; font-size: 9px; text-transform: uppercase; color: #999; letter-spacing: .3px; }
+.ask-tbl td { padding: 8px 8px; border-bottom: 1px solid #e5e5e3; }
+.ask-res-actions { padding: 10px 16px 14px; display: flex; gap: 7px; }
+
+/* Command center */
+.cc-section { padding: 16px 22px 4px; }
+.cc-st { font-size: 13px; font-weight: 700; font-family: Georgia, serif; margin-bottom: 8px; }
+.cc-grid { padding: 0 22px; display: grid; gap: 10px; }
+.action-card { background: #fff; border: 1px solid #e5e5e3; border-radius: 10px; padding: 14px 16px; border-left: 4px solid #534AB7; }
+.action-card.urg { border-left-color: #A32D2D; }
+.action-card.warn { border-left-color: #854F0B; }
+.action-card.ok { border-left-color: #1B4332; }
+.ac-head { display: flex; gap: 11px; margin-bottom: 6px; }
+.ac-icon { font-size: 22px; }
+.ac-title { font-size: 12.5px; font-weight: 700; flex: 1; }
+.ac-badge { font-size: 9px; padding: 2px 6px; border-radius: 4px; font-weight: 700; background: #EEEDFE; color: #534AB7; }
+.ac-desc { font-size: 10.5px; color: #555; line-height: 1.5; margin-left: 33px; }
+.ac-actions { display: flex; gap: 6px; margin-top: 10px; margin-left: 33px; }
+.ac-btn { font-size: 10.5px; padding: 5px 10px; border-radius: 5px; font-weight: 700; cursor: pointer; }
+.ac-btn-p { background: #534AB7; color: #fff; }
+.ac-btn-g { background: #f5f5f3; color: #555; border: 1px solid #e5e5e3; }
+
+/* Page Assistant panel */
+.pa-panel { background: linear-gradient(135deg,#26215C,#534AB7); border-radius: 12px; padding: 14px 16px; color: #fff; margin: 14px 22px; }
+.pa-label { font-size: 9px; color: #FFD166; font-weight: 700; letter-spacing: .5px; margin-bottom: 4px; }
+.pa-title { font-size: 13px; font-weight: 700; margin-bottom: 9px; }
+.pa-grid { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 10px; }
+.pa-stat { background: rgba(255,255,255,.08); border-radius: 7px; padding: 8px 10px; }
+.pa-stat-l { font-size: 9px; color: rgba(255,255,255,.6); font-weight: 700; letter-spacing: .3px; }
+.pa-stat-v { font-size: 16px; font-weight: 700; margin-top: 2px; }
+.pa-stat-s { font-size: 9px; color: rgba(255,255,255,.65); margin-top: 1px; }
+
+/* Smart Inbox */
+.inbox-ctr { display: flex; height: 100%; }
+.inbox-list { flex: 1.4; border-right: 1px solid #e5e5e3; overflow-y: auto; }
+.inbox-detail { flex: 1; background: #f7f7f5; overflow-y: auto; padding: 18px 20px; }
+.inbox-filter { padding: 10px 16px; display: flex; gap: 6px; border-bottom: 1px solid #e5e5e3; background: #fff; flex-wrap: wrap; }
+.inb-chip { font-size: 10px; padding: 4px 10px; border-radius: 12px; background: #f5f5f3; color: #555; cursor: pointer; border: 1px solid #e5e5e3; }
+.inb-chip.on { background: #534AB7; color: #fff; border-color: #534AB7; font-weight: 700; }
+.inb-item { padding: 11px 16px; border-bottom: 1px solid #e5e5e3; cursor: pointer; display: flex; gap: 10px; }
+.inb-item:hover { background: #fafaf8; }
+.inb-item.on { background: #EEEDFE; }
+.inb-ic { font-size: 18px; flex-shrink: 0; }
+.inb-body { flex: 1; min-width: 0; }
+.inb-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px; }
+.inb-from { font-size: 11.5px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.inb-time { font-size: 9px; color: #999; flex-shrink: 0; margin-left: 6px; }
+.inb-sub { font-size: 10.5px; color: #555; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 4px; }
+.inb-tags { display: flex; gap: 4px; }
+.inb-tag { font-size: 9px; padding: 1px 6px; border-radius: 3px; font-weight: 700; letter-spacing: .2px; }
+.detail-header { background: #fff; border: 1px solid #e5e5e3; border-radius: 10px; padding: 14px 16px; margin-bottom: 12px; }
+.detail-from { font-size: 13px; font-weight: 700; }
+.detail-meta { font-size: 10px; color: #999; margin-top: 3px; }
+.detail-subj { font-size: 14px; font-weight: 700; margin-top: 10px; font-family: Georgia, serif; }
+.detail-body { font-size: 11.5px; color: #555; line-height: 1.6; margin-top: 8px; }
+.ai-suggestion { background: linear-gradient(135deg,#26215C,#534AB7); color: #fff; border-radius: 10px; padding: 14px 16px; margin-bottom: 12px; }
+.ai-sug-lbl { font-size: 9px; color: #FFD166; font-weight: 700; letter-spacing: .5px; margin-bottom: 5px; }
+.ai-sug-t { font-size: 12px; font-weight: 700; margin-bottom: 6px; }
+.ai-sug-txt { font-size: 11px; line-height: 1.5; color: rgba(255,255,255,.85); }
+.ai-sug-response { background: rgba(0,0,0,.2); border-radius: 8px; padding: 10px 12px; margin-top: 10px; font-size: 11px; line-height: 1.6; }
+.ai-sug-actions { display: flex; gap: 7px; margin-top: 10px; }
+.ai-sug-btn { padding: 6px 11px; border-radius: 6px; font-size: 10.5px; font-weight: 700; cursor: pointer; }
+.ai-sug-btn-y { background: #FFD166; color: #0a0a14; }
+.ai-sug-btn-n { background: rgba(255,255,255,.15); color: #fff; }
+
+.footer-info { font-size: 10px; color: #999; text-align: center; max-width: 720px; line-height: 1.5; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState } = React;
+
+function Sidebar({ active, setActive }) {
+  const groups = [
+    { t: "Operação diária", items: [["⚡","Command Center"],["📥","Smart Inbox","14"],["✨","V2 Ask"]] },
+    { t: "Carteira", items: [["🏢","Edifícios"],["🚪","Frações"],["👥","Condóminos"],["📍","Mapa"]] },
+    { t: "Processos", items: [["📅","Assembleias"],["🎙️","Atas IA"],["📋","Orçamentos"],["⚠️","Obrigatórias","7"]] },
+    { t: "Financeiro", items: [["💰","Quotas"],["🧾","Faturação"],["📊","Fundo reserva"]] }
+  ];
+  let idx = -1;
+  return (
+    <div className="sidebar">
+      <div className="logo">
+        <div className="logo-box">V2</div>
+        <div>
+          <div className="logo-title">V2 Condomínios</div>
+          <div className="logo-sub">AI-first · powered by Agora</div>
+        </div>
+      </div>
+      <div className="ask-input-side" onClick={() => setActive(2)}>
+        <span className="ask-ic">✨</span>
+        <span className="ask-placeholder">Pergunta ao V2 Ask...</span>
+        <span className="ask-shortcut">⌘K</span>
+      </div>
+      <div className="nav">
+        {groups.map(g => (
+          <div key={g.t}>
+            <div className="nav-gt">{g.t.toUpperCase()}</div>
+            {g.items.map((it) => {
+              idx++;
+              const myIdx = idx;
+              const [ic, l, badge] = it;
+              return (
+                <div key={l} onClick={() => setActive(myIdx)} className={"nav-item" + (myIdx === active ? " on" : "")}>
+                  <span className="nav-ic">{ic}</span>
+                  <span>{l}</span>
+                  {badge && <span className="nav-badge">{badge}</span>}
+                </div>
+              );
+            })}
+          </div>
+        ))}
+      </div>
+      <div className="user-card">
+        <div className="user-avatar">AC</div>
+        <div style={{minWidth:0}}>
+          <div className="user-name">AdminCondo Lda</div>
+          <div className="user-sub">42 edifícios · 1.240 frações</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════ COMMAND CENTER ═══════ */
+function CommandCenter() {
+  return (
+    <React.Fragment>
+      <div className="topbar">
+        <div>
+          <div className="topbar-label">COMMAND CENTER · 24 ABRIL 2026</div>
+          <div className="topbar-title">Bom dia · tens 7 decisões hoje</div>
+        </div>
+        <div style={{display:"flex",gap:8}}>
+          <button className="btn btn-ghost">Vista semana</button>
+          <button className="btn btn-purple">+ Nova tarefa IA</button>
+        </div>
+      </div>
+
+      {/* Page Assistant - briefing IA */}
+      <div className="pa-panel">
+        <div className="pa-label">✨ PAGE ASSISTANT · BRIEFING DE HOJE</div>
+        <div className="pa-title">A IA analisou a tua carteira às 6h. 7 itens precisam da tua atenção. 3 urgentes, 4 planeáveis.</div>
+        <div className="pa-grid">
+          <div className="pa-stat">
+            <div className="pa-stat-l">URGENTES</div>
+            <div className="pa-stat-v" style={{color:"#F9BABA"}}>3</div>
+            <div className="pa-stat-s">acção nas próximas 48h</div>
+          </div>
+          <div className="pa-stat">
+            <div className="pa-stat-l">INBOX IA</div>
+            <div className="pa-stat-v">14</div>
+            <div className="pa-stat-s">11 já rascunhadas</div>
+          </div>
+          <div className="pa-stat">
+            <div className="pa-stat-l">A EXECUTAR</div>
+            <div className="pa-stat-v" style={{color:"#FFD166"}}>4</div>
+            <div className="pa-stat-s">workflows IA</div>
+          </div>
+          <div className="pa-stat">
+            <div className="pa-stat-l">POUPADO HOJE</div>
+            <div className="pa-stat-v" style={{color:"#78E08F"}}>2h40</div>
+            <div className="pa-stat-s">com automações</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Urgent action cards */}
+      <div className="cc-section">
+        <div className="cc-st">🚨 3 urgentes · aguardam a tua decisão</div>
+      </div>
+      <div className="cc-grid" style={{gridTemplateColumns:"1fr",paddingBottom:4}}>
+        {[
+          {ic:"⚠️",t:"Ed. Palmeira · inspeção ISQ elevador em atraso",d:"9 dias de atraso. Coima potencial 2.500€. A IA já identificou 3 empresas ISQ disponíveis na tua zona e pré-redigiu email de agendamento.",b:["Enviar pedido (3 empresas)","Ver comparativo","Ignorar"],cls:"urg"},
+          {ic:"💰",t:"Quinta dos Arcos · fundo 1.100€ vs obra 4.800€",d:"Obra de cobertura a 12 Mai. Défice 3.700€. IA simulou 3 cenários: quota extraordinária 310€/fração · fraccionamento 12 meses · crédito bancário. PDF pronto para assembleia.",b:["Ver 3 cenários","Convocar assembleia","Falar com banco"],cls:"urg"},
+          {ic:"📅",t:"Prata Riverside 2A · prazo legal em 21 dias",d:"Assembleia anual deve ser convocada até 15 Mai (30d antes). IA gerou convocatória, agenda, documentos anexos (contas, orçamentos). Revê e envia.",b:["Rever convocatória","Enviar agora","Adiar decisão"],cls:"urg"}
+        ].map((c,i) => (
+          <div key={i} className={"action-card " + c.cls}>
+            <div className="ac-head">
+              <div className="ac-icon">{c.ic}</div>
+              <div className="ac-title">{c.t}</div>
+              <span className="ac-badge" style={{background:"#FCEBEB",color:"#A32D2D"}}>URGENTE</span>
+            </div>
+            <div className="ac-desc">{c.d}</div>
+            <div className="ac-actions">
+              {c.b.map((l,j) => (
+                <button key={j} className={"ac-btn " + (j===0?"ac-btn-p":"ac-btn-g")}>{l}</button>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="cc-section" style={{paddingTop:18}}>
+        <div className="cc-st">💡 4 sugestões da IA · poupança e qualidade</div>
+      </div>
+      <div className="cc-grid" style={{gridTemplateColumns:"1fr 1fr",paddingBottom:22}}>
+        {[
+          {ic:"📉",t:"Ed. Palmeira gasta 42% mais em elevador",d:"Vs média carteira. 825€/mês vs 580€. A IA preparou RFQ para 3 alternativas.",b:"Pedir 3 orçamentos",cls:"warn"},
+          {ic:"🛡️",t:"6 edifícios podem baixar seguro 15%",d:"Todos com score > 75. Fidelidade oferece desconto. Poupança anual total: 3.240€.",b:"Iniciar negociação",cls:"ok"},
+          {ic:"📆",t:"Agrupar 5 assembleias de Junho",d:"Duas semanas em Cascais. Poupa 3 deslocações e 6h de agenda.",b:"Ver proposta",cls:"ok"},
+          {ic:"🔄",t:"ServiTech em queda · 3 edifícios",d:"Avaliações < 3★ em 3 edifícios. Recomenda-se avaliar substituição.",b:"Abrir análise",cls:"warn"}
+        ].map((c,i) => (
+          <div key={i} className={"action-card " + c.cls}>
+            <div className="ac-head">
+              <div className="ac-icon">{c.ic}</div>
+              <div className="ac-title">{c.t}</div>
+            </div>
+            <div className="ac-desc">{c.d}</div>
+            <div className="ac-actions">
+              <button className="ac-btn ac-btn-p">{c.b}</button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </React.Fragment>
+  );
+}
+
+/* ═══════ SMART INBOX ═══════ */
+function SmartInbox() {
+  const [selected, setSelected] = useState(0);
+  const items = [
+    {ic:"📧",from:"António Silva · Cond. Palmeira",sub:"Re: quota de Maio · atraso",tags:[["Condómino","b-blu"],["IA responde","b-ppl"]],time:"há 8min",prio:"med"},
+    {ic:"📄",from:"Fatura · ServiTech",sub:"Limpeza geral Abril · 420€",tags:[["Fatura","b-grn"],["Auto-classif","b-ppl"]],time:"há 14min",prio:"low"},
+    {ic:"🚨",from:"Email urgente · Maria Costa",sub:"Infiltração no 3º andar",tags:[["Urgência","b-red"],["IA escalou","b-ppl"]],time:"há 22min",prio:"high"},
+    {ic:"📋",from:"Orçamento · PintarJá",sub:"Pintura fachada Ed. Palmeira",tags:[["Orçamento","b-amb"],["IA analisou","b-ppl"]],time:"há 45min",prio:"med"},
+    {ic:"⚠️",from:"Alerta legal · IA",sub:"Prazo convocatória em 21d",tags:[["Compliance","b-red"]],time:"hoje 06h",prio:"high"},
+    {ic:"💬",from:"Chat porteiro · Ed. Palmeira",sub:"2 entregas à espera",tags:[["Porteiro","b-blu"]],time:"hoje 06h",prio:"low"},
+    {ic:"📧",from:"Carlos Mendes · Oceano",sub:"Proposta nova cor fachada",tags:[["Condómino","b-blu"]],time:"ontem",prio:"low"},
+    {ic:"🧾",from:"Fatura · AguasPT",sub:"Consumo água Abril · 180€",tags:[["Fatura","b-grn"],["Auto-classif","b-ppl"]],time:"ontem",prio:"low"}
+  ];
+  const cur = items[selected];
+
+  return (
+    <React.Fragment>
+      <div className="topbar">
+        <div>
+          <div className="topbar-label">SMART INBOX · 14 NOVAS · 11 PRÉ-RESPONDIDAS</div>
+          <div className="topbar-title">Caixa inteligente</div>
+        </div>
+        <button className="btn btn-purple">Processar todas (11 auto)</button>
+      </div>
+      <div className="inbox-ctr">
+        <div className="inbox-list">
+          <div className="inbox-filter">
+            {[["Todas",14,true],["Urgentes",3],["Condóminos",6],["Faturas",3],["Orçamentos",2]].map(([l,n,on]) => (
+              <div key={l} className={"inb-chip" + (on?" on":"")}>{l} · {n}</div>
+            ))}
+          </div>
+          {items.map((it,i) => (
+            <div key={i} className={"inb-item" + (i===selected?" on":"")} onClick={() => setSelected(i)}>
+              <div className="inb-ic">{it.ic}</div>
+              <div className="inb-body">
+                <div className="inb-top">
+                  <div className="inb-from">{it.from}</div>
+                  <div className="inb-time">{it.time}</div>
+                </div>
+                <div className="inb-sub">{it.sub}</div>
+                <div className="inb-tags">
+                  {it.tags.map(([t,c],j) => (
+                    <span key={j} className={"inb-tag " + c}>{t}</span>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="inbox-detail">
+          <div className="detail-header">
+            <div className="detail-from">{cur.from}</div>
+            <div className="detail-meta">Recebido {cur.time} · {cur.ic === "📧" ? "email" : cur.ic === "🚨" ? "sistema" : "plataforma"}</div>
+            <div className="detail-subj">{cur.sub}</div>
+            <div className="detail-body">
+              {selected === 0 && "Boa tarde. Não consigo pagar a quota de Maio este mês por dificuldades pessoais. Posso pagar até ao dia 20? Obrigado."}
+              {selected === 1 && "Fatura de limpeza geral · Condomínio Palmeira · Abril 2026. Valor: 420€ IVA incluído. Vencimento: 30 Abril 2026. NIF: 501234567. IA detectou que está dentro do histórico do prestador (-5% vs média 12m)."}
+              {selected === 2 && "Olá, tenho uma infiltração no meu teto que começou esta manhã. Vem do apartamento de cima. Já está a escorrer água pela parede. Precisam de intervir urgentemente."}
+              {selected === 3 && "Apresentamos proposta para pintura integral da fachada Ed. Palmeira. Inclui preparação, tinta exterior 80L e mão de obra. Total: 9.400€ IVA incluído. Andaimes incluídos."}
+              {selected > 3 && "Conteúdo resumido pela IA. Clica para ver o original."}
+            </div>
+          </div>
+
+          <div className="ai-suggestion">
+            <div className="ai-sug-lbl">✨ SUGESTÃO IA · RESPOSTA RASCUNHADA</div>
+            <div className="ai-sug-t">
+              {selected === 0 && "Aceitar plano de pagamento + registar"}
+              {selected === 1 && "Validar e aprovar para pagamento"}
+              {selected === 2 && "Escalar para técnico 24h + notificar piso superior"}
+              {selected === 3 && "Proposta competitiva · recomendo adjudicar"}
+              {selected > 3 && "Ação sugerida"}
+            </div>
+            <div className="ai-sug-txt">
+              {selected === 0 && "Baseado em histórico: condómino sempre paga antes do atraso (3 anos). Sugere-se aceitar com registo no histórico. Esta decisão está dentro da tua alçada."}
+              {selected === 1 && "Fatura está coerente com histórico (-5% vs média 12m). Já validada contra orçamento anual (rúbrica limpeza geral). Faltam 120€ para exceder orçamento mensal."}
+              {selected === 2 && "Urgência detectada por palavras-chave + sistema identificou situação semelhante no Ed. Palmeira em Jan 2025. Técnico João Silva (histórico do condomínio) tem disponibilidade em 90min."}
+              {selected === 3 && "Análise comparativa: PintarJá melhor preço efectivo vs ServiTech (8.200€ que não inclui andaimes = 9.400€ real) e ObraLda (8.150€ sem remoção resíduos)."}
+              {selected > 3 && "Revê e aprova quando quiseres."}
+            </div>
+            <div className="ai-sug-response">
+              {selected === 0 && <><b>Rascunho da resposta:</b><br/>"Caro Sr. Silva, compreendemos a situação. Aceitamos o pagamento da quota de Maio até dia 20. Sem acréscimo de juros desta vez. Cumprimentos, AdminCondo Lda."</>}
+              {selected === 1 && <><b>Workflow automático pronto:</b><br/>• Atribuir à rúbrica "Limpeza geral · Ed. Palmeira"<br/>• Validar NIF e retenção<br/>• Agendar pagamento para 29 Abril<br/>• Enviar para contabilidade</>}
+              {selected === 2 && <><b>Plano de ação:</b><br/>• Contactar João Silva (1 clique)<br/>• Notificar apartamento 4º andar (email pronto)<br/>• Criar ticket + fotos solicitadas à condómina<br/>• Responder à Maria com ETA</>}
+              {selected === 3 && <><b>Recomendação:</b> adjudicar à PintarJá. Gerar contrato automaticamente com base no template assembleia 2023? Convocar reunião extraordinária para aprovação (prazo legal)?</>}
+              {selected > 3 && "Sugestão em processamento..."}
+            </div>
+            <div className="ai-sug-actions">
+              <button className="ai-sug-btn ai-sug-btn-y">✓ Aprovar e executar</button>
+              <button className="ai-sug-btn ai-sug-btn-n">Editar antes</button>
+              <button className="ai-sug-btn ai-sug-btn-n">Rejeitar</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </React.Fragment>
+  );
+}
+
+/* ═══════ V2 ASK (natural language) ═══════ */
+function V2Ask() {
+  const [query, setQuery] = useState("Mostra-me os condóminos em atraso há mais de 30 dias, ordenados por valor em dívida");
+  const [showResult, setShowResult] = useState(true);
+
+  return (
+    <React.Fragment>
+      <div className="ask-hero">
+        <div className="ask-hero-t">✨ V2 ASK · PERGUNTA EM LINGUAGEM NATURAL</div>
+        <div className="ask-hero-h">O que queres saber?</div>
+        <div className="ask-hero-s">Pergunta sobre qualquer edifício, condómino, fatura, obra, histórico. Em português.</div>
+        <div className="ask-main-box">
+          <span className="ask-main-ic">✨</span>
+          <input className="ask-main-input" value={query} onChange={e => setQuery(e.target.value)} placeholder="Ex: mostra-me o fundo de reserva dos edifícios com obras nos próximos 6 meses..."/>
+          <button className="ask-main-send" onClick={() => setShowResult(true)}>Perguntar →</button>
+        </div>
+      </div>
+
+      {showResult && (
+        <div className="ask-result">
+          <div className="ask-q-shown">
+            <span className="ask-q-label">RESPOSTA</span>
+            <span className="ask-q-text">{query}</span>
+            <span style={{fontSize:9,color:"#999"}}>3 fontes · BD V2 + V5 + Core</span>
+          </div>
+          <div className="ask-res-body">
+            <div className="ask-res-label">6 CONDÓMINOS ENCONTRADOS · TOTAL EM DÍVIDA: 4.870€</div>
+            <table className="ask-tbl">
+              <thead>
+                <tr><th>Condómino</th><th>Edifício · Fração</th><th>Dias atraso</th><th>Valor</th><th>Histórico</th></tr>
+              </thead>
+              <tbody>
+                <tr><td><b>Manuel Oliveira</b></td><td>Palmeira · 3B</td><td>87 dias</td><td style={{color:"#A32D2D",fontWeight:700}}>1.240€</td><td style={{fontSize:10,color:"#999"}}>reincidente</td></tr>
+                <tr><td><b>Sofia Martins</b></td><td>Quinta Arcos · 1A</td><td>64 dias</td><td style={{color:"#A32D2D",fontWeight:700}}>985€</td><td style={{fontSize:10,color:"#999"}}>1º atraso</td></tr>
+                <tr><td><b>Pedro Ferreira</b></td><td>Oceano · 5C</td><td>52 dias</td><td style={{fontWeight:700}}>820€</td><td style={{fontSize:10,color:"#999"}}>2 atrasos 12m</td></tr>
+                <tr><td><b>Ana Rodrigues</b></td><td>Central · 2A</td><td>45 dias</td><td style={{fontWeight:700}}>710€</td><td style={{fontSize:10,color:"#999"}}>novo condómino</td></tr>
+                <tr><td><b>Ricardo Lopes</b></td><td>Palmeira · 6D</td><td>38 dias</td><td style={{fontWeight:700}}>620€</td><td style={{fontSize:10,color:"#999"}}>1º atraso</td></tr>
+                <tr><td><b>Carla Santos</b></td><td>Riverside · 8B</td><td>33 dias</td><td style={{fontWeight:700}}>495€</td><td style={{fontSize:10,color:"#999"}}>1º atraso</td></tr>
+              </tbody>
+            </table>
+            <div style={{background:"#EEEDFE",borderRadius:7,padding:"10px 12px",marginTop:12,fontSize:10.5,color:"#26215C",lineHeight:1.5}}>
+              <b>💡 Insight IA:</b> 4 dos 6 condóminos são 1º atraso · A IA recomenda <b>email amigável com plano de pagamento</b> para estes (taxa de sucesso histórica 87%). Para os 2 reincidentes (Oliveira e Ferreira), sugere-se carta registada e notificação legal.
+            </div>
+          </div>
+          <div className="ask-res-actions">
+            <button className="ac-btn ac-btn-p">📧 Enviar emails automáticos (4)</button>
+            <button className="ac-btn ac-btn-g">📄 Gerar relatório PDF</button>
+            <button className="ac-btn ac-btn-g">⭐ Guardar como favorita</button>
+            <button className="ac-btn ac-btn-g">💬 Refinar pergunta</button>
+          </div>
+        </div>
+      )}
+
+      <div className="ask-sections">
+        <div>
+          <div className="ask-sec-title">
+            <span>⭐ Perguntas favoritas</span>
+            <span style={{fontSize:10,color:"#534AB7",cursor:"pointer"}}>Gerir →</span>
+          </div>
+          {[
+            {ic:"💰",t:"Taxa de cobrança de quotas deste mês"},
+            {ic:"📊",t:"Qual edifício gasta mais em manutenção?"},
+            {ic:"⚠️",t:"Obrigatórias legais a expirar nos próximos 60 dias"},
+            {ic:"🏢",t:"Edifícios sem assembleia há mais de 12 meses"}
+          ].map((q,i) => (
+            <div key={i} className="q-item" onClick={() => setQuery(q.t)}>
+              <span className="q-ic">{q.ic}</span>
+              <span className="q-t">{q.t}</span>
+              <span className="q-fav">★</span>
+            </div>
+          ))}
+        </div>
+        <div>
+          <div className="ask-sec-title">
+            <span>🕒 Perguntas recentes</span>
+            <span style={{fontSize:10,color:"#534AB7",cursor:"pointer"}}>Limpar →</span>
+          </div>
+          {[
+            {t:"Fundo de reserva agregado dos 42 edifícios",time:"hoje"},
+            {t:"Quanto gastou Palmeira em elevador em 2025?",time:"hoje"},
+            {t:"Lista de prestadores usados no último trimestre",time:"ontem"},
+            {t:"Condóminos de Oceano ordenados por morada",time:"23 Abr"}
+          ].map((q,i) => (
+            <div key={i} className="q-item" onClick={() => setQuery(q.t)}>
+              <span className="q-ic">🕒</span>
+              <span className="q-t">{q.t}</span>
+              <span className="q-time">{q.time}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </React.Fragment>
+  );
+}
+
+function Placeholder({ t }) {
+  return (
+    <div style={{padding:"60px 22px",textAlign:"center"}}>
+      <div style={{fontSize:42,marginBottom:10}}>✨</div>
+      <div style={{fontSize:16,fontWeight:700,fontFamily:"Georgia, serif"}}>{t}</div>
+      <div style={{fontSize:11,color:"#999",marginTop:8,maxWidth:500,margin:"8px auto 0",lineHeight:1.6}}>Vista não implementada neste protótipo. Os 3 ecrãs principais (Command Center, Smart Inbox, V2 Ask) demonstram a filosofia AI-first que proponho para integrar com o V2 que já tens.</div>
+    </div>
+  );
+}
+
+function App() {
+  const [active, setActive] = useState(0);
+  const render = () => {
+    if (active === 0) return <CommandCenter/>;
+    if (active === 1) return <SmartInbox/>;
+    if (active === 2) return <V2Ask/>;
+    return <Placeholder t="Em construção"/>;
+  };
+  return (
+    <React.Fragment>
+      <div className="pills">
+        <div className={"pill " + (active===0?"on":"")} onClick={() => setActive(0)}>⚡ Command Center</div>
+        <div className={"pill " + (active===1?"on":"")} onClick={() => setActive(1)}>📥 Smart Inbox</div>
+        <div className={"pill " + (active===2?"on":"")} onClick={() => setActive(2)}>✨ V2 Ask</div>
+      </div>
+      <div className="app">
+        <Sidebar active={active} setActive={setActive}/>
+        <div className="main">
+          {render()}
+        </div>
+      </div>
+      <div className="footer-info">
+        3 ecrãs-chave da filosofia AI-first: <b>Command Center</b> (briefing + action cards) · <b>Smart Inbox</b> (caixa unificada com IA a sugerir resposta) · <b>V2 Ask</b> (perguntas em linguagem natural, inspirado em MRI Ask Agora)
+      </div>
+    </React.Fragment>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
