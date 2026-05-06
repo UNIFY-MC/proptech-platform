@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import SkillModal from '../components/SkillModal.jsx'
+import RecipeModal from '../components/RecipeModal.jsx'
+import EmployeeHeader from '../components/EmployeeHeader.jsx'
 
 const TRIGGER_COLORS = {
   event:    { bg: 'rgba(59,130,246,0.12)',  color: 'var(--info)',     label: 'EVENT'  },
@@ -22,11 +24,11 @@ function TriggerBadge({ trigger }) {
 function SectionCard({ title, action, children }) {
   return (
     <div style={{
-      background: 'var(--bg-card)', border: '1px solid var(--border)',
+      background: 'var(--bg-card-soft)', border: '1px solid var(--border-soft)',
       borderRadius: 10, overflow: 'hidden', marginBottom: 12,
     }}>
       <div style={{
-        padding: '8px 16px', borderBottom: '1px solid var(--border)',
+        padding: '8px 16px', borderBottom: '1px solid var(--border-soft)',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
         <span style={{
@@ -72,11 +74,11 @@ function MarkdownProse({ text }) {
       i++; continue
     }
     if (line.startsWith('## ')) {
-      elements.push(<h2 key={i} style={{ fontSize: '0.68rem', fontWeight: 700, fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-dim)', margin: '14px 0 6px', paddingTop: 10, borderTop: '1px solid var(--border)' }}>{line.slice(3)}</h2>)
+      elements.push(<h2 key={i} style={{ fontSize: '0.68rem', fontWeight: 700, fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-dim)', margin: '14px 0 6px', paddingTop: 10, borderTop: '1px solid var(--border-soft)' }}>{line.slice(3)}</h2>)
     } else if (line.startsWith('### ')) {
       elements.push(<h3 key={i} style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text)', margin: '8px 0 4px' }}>{line.slice(4)}</h3>)
     } else if (line.startsWith('---')) {
-      elements.push(<hr key={i} style={{ border: 'none', borderTop: '1px solid var(--border)', margin: '10px 0' }} />)
+      elements.push(<hr key={i} style={{ border: 'none', borderTop: '1px solid var(--border-soft)', margin: '10px 0' }} />)
     } else if (line.startsWith('- ')) {
       elements.push(
         <div key={i} style={{ display: 'flex', gap: 8, fontSize: '0.75rem', color: 'var(--text-dim)', lineHeight: 1.5, margin: '2px 0' }}>
@@ -94,11 +96,11 @@ function MarkdownProse({ text }) {
     } else if (line.startsWith('```')) {
       const codeLines = []; i++
       while (i < lines.length && !lines[i].startsWith('```')) { codeLines.push(lines[i]); i++ }
-      elements.push(<pre key={`code-${i}`} style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 6, padding: '8px 12px', fontSize: '0.68rem', fontFamily: 'monospace', color: 'var(--text)', margin: '6px 0', overflowX: 'auto', whiteSpace: 'pre-wrap' }}>{codeLines.join('\n')}</pre>)
+      elements.push(<pre key={`code-${i}`} style={{ background: 'var(--bg-card-elevated)', border: '1px solid var(--border-soft)', borderRadius: 6, padding: '8px 12px', fontSize: '0.68rem', fontFamily: 'monospace', color: 'var(--text)', margin: '6px 0', overflowX: 'auto', whiteSpace: 'pre-wrap' }}>{codeLines.join('\n')}</pre>)
     } else if (line.trim() !== '') {
       elements.push(
         <p key={i} style={{ fontSize: '0.75rem', color: 'var(--text-dim)', lineHeight: 1.6, margin: '4px 0' }}
-          dangerouslySetInnerHTML={{ __html: line.replace(/\*\*(.*?)\*\*/g, '<strong style="color:var(--text)">$1</strong>').replace(/`(.*?)`/g, '<code style="font-family:monospace;font-size:0.7rem;background:var(--bg-elevated);padding:1px 4px;border-radius:3px;color:var(--info)">$1</code>') }}
+          dangerouslySetInnerHTML={{ __html: line.replace(/\*\*(.*?)\*\*/g, '<strong style="color:var(--text)">$1</strong>').replace(/`(.*?)`/g, '<code style="font-family:monospace;font-size:0.7rem;background:var(--bg-card-elevated);padding:1px 4px;border-radius:3px;color:var(--info)">$1</code>') }}
         />
       )
     }
@@ -115,6 +117,7 @@ export default function EmployeePage({ data }) {
   const [editMode, setEditMode] = useState(false)
   const [draft, setDraft] = useState('')
   const [selectedSkill, setSelectedSkill] = useState(null)
+  const [selectedRecipe, setSelectedRecipe] = useState(null)
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 1024)
 
   useEffect(() => {
@@ -134,7 +137,6 @@ export default function EmployeePage({ data }) {
     )
   }
 
-  const modelShort = emp.model?.replace('claude-', '').replace('-20251001', '') || '—'
   const enabledCount = emp.integrations?.filter(i => i.enabled && !i.planned).length ?? 0
   const totalInteg = emp.integrations?.length ?? 0
   const mdText = emp._mdRaw || ''
@@ -145,51 +147,20 @@ export default function EmployeePage({ data }) {
     setSelectedSkill(full)
   }
 
-  const btnSmall = { background: 'none', border: '1px solid var(--border)', borderRadius: 5, padding: '2px 8px', cursor: 'pointer', fontSize: '0.62rem', color: 'var(--text-dim)' }
+  const openRecipe = (recipe) => {
+    setSelectedRecipe({ ...recipe, ownerId: emp.id, ownerName: emp.name })
+  }
+
+  const btnSmall = { background: 'none', border: '1px solid var(--border-soft)', borderRadius: 5, padding: '2px 8px', cursor: 'pointer', fontSize: '0.62rem', color: 'var(--text-dim)' }
 
   return (
     <div style={{ maxWidth: 1400 }}>
       {selectedSkill && <SkillModal skill={selectedSkill} onClose={() => setSelectedSkill(null)} />}
+      {selectedRecipe && <RecipeModal recipe={selectedRecipe} onClose={() => setSelectedRecipe(null)} />}
 
       <Link to="/employees" style={{ fontSize: '0.72rem', color: 'var(--text-dim)', textDecoration: 'none', display: 'inline-block', marginBottom: 14 }}>← Equipa</Link>
 
-      {/* HEADER — full width */}
-      <div style={{
-        background: 'var(--bg-card)', border: '1px solid var(--border)',
-        borderRadius: 10, padding: '20px 24px', marginBottom: 20,
-        display: 'flex', alignItems: 'center', gap: 16,
-      }}>
-        <div style={{
-          width: 64, height: 64, borderRadius: '50%', flexShrink: 0,
-          background: 'linear-gradient(135deg, #534AB7, #8b5cf6)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: '1.4rem', fontWeight: 700, color: '#fff',
-        }}>
-          {emp.avatarInitial || emp.name?.[0]?.toUpperCase() || '?'}
-        </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 5 }}>
-            <span style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--text)' }}>{emp.name}</span>
-            <span style={{ color: 'var(--text-dim)' }}>·</span>
-            <span style={{ fontSize: '0.8rem', color: 'var(--text-dim)' }}>{emp.role}</span>
-          </div>
-          <div style={{ fontSize: '0.62rem', color: 'var(--text-dim)', fontFamily: 'monospace', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <span>{modelShort}</span>
-            <span style={{ opacity: 0.4 }}>·</span>
-            <span>replies pt-pt</span>
-            <span style={{ opacity: 0.4 }}>·</span>
-            <span>v{emp.version || '1.0'}</span>
-          </div>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-          <span style={{
-            padding: '3px 10px', borderRadius: 20, fontSize: '0.65rem', fontWeight: 600, fontFamily: 'monospace',
-            background: emp.status === 'active' ? 'rgba(16,185,129,0.15)' : 'var(--bg-elevated)',
-            color: emp.status === 'active' ? 'var(--success)' : 'var(--text-dim)',
-          }}>{emp.status || 'draft'}</span>
-          <button style={btnSmall}>⋯</button>
-        </div>
-      </div>
+      <EmployeeHeader emp={emp} />
 
       {/* 2-COLUMN GRID */}
       <div style={{
@@ -209,7 +180,7 @@ export default function EmployeePage({ data }) {
               { label: 'Approval rate',     value: '—', sub: 'últimos 30d' },
               { label: 'Cost 30D',          value: emp.cost ? `$${emp.cost.current}` : '—', sub: 'USD' },
             ].map(s => (
-              <div key={s.label} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 12px' }}>
+              <div key={s.label} style={{ background: 'var(--bg-card-soft)', border: '1px solid var(--border-soft)', borderRadius: 8, padding: '10px 12px' }}>
                 <div style={{ fontSize: '0.52rem', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 4 }}>{s.label}</div>
                 <div style={{ fontSize: '1.1rem', fontWeight: 700, fontFamily: 'monospace', color: 'var(--text)' }}>{s.value}</div>
                 <div style={{ fontSize: '0.6rem', color: 'var(--text-dim)', marginTop: 2 }}>{s.sub}</div>
@@ -233,7 +204,7 @@ export default function EmployeePage({ data }) {
               <textarea
                 value={draft}
                 onChange={e => setDraft(e.target.value)}
-                style={{ width: '100%', boxSizing: 'border-box', minHeight: 400, padding: 14, background: 'var(--bg-elevated)', border: 'none', resize: 'vertical', fontSize: '0.75rem', fontFamily: 'monospace', color: 'var(--text)', outline: 'none' }}
+                style={{ width: '100%', boxSizing: 'border-box', minHeight: 400, padding: 14, background: 'var(--bg-card-elevated)', border: 'none', resize: 'vertical', fontSize: '0.75rem', fontFamily: 'monospace', color: 'var(--text)', outline: 'none' }}
               />
             ) : (
               <div style={{ padding: '12px 16px' }}>
@@ -255,11 +226,34 @@ export default function EmployeePage({ data }) {
             )}
           </SectionCard>
 
+          {/* Integrations — left column after Instructions */}
+          {emp.integrations?.length > 0 && (
+            <SectionCard title={`Integrations · ${enabledCount}/${totalInteg}`}>
+              {emp.integrations.map(integ => (
+                <div key={integ.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 12px', borderBottom: '1px solid var(--border-soft)' }}>
+                  <div style={{
+                    width: 20, height: 20, borderRadius: 4, flexShrink: 0,
+                    background: 'var(--bg-card-elevated)', border: '1px solid var(--border-soft)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: '0.48rem', fontWeight: 700, fontFamily: 'monospace', color: 'var(--text-dim)',
+                  }}>{integ.icon || integ.id.slice(0, 2).toUpperCase()}</div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: '0.7rem', fontWeight: 600, color: integ.enabled && !integ.planned ? 'var(--text)' : 'var(--text-dim)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{integ.name}</div>
+                  </div>
+                  {integ.planned && (
+                    <span style={{ fontSize: '0.5rem', padding: '1px 4px', borderRadius: 3, background: 'rgba(245,158,11,0.12)', color: 'var(--warning)', fontWeight: 600, flexShrink: 0 }}>plan</span>
+                  )}
+                  <Toggle on={integ.enabled && !integ.planned} />
+                </div>
+              ))}
+            </SectionCard>
+          )}
+
           {/* Peer Reads */}
           {emp.peerReads?.length > 0 && (
             <SectionCard title="Colabora com">
               {emp.peerReads.map((p, i) => (
-                <div key={i} style={{ display: 'flex', gap: 10, padding: '6px 16px', borderBottom: '1px solid var(--border)', fontSize: '0.72rem' }}>
+                <div key={i} style={{ display: 'flex', gap: 10, padding: '6px 16px', borderBottom: '1px solid var(--border-soft)', fontSize: '0.72rem' }}>
                   <span style={{ fontFamily: 'monospace', fontSize: '0.6rem', fontWeight: 700, color: p.stage === 'current' ? 'var(--primary)' : 'var(--text-dim)', width: 70, flexShrink: 0, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{p.stage}</span>
                   <span style={{ color: 'var(--text-dim)' }}>{p.value}</span>
                 </div>
@@ -278,7 +272,7 @@ export default function EmployeePage({ data }) {
         }}>
           {/* Quick stats */}
           <div style={{
-            background: 'var(--bg-card)', border: '1px solid var(--border)',
+            background: 'var(--bg-card-soft)', border: '1px solid var(--border-soft)',
             borderRadius: 10, marginBottom: 12, display: 'flex',
           }}>
             {[
@@ -287,35 +281,12 @@ export default function EmployeePage({ data }) {
               { label: 'Recipes',      value: emp.recipes?.length ?? 0 },
               { label: '$/mo',         value: emp.cost ? `$${emp.cost.current}` : '—', color: emp.cost ? 'var(--warning)' : undefined },
             ].map((stat, i, arr) => (
-              <div key={stat.label} style={{ flex: 1, textAlign: 'center', padding: '12px 8px', borderRight: i < arr.length - 1 ? '1px solid var(--border)' : 'none' }}>
+              <div key={stat.label} style={{ flex: 1, textAlign: 'center', padding: '12px 8px', borderRight: i < arr.length - 1 ? '1px solid var(--border-soft)' : 'none' }}>
                 <div style={{ fontSize: '1.1rem', fontWeight: 700, fontFamily: 'monospace', color: stat.color || 'var(--text)' }}>{stat.value}</div>
                 <div style={{ fontSize: '0.5rem', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: 2 }}>{stat.label}</div>
               </div>
             ))}
           </div>
-
-          {/* Integrations */}
-          {emp.integrations?.length > 0 && (
-            <SectionCard title={`Integrations · ${enabledCount}/${totalInteg}`}>
-              {emp.integrations.map(integ => (
-                <div key={integ.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 12px', borderBottom: '1px solid var(--border)' }}>
-                  <div style={{
-                    width: 20, height: 20, borderRadius: 4, flexShrink: 0,
-                    background: 'var(--bg-elevated)', border: '1px solid var(--border)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: '0.48rem', fontWeight: 700, fontFamily: 'monospace', color: 'var(--text-dim)',
-                  }}>{integ.icon || integ.id.slice(0, 2).toUpperCase()}</div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: '0.7rem', fontWeight: 600, color: integ.enabled && !integ.planned ? 'var(--text)' : 'var(--text-dim)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{integ.name}</div>
-                  </div>
-                  {integ.planned && (
-                    <span style={{ fontSize: '0.5rem', padding: '1px 4px', borderRadius: 3, background: 'rgba(245,158,11,0.12)', color: 'var(--warning)', fontWeight: 600, flexShrink: 0 }}>plan</span>
-                  )}
-                  <Toggle on={integ.enabled && !integ.planned} />
-                </div>
-              ))}
-            </SectionCard>
-          )}
 
           {/* Skills */}
           {emp.skills?.length > 0 && (
@@ -324,12 +295,14 @@ export default function EmployeePage({ data }) {
                 <div
                   key={s.id}
                   onClick={() => openSkill(s)}
-                  style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 12px', borderBottom: '1px solid var(--border)', cursor: 'pointer' }}
-                  onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-elevated)'}
+                  style={{ padding: '8px 12px', borderBottom: '1px solid var(--border-soft)', cursor: 'pointer' }}
+                  onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-card-elevated)'}
                   onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                 >
-                  <code style={{ fontSize: '0.65rem', fontFamily: 'monospace', fontWeight: 600, color: 'var(--info)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.id}</code>
-                  <span style={{ color: 'var(--text-dim)', fontSize: '0.72rem', flexShrink: 0 }}>›</span>
+                  <code style={{ fontSize: '0.65rem', fontFamily: 'monospace', fontWeight: 600, color: 'var(--info)', display: 'block', marginBottom: s.desc ? 2 : 0 }}>{s.id}</code>
+                  {s.desc && (
+                    <span style={{ fontSize: '0.62rem', color: 'var(--text-dim)', fontStyle: 'italic', lineHeight: 1.4, display: 'block' }}>{s.desc}</span>
+                  )}
                 </div>
               ))}
             </SectionCard>
@@ -339,13 +312,22 @@ export default function EmployeePage({ data }) {
           {emp.recipes?.length > 0 && (
             <SectionCard title={`Recipes · ${emp.recipes.length}`}>
               {emp.recipes.map(r => (
-                <div key={r.id} style={{ padding: '8px 12px', borderBottom: '1px solid var(--border)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: r.trigger_label ? 2 : 0 }}>
+                <div
+                  key={r.id}
+                  onClick={() => openRecipe(r)}
+                  style={{ padding: '8px 12px', borderBottom: '1px solid var(--border-soft)', cursor: 'pointer' }}
+                  onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-card-elevated)'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
                     <TriggerBadge trigger={r.trigger} />
                     <span style={{ fontSize: '0.65rem', fontWeight: 600, color: 'var(--text)', fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{r.id}</span>
                   </div>
                   {r.trigger_label && (
-                    <div style={{ fontSize: '0.58rem', color: 'var(--text-dim)', fontFamily: 'monospace' }}>{r.trigger_label}</div>
+                    <div style={{ fontSize: '0.58rem', color: 'var(--text-dim)', fontFamily: 'monospace', marginBottom: r.desc ? 3 : 0 }}>{r.trigger_label}</div>
+                  )}
+                  {r.desc && (
+                    <span style={{ fontSize: '0.62rem', color: 'var(--text-dim)', fontStyle: 'italic', lineHeight: 1.4, display: 'block' }}>{r.desc}</span>
                   )}
                 </div>
               ))}

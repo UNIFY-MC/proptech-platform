@@ -62,9 +62,9 @@ export default function RecipeModal({ recipe, onClose }) {
             </div>
           )}
 
-          {recipe.desc && (
-            <p style={{ fontSize: '0.8rem', color: 'var(--text-dim)', lineHeight: 1.6, marginBottom: 18, marginTop: 0 }}>{recipe.desc}</p>
-          )}
+          <p style={{ fontSize: 14, color: 'var(--text-dim)', fontStyle: recipe.desc ? 'normal' : 'italic', lineHeight: 1.6, marginBottom: 18, marginTop: 0 }}>
+            {recipe.desc || 'Sem descrição registada em .meta.json'}
+          </p>
 
           {/* Owner */}
           {recipe.ownerName && (
@@ -83,11 +83,6 @@ export default function RecipeModal({ recipe, onClose }) {
               >{recipe.ownerName}</button>
             </div>
           )}
-
-          {/* Spec placeholder */}
-          <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)', fontStyle: 'italic', padding: '10px 14px', background: 'var(--bg-card)', borderRadius: 6, border: '1px solid var(--border)' }}>
-            Detailed recipe specification em construção
-          </div>
         </div>
 
         {/* Footer */}

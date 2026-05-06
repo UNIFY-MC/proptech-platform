@@ -96,6 +96,30 @@ const AGENT_META = {
 }
 
 // ---------------------------------------------------------------------------
+// Skill tag classification (module-level so parseEmployees can use it)
+// ---------------------------------------------------------------------------
+
+const SKILL_TAGS = {
+  'classify': 'CLASSIFICATION', 'match': 'MATCHING',    'triage': 'TRIAGE',
+  'score':    'SCORING',        'compose': 'COMPOSE',    'extract': 'EXTRACT',
+  'escalate': 'ESCALATE',       'vision': 'VISION',      'simul': 'SIMULATION',
+  'abrir':    'ACTION',         'fechar': 'ACTION',       'iniciar': 'ACTION',
+  'gerir':    'MANAGE',         'monitoriz': 'MONITOR',   'alert': 'ALERT',
+  'auditar':  'AUDIT',          'participar': 'ACTION',   'acompanhar': 'MONITOR',
+  'actualiz': 'ACTION',         'publicar': 'PUBLISH',    'redigir': 'COMPOSE',
+  'analis':   'ANALYSIS',       'gerar': 'GENERATE',      'import': 'IMPORT',
+  'sincroniz':'SYNC',           'certific': 'COMPLIANCE',
+}
+
+function getTag(id) {
+  const lower = id.toLowerCase()
+  for (const [key, tag] of Object.entries(SKILL_TAGS)) {
+    if (lower.includes(key)) return tag
+  }
+  return 'CORE'
+}
+
+// ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
@@ -541,7 +565,7 @@ function parseEmployees() {
         avatarInitial: meta.avatarInitial || (meta.name?.[0]?.toUpperCase() ?? '?'),
         color: meta.color || '',
         cost: meta.cost || null,
-        skills: meta.skills || [],
+        skills: (meta.skills || []).map(s => ({ ...s, tag: getTag(s.id) })),
         recipes: meta.recipes || [],
         integrations: meta.integrations || [],
         peerReads: meta.peerReads || [],
@@ -595,24 +619,6 @@ function parseSkills() {
   const employeeDir = join(ROOT, '.claude', 'employees')
   if (!existsSync(employeeDir)) return []
   const files = readdirSync(employeeDir).filter(f => f.endsWith('.meta.json'))
-  const SKILL_TAGS = {
-    'classify': 'CLASSIFICATION', 'match': 'MATCHING',    'triage': 'TRIAGE',
-    'score':    'SCORING',        'compose': 'COMPOSE',    'extract': 'EXTRACT',
-    'escalate': 'ESCALATE',       'vision': 'VISION',      'simul': 'SIMULATION',
-    'abrir':    'ACTION',         'fechar': 'ACTION',       'iniciar': 'ACTION',
-    'gerir':    'MANAGE',         'monitoriz': 'MONITOR',   'alert': 'ALERT',
-    'auditar':  'AUDIT',          'participar': 'ACTION',   'acompanhar': 'MONITOR',
-    'actualiz': 'ACTION',         'publicar': 'PUBLISH',    'redigir': 'COMPOSE',
-    'analis':   'ANALYSIS',       'gerar': 'GENERATE',      'import': 'IMPORT',
-    'sincroniz':'SYNC',           'certific': 'COMPLIANCE',
-  }
-  const getTag = (id) => {
-    const lower = id.toLowerCase()
-    for (const [key, tag] of Object.entries(SKILL_TAGS)) {
-      if (lower.includes(key)) return tag
-    }
-    return 'CORE'
-  }
   for (const file of files) {
     try {
       const raw = readFileSync(join(employeeDir, file), 'utf8')

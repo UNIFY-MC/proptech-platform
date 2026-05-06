@@ -67,9 +67,9 @@ export default function SkillModal({ skill, onClose }) {
 
         {/* Body */}
         <div style={{ overflowY: 'auto', flex: 1, padding: '16px 18px' }}>
-          {skill.desc && (
-            <p style={{ fontSize: '0.8rem', color: 'var(--text-dim)', lineHeight: 1.6, marginBottom: 18, marginTop: 0 }}>{skill.desc}</p>
-          )}
+          <p style={{ fontSize: 14, color: skill.desc ? 'var(--text-dim)' : 'var(--text-dim)', fontStyle: skill.desc ? 'normal' : 'italic', lineHeight: 1.6, marginBottom: 18, marginTop: 0 }}>
+            {skill.desc || 'Sem descrição registada em .meta.json'}
+          </p>
 
           {/* Used by */}
           {skill.usedBy?.length > 0 && (
