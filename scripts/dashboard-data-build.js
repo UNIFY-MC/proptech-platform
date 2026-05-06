@@ -510,6 +510,48 @@ function parseAgents() {
   return agents
 }
 
+function parseEmployees() {
+  const employeeDir = join(ROOT, '.claude', 'employees')
+  if (!existsSync(employeeDir)) return []
+  const files = readdirSync(employeeDir).filter(f => f.endsWith('.meta.json'))
+  const employees = []
+  for (const file of files) {
+    try {
+      const raw = readFileSync(join(employeeDir, file), 'utf8')
+      const meta = JSON.parse(raw)
+      const mdPath = join(employeeDir, file.replace('.meta.json', '.md'))
+      const mdRaw = existsSync(mdPath) ? readFileSync(mdPath, 'utf8') : ''
+      employees.push({
+        id: meta.id,
+        name: meta.name,
+        role: meta.role,
+        department: meta.department,
+        vertical: meta.vertical,
+        secondary_verticals: meta.secondary_verticals || [],
+        model: meta.model || '',
+        version: meta.version || '',
+        status: meta.status || 'draft',
+        avatarInitial: meta.avatarInitial || (meta.name?.[0]?.toUpperCase() ?? '?'),
+        color: meta.color || '',
+        cost: meta.cost || null,
+        skills: meta.skills || [],
+        recipes: meta.recipes || [],
+        integrations: meta.integrations || [],
+        peerReads: meta.peerReads || [],
+        _mdRaw: mdRaw,
+      })
+    } catch { /* skip malformed file */ }
+  }
+  employees.sort((a, b) => {
+    const DEPT_ORDER = ['Manutenção', 'Condomínios', 'Marketing']
+    const da = DEPT_ORDER.indexOf(a.department)
+    const db = DEPT_ORDER.indexOf(b.department)
+    if (da !== db) return (da === -1 ? 99 : da) - (db === -1 ? 99 : db)
+    return a.name.localeCompare(b.name)
+  })
+  return employees
+}
+
 function parseCompetitors(filePath) {
   const competitors = []
   const content = readFile(filePath)
@@ -596,6 +638,7 @@ const decisionsResult   = parseDecisions(decisionsFile)
 const roadmapResult     = parseRoadmap(sprintFile)
 const watchersResult    = parseWatchers(watchersFile)
 const agentsResult      = parseAgents()
+const employeesResult   = parseEmployees()
 const activityResult    = parseActivity(activityContent)
 const alertsResult      = parseAlerts(triggersContent)
 const competitorsResult = parseCompetitors(competitorsFile)
@@ -632,6 +675,7 @@ const data = {
   },
   watchers: watchersResult,
   agents: agentsResult,
+  employees: employeesResult,
   recentActivity: activityResult.slice(0, 20),
   decisions: decisionsResult.decisions,
   _decisionsMeta: {
@@ -664,6 +708,7 @@ const sections = [
   { name: 'Roadmap',      status: roadmapResult._status,     n: roadmapResult.roadmap?.length || 0 },
   { name: 'Watchers',     status: 'live',                    n: watchersResult.length },
   { name: 'Agents',       status: 'live',                    n: agentsResult.length },
+  { name: 'Employees',    status: 'live',                    n: employeesResult.length },
   { name: 'Activity',     status: 'live',                    n: activityResult.length },
   { name: 'Alerts',       status: 'live',                    n: alertsResult.length },
   { name: 'Competitors',  status: 'live',                    n: competitorsResult.length },
