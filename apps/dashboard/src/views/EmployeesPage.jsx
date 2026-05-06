@@ -1,10 +1,18 @@
 import { useNavigate } from 'react-router-dom'
+import { useVerticalStore } from '../store'
 
 const DEPT_ORDER = ['Manutenção', 'Condomínios', 'Marketing']
 const DEPT_META = {
   'Manutenção':  { label: 'Manutenção · V5', color: 'var(--primary)', desc: 'Concierge operacional · owners PRATA' },
   'Condomínios': { label: 'Condomínios · V2', color: 'var(--success)', desc: '10 agents · gestão total de condomínio' },
   'Marketing':   { label: 'Marketing · Cross', color: 'var(--info)', desc: 'Aquisição, conteúdo e leads multi-vertical' },
+}
+
+function matchVertical(emp, activeV) {
+  if (activeV === 'all') return true
+  const v = activeV.toUpperCase()
+  if ((emp.vertical || '').toUpperCase().startsWith(v)) return true
+  return (emp.secondary_verticals || []).some(sv => sv.toUpperCase().startsWith(v))
 }
 
 function EmployeeCard({ emp, accentColor, onClick }) {
@@ -75,7 +83,10 @@ function EmployeeCard({ emp, accentColor, onClick }) {
 
 export default function EmployeesPage({ data }) {
   const navigate = useNavigate()
-  const employees = data?.employees || []
+  const { activeVertical } = useVerticalStore()
+
+  const allEmployees = data?.employees || []
+  const employees = allEmployees.filter(e => matchVertical(e, activeVertical))
 
   const grouped = {}
   for (const emp of employees) {
@@ -92,8 +103,19 @@ export default function EmployeesPage({ data }) {
   const totalCost = employees.reduce((s, e) => s + (e.cost?.current || 0), 0)
   const activeCount = employees.filter(e => e.status === 'active').length
 
-  if (employees.length === 0) {
+  if (allEmployees.length === 0) {
     return <div className="empty">Sem dados de employees</div>
+  }
+
+  if (employees.length === 0) {
+    return (
+      <div className="empty">
+        Nenhum employee na vertical seleccionada
+        <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)', marginTop: 6 }}>
+          Muda o filtro para "Todas as verticais" para ver todos
+        </div>
+      </div>
+    )
   }
 
   return (

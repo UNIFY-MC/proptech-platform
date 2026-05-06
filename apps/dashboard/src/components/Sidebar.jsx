@@ -16,6 +16,13 @@ const DEPT_COLORS = {
   'Marketing':   '#3b82f6',
 }
 
+function matchVertical(emp, activeV) {
+  if (activeV === 'all') return true
+  const v = activeV.toUpperCase()
+  if ((emp.vertical || '').toUpperCase().startsWith(v)) return true
+  return (emp.secondary_verticals || []).some(sv => sv.toUpperCase().startsWith(v))
+}
+
 const IC = ({ icon: Icon }) => (
   <Icon size={16} style={{ color: 'var(--text-dim)', flexShrink: 0, marginRight: 8 }} />
 )
@@ -43,7 +50,7 @@ export default function Sidebar({ theme, setTheme, data, lastSync, loading, refr
   const { readSet } = useInboxReads()
 
   const unreadCount = items.filter(i => !readSet.has(i.id)).length
-  const employees = data?.employees || []
+  const employees = (data?.employees || []).filter(e => matchVertical(e, activeVertical))
 
   return (
     <aside className="app-sidebar">

@@ -1,8 +1,8 @@
 {
   "meta": {
     "schemaVersion": "3.0",
-    "lastSync": "2026-05-06T00:36:12.460Z",
-    "generatedAt": "2026-05-06T00:36:12.460Z",
+    "lastSync": "2026-05-06T01:08:30.542Z",
+    "generatedAt": "2026-05-06T01:08:30.542Z",
     "branch": "feat/command-center",
     "worktree": "proptech-platform",
     "generator": "scripts/dashboard-data-build.js"
@@ -68,7 +68,7 @@
     ],
     "_source": ".claude/current/current-sprint-state.md",
     "_status": "live",
-    "_lastParsed": "2026-05-06T00:36:12.474Z"
+    "_lastParsed": "2026-05-06T01:08:30.554Z"
   },
   "verticals": [
     {
@@ -2585,7 +2585,973 @@
       "_mdRaw": "---\r\nname: Paula\r\nrole: Publisher Social Media — PropTech Platform\r\ntagline: Conteúdo aprovado publicado na hora certa, na plataforma certa\r\nmodel: claude-haiku-4-5\r\nstatus: active\r\nvertical: core\r\nversion: \"1.0\"\r\nintegrations: 5\r\nskills: 5\r\nrecipes: 2\r\ncost_monthly: \"~$3/mês\"\r\nupdated: \"2026-05-05\"\r\n---\r\n\r\n## Core Belief\r\n\r\nUm carousel perfeito que fica na pasta não gera leads. A Paula garante que cada peça aprovada chega à plataforma certa, no horário de maior engagement, com hashtags correctos e tracking de resultado.\r\n\r\n## Job One Sentence\r\n\r\nA Paula publica conteúdo orgânico aprovado em Instagram, Facebook e LinkedIn nos horários de peak engagement de cada plataforma, monitoriza engagement semanal e alerta o `diretor-marketing` quando uma peça está a sobressair ou a morrer.\r\n\r\n## Identity & Context\r\n\r\nA Paula é a última etapa do pipeline de conteúdo orgânico. Só publica após approvals_queue aprovado pelo Mário. Usa o Canva MCP para exportar assets finais e a API do Facebook/Instagram para publicar. LinkedIn é publicação semi-manual (sem API directa) — cria o post formatado e aguarda publicação assistida.\r\n\r\nÉ invocada pelo `diretor-marketing` com assets + copy + schedule definido.\r\n\r\n## Plataformas e Perfis\r\n\r\n| Plataforma | Tipo | Vertical Principal | Frequência |\r\n|---|---|---|---|\r\n| **Instagram** | Carousels + Stories + Reels | V5 Manutenção | 3-4×/semana |\r\n| **Facebook** | Posts + Carousels + Eventos | V2 Condomínios + V5 | 2-3×/semana |\r\n| **LinkedIn** | Artigos + Posts + Carousels | V2 + V3 + V4 (B2B) | 2×/semana |\r\n\r\n## Five Levers\r\n\r\n1. **Publicação no peak time** — horários por plataforma baseados em dados de engagement PT\r\n2. **Hashtag strategy** — 10-15 hashtags estratificadas por vertical (3 nicho, 5 médio, 2 grande)\r\n3. **Cross-posting inteligente** — adapta caption e format para cada plataforma (não copia igual)\r\n4. **Calendário editorial** — mantém 4 semanas à frente com status: a criar / aprovado / agendado / publicado\r\n5. **Engagement monitoring** — likes, shares, comentários, saves — flags ao `diretor-marketing` em <24h se outlier\r\n\r\n## For Every Post\r\n\r\nQuando recebe assets aprovados do `diretor-marketing`:\r\n1. Verificar aprovação: approvals_queue status='approved'\r\n2. Confirmar assets: imagens + copy por plataforma + CTA definido\r\n3. Determinar horário óptimo:\r\n   - Instagram: 19h00-21h00 (seg-sex), 11h00-13h00 (sáb)\r\n   - Facebook: 13h00-15h00 (seg-qui), 18h00-20h00 (sex)\r\n   - LinkedIn: 08h00-09h00 (ter-qui)\r\n4. Preparar caption com variantes por plataforma + hashtags + CTA\r\n5. Publicar via API (Instagram/Facebook via Meta MCP) ou formatar para publicação manual (LinkedIn)\r\n6. Registar em `core.publicacoes`: plataforma, timestamp, URL do post, vertical\r\n7. Criar inbox_item: \"Publicado [Vertical] em [Plataforma] — [título/hook]\"\r\n\r\n**Hashtag sets por vertical:**\r\n```\r\nV5 Manutenção: #casaportugal #proprietario #manutencaodomestica #imoveispt\r\n               #gestaoimovel #prata #casasaudavel #bricolage [+ 3 nicho local]\r\n\r\nV2 Condomínios: #gestaocondominio #administracaocondominios #sindico\r\n                #condominiopt #gestaoimoveis [+ 3 nicho sector]\r\n\r\nV4 Energia: #energiapt #poupancaenergia #eficienciaenergetica\r\n            #tarifaenergia #mercadoliberalizado [+ 3 nicho]\r\n\r\nV3 Seguros: #seguroimovel #segurocondominio #protecaoimovel [+ 3 nicho]\r\n```\r\n\r\n## Daily / Weekly Rhythm\r\n\r\n**Diário:** Verificar calendário editorial — algo a publicar hoje? Se sim, publicar no horário definido\r\n\r\n**Semanal (sexta, 16h00):** Digest de engagement:\r\n- Top 3 posts da semana (por reach e engagement rate)\r\n- Bottom 3 (para informar `criativo-conteudo` do que não funciona)\r\n- Engagement rate médio por plataforma\r\n\r\n**Mensal:** Propor ajuste de frequência ou horários com base em dados de 30 dias\r\n\r\n## Daily Flags\r\n\r\n🔴 **RED:** Post agendado não publicado (falha de API)\r\n🟡 **AMARELO:** Post com engagement rate <1% nas primeiras 4h\r\n🟡 **AMARELO:** Calendário editorial vazio para os próximos 3 dias\r\n🟡 **AMARELO:** Comentário negativo ou reclamação num post → passar ao `diretor-marketing`\r\n\r\n## Paula Standard\r\n\r\n- Horário é sagrado: publicar dentro de ±15 min do horário definido\r\n- Caption LinkedIn: máximo 3 parágrafos curtos, sem hashtags em excesso (máx 5)\r\n- Caption Instagram: 1 parágrafo curto visível + break + hashtags (não misturar no texto)\r\n- Nunca republica conteúdo sem autorização — mesmo que tenha performado bem\r\n- Comentários em posts: nunca responde sem aprovação do `diretor-marketing`\r\n\r\n## Data Sources\r\n\r\n| Fonte | Tipo | Freq | Descrição |\r\n|---|---|---|---|\r\n| Facebook Ads MCP | API | Por post | Publicar em Instagram + Facebook via Meta API |\r\n| Canva MCP | API | Por post | Exportar assets finais prontos para publicação |\r\n| `core.publicacoes` | Supabase INSERT | Por post | Registo de publicações + URLs |\r\n| `core.campanhas` | Supabase SELECT | Por post | Alinhar orgânico com campanhas pagas activas |\r\n| `system.approvals_queue` | Supabase SELECT | Por post | Verificar aprovação antes de publicar |\r\n| `system.inbox_items` | Supabase INSERT | Push | Confirmações e flags de engagement |\r\n\r\n## NEVER\r\n\r\n- NUNCA publicar sem approvals_queue aprovado\r\n- NUNCA publicar o mesmo texto em todas as plataformas sem adaptar\r\n- NUNCA responder a comentários ou DMs directamente — passar ao `diretor-marketing`\r\n- NUNCA usar mais de 15 hashtags num post Instagram\r\n- NUNCA agendar mais de 2 posts no mesmo dia na mesma plataforma\r\n"
     }
   ],
+  "skills": [
+    {
+      "id": "ab-testing",
+      "desc": "2-3 variantes de criativo; vencedor (≥100 impressões) recebe 80% do budget",
+      "tag": "CORE",
+      "usedBy": [
+        {
+          "id": "gestor-ads",
+          "name": "Gabi"
+        }
+      ]
+    },
+    {
+      "id": "ab-variants",
+      "desc": "2-3 variantes de headline por peça para teste (mesmo visual, copy diferente)",
+      "tag": "CORE",
+      "usedBy": [
+        {
+          "id": "criativo-conteudo",
+          "name": "Cris"
+        }
+      ]
+    },
+    {
+      "id": "abrir-ot",
+      "desc": "Cria OT com contexto completo — adjudica <€200 ou submete approvals_queue",
+      "tag": "ACTION",
+      "usedBy": [
+        {
+          "id": "manutencao-condo",
+          "name": "Marco"
+        }
+      ]
+    },
+    {
+      "id": "acompanhar-ot",
+      "desc": "Verifica OTs abertas >48h sem update — cria flags proporcionais",
+      "tag": "MONITOR",
+      "usedBy": [
+        {
+          "id": "manutencao-condo",
+          "name": "Marco"
+        }
+      ]
+    },
+    {
+      "id": "acompanhar-sinistro",
+      "desc": "Monitoriza estado semanal, flag se sem movimento >15 dias",
+      "tag": "MONITOR",
+      "usedBy": [
+        {
+          "id": "seguros-condo",
+          "name": "Sofia"
+        }
+      ]
+    },
+    {
+      "id": "actualizar-rating-prestador",
+      "desc": "Actualiza score do prestador com base no resultado e prazo da OT",
+      "tag": "ACTION",
+      "usedBy": [
+        {
+          "id": "manutencao-condo",
+          "name": "Marco"
+        }
+      ]
+    },
+    {
+      "id": "adaptacao-multiplataforma",
+      "desc": "1:1 Instagram/Facebook, 9:16 Stories, 1.91:1 Feed ads, Google Display (300×250, 728×90)",
+      "tag": "CORE",
+      "usedBy": [
+        {
+          "id": "criativo-conteudo",
+          "name": "Cris"
+        }
+      ]
+    },
+    {
+      "id": "alertar-renovacao",
+      "desc": "Cascata 90/60/30/15 dias com simulação de mercado incorporada",
+      "tag": "ALERT",
+      "usedBy": [
+        {
+          "id": "seguros-condo",
+          "name": "Sofia"
+        }
+      ]
+    },
+    {
+      "id": "alertar-renovacao-contrato",
+      "desc": "Monitora vencimentos 90/60/30 dias — com simulação já preparada",
+      "tag": "ALERT",
+      "usedBy": [
+        {
+          "id": "energia-condo",
+          "name": "Enzo"
+        }
+      ]
+    },
+    {
+      "id": "aprovacao-conteudo",
+      "desc": "Revê cada peça antes de submeter approvals_queue para Mário",
+      "tag": "CORE",
+      "usedBy": [
+        {
+          "id": "diretor-marketing",
+          "name": "Diogo"
+        }
+      ]
+    },
+    {
+      "id": "archive-drive",
+      "desc": "Upload Drive com path canónico [Edifício]/[Tipo]/[Ano]/[Mês]/[filename_normalizado]",
+      "tag": "CORE",
+      "usedBy": [
+        {
+          "id": "docs-condo",
+          "name": "Dora"
+        }
+      ]
+    },
+    {
+      "id": "assess-urgency",
+      "desc": "Determina urgência: emergência/urgente/normal com base em conteúdo",
+      "tag": "CORE",
+      "usedBy": [
+        {
+          "id": "atendimento-condo",
+          "name": "Ana"
+        }
+      ]
+    },
+    {
+      "id": "auditar-cobertura",
+      "desc": "Verifica checklist legal de coberturas obrigatórias por edifício (DL 268/94)",
+      "tag": "AUDIT",
+      "usedBy": [
+        {
+          "id": "seguros-condo",
+          "name": "Sofia"
+        }
+      ]
+    },
+    {
+      "id": "brief-review",
+      "desc": "Confirma elementos obrigatórios antes de criar: vertical + ICP + mensagem + formato + canal",
+      "tag": "CORE",
+      "usedBy": [
+        {
+          "id": "criativo-conteudo",
+          "name": "Cris"
+        }
+      ]
+    },
+    {
+      "id": "briefing-vertical",
+      "desc": "Cria brief completo (ICP, mensagem, budget, canal) antes de invocar criativo-conteudo",
+      "tag": "CORE",
+      "usedBy": [
+        {
+          "id": "diretor-marketing",
+          "name": "Diogo"
+        }
+      ]
+    },
+    {
+      "id": "budget-discipline",
+      "desc": "Valida ROAS vs. target antes de escalar gasto; para campanha se CAC > limite",
+      "tag": "CORE",
+      "usedBy": [
+        {
+          "id": "diretor-marketing",
+          "name": "Diogo"
+        }
+      ]
+    },
+    {
+      "id": "calcular-juros-mora",
+      "desc": "Calcula juros legais (Euribor 6M + 1pp) desde data de vencimento",
+      "tag": "CORE",
+      "usedBy": [
+        {
+          "id": "financeiro-condo",
+          "name": "Fina"
+        }
+      ]
+    },
+    {
+      "id": "calcular-mora-grave",
+      "desc": "Capital + juros legais (Euribor 6M + 1pp) desde vencimento — para mora >60 dias",
+      "tag": "CORE",
+      "usedBy": [
+        {
+          "id": "compliance-condo",
+          "name": "Clara"
+        }
+      ]
+    },
+    {
+      "id": "calendario-anual-obrigacoes",
+      "desc": "Gera calendário de todas as obrigações legais do ano para cada edifício",
+      "tag": "CORE",
+      "usedBy": [
+        {
+          "id": "compliance-condo",
+          "name": "Clara"
+        }
+      ]
+    },
+    {
+      "id": "calendario-editorial",
+      "desc": "Plano 4 semanas à frente: orgânico + pago por vertical",
+      "tag": "CORE",
+      "usedBy": [
+        {
+          "id": "diretor-marketing",
+          "name": "Diogo"
+        },
+        {
+          "id": "publisher-social",
+          "name": "Paula"
+        }
+      ]
+    },
+    {
+      "id": "captura-multicanal",
+      "desc": "Meta Lead Forms, Google, formulário website, input manual — com dedup por email",
+      "tag": "CORE",
+      "usedBy": [
+        {
+          "id": "gestor-leads",
+          "name": "Leo"
+        }
+      ]
+    },
+    {
+      "id": "carousel-canva",
+      "desc": "5-7 slides via Canva MCP com design tokens PropTech (cores, tipografia, logo)",
+      "tag": "CORE",
+      "usedBy": [
+        {
+          "id": "criativo-conteudo",
+          "name": "Cris"
+        }
+      ]
+    },
+    {
+      "id": "certificacao-energetica",
+      "desc": "Monitoriza validade SCE (10 anos) e agenda renovação com antecedência",
+      "tag": "COMPLIANCE",
+      "usedBy": [
+        {
+          "id": "energia-condo",
+          "name": "Enzo"
+        }
+      ]
+    },
+    {
+      "id": "classify-document",
+      "desc": "Classifica em 9 tipos (fatura/ata/contrato/apólice/extracto/certidão/planta/correspondência/outro)",
+      "tag": "CLASSIFICATION",
+      "usedBy": [
+        {
+          "id": "docs-condo",
+          "name": "Dora"
+        }
+      ]
+    },
+    {
+      "id": "classify-intent",
+      "desc": "Classifica pedido em 12 categorias com score de confiança",
+      "tag": "CLASSIFICATION",
+      "usedBy": [
+        {
+          "id": "atendimento-condo",
+          "name": "Ana"
+        }
+      ]
+    },
+    {
+      "id": "classify-problem-pt",
+      "desc": "Categoriza descrição em taxonomy V5 + retorna confiança",
+      "tag": "CLASSIFICATION",
+      "usedBy": [
+        {
+          "id": "bia",
+          "name": "Bia"
+        }
+      ]
+    },
+    {
+      "id": "compose-pedido-msg",
+      "desc": "Gera mensagem WhatsApp em PT-PT calibrada ao tom",
+      "tag": "COMPOSE",
+      "usedBy": [
+        {
+          "id": "bia",
+          "name": "Bia"
+        }
+      ]
+    },
+    {
+      "id": "copy-hormozi",
+      "desc": "Framework Hook→Pain→Solution→Outcome→CTA, hook em <6 palavras, PT-PT obrigatório",
+      "tag": "CORE",
+      "usedBy": [
+        {
+          "id": "criativo-conteudo",
+          "name": "Cris"
+        }
+      ]
+    },
+    {
+      "id": "criar-campanha",
+      "desc": "Estrutura Campanha→AdSet→Ad via MCP após approvals_queue aprovado",
+      "tag": "CORE",
+      "usedBy": [
+        {
+          "id": "gestor-ads",
+          "name": "Gabi"
+        }
+      ]
+    },
+    {
+      "id": "cross-posting",
+      "desc": "Adapta caption e formato por plataforma — nunca copia igual de Instagram para LinkedIn",
+      "tag": "CORE",
+      "usedBy": [
+        {
+          "id": "publisher-social",
+          "name": "Paula"
+        }
+      ]
+    },
+    {
+      "id": "daily-digest",
+      "desc": "Consolida estado de todos os employees em inbox_item resumo para Mário",
+      "tag": "CORE",
+      "usedBy": [
+        {
+          "id": "orquestrador-condo",
+          "name": "Orquestrador"
+        }
+      ]
+    },
+    {
+      "id": "digest-semanal",
+      "desc": "KPIs por vertical + recomendação de optimização ao cmo-agent",
+      "tag": "CORE",
+      "usedBy": [
+        {
+          "id": "diretor-marketing",
+          "name": "Diogo"
+        }
+      ]
+    },
+    {
+      "id": "draft-aviso-mora",
+      "desc": "Gera carta de aviso proporcional ao tempo em mora (cordial/formal/grave)",
+      "tag": "CORE",
+      "usedBy": [
+        {
+          "id": "financeiro-condo",
+          "name": "Fina"
+        }
+      ]
+    },
+    {
+      "id": "draft-convocatoria",
+      "desc": "Gera texto legal de convocatória com lista de condóminos e permilagem",
+      "tag": "CORE",
+      "usedBy": [
+        {
+          "id": "assembleia-condo",
+          "name": "Assie"
+        }
+      ]
+    },
+    {
+      "id": "draft-interpelacao-judicial",
+      "desc": "Carta formal de último aviso com cálculo de juros — submete approvals_queue",
+      "tag": "CORE",
+      "usedBy": [
+        {
+          "id": "compliance-condo",
+          "name": "Clara"
+        }
+      ]
+    },
+    {
+      "id": "engagement-monitoring",
+      "desc": "Likes, shares, comentários, saves — flag ao diretor-marketing se outlier em <24h",
+      "tag": "CORE",
+      "usedBy": [
+        {
+          "id": "publisher-social",
+          "name": "Paula"
+        }
+      ]
+    },
+    {
+      "id": "enrich-context",
+      "desc": "Adiciona histórico do condómino, OTs abertas, mora actual ao brief",
+      "tag": "CORE",
+      "usedBy": [
+        {
+          "id": "atendimento-condo",
+          "name": "Ana"
+        }
+      ]
+    },
+    {
+      "id": "enviar-email-batch",
+      "desc": "Chama Resend API para lista de destinatários, com anti-spam e horário correcto",
+      "tag": "CORE",
+      "usedBy": [
+        {
+          "id": "comunicacao-condo",
+          "name": "Cami"
+        }
+      ]
+    },
+    {
+      "id": "escalate-to-human",
+      "desc": "Sinaliza baixa confiança e pinga Mário no Discord",
+      "tag": "ESCALATE",
+      "usedBy": [
+        {
+          "id": "bia",
+          "name": "Bia"
+        }
+      ]
+    },
+    {
+      "id": "escalonamento-disciplinado",
+      "desc": "+20% budget só se ROAS ≥3 nos últimos 7 dias, máx 1×/semana",
+      "tag": "CORE",
+      "usedBy": [
+        {
+          "id": "gestor-ads",
+          "name": "Gabi"
+        }
+      ]
+    },
+    {
+      "id": "execute-approval",
+      "desc": "Executa aprovações pendentes na queue — invoca comunicacao-condo",
+      "tag": "CORE",
+      "usedBy": [
+        {
+          "id": "orquestrador-condo",
+          "name": "Orquestrador"
+        }
+      ]
+    },
+    {
+      "id": "extract-magic-link-token",
+      "desc": "Gera magic-link único por pedido com expiry",
+      "tag": "EXTRACT",
+      "usedBy": [
+        {
+          "id": "bia",
+          "name": "Bia"
+        }
+      ]
+    },
+    {
+      "id": "fechar-ot",
+      "desc": "Fecha OT, verifica valor final vs. orçamento, lança custo em financeiro-condo",
+      "tag": "ACTION",
+      "usedBy": [
+        {
+          "id": "manutencao-condo",
+          "name": "Marco"
+        }
+      ]
+    },
+    {
+      "id": "gerar-ordem-trabalhos",
+      "desc": "Compila pontos obrigatórios + inputs financeiro + manutencao + Mário",
+      "tag": "GENERATE",
+      "usedBy": [
+        {
+          "id": "assembleia-condo",
+          "name": "Assie"
+        }
+      ]
+    },
+    {
+      "id": "gerar-quotas",
+      "desc": "Calcula quota_individual = quota_base × (permilagem/1000) e insere em recebimentos",
+      "tag": "GENERATE",
+      "usedBy": [
+        {
+          "id": "financeiro-condo",
+          "name": "Fina"
+        }
+      ]
+    },
+    {
+      "id": "gerir-bounces",
+      "desc": "Para cada bounce: cria inbox_item para actualizar contacto na base de dados",
+      "tag": "MANAGE",
+      "usedBy": [
+        {
+          "id": "comunicacao-condo",
+          "name": "Cami"
+        }
+      ]
+    },
+    {
+      "id": "gerir-carregadores-ev",
+      "desc": "Calcula kWh por condómino e draft facturação mensal EV",
+      "tag": "MANAGE",
+      "usedBy": [
+        {
+          "id": "energia-condo",
+          "name": "Enzo"
+        }
+      ]
+    },
+    {
+      "id": "gerir-seguro-fracoes",
+      "desc": "Verifica seguros individuais registados e alerta fracções sem cobertura",
+      "tag": "MANAGE",
+      "usedBy": [
+        {
+          "id": "seguros-condo",
+          "name": "Sofia"
+        }
+      ]
+    },
+    {
+      "id": "hashtag-strategy",
+      "desc": "10-15 hashtags estratificadas por vertical: 3 nicho, 5 médio, 2 grande",
+      "tag": "CORE",
+      "usedBy": [
+        {
+          "id": "publisher-social",
+          "name": "Paula"
+        }
+      ]
+    },
+    {
+      "id": "identify-sender",
+      "desc": "Cruza email/tel com core.pessoas — retorna pessoa_id + edificio_id + fracção",
+      "tag": "CORE",
+      "usedBy": [
+        {
+          "id": "atendimento-condo",
+          "name": "Ana"
+        }
+      ]
+    },
+    {
+      "id": "index-supabase",
+      "desc": "Regista metadados completos + link Drive permanente em v2_condominios.documentos",
+      "tag": "CORE",
+      "usedBy": [
+        {
+          "id": "docs-condo",
+          "name": "Dora"
+        }
+      ]
+    },
+    {
+      "id": "iniciar-mudanca-comercializador",
+      "desc": "Prepara formulário ERSE de mudança + submete approvals_queue",
+      "tag": "ACTION",
+      "usedBy": [
+        {
+          "id": "energia-condo",
+          "name": "Enzo"
+        }
+      ]
+    },
+    {
+      "id": "match-prestador-geo",
+      "desc": "Filtra prestadores por concelho/freguesia + especialidade + rating",
+      "tag": "MATCHING",
+      "usedBy": [
+        {
+          "id": "bia",
+          "name": "Bia"
+        }
+      ]
+    },
+    {
+      "id": "monitorizar-consumo",
+      "desc": "Detecta anomalias: consumo >baseline+2σ → flag com análise de causa",
+      "tag": "MONITOR",
+      "usedBy": [
+        {
+          "id": "energia-condo",
+          "name": "Enzo"
+        }
+      ]
+    },
+    {
+      "id": "monitorizar-prazos-legais",
+      "desc": "Verifica 8 tipos de prazo obrigatório por edifício — alertas em cascata 90/60/30/15 dias",
+      "tag": "MONITOR",
+      "usedBy": [
+        {
+          "id": "compliance-condo",
+          "name": "Clara"
+        }
+      ]
+    },
+    {
+      "id": "naming-convention",
+      "desc": "[VERTICAL]_[OBJECTIVO]_[MÊS-ANO] / [TARGETING]_[LOCALIZAÇÃO] / [CRIATIVO-ID]_[VARIANTE]",
+      "tag": "CORE",
+      "usedBy": [
+        {
+          "id": "gestor-ads",
+          "name": "Gabi"
+        }
+      ]
+    },
+    {
+      "id": "notify-employees",
+      "desc": "Notifica employee relevante: fatura→financeiro, apólice→seguros, certidão→compliance",
+      "tag": "CORE",
+      "usedBy": [
+        {
+          "id": "docs-condo",
+          "name": "Dora"
+        }
+      ]
+    },
+    {
+      "id": "nurturing-sequence",
+      "desc": "3 emails em 7 dias por vertical (D+0, D+3, D+7) com conteúdo específico. RGPD obrigatório.",
+      "tag": "CORE",
+      "usedBy": [
+        {
+          "id": "gestor-leads",
+          "name": "Leo"
+        }
+      ]
+    },
+    {
+      "id": "ocr-fatura",
+      "desc": "Extrai fornecedor/valor/data/NIF com confiança quantificada — >90% auto, <90% flag",
+      "tag": "CORE",
+      "usedBy": [
+        {
+          "id": "docs-condo",
+          "name": "Dora"
+        }
+      ]
+    },
+    {
+      "id": "parallel-launch",
+      "desc": "Lança múltiplos employees em simultâneo para triggers globais (fecho mês)",
+      "tag": "CORE",
+      "usedBy": [
+        {
+          "id": "orquestrador-condo",
+          "name": "Orquestrador"
+        }
+      ]
+    },
+    {
+      "id": "participar-sinistro",
+      "desc": "Prepara formulário completo + prazo legal 8 dias úteis → approvals_queue urgente",
+      "tag": "ACTION",
+      "usedBy": [
+        {
+          "id": "seguros-condo",
+          "name": "Sofia"
+        }
+      ]
+    },
+    {
+      "id": "personalizar-template",
+      "desc": "Injeta nome, fracção, valor, datas no template aprovado — nunca reescreve conteúdo",
+      "tag": "CORE",
+      "usedBy": [
+        {
+          "id": "comunicacao-condo",
+          "name": "Cami"
+        }
+      ]
+    },
+    {
+      "id": "publicacao-peak-time",
+      "desc": "Instagram 19h-21h (seg-sex) / Facebook 13h-15h (seg-qui) / LinkedIn 08h-09h (ter-qui)",
+      "tag": "CORE",
+      "usedBy": [
+        {
+          "id": "publisher-social",
+          "name": "Paula"
+        }
+      ]
+    },
+    {
+      "id": "reconciliar-bancario",
+      "desc": "Cruza movimentos extrato_bancario com recebimentos — identifica não reconciliados",
+      "tag": "CORE",
+      "usedBy": [
+        {
+          "id": "financeiro-condo",
+          "name": "Fina"
+        }
+      ]
+    },
+    {
+      "id": "redigir-ata",
+      "desc": "Estrutura ata com secções obrigatórias, votações por permilagem, deliberações",
+      "tag": "COMPOSE",
+      "usedBy": [
+        {
+          "id": "assembleia-condo",
+          "name": "Assie"
+        }
+      ]
+    },
+    {
+      "id": "relatorio-cpl",
+      "desc": "CPL real por canal e vertical, cruzando gasto gestor-ads com leads gerados",
+      "tag": "CORE",
+      "usedBy": [
+        {
+          "id": "gestor-leads",
+          "name": "Leo"
+        }
+      ]
+    },
+    {
+      "id": "relatorio-mensal",
+      "desc": "Agrega cobrança, pendentes com aging, pagamentos fornecedores por edifício",
+      "tag": "CORE",
+      "usedBy": [
+        {
+          "id": "financeiro-condo",
+          "name": "Fina"
+        }
+      ]
+    },
+    {
+      "id": "roas-guardian",
+      "desc": "Check diário; pausa automática se ROAS <2 após 7 dias; alerta se ROAS <1.5 há >3 dias",
+      "tag": "CORE",
+      "usedBy": [
+        {
+          "id": "gestor-ads",
+          "name": "Gabi"
+        }
+      ]
+    },
+    {
+      "id": "route-event",
+      "desc": "Classifica evento e delega ao employee correcto com contexto completo",
+      "tag": "CORE",
+      "usedBy": [
+        {
+          "id": "orquestrador-condo",
+          "name": "Orquestrador"
+        }
+      ]
+    },
+    {
+      "id": "route-to-employee",
+      "desc": "Cria inbox_item para employee destino com brief completo e metadata",
+      "tag": "CORE",
+      "usedBy": [
+        {
+          "id": "atendimento-condo",
+          "name": "Ana"
+        }
+      ]
+    },
+    {
+      "id": "routing-inteligente",
+      "desc": "≥70 → employee operacional da vertical; 40-69 → nurturing; <40 → qualificar manualmente",
+      "tag": "CORE",
+      "usedBy": [
+        {
+          "id": "gestor-leads",
+          "name": "Leo"
+        }
+      ]
+    },
+    {
+      "id": "score-prestador",
+      "desc": "Calcula score: rating×0.4 + taxa_prazo×0.3 + proximidade×0.2 + disponibilidade×0.1",
+      "tag": "SCORING",
+      "usedBy": [
+        {
+          "id": "manutencao-condo",
+          "name": "Marco"
+        }
+      ]
+    },
+    {
+      "id": "scoring-automatico",
+      "desc": "0-100: vertical +20, email válido +15, telefone +10, cargo B2B +15, empresa >10 frac +20, intenção +20, email gratuito B2B -10, sem tel -5",
+      "tag": "CORE",
+      "usedBy": [
+        {
+          "id": "gestor-leads",
+          "name": "Leo"
+        }
+      ]
+    },
+    {
+      "id": "simular-seguro",
+      "desc": "Compara prémio actual com alternativas — ratio cobertura/prémio",
+      "tag": "SIMULATION",
+      "usedBy": [
+        {
+          "id": "seguros-condo",
+          "name": "Sofia"
+        }
+      ]
+    },
+    {
+      "id": "simular-tarifas",
+      "desc": "Compara contrato actual com mercado — calcula poupança €/ano + meses ROI",
+      "tag": "SIMULATION",
+      "usedBy": [
+        {
+          "id": "energia-condo",
+          "name": "Enzo"
+        }
+      ]
+    },
+    {
+      "id": "sla-monitor",
+      "desc": "Verifica SLAs e cria flags 🔴 para items sem resposta",
+      "tag": "CORE",
+      "usedBy": [
+        {
+          "id": "orquestrador-condo",
+          "name": "Orquestrador"
+        }
+      ]
+    },
+    {
+      "id": "stories-sequence",
+      "desc": "3-5 slides sequenciais para Instagram Stories com CTA no final",
+      "tag": "CORE",
+      "usedBy": [
+        {
+          "id": "criativo-conteudo",
+          "name": "Cris"
+        }
+      ]
+    },
+    {
+      "id": "targeting-preciso",
+      "desc": "Audiences por vertical: interesses, lookalike (após 100+ conversões), retargeting separado",
+      "tag": "CORE",
+      "usedBy": [
+        {
+          "id": "gestor-ads",
+          "name": "Gabi"
+        }
+      ]
+    },
+    {
+      "id": "track-entrega",
+      "desc": "Regista sent/delivered/bounced por destinatário em v2_condominios.comunicacoes",
+      "tag": "CORE",
+      "usedBy": [
+        {
+          "id": "comunicacao-condo",
+          "name": "Cami"
+        }
+      ]
+    },
+    {
+      "id": "triage-avaria",
+      "desc": "Classifica tipo técnico + urgência (emergência/urgente/normal) com base em descrição",
+      "tag": "TRIAGE",
+      "usedBy": [
+        {
+          "id": "manutencao-condo",
+          "name": "Marco"
+        }
+      ]
+    },
+    {
+      "id": "verificar-aprovacao",
+      "desc": "Verifica status='approved' em approvals_queue antes de qualquer envio — recusa se não aprovado",
+      "tag": "CORE",
+      "usedBy": [
+        {
+          "id": "comunicacao-condo",
+          "name": "Cami"
+        }
+      ]
+    },
+    {
+      "id": "verificar-mora",
+      "desc": "Identifica pendentes >7 dias, classifica 1º/2º aviso/grave, gera drafts",
+      "tag": "CORE",
+      "usedBy": [
+        {
+          "id": "financeiro-condo",
+          "name": "Fina"
+        }
+      ]
+    },
+    {
+      "id": "verificar-prazo-legal",
+      "desc": "Verifica data proposta ≥10 dias corridos (art. 1431º CC) — nunca negocia",
+      "tag": "CORE",
+      "usedBy": [
+        {
+          "id": "assembleia-condo",
+          "name": "Assie"
+        }
+      ]
+    },
+    {
+      "id": "verificar-quorum",
+      "desc": "Calcula permilagem presente e valida cada deliberação (maioria simples/unanimidade)",
+      "tag": "CORE",
+      "usedBy": [
+        {
+          "id": "assembleia-condo",
+          "name": "Assie"
+        }
+      ]
+    },
+    {
+      "id": "verificar-rgpd",
+      "desc": "Responde pedidos RGPD em prazo (30 dias), verifica audit_log activo",
+      "tag": "CORE",
+      "usedBy": [
+        {
+          "id": "compliance-condo",
+          "name": "Clara"
+        }
+      ]
+    },
+    {
+      "id": "vision-analyse-foto",
+      "desc": "Extrai dados de foto enviada pelo owner",
+      "tag": "VISION",
+      "usedBy": [
+        {
+          "id": "bia",
+          "name": "Bia"
+        }
+      ]
+    }
+  ],
   "recentActivity": [
+    {
+      "ts": "2026-05-06T00:49Z",
+      "agent": "subagent",
+      "worktree": "proptech-v5-1b3",
+      "action": "subagent stopped [session:d62fe085]",
+      "refs": []
+    },
+    {
+      "ts": "2026-05-06T00:42Z",
+      "agent": "subagent",
+      "worktree": "proptech-v5-1b3",
+      "action": "subagent stopped [session:d62fe085]",
+      "refs": []
+    },
     {
       "ts": "2026-05-06T00:25Z",
       "agent": "subagent",
@@ -2710,20 +3676,6 @@
       "agent": "general-purpose",
       "worktree": "proptech-v5-1b3",
       "action": "subagent stopped [session:d62fe085]",
-      "refs": []
-    },
-    {
-      "ts": "2026-05-05T20:37Z",
-      "agent": "subagent",
-      "worktree": "proptech-v5-1b3",
-      "action": "subagent stopped [session:a74b3960]",
-      "refs": []
-    },
-    {
-      "ts": "2026-05-05T18:34Z",
-      "agent": "subagent",
-      "worktree": "proptech-v5-1b3",
-      "action": "subagent stopped [session:a74b3960]",
       "refs": []
     }
   ],

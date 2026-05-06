@@ -552,6 +552,50 @@ function parseEmployees() {
   return employees
 }
 
+function parseSkills() {
+  const skillsMap = new Map()
+  const employeeDir = join(ROOT, '.claude', 'employees')
+  if (!existsSync(employeeDir)) return []
+  const files = readdirSync(employeeDir).filter(f => f.endsWith('.meta.json'))
+  const SKILL_TAGS = {
+    'classify': 'CLASSIFICATION', 'match': 'MATCHING',    'triage': 'TRIAGE',
+    'score':    'SCORING',        'compose': 'COMPOSE',    'extract': 'EXTRACT',
+    'escalate': 'ESCALATE',       'vision': 'VISION',      'simul': 'SIMULATION',
+    'abrir':    'ACTION',         'fechar': 'ACTION',       'iniciar': 'ACTION',
+    'gerir':    'MANAGE',         'monitoriz': 'MONITOR',   'alert': 'ALERT',
+    'auditar':  'AUDIT',          'participar': 'ACTION',   'acompanhar': 'MONITOR',
+    'actualiz': 'ACTION',         'publicar': 'PUBLISH',    'redigir': 'COMPOSE',
+    'analis':   'ANALYSIS',       'gerar': 'GENERATE',      'import': 'IMPORT',
+    'sincroniz':'SYNC',           'certific': 'COMPLIANCE',
+  }
+  const getTag = (id) => {
+    const lower = id.toLowerCase()
+    for (const [key, tag] of Object.entries(SKILL_TAGS)) {
+      if (lower.includes(key)) return tag
+    }
+    return 'CORE'
+  }
+  for (const file of files) {
+    try {
+      const raw = readFileSync(join(employeeDir, file), 'utf8')
+      const meta = JSON.parse(raw)
+      for (const skill of (meta.skills || [])) {
+        if (!skillsMap.has(skill.id)) {
+          skillsMap.set(skill.id, {
+            id: skill.id,
+            desc: skill.desc || '',
+            tag: getTag(skill.id),
+            usedBy: [{ id: meta.id, name: meta.name }],
+          })
+        } else {
+          skillsMap.get(skill.id).usedBy.push({ id: meta.id, name: meta.name })
+        }
+      }
+    } catch { /* skip malformed file */ }
+  }
+  return Array.from(skillsMap.values()).sort((a, b) => a.id.localeCompare(b.id))
+}
+
 function parseCompetitors(filePath) {
   const competitors = []
   const content = readFile(filePath)
@@ -639,6 +683,7 @@ const roadmapResult     = parseRoadmap(sprintFile)
 const watchersResult    = parseWatchers(watchersFile)
 const agentsResult      = parseAgents()
 const employeesResult   = parseEmployees()
+const skillsResult      = parseSkills()
 const activityResult    = parseActivity(activityContent)
 const alertsResult      = parseAlerts(triggersContent)
 const competitorsResult = parseCompetitors(competitorsFile)
@@ -676,6 +721,7 @@ const data = {
   watchers: watchersResult,
   agents: agentsResult,
   employees: employeesResult,
+  skills: skillsResult,
   recentActivity: activityResult.slice(0, 20),
   decisions: decisionsResult.decisions,
   _decisionsMeta: {
@@ -709,6 +755,7 @@ const sections = [
   { name: 'Watchers',     status: 'live',                    n: watchersResult.length },
   { name: 'Agents',       status: 'live',                    n: agentsResult.length },
   { name: 'Employees',    status: 'live',                    n: employeesResult.length },
+  { name: 'Skills',       status: 'live',                    n: skillsResult.length },
   { name: 'Activity',     status: 'live',                    n: activityResult.length },
   { name: 'Alerts',       status: 'live',                    n: alertsResult.length },
   { name: 'Competitors',  status: 'live',                    n: competitorsResult.length },

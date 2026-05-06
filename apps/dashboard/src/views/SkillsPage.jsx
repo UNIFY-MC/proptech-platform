@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react'
+import SkillModal from '../components/SkillModal.jsx'
 
 const SKILL_TAGS = {
   'classify': 'CLASSIFICATION',
@@ -64,19 +65,20 @@ const TAG_COLORS = {
 export default function SkillsPage({ data }) {
   const [search, setSearch] = useState('')
   const [tagFilter, setTagFilter] = useState('ALL')
+  const [selectedSkill, setSelectedSkill] = useState(null)
 
   const allSkills = useMemo(() => {
-    const seen = new Set()
-    const result = []
+    const seen = new Map()
     for (const emp of (data?.employees || [])) {
       for (const skill of (emp.skills || [])) {
         if (!seen.has(skill.id)) {
-          seen.add(skill.id)
-          result.push({ ...skill, tag: getTag(skill.id), owner: emp.name, ownerId: emp.id })
+          seen.set(skill.id, { ...skill, tag: getTag(skill.id), usedBy: [{ id: emp.id, name: emp.name }] })
+        } else {
+          seen.get(skill.id).usedBy.push({ id: emp.id, name: emp.name })
         }
       }
     }
-    return result.sort((a, b) => a.id.localeCompare(b.id))
+    return Array.from(seen.values()).sort((a, b) => a.id.localeCompare(b.id))
   }, [data])
 
   const allTags = useMemo(() => {
@@ -94,10 +96,10 @@ export default function SkillsPage({ data }) {
 
   return (
     <div>
+      {selectedSkill && <SkillModal skill={selectedSkill} onClose={() => setSelectedSkill(null)} />}
+
       {/* Filter bar */}
-      <div style={{
-        display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap', alignItems: 'center',
-      }}>
+      <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap', alignItems: 'center' }}>
         <input
           type="text"
           placeholder="Pesquisar skills…"
@@ -132,27 +134,33 @@ export default function SkillsPage({ data }) {
         {filtered.map(skill => {
           const tagColor = TAG_COLORS[skill.tag] || 'var(--text-dim)'
           return (
-            <div key={skill.id} style={{
-              background: 'var(--bg-card)', border: '1px solid var(--border)',
-              borderRadius: 10, padding: 16,
-              borderLeft: `2px solid ${tagColor}`,
-            }}>
+            <div
+              key={skill.id}
+              onClick={() => setSelectedSkill(skill)}
+              style={{
+                background: 'var(--bg-card)', border: '1px solid var(--border)',
+                borderRadius: 10, padding: 16,
+                borderLeft: `2px solid ${tagColor}`,
+                cursor: 'pointer',
+                transition: 'transform 0.1s, background 0.1s',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.background = 'var(--bg-elevated)' }}
+              onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.background = 'var(--bg-card)' }}
+            >
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, marginBottom: 6 }}>
-                <code style={{
-                  fontSize: '0.68rem', fontFamily: 'monospace', fontWeight: 600,
-                  color: 'var(--info)', lineHeight: 1.3,
-                }}>{skill.id}</code>
-                <span style={{
-                  fontSize: '0.55rem', fontWeight: 700, fontFamily: 'monospace',
-                  padding: '1px 6px', borderRadius: 3, flexShrink: 0,
-                  background: `${tagColor}18`, color: tagColor,
-                }}>{skill.tag}</span>
+                <code style={{ fontSize: '0.68rem', fontFamily: 'monospace', fontWeight: 600, color: 'var(--info)', lineHeight: 1.3 }}>{skill.id}</code>
+                <span style={{ fontSize: '0.55rem', fontWeight: 700, fontFamily: 'monospace', padding: '1px 6px', borderRadius: 3, flexShrink: 0, background: `${tagColor}18`, color: tagColor }}>{skill.tag}</span>
               </div>
               <p style={{ fontSize: '0.72rem', color: 'var(--text-dim)', lineHeight: 1.5, margin: '0 0 8px' }}>
                 {skill.desc}
               </p>
-              <div style={{ fontSize: '0.6rem', color: 'var(--text-dim)', fontStyle: 'italic' }}>
-                via {skill.owner}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ fontSize: '0.6rem', color: 'var(--text-dim)', fontStyle: 'italic' }}>
+                  {skill.usedBy?.length === 1
+                    ? `via ${skill.usedBy[0].name}`
+                    : `${skill.usedBy?.length ?? 1} employees`}
+                </div>
+                <span style={{ fontSize: '0.65rem', color: 'var(--text-dim)' }}>›</span>
               </div>
             </div>
           )
