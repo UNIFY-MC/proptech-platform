@@ -559,6 +559,37 @@ function parseEmployees() {
   return employees
 }
 
+function parseBia() {
+  const biaMetaPath = join(ROOT, '.claude', 'employees', 'bia.meta.json')
+  const biaMdPath   = join(ROOT, '.claude', 'employees', 'bia.md')
+  try {
+    const meta  = JSON.parse(readFileSync(biaMetaPath, 'utf8'))
+    const mdRaw = existsSync(biaMdPath) ? readFileSync(biaMdPath, 'utf8') : ''
+    return {
+      id:      meta.id,
+      name:    meta.name,
+      role:    meta.role,
+      version: meta.version,
+      model:   meta.model,
+      status:  meta.status,
+      integrations: meta.integrations || [],
+      skills:       meta.skills       || [],
+      recipes:      meta.recipes      || [],
+      peer_reads: (meta.peerReads || []).map(p => ({
+        sprint: p.stage,
+        agents: !p.value || p.value === '— none' ? [] : p.value.split(' + '),
+      })),
+      cost:         meta.cost         || {},
+      _mdRaw:       stripFrontmatter(mdRaw),
+      _source:      '.claude/employees/bia.meta.json',
+      _status:      'live',
+      _lastParsed:  new Date().toISOString(),
+    }
+  } catch (e) {
+    return { _source: '.claude/employees/bia.meta.json', _status: 'missing', _error: e.message }
+  }
+}
+
 function parseSkills() {
   const skillsMap = new Map()
   const employeeDir = join(ROOT, '.claude', 'employees')
@@ -690,6 +721,7 @@ const roadmapResult     = parseRoadmap(sprintFile)
 const watchersResult    = parseWatchers(watchersFile)
 const agentsResult      = parseAgents()
 const employeesResult   = parseEmployees()
+const biaResult         = parseBia()
 const skillsResult      = parseSkills()
 const activityResult    = parseActivity(activityContent)
 const alertsResult      = parseAlerts(triggersContent)
@@ -728,6 +760,7 @@ const data = {
   watchers: watchersResult,
   agents: agentsResult,
   employees: employeesResult,
+  bia: biaResult,
   skills: skillsResult,
   recentActivity: activityResult.slice(0, 20),
   decisions: decisionsResult.decisions,
@@ -762,6 +795,7 @@ const sections = [
   { name: 'Watchers',     status: 'live',                    n: watchersResult.length },
   { name: 'Agents',       status: 'live',                    n: agentsResult.length },
   { name: 'Employees',    status: 'live',                    n: employeesResult.length },
+  { name: 'Bia',          status: biaResult._status,         n: biaResult.skills?.length || 0 },
   { name: 'Skills',       status: 'live',                    n: skillsResult.length },
   { name: 'Activity',     status: 'live',                    n: activityResult.length },
   { name: 'Alerts',       status: 'live',                    n: alertsResult.length },

@@ -19,7 +19,7 @@ export default function BiaMetaSidebar({ hidden }) {
 
       {/* SKILLS */}
       <MetaBlock title="Skills">
-        {meta.skills.map(s => (
+        {(meta?.skills ?? []).map(s => (
           <div key={s.id} className="bia-skill-row">
             <span className="arrow">▸</span>
             <div>
@@ -34,7 +34,7 @@ export default function BiaMetaSidebar({ hidden }) {
       <div className="bia-meta-block">
         <div className="bia-meta-head">Recipes</div>
         <div className="bia-recipes-body">
-          {meta.recipes.map(r => (
+          {(meta?.recipes ?? []).map(r => (
             <div key={r.id} className="bia-recipe-card">
               <div className="bia-recipe-name bia-mono">{r.id}</div>
               <div className="bia-recipe-meta">
@@ -48,11 +48,11 @@ export default function BiaMetaSidebar({ hidden }) {
 
       {/* PEER READS */}
       <MetaBlock title="Peer Reads">
-        {meta.peer_reads.map(p => (
+        {(meta?.peer_reads ?? []).map(p => (
           <div key={p.sprint} className={`bia-peer-row${p.sprint === 'current' ? ' current' : ''}`}>
             <span className="bia-peer-sprint bia-mono">{p.sprint}</span>
             <span className="bia-peer-agents">
-              {p.agents.length === 0 ? '─ none' : `▸ ${p.agents.join(', ')}`}
+              {(p.agents ?? []).length === 0 ? '─ none' : `▸ ${(p.agents ?? []).join(', ')}`}
             </span>
           </div>
         ))}

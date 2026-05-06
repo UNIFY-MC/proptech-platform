@@ -94,10 +94,6 @@ export default function SkillModal({ skill, onClose }) {
             </div>
           )}
 
-          {/* Spec placeholder */}
-          <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)', fontStyle: 'italic', padding: '10px 14px', background: 'var(--bg-elevated)', borderRadius: 6, border: '1px solid var(--border)' }}>
-            Detailed skill specification em construção
-          </div>
         </div>
 
         {/* Footer */}
