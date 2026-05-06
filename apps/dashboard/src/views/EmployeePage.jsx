@@ -1,6 +1,5 @@
-import { useState } from 'react'
-import { useParams, Link, useNavigate } from 'react-router-dom'
-import BiaScorecard from './BiaScorecard.jsx'
+import { useState, useEffect } from 'react'
+import { useParams, Link } from 'react-router-dom'
 import SkillModal from '../components/SkillModal.jsx'
 
 const TRIGGER_COLORS = {
@@ -112,14 +111,17 @@ const PREVIEW_LEN = 400
 
 export default function EmployeePage({ data }) {
   const { slug } = useParams()
-  const navigate = useNavigate()
   const [expanded, setExpanded] = useState(false)
   const [editMode, setEditMode] = useState(false)
   const [draft, setDraft] = useState('')
   const [selectedSkill, setSelectedSkill] = useState(null)
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 1024)
 
-  // FIX 1 — Bia always routes to BiaScorecard, untouched
-  if (slug === 'bia') return <BiaScorecard />
+  useEffect(() => {
+    const handler = () => setIsMobile(window.innerWidth < 1024)
+    window.addEventListener('resize', handler)
+    return () => window.removeEventListener('resize', handler)
+  }, [])
 
   const emp = data?.employees?.find(e => e.id === slug)
 
@@ -146,15 +148,15 @@ export default function EmployeePage({ data }) {
   const btnSmall = { background: 'none', border: '1px solid var(--border)', borderRadius: 5, padding: '2px 8px', cursor: 'pointer', fontSize: '0.62rem', color: 'var(--text-dim)' }
 
   return (
-    <div style={{ maxWidth: 820 }}>
+    <div style={{ maxWidth: 1400 }}>
       {selectedSkill && <SkillModal skill={selectedSkill} onClose={() => setSelectedSkill(null)} />}
 
       <Link to="/employees" style={{ fontSize: '0.72rem', color: 'var(--text-dim)', textDecoration: 'none', display: 'inline-block', marginBottom: 14 }}>← Equipa</Link>
 
-      {/* HEADER */}
+      {/* HEADER — full width */}
       <div style={{
         background: 'var(--bg-card)', border: '1px solid var(--border)',
-        borderRadius: 10, padding: '20px 24px', marginBottom: 12,
+        borderRadius: 10, padding: '20px 24px', marginBottom: 20,
         display: 'flex', alignItems: 'center', gap: 16,
       }}>
         <div style={{
@@ -189,138 +191,169 @@ export default function EmployeePage({ data }) {
         </div>
       </div>
 
-      {/* QUICK STATS */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginBottom: 12 }}>
-        {[
-          { label: 'Messages 7D',       value: '—', sub: 'No data yet' },
-          { label: 'Approvals pending', value: '—', sub: 'aguardam'    },
-          { label: 'Approval rate',     value: '—', sub: 'últimos 30d' },
-          { label: 'Cost 30D',          value: emp.cost ? `$${emp.cost.current}` : '—', sub: 'USD' },
-        ].map(s => (
-          <div key={s.label} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 12px' }}>
-            <div style={{ fontSize: '0.52rem', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 4 }}>{s.label}</div>
-            <div style={{ fontSize: '1.1rem', fontWeight: 700, fontFamily: 'monospace', color: 'var(--text)' }}>{s.value}</div>
-            <div style={{ fontSize: '0.6rem', color: 'var(--text-dim)', marginTop: 2 }}>{s.sub}</div>
-          </div>
-        ))}
-      </div>
+      {/* 2-COLUMN GRID */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: isMobile ? '1fr' : '1fr 320px',
+        gap: 24,
+        alignItems: 'start',
+      }}>
 
-      {/* INSTRUCTIONS */}
-      <SectionCard
-        title="📄  Instructions"
-        action={editMode ? (
-          <div style={{ display: 'flex', gap: 6 }}>
-            <button onClick={() => setEditMode(false)} style={btnSmall}>Cancel</button>
-            <button onClick={() => setEditMode(false)} style={{ ...btnSmall, background: 'var(--primary)', border: 'none', color: '#fff' }}>Save</button>
+        {/* LEFT COLUMN */}
+        <div>
+          {/* 4 KPI cards */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginBottom: 12 }}>
+            {[
+              { label: 'Messages 7D',       value: '—', sub: 'No data yet' },
+              { label: 'Approvals pending', value: '—', sub: 'aguardam'    },
+              { label: 'Approval rate',     value: '—', sub: 'últimos 30d' },
+              { label: 'Cost 30D',          value: emp.cost ? `$${emp.cost.current}` : '—', sub: 'USD' },
+            ].map(s => (
+              <div key={s.label} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 12px' }}>
+                <div style={{ fontSize: '0.52rem', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 4 }}>{s.label}</div>
+                <div style={{ fontSize: '1.1rem', fontWeight: 700, fontFamily: 'monospace', color: 'var(--text)' }}>{s.value}</div>
+                <div style={{ fontSize: '0.6rem', color: 'var(--text-dim)', marginTop: 2 }}>{s.sub}</div>
+              </div>
+            ))}
           </div>
-        ) : (
-          <button onClick={() => { setEditMode(true); setDraft(mdText) }} style={btnSmall}>Edit ✏</button>
-        )}
-      >
-        {editMode ? (
-          <textarea
-            value={draft}
-            onChange={e => setDraft(e.target.value)}
-            style={{ width: '100%', boxSizing: 'border-box', minHeight: 400, padding: 14, background: 'var(--bg-elevated)', border: 'none', resize: 'vertical', fontSize: '0.75rem', fontFamily: 'monospace', color: 'var(--text)', outline: 'none' }}
-          />
-        ) : (
-          <div style={{ padding: '12px 16px' }}>
-            {mdText ? (
-              <>
-                <MarkdownProse text={needsExpand && !expanded ? mdText.slice(0, PREVIEW_LEN) + '…' : mdText} />
-                {needsExpand && (
-                  <button onClick={() => setExpanded(p => !p)} style={{ marginTop: 8, background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.65rem', color: 'var(--primary)', padding: 0 }}>
-                    {expanded ? 'Show less ↑' : 'Show more ↓'}
-                  </button>
-                )}
-              </>
+
+          {/* Instructions */}
+          <SectionCard
+            title="📄  Instructions"
+            action={editMode ? (
+              <div style={{ display: 'flex', gap: 6 }}>
+                <button onClick={() => setEditMode(false)} style={btnSmall}>Cancel</button>
+                <button onClick={() => setEditMode(false)} style={{ ...btnSmall, background: 'var(--primary)', border: 'none', color: '#fff' }}>Save</button>
+              </div>
             ) : (
-              <span style={{ fontSize: '0.75rem', color: 'var(--text-dim)', fontStyle: 'italic' }}>
-                Ficheiro .md não disponível em .claude/employees/{slug}.md
-              </span>
+              <button onClick={() => { setEditMode(true); setDraft(mdText) }} style={btnSmall}>Edit ✏</button>
             )}
+          >
+            {editMode ? (
+              <textarea
+                value={draft}
+                onChange={e => setDraft(e.target.value)}
+                style={{ width: '100%', boxSizing: 'border-box', minHeight: 400, padding: 14, background: 'var(--bg-elevated)', border: 'none', resize: 'vertical', fontSize: '0.75rem', fontFamily: 'monospace', color: 'var(--text)', outline: 'none' }}
+              />
+            ) : (
+              <div style={{ padding: '12px 16px' }}>
+                {mdText ? (
+                  <>
+                    <MarkdownProse text={needsExpand && !expanded ? mdText.slice(0, PREVIEW_LEN) + '…' : mdText} />
+                    {needsExpand && (
+                      <button onClick={() => setExpanded(p => !p)} style={{ marginTop: 8, background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.65rem', color: 'var(--primary)', padding: 0 }}>
+                        {expanded ? 'Show less ↑' : 'Show more ↓'}
+                      </button>
+                    )}
+                  </>
+                ) : (
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-dim)', fontStyle: 'italic' }}>
+                    Ficheiro .md não disponível em .claude/employees/{slug}.md
+                  </span>
+                )}
+              </div>
+            )}
+          </SectionCard>
+
+          {/* Peer Reads */}
+          {emp.peerReads?.length > 0 && (
+            <SectionCard title="Colabora com">
+              {emp.peerReads.map((p, i) => (
+                <div key={i} style={{ display: 'flex', gap: 10, padding: '6px 16px', borderBottom: '1px solid var(--border)', fontSize: '0.72rem' }}>
+                  <span style={{ fontFamily: 'monospace', fontSize: '0.6rem', fontWeight: 700, color: p.stage === 'current' ? 'var(--primary)' : 'var(--text-dim)', width: 70, flexShrink: 0, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{p.stage}</span>
+                  <span style={{ color: 'var(--text-dim)' }}>{p.value}</span>
+                </div>
+              ))}
+            </SectionCard>
+          )}
+        </div>
+
+        {/* RIGHT COLUMN — sticky */}
+        <div style={{
+          position: 'sticky',
+          top: 24,
+          alignSelf: 'start',
+          maxHeight: 'calc(100vh - 48px)',
+          overflowY: 'auto',
+        }}>
+          {/* Quick stats */}
+          <div style={{
+            background: 'var(--bg-card)', border: '1px solid var(--border)',
+            borderRadius: 10, marginBottom: 12, display: 'flex',
+          }}>
+            {[
+              { label: 'Integrations', value: totalInteg },
+              { label: 'Skills',       value: emp.skills?.length ?? 0 },
+              { label: 'Recipes',      value: emp.recipes?.length ?? 0 },
+              { label: '$/mo',         value: emp.cost ? `$${emp.cost.current}` : '—', color: emp.cost ? 'var(--warning)' : undefined },
+            ].map((stat, i, arr) => (
+              <div key={stat.label} style={{ flex: 1, textAlign: 'center', padding: '12px 8px', borderRight: i < arr.length - 1 ? '1px solid var(--border)' : 'none' }}>
+                <div style={{ fontSize: '1.1rem', fontWeight: 700, fontFamily: 'monospace', color: stat.color || 'var(--text)' }}>{stat.value}</div>
+                <div style={{ fontSize: '0.5rem', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: 2 }}>{stat.label}</div>
+              </div>
+            ))}
           </div>
-        )}
-      </SectionCard>
 
-      {/* INTEGRATIONS */}
-      {emp.integrations?.length > 0 && (
-        <SectionCard
-          title={`Integrations · ${enabledCount} of ${totalInteg} enabled`}
-          action={<button style={btnSmall}>Manage →</button>}
-        >
-          {emp.integrations.map(integ => (
-            <div key={integ.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 16px', borderBottom: '1px solid var(--border)' }}>
-              <div style={{
-                width: 24, height: 24, borderRadius: 5, flexShrink: 0,
-                background: 'var(--bg-elevated)', border: '1px solid var(--border)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: '0.52rem', fontWeight: 700, fontFamily: 'monospace', color: 'var(--text-dim)',
-              }}>{integ.icon || integ.id.slice(0, 2).toUpperCase()}</div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: '0.75rem', fontWeight: 600, color: integ.enabled && !integ.planned ? 'var(--text)' : 'var(--text-dim)' }}>{integ.name}</div>
-                <div style={{ fontSize: '0.62rem', color: 'var(--text-dim)', lineHeight: 1.3 }}>{integ.desc}</div>
-              </div>
-              {integ.planned && (
-                <span style={{ fontSize: '0.55rem', padding: '1px 5px', borderRadius: 3, background: 'rgba(245,158,11,0.12)', color: 'var(--warning)', fontWeight: 600 }}>planned</span>
-              )}
-              <Toggle on={integ.enabled && !integ.planned} />
-            </div>
-          ))}
-        </SectionCard>
-      )}
+          {/* Integrations */}
+          {emp.integrations?.length > 0 && (
+            <SectionCard title={`Integrations · ${enabledCount}/${totalInteg}`}>
+              {emp.integrations.map(integ => (
+                <div key={integ.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 12px', borderBottom: '1px solid var(--border)' }}>
+                  <div style={{
+                    width: 20, height: 20, borderRadius: 4, flexShrink: 0,
+                    background: 'var(--bg-elevated)', border: '1px solid var(--border)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: '0.48rem', fontWeight: 700, fontFamily: 'monospace', color: 'var(--text-dim)',
+                  }}>{integ.icon || integ.id.slice(0, 2).toUpperCase()}</div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: '0.7rem', fontWeight: 600, color: integ.enabled && !integ.planned ? 'var(--text)' : 'var(--text-dim)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{integ.name}</div>
+                  </div>
+                  {integ.planned && (
+                    <span style={{ fontSize: '0.5rem', padding: '1px 4px', borderRadius: 3, background: 'rgba(245,158,11,0.12)', color: 'var(--warning)', fontWeight: 600, flexShrink: 0 }}>plan</span>
+                  )}
+                  <Toggle on={integ.enabled && !integ.planned} />
+                </div>
+              ))}
+            </SectionCard>
+          )}
 
-      {/* SKILLS */}
-      {emp.skills?.length > 0 && (
-        <SectionCard title={`Skills · ${emp.skills.length}`}>
-          {emp.skills.map(s => (
-            <div
-              key={s.id}
-              onClick={() => openSkill(s)}
-              style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '8px 16px', borderBottom: '1px solid var(--border)', cursor: 'pointer' }}
-              onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-elevated)'}
-              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-            >
-              <span style={{ color: 'var(--text-dim)', flexShrink: 0, marginTop: 3, fontSize: '0.7rem' }}>•</span>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <code style={{ fontSize: '0.68rem', fontFamily: 'monospace', fontWeight: 600, color: 'var(--info)' }}>{s.id}</code>
-                <span style={{ display: 'block', fontSize: '0.68rem', color: 'var(--text-dim)', fontStyle: 'italic', marginTop: 1 }}>{s.desc}</span>
-              </div>
-              <span style={{ color: 'var(--text-dim)', fontSize: '0.75rem', marginTop: 2, flexShrink: 0 }}>›</span>
-            </div>
-          ))}
-        </SectionCard>
-      )}
+          {/* Skills */}
+          {emp.skills?.length > 0 && (
+            <SectionCard title={`Skills · ${emp.skills.length}`}>
+              {emp.skills.map(s => (
+                <div
+                  key={s.id}
+                  onClick={() => openSkill(s)}
+                  style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 12px', borderBottom: '1px solid var(--border)', cursor: 'pointer' }}
+                  onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-elevated)'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                >
+                  <code style={{ fontSize: '0.65rem', fontFamily: 'monospace', fontWeight: 600, color: 'var(--info)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.id}</code>
+                  <span style={{ color: 'var(--text-dim)', fontSize: '0.72rem', flexShrink: 0 }}>›</span>
+                </div>
+              ))}
+            </SectionCard>
+          )}
 
-      {/* RECIPES */}
-      {emp.recipes?.length > 0 && (
-        <SectionCard title={`Recipes · ${emp.recipes.length}`}>
-          {emp.recipes.map(r => (
-            <div key={r.id} style={{ padding: '10px 16px', borderBottom: '1px solid var(--border)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
-                <TriggerBadge trigger={r.trigger} />
-                <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text)', fontFamily: 'monospace' }}>{r.id}</span>
-              </div>
-              {r.trigger_label && (
-                <div style={{ fontSize: '0.6rem', color: 'var(--text-dim)', fontFamily: 'monospace', marginBottom: 3 }}>{r.trigger_label}</div>
-              )}
-              <div style={{ fontSize: '0.68rem', color: 'var(--text-dim)' }}>{r.desc}</div>
-            </div>
-          ))}
-        </SectionCard>
-      )}
+          {/* Recipes */}
+          {emp.recipes?.length > 0 && (
+            <SectionCard title={`Recipes · ${emp.recipes.length}`}>
+              {emp.recipes.map(r => (
+                <div key={r.id} style={{ padding: '8px 12px', borderBottom: '1px solid var(--border)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: r.trigger_label ? 2 : 0 }}>
+                    <TriggerBadge trigger={r.trigger} />
+                    <span style={{ fontSize: '0.65rem', fontWeight: 600, color: 'var(--text)', fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{r.id}</span>
+                  </div>
+                  {r.trigger_label && (
+                    <div style={{ fontSize: '0.58rem', color: 'var(--text-dim)', fontFamily: 'monospace' }}>{r.trigger_label}</div>
+                  )}
+                </div>
+              ))}
+            </SectionCard>
+          )}
+        </div>
 
-      {/* PEER READS */}
-      {emp.peerReads?.length > 0 && (
-        <SectionCard title="Colabora com">
-          {emp.peerReads.map((p, i) => (
-            <div key={i} style={{ display: 'flex', gap: 10, padding: '6px 16px', borderBottom: '1px solid var(--border)', fontSize: '0.72rem' }}>
-              <span style={{ fontFamily: 'monospace', fontSize: '0.6rem', fontWeight: 700, color: p.stage === 'current' ? 'var(--primary)' : 'var(--text-dim)', width: 70, flexShrink: 0, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{p.stage}</span>
-              <span style={{ color: 'var(--text-dim)' }}>{p.value}</span>
-            </div>
-          ))}
-        </SectionCard>
-      )}
+      </div>
     </div>
   )
 }

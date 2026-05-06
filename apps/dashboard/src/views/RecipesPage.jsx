@@ -1,4 +1,5 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
+import RecipeModal from '../components/RecipeModal.jsx'
 
 const TRIGGER_STYLES = {
   event:    { bg: 'rgba(59,130,246,0.12)',  color: 'var(--info)',    label: 'EVENT' },
@@ -18,6 +19,8 @@ function TriggerBadge({ trigger }) {
 }
 
 export default function RecipesPage({ data }) {
+  const [selectedRecipe, setSelectedRecipe] = useState(null)
+
   const allRecipes = useMemo(() => {
     const result = []
     for (const emp of (data?.employees || [])) {
@@ -48,6 +51,8 @@ export default function RecipesPage({ data }) {
 
   return (
     <div>
+      {selectedRecipe && <RecipeModal recipe={selectedRecipe} onClose={() => setSelectedRecipe(null)} />}
+
       <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)', marginBottom: 20 }}>
         {allRecipes.length} receitas em {(data?.employees || []).filter(e => e.recipes?.length).length} employees
       </div>
@@ -70,11 +75,18 @@ export default function RecipesPage({ data }) {
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               {recipes.map((r, i) => (
-                <div key={i} style={{
-                  background: 'var(--bg-card)', border: '1px solid var(--border)',
-                  borderRadius: 10, padding: '12px 16px',
-                  borderLeft: `2px solid ${style.color}`,
-                }}>
+                <div
+                  key={i}
+                  onClick={() => setSelectedRecipe(r)}
+                  style={{
+                    background: 'var(--bg-card)', border: '1px solid var(--border)',
+                    borderRadius: 10, padding: '12px 16px',
+                    borderLeft: `2px solid ${style.color}`,
+                    cursor: 'pointer', transition: 'transform 0.1s, background 0.1s',
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.background = 'var(--bg-elevated)' }}
+                  onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.background = 'var(--bg-card)' }}
+                >
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
                     <span style={{
                       fontSize: '0.72rem', fontWeight: 600, fontFamily: 'monospace', color: 'var(--text)',

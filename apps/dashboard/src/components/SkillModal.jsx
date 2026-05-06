@@ -41,7 +41,7 @@ export default function SkillModal({ skill, onClose }) {
       onClick={onClose}
       style={{
         position: 'fixed', inset: 0,
-        background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(2px)',
+        background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(2px)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         zIndex: 1000, padding: 16,
       }}
@@ -49,7 +49,7 @@ export default function SkillModal({ skill, onClose }) {
       <div
         onClick={e => e.stopPropagation()}
         style={{
-          background: 'var(--bg-card)', border: '1px solid var(--border)',
+          background: 'var(--bg-elevated)', border: '1px solid var(--border)',
           borderRadius: 12, maxWidth: 560, width: '100%',
           maxHeight: '80vh', overflow: 'hidden',
           display: 'flex', flexDirection: 'column',

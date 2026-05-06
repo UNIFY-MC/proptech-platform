@@ -103,6 +103,13 @@ function readFile(path) {
   try { return readFileSync(path, 'utf8') } catch { return '' }
 }
 
+function stripFrontmatter(md) {
+  if (!md.startsWith('---\n')) return md
+  const end = md.indexOf('\n---\n', 4)
+  if (end === -1) return md
+  return md.slice(end + 5)
+}
+
 function parseKV(content) {
   const result = {}
   const lines = content.split(/\r?\n/)
@@ -538,7 +545,7 @@ function parseEmployees() {
         recipes: meta.recipes || [],
         integrations: meta.integrations || [],
         peerReads: meta.peerReads || [],
-        _mdRaw: mdRaw,
+        _mdRaw: stripFrontmatter(mdRaw),
       })
     } catch { /* skip malformed file */ }
   }

@@ -14,6 +14,7 @@ import InboxView from './views/InboxView.jsx'
 import ApprovalsView from './views/ApprovalsView.jsx'
 import EmployeesPage from './views/EmployeesPage.jsx'
 import EmployeePage from './views/EmployeePage.jsx'
+import BiaScorecard from './views/BiaScorecard.jsx'
 import SkillsPage from './views/SkillsPage.jsx'
 import RecipesPage from './views/RecipesPage.jsx'
 import IntegrationsPage from './views/IntegrationsPage.jsx'
@@ -54,8 +55,9 @@ export default function App() {
             <Routes>
               <Route path="/"             element={<Overview data={data} />} />
               <Route path="/inbox"        element={<Activity data={data} />} />
-              <Route path="/employees"    element={<EmployeesPage data={data} />} />
-              <Route path="/employees/:slug" element={<EmployeePage data={data} />} />
+              <Route path="/employees"         element={<EmployeesPage data={data} />} />
+              <Route path="/employees/bia"    element={<BiaScorecard />} />
+              <Route path="/employees/:slug"  element={<EmployeePage data={data} />} />
               <Route path="/agentes"      element={<Agents data={data} />} />
               <Route path="/roadmap"      element={<Roadmap data={data} />} />
               <Route path="/watchers"     element={<Watchers data={data} />} />
