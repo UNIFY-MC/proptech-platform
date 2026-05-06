@@ -26,11 +26,11 @@ export default function BiaScorecard() {
             dimmed={isEditing}
           />
 
+          <BiaInstructions {...instructions} />
+
           {!isEditing && (
             <BiaIntegrations integrations={meta.integrations} />
           )}
-
-          <BiaInstructions {...instructions} />
         </div>
 
         <BiaMetaSidebar hidden={isEditing} />

@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom'
 
 export default function BiaHeader({ meta, isEditing }) {
   const navigate = useNavigate()
+  const modelShort = meta.model?.replace('claude-', '') || '—'
 
   return (
     <div className={`bsc-header${isEditing ? ' editing' : ''}`}>
@@ -12,18 +13,18 @@ export default function BiaHeader({ meta, isEditing }) {
       <div className="bsc-title-group">
         <div className="bsc-title-row">
           <span className="bsc-name">{meta.name}</span>
-          <span className="bsc-sep">·</span>
-          <span className="bsc-role">{meta.role}</span>
-          <span className="bsc-vertical">{meta.vertical}</span>
+        </div>
+        <div className="bsc-desc-row">
+          {meta.role} · {meta.vertical}
         </div>
         <div className="bsc-subline">
-          <span>{meta.model}</span>
+          <span>Model: {modelShort}</span>
           <span className="sep">·</span>
-          <span>replies pt-pt</span>
+          <span>Replies: pt-pt</span>
           <span className="sep">·</span>
-          <span>last check —</span>
+          <span>v{meta.version}</span>
           <span className="sep">·</span>
-          <span className="bsc-version-chip">v{meta.version}</span>
+          <span>Last check: —</span>
         </div>
       </div>
 
