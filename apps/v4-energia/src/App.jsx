@@ -14,6 +14,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
+import ClienteSimulator from './components/ClienteSimulator.jsx';
+import StaffLeads from './components/StaffLeads.jsx';
 
 /* ─────────────────────────────────────────────────────────────────────
  *  CONFIG · Supabase V1 Core Hub
@@ -133,6 +135,19 @@ body.dark{
 }
 .logout-btn:hover{border-color:var(--red);color:var(--red)}
 .hdr-user{font-size:11px;color:var(--muted);font-family:var(--mono)}
+
+/* ── TABS ────────────────────────────────────── */
+.tabs{
+  display:flex;gap:2px;background:var(--surface);border-bottom:1px solid var(--border);
+  padding:0 28px;flex-shrink:0;
+}
+.tab{
+  background:none;border:none;padding:10px 18px;cursor:pointer;
+  font-size:11px;font-family:var(--mono);letter-spacing:.08em;text-transform:uppercase;
+  color:var(--muted);border-bottom:2px solid transparent;transition:all .15s;
+}
+.tab:hover{color:var(--text)}
+.tab.active{color:var(--blue);border-bottom-color:var(--blue)}
 
 /* ── MAIN CONTENT ────────────────────────────── */
 .main{flex:1;overflow-y:auto;padding:28px 32px}
@@ -339,6 +354,12 @@ function LoginScreen({ onLogin, theme, onToggleTheme }) {
 function Dashboard({ session, theme, onToggleTheme, onLogout }) {
   const email = session?.user?.email || '';
 
+  // Tab activa — 'painel' | 'simulador' | 'leads'
+  const [tab, setTab] = useState(
+    () => localStorage.getItem('v4tab') || 'painel'
+  );
+  useEffect(() => { localStorage.setItem('v4tab', tab); }, [tab]);
+
   // Estado de cada KPI: null = loading, string = valor formatado
   const [kpiActivos, setKpiActivos] = useState(null);
   const [kpiLeads, setKpiLeads] = useState(null);
@@ -480,25 +501,67 @@ function Dashboard({ session, theme, onToggleTheme, onLogout }) {
         </div>
       </header>
 
+      {/* TABS */}
+      <div className="tabs">
+        <button
+          className={`tab ${tab === 'painel' ? 'active' : ''}`}
+          onClick={() => setTab('painel')}
+        >Painel</button>
+        <button
+          className={`tab ${tab === 'simulador' ? 'active' : ''}`}
+          onClick={() => setTab('simulador')}
+        >Simulador</button>
+        <button
+          className={`tab ${tab === 'leads' ? 'active' : ''}`}
+          onClick={() => setTab('leads')}
+        >Leads</button>
+      </div>
+
       {/* CONTEÚDO */}
       <main className="main">
-        <div className="ph">
-          <div>
-            <div className="pt">Painel</div>
-            <div className="ps">Visão geral da vertical Energia</div>
-          </div>
-        </div>
-
-        {/* GRID 4 KPIs */}
-        <div className="kpi4">
-          {kpis.map((k) => (
-            <div key={k.label} className={`kpi ${k.cor}`}>
-              <div className="kpi-l">{k.label}</div>
-              <div className="kpi-v">{k.valor ?? '—'}</div>
-              <div className="kpi-s">{k.sub}</div>
+        {tab === 'painel' && (
+          <>
+            <div className="ph">
+              <div>
+                <div className="pt">Painel</div>
+                <div className="ps">Visão geral da vertical Energia</div>
+              </div>
             </div>
-          ))}
-        </div>
+            <div className="kpi4">
+              {kpis.map((k) => (
+                <div key={k.label} className={`kpi ${k.cor}`}>
+                  <div className="kpi-l">{k.label}</div>
+                  <div className="kpi-v">{k.valor ?? '—'}</div>
+                  <div className="kpi-s">{k.sub}</div>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+
+        {tab === 'simulador' && (
+          <>
+            <div className="ph">
+              <div>
+                <div className="pt">Simulador</div>
+                <div className="ps">Compara tarifas de electricidade · 8 comercializadores</div>
+              </div>
+            </div>
+            <ClienteSimulator />
+          </>
+        )}
+
+        {tab === 'leads' && (
+          <>
+            <div className="ph">
+              <div>
+                <div className="pt">Leads</div>
+                <div className="ps">Pipeline de contratos · gestão de estados</div>
+              </div>
+            </div>
+            <StaffLeads />
+          </>
+        )}
       </main>
     </div>
   );
