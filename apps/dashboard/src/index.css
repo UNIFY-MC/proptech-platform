@@ -498,11 +498,31 @@ body {
   overflow: hidden;
 }
 
+/* Sidebar secundário — só visível quando uma app embebida está activa */
+.app-subsidebar {
+  width: 230px;
+  flex-shrink: 0;
+  background: var(--bg);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow: hidden;
+}
+
 .app-main {
   flex: 1;
   min-width: 0;
   padding: 20px;
   overflow-y: auto;
+}
+
+/* Quando há app embebida, main area é o iframe a full bleed (sem padding) */
+.app-main.embed-mode {
+  padding: 0;
+  overflow: hidden;
 }
 
 /* Brand */

@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import { useData } from './hooks/useData.js'
 import { DrawerProvider } from './context/DrawerContext.jsx'
 import Sidebar from './components/Sidebar.jsx'
+import AppSubSidebar from './components/AppSubSidebar.jsx'
 import Overview from './components/Overview.jsx'
 import Activity from './components/Activity.jsx'
 import Agents from './components/Agents.jsx'
@@ -25,10 +26,14 @@ import AppEmbed from './views/AppEmbed.jsx'
 import StubView from './views/StubView.jsx'
 import { useAppShellStore } from './store'
 
+// Detect se a aplicação está embebida dentro de outra (window.parent !== window).
+// Quando assim, renderiza-se sem sidebars (evita recursão visual de app dentro de app).
+const IS_EMBEDDED = typeof window !== 'undefined' && window.parent !== window.self
+
 export default function App() {
   const { data, loading, error, lastSync, refresh } = useData()
   const { activeAppSlug } = useAppShellStore()
-  const showEmbed = activeAppSlug !== 'dashboard'
+  const showEmbed = !IS_EMBEDDED && activeAppSlug !== 'dashboard'
 
   const [theme, setTheme] = useState(() => localStorage.getItem('dashboard-theme') || 'dark')
 
@@ -37,19 +42,27 @@ export default function App() {
     localStorage.setItem('dashboard-theme', theme)
   }, [theme])
 
+  const mainClass = 'app-main' + (showEmbed ? ' embed-mode' : '')
+
   return (
     <DrawerProvider>
       <div className="app-layout">
-        <Sidebar
-          theme={theme}
-          setTheme={setTheme}
-          data={data}
-          lastSync={lastSync}
-          loading={loading}
-          refresh={refresh}
-        />
+        {/* Sidebar primária — sempre visível, excepto quando estamos dentro de outra app */}
+        {!IS_EMBEDDED && (
+          <Sidebar
+            theme={theme}
+            setTheme={setTheme}
+            data={data}
+            lastSync={lastSync}
+            loading={loading}
+            refresh={refresh}
+          />
+        )}
 
-        <main className="app-main">
+        {/* Sidebar secundária — só quando há app embebida activa (2ª coluna) */}
+        {showEmbed && <AppSubSidebar />}
+
+        <main className={mainClass}>
           {error && (
             <div className="error-banner">Erro ao carregar dados: {error}</div>
           )}

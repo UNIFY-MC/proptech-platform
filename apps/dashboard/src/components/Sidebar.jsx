@@ -57,7 +57,7 @@ export default function Sidebar({ theme, setTheme, data, lastSync, loading, refr
 
   return (
     <aside className="app-sidebar">
-      {/* Brand */}
+      {/* Brand — sempre visível */}
       <div className="sidebar-brand">
         <div className="sidebar-brand-title">Agentic Ops</div>
         {data?.meta?.branch && (
@@ -84,10 +84,11 @@ export default function Sidebar({ theme, setTheme, data, lastSync, loading, refr
 
       {/* Nav sections */}
       <div className="sidebar-nav">
-        {/* App switcher sempre visível no topo (BD-driven via system.apps) */}
+        {/* APPS sempre no topo (BD-driven via system.apps) */}
         <AppSwitcher />
 
-        {/* Sidebar interno do dashboard só quando dashboard activo */}
+        {/* Sidebar interno do dashboard só visível em dashboard mode.
+            Quando uma app está activa, os items dela aparecem na 2ª coluna (AppSubSidebar). */}
         {isDashboardMode && (
           <>
             <div className="sidebar-section-label">Daily</div>
@@ -120,7 +121,7 @@ export default function Sidebar({ theme, setTheme, data, lastSync, loading, refr
         )}
       </div>
 
-      {/* TASKS · CHATS — employees scrollable (só no dashboard mode) */}
+      {/* TASKS · CHATS — só no dashboard mode */}
       {isDashboardMode && employees.length > 0 && (
         <div className="sidebar-tasks">
           <div className="sidebar-section-label">Tasks · Chats</div>

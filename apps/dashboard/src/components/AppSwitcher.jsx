@@ -1,7 +1,6 @@
-// AppSwitcher — secção topo do Sidebar com lista de apps + items da app activa
-// Dados de system.apps + system.app_routes via useApps (BD-driven)
+// AppSwitcher — APENAS a lista de Apps no sidebar primário
+// Dados de system.apps via useApps (BD-driven)
 
-import { NavLink } from 'react-router-dom'
 import * as Icons from 'lucide-react'
 import { useApps } from '../hooks/useApps.js'
 import { useAppShellStore } from '../store'
@@ -14,13 +13,12 @@ function Ic({ name, size = 16, color = 'var(--text-dim)' }) {
 }
 
 export default function AppSwitcher() {
-  const { apps, sectionsFor, loading } = useApps()
-  const { activeAppSlug, setActiveApp, activePath, setActivePath } = useAppShellStore()
-  const activeApp = apps.find(a => a.slug === activeAppSlug)
+  const { apps, loading } = useApps()
+  const { activeAppSlug, setActiveApp } = useAppShellStore()
 
   if (loading) {
     return (
-      <div style={{ padding: '12px 14px', fontSize: '0.7rem', color: 'var(--text-dim)' }}>
+      <div style={{ padding: '8px 14px', fontSize: '0.65rem', color: 'var(--text-dim)' }}>
         A carregar apps…
       </div>
     )
@@ -28,9 +26,8 @@ export default function AppSwitcher() {
 
   return (
     <>
-      {/* Topo — switcher de apps */}
       <div className="sidebar-section-label">Apps</div>
-      {apps.map(app => {
+      {apps.filter(a => a.active).map(app => {
         const isActive = app.slug === activeAppSlug
         return (
           <button
@@ -38,14 +35,9 @@ export default function AppSwitcher() {
             onClick={() => setActiveApp(app.slug)}
             className={'sidebar-link' + (isActive ? ' active' : '')}
             style={{
-              background: 'none',
-              border: 'none',
-              width: '100%',
-              textAlign: 'left',
-              cursor: 'pointer',
-              padding: 0,
-              font: 'inherit',
-              color: 'inherit',
+              background: 'none', border: 'none', width: '100%',
+              textAlign: 'left', cursor: 'pointer', padding: 0,
+              font: 'inherit', color: 'inherit',
             }}
           >
             <span style={{ display: 'flex', alignItems: 'center', flex: 1, minWidth: 0 }}>
@@ -55,54 +47,9 @@ export default function AppSwitcher() {
                 fontWeight: isActive ? 600 : 400,
               }}>{app.label}</span>
             </span>
-            {!app.embed && (
-              <span style={{
-                fontSize: '0.52rem', fontFamily: 'JetBrains Mono, monospace',
-                color: 'var(--text-dim)', marginLeft: 6,
-              }}>SPA</span>
-            )}
-            {app.embed && (
-              <span style={{
-                fontSize: '0.52rem', fontFamily: 'JetBrains Mono, monospace',
-                color: 'var(--text-dim)', marginLeft: 6,
-              }}>IFRAME</span>
-            )}
           </button>
         )
       })}
-
-      {/* Routes da app activa (só para embed=true) */}
-      {activeApp && activeApp.embed && (
-        <>
-          {sectionsFor(activeApp.slug).map((sec, idx) => (
-            <div key={`${activeApp.slug}-${sec.label ?? 'default'}-${idx}`}>
-              {sec.label && <div className="sidebar-section-label">{sec.label}</div>}
-              {sec.routes.map(r => {
-                const isActiveRoute = r.path === activePath
-                return (
-                  <button
-                    key={r.id}
-                    onClick={() => setActivePath(r.path)}
-                    className={'sidebar-link' + (isActiveRoute ? ' active' : '')}
-                    style={{
-                      background: 'none', border: 'none', width: '100%',
-                      textAlign: 'left', cursor: 'pointer', padding: 0,
-                      font: 'inherit', color: 'inherit',
-                    }}
-                  >
-                    <span style={{ display: 'flex', alignItems: 'center', flex: 1, minWidth: 0 }}>
-                      <Ic name={r.icon} />
-                      <span style={{
-                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                      }}>{r.label}</span>
-                    </span>
-                  </button>
-                )
-              })}
-            </div>
-          ))}
-        </>
-      )}
     </>
   )
 }
