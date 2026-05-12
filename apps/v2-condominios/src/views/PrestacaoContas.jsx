@@ -87,7 +87,7 @@ export default function PrestacaoContas() {
 
       <div style={{
         background: 'var(--sf)', border: '1px solid var(--bd)', borderRadius: 8,
-        padding: '12px 18px', marginBottom: 18,
+        padding: '12px 18px', marginBottom: 14,
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
         <span style={{ fontSize: 13, fontWeight: 600 }}>Resultado do período</span>
@@ -98,6 +98,46 @@ export default function PrestacaoContas() {
           {kpis ? (kpis.resultado_periodo >= 0 ? '+ ' : '') + eur(kpis.resultado_periodo) : '—'}
         </span>
       </div>
+
+      {/* Resumo Financeiro (paridade legacy) */}
+      {kpis && (
+        <div style={{
+          background: 'var(--sf)', border: '1px solid var(--bd)', borderRadius: 8,
+          marginBottom: 18, overflow: 'hidden',
+        }}>
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '10px 18px', borderBottom: '2px solid var(--bd)', background: 'var(--sf2)',
+          }}>
+            <span className="mono" style={{ fontSize: 9, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 1, color: 'var(--mu)' }}>
+              Resumo Financeiro
+            </span>
+            <span className="mono dim" style={{ fontSize: 9, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 1 }}>
+              {ano === CURRENT_YEAR ? 'Actual' : `31 Dez ${ano}`}
+            </span>
+          </div>
+          <RR label="Saldo Bancário Final" value={eur(kpis.saldo_bancario_final)} tone="blue" />
+          <RR label="Dívidas Condóminos" value={(kpis.mora_total > 0 ? '+ ' : '') + eur(kpis.mora_total)} tone={kpis.mora_total > 0 ? 'green' : null} sub={`${kpis.fracoes_em_mora ?? 0} fracções`} />
+          <RR label="Dívidas a Fornecedores" value={(kpis.dividas_fornecedores > 0 ? '- ' : '') + eur(kpis.dividas_fornecedores)} tone={kpis.dividas_fornecedores > 0 ? 'red' : null} />
+          <RR label="Fundo Comum de Reserva (10%)" value={eur(kpis.fundo_comum_reserva)} tone="gold" />
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '12px 18px', borderTop: '2px solid var(--bd)', background: 'var(--sf2)',
+          }}>
+            <span style={{ fontSize: 13, fontWeight: 700 }}>Saldo Financeiro Líquido</span>
+            <span className="mono" style={{ fontSize: 14, fontWeight: 700, color: 'var(--tx)' }}>
+              {eur(kpis.saldo_financeiro)}
+            </span>
+          </div>
+        </div>
+      )}
+
+      {kpis && kpis.receitas > 0 && (
+        <p className="dim" style={{ fontSize: 10, marginBottom: 12, fontStyle: 'italic' }}>
+          Valores derivados do extrato bancário ({ano}). Inclui transferências internas (e.g. EUPAGO → conta).
+          Para excluir, classificar movimentos em <code className="mono">extrato_bancario</code>.
+        </p>
+      )}
 
       <div className="tabs">
         {TABS.map(t => (
@@ -119,6 +159,27 @@ export default function PrestacaoContas() {
         {tab === 'extrato'     && <TabExtrato ano={ano} />}
         {tab === 'documentos'  && <TabDocumentos ano={ano} />}
       </div>
+    </div>
+  )
+}
+
+/* Linha do Resumo Financeiro */
+function RR({ label, value, tone, sub }) {
+  const color = tone === 'red'   ? 'var(--rd)'
+              : tone === 'green' ? 'var(--gr)'
+              : tone === 'gold'  ? 'var(--go)'
+              : tone === 'blue'  ? 'var(--bl)'
+              : 'var(--tx)'
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      padding: '10px 18px', borderBottom: '1px solid var(--bd)',
+    }}>
+      <div>
+        <span style={{ fontSize: 12 }}>{label}</span>
+        {sub && <span className="dim mono" style={{ fontSize: 9, marginLeft: 8 }}>{sub}</span>}
+      </div>
+      <span className="mono" style={{ fontSize: 13, color }}>{value}</span>
     </div>
   )
 }
