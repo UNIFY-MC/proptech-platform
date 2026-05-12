@@ -19,6 +19,10 @@ const AGENTIC = [
   { to: '/chat',      label: 'Chat',      icon: '💬', accent: true },
 ]
 
+const DATA_REF = [
+  { to: '/v2-legacy', label: 'V2 Legacy', icon: '⌖', accent: true },
+]
+
 const itemStyle = ({ isActive }) => ({
   display: 'flex',
   alignItems: 'center',
@@ -66,6 +70,14 @@ export default function Sidebar({ theme, setTheme }) {
 
         <SectionLabel>Agentic Ops</SectionLabel>
         {AGENTIC.map(it => (
+          <NavLink key={it.to} to={it.to} style={itemStyle}>
+            <span style={{ width: 14, textAlign: 'center' }}>{it.icon}</span>
+            {it.label}
+          </NavLink>
+        ))}
+
+        <SectionLabel>Referência</SectionLabel>
+        {DATA_REF.map(it => (
           <NavLink key={it.to} to={it.to} style={itemStyle}>
             <span style={{ width: 14, textAlign: 'center' }}>{it.icon}</span>
             {it.label}

@@ -74,3 +74,25 @@ export function createSystemClient(anonKey) {
     },
   })
 }
+
+// V2 Condo Hub legacy — projecto Supabase em produção em prataowners.pt.
+// READ-ONLY. NUNCA escrever (ver CLAUDE.md guard-rail 4).
+// Usado por apps/v2-condominios para mostrar dados reais (97 fracções, 593
+// recebimentos, 2733 documentos, etc) enquanto v2_condominios no V1 está vazio.
+export const SUPABASE_V2_LEGACY_URL = 'https://eozklslwfaqujaijvdnl.supabase.co'
+
+/**
+ * Factory para o cliente do Supabase V2 produção legacy.
+ * Sessão isolada para não colidir com mainClient (V1).
+ *
+ * @param {string} anonKey - import.meta.env.VITE_SUPABASE_V2_LEGACY_ANON_KEY
+ */
+export function createV2LegacyClient(anonKey) {
+  return createClient(SUPABASE_V2_LEGACY_URL, anonKey, {
+    auth: {
+      storageKey: 'sb-v2-legacy-auth',
+      persistSession: false,
+      autoRefreshToken: false,
+    },
+  })
+}

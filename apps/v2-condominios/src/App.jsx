@@ -19,6 +19,7 @@ import Agente from './views/Agente.jsx'
 import Inbox from './views/Inbox.jsx'
 import Approvals from './views/Approvals.jsx'
 import Chat from './views/Chat.jsx'
+import V2Legacy from './views/V2Legacy.jsx'
 
 function AppInner() {
   const { authenticated, loading } = useAuth()
@@ -57,6 +58,7 @@ function AppInner() {
               <Route path="/approvals"     element={<Approvals />} />
               <Route path="/chat"          element={<Chat />} />
               <Route path="/agentes/:slug" element={<Agente />} />
+              <Route path="/v2-legacy"     element={<V2Legacy />} />
               <Route path="*"              element={<Navigate to="/" replace />} />
             </Routes>
           </main>
