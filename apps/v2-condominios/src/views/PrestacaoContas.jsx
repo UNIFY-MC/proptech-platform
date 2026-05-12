@@ -616,60 +616,79 @@ function LinhaOrcReal({ ano, rubrica, efetivo }) {
 }
 
 function TabOrcFracao({ ano }) {
-  const [orcs, setOrcs] = useState(null)
-  const [fracoes, setFracoes] = useState(null)
+  const [rows, setRows] = useState(null)
   const [error, setError] = useState(null)
   useEffect(() => {
     let active = true
-    setOrcs(null); setFracoes(null); setError(null)
-    Promise.all([
-      v2Client.from('orcamentos').select('valor_total').eq('ano', ano),
-      v2Client.from('fracoes').select('id, codigo, permilagem').order('codigo'),
-    ]).then(([o, f]) => {
-      if (!active) return
-      if (o.error || f.error) { setError(o.error?.message || f.error?.message); return }
-      setOrcs(o.data || []); setFracoes(f.data || [])
-    })
+    setRows(null); setError(null)
+    v2Client.from('orcamento_por_fracao')
+      .select('fracao_codigo, permilagem, valor_mensal, valor_mensal_fcr, total_mensal, ordem')
+      .eq('ano', ano).order('ordem')
+      .then(({ data, error }) => {
+        if (!active) return
+        if (error) setError(error.message); else setRows(data || [])
+      })
     return () => { active = false }
   }, [ano])
   if (error) return <div className="error-banner">Erro: {error}</div>
-  if (orcs === null || fracoes === null) return <div className="dim">A carregar…</div>
-  const orcTotal = orcs.reduce((a, o) => a + Number(o.valor_total ?? 0), 0)
-  const totPerm = fracoes.reduce((a, f) => a + Number(f.permilagem ?? 0), 0)
+  if (rows === null) return <div className="dim">A carregar…</div>
+  if (rows.length === 0) return (
+    <div className="empty-state">
+      <div style={{ fontSize: 14, marginBottom: 4 }}>Sem orçamento por fracção para {ano}</div>
+      <div style={{ fontSize: 12 }}>Dados detalhados não importados.</div>
+    </div>
+  )
+
+  const tot = rows.reduce((a, r) => ({
+    permilagem: a.permilagem + Number(r.permilagem ?? 0),
+    valor_mensal: a.valor_mensal + Number(r.valor_mensal ?? 0),
+    valor_mensal_fcr: a.valor_mensal_fcr + Number(r.valor_mensal_fcr ?? 0),
+    total_mensal: a.total_mensal + Number(r.total_mensal ?? 0),
+  }), { permilagem: 0, valor_mensal: 0, valor_mensal_fcr: 0, total_mensal: 0 })
+
   return (
-    <div>
-      <h3 style={{ fontSize: 13, marginBottom: 6 }}>Distribuição por fracção {ano}</h3>
-      <p className="dim" style={{ fontSize: 11, marginBottom: 12 }}>
-        Quota anual = orçamento × permilagem / 1000. Mensal = anual / 12.
-      </p>
-      {orcTotal === 0 && (
-        <div className="error-banner" style={{ background: 'rgba(227,179,65,0.10)', color: 'var(--go)', borderColor: 'rgba(227,179,65,0.30)' }}>
-          Aviso: orçamento {ano} = 0 €. Valores abaixo são estrutura permilagem.
-        </div>
-      )}
-      <table>
-        <thead><tr><th>Fracção</th><th style={{ textAlign: 'right' }}>Permilagem</th><th style={{ textAlign: 'right' }}>% Total</th><th style={{ textAlign: 'right' }}>Anual</th><th style={{ textAlign: 'right' }}>Mensal</th></tr></thead>
-        <tbody>{fracoes.map(f => {
-          const perm = Number(f.permilagem ?? 0)
-          const pct = totPerm > 0 ? (perm / totPerm) * 100 : 0
-          const anual = orcTotal * (perm / 1000)
-          return (
-            <tr key={f.id}>
-              <td className="mono" style={{ fontWeight: 600 }}>{f.codigo}</td>
-              <td className="mono" style={{ textAlign: 'right' }}>{perm.toFixed(3)}</td>
-              <td className="mono" style={{ textAlign: 'right' }}>{pct.toFixed(2)}%</td>
-              <td className="mono" style={{ textAlign: 'right' }}>{eur(anual)}</td>
-              <td className="mono" style={{ textAlign: 'right' }}>{eur(anual / 12)}</td>
+    <div style={{ background: 'var(--sf)', border: '1px solid var(--bd)', borderRadius: 8, overflow: 'hidden' }}>
+      <div style={{
+        padding: '10px 18px', borderBottom: '2px solid var(--bd)', background: 'var(--sf2)',
+        display: 'flex', alignItems: 'baseline', justifyContent: 'space-between',
+      }}>
+        <span className="mono" style={{ fontSize: 10, fontWeight: 600, letterSpacing: 1, color: 'var(--mu)' }}>
+          TABELA MENSAL FRACÇÕES — ORÇAMENTO {ano}
+        </span>
+        <span className="mono dim" style={{ fontSize: 9 }}>{rows.length} fracções</span>
+      </div>
+      <table style={{ width: '100%' }}>
+        <thead>
+          <tr>
+            <th style={{ width: '36%' }}>Fracção</th>
+            <th style={{ textAlign: 'right' }}>Permilagem</th>
+            <th style={{ textAlign: 'right' }}>Quota Mensal</th>
+            <th style={{ textAlign: 'right' }}>FCR Mensal</th>
+            <th style={{ textAlign: 'right', paddingRight: 18 }}>Total Mensal</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map(r => (
+            <tr key={r.fracao_codigo}>
+              <td className="mono" style={{ paddingLeft: 18, fontWeight: 500 }}>{r.fracao_codigo}</td>
+              <td className="mono" style={{ textAlign: 'right' }}>{r.permilagem != null ? Number(r.permilagem).toFixed(3) : '—'}</td>
+              <td className="mono" style={{ textAlign: 'right' }}>{r.valor_mensal != null ? eur(r.valor_mensal) : '—'}</td>
+              <td className="mono" style={{ textAlign: 'right' }}>{r.valor_mensal_fcr != null ? eur(r.valor_mensal_fcr) : '—'}</td>
+              <td className="mono" style={{ textAlign: 'right', paddingRight: 18, fontWeight: 600 }}>
+                {r.total_mensal != null ? eur(r.total_mensal) : '—'}
+              </td>
             </tr>
-          )
-        })}</tbody>
-        <tfoot><tr style={{ background: 'var(--sf2)', fontWeight: 700 }}>
-          <td className="mono">Total</td>
-          <td className="mono" style={{ textAlign: 'right' }}>{totPerm.toFixed(3)}</td>
-          <td className="mono" style={{ textAlign: 'right' }}>100.00%</td>
-          <td className="mono" style={{ textAlign: 'right' }}>{eur(orcTotal)}</td>
-          <td className="mono" style={{ textAlign: 'right' }}>{eur(orcTotal / 12)}</td>
-        </tr></tfoot>
+          ))}
+        </tbody>
+        <tfoot>
+          <tr style={{ background: 'var(--sf2)', fontWeight: 700 }}>
+            <td className="mono" style={{ paddingLeft: 18 }}>Total</td>
+            <td className="mono" style={{ textAlign: 'right' }}>{tot.permilagem.toFixed(3)}</td>
+            <td className="mono" style={{ textAlign: 'right' }}>{eur(tot.valor_mensal)}</td>
+            <td className="mono" style={{ textAlign: 'right' }}>{eur(tot.valor_mensal_fcr)}</td>
+            <td className="mono" style={{ textAlign: 'right', paddingRight: 18 }}>{eur(tot.total_mensal)}</td>
+          </tr>
+        </tfoot>
       </table>
     </div>
   )
