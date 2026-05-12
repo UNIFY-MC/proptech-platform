@@ -1,2 +1,191 @@
 *, *::before, *::after { box-sizing: border-box; }
-body { margin: 0; background: #f4f3f0; }
+
+:root {
+  --bg: #f4f3f0;
+  --bg-elevated: #f0eeeb;
+  --bg-card: #ffffff;
+  --bg-card-soft: #faf9f6;
+  --bg-card-elevated: #f0eeeb;
+  --surface: #ffffff;
+  --surface2: #f0eeeb;
+  --border: rgba(0, 0, 0, 0.08);
+  --border-soft: rgba(0, 0, 0, 0.05);
+  --text: #18160f;
+  --text-dim: #6b6458;
+  --muted: #6b6458;
+  --primary: #1a5296;
+  --info: #3b82f6;
+  --success: #16a34a;
+  --warning: #d97706;
+  --danger: #b91c1c;
+  --blue: #1a5296;
+  --green: #2d6a4f;
+  --gold: #8c6508;
+  --red: #8b1a1a;
+  --purple: #6b4fa0;
+}
+
+body[data-theme='dark'] {
+  --bg: #0d1117;
+  --bg-elevated: #1c2333;
+  --bg-card: #161b22;
+  --bg-card-soft: #1c2333;
+  --bg-card-elevated: #21283a;
+  --surface: #161b22;
+  --surface2: #1c2333;
+  --border: rgba(255, 255, 255, 0.08);
+  --border-soft: rgba(255, 255, 255, 0.05);
+  --text: #e6edf3;
+  --text-dim: #9198a1;
+  --muted: #9198a1;
+  --primary: #58a6ff;
+  --info: #58a6ff;
+  --success: #3fb950;
+  --warning: #e3b341;
+  --danger: #ff7b72;
+  --blue: #58a6ff;
+  --green: #3fb950;
+  --gold: #e3b341;
+  --red: #ff7b72;
+  --purple: #d2a8ff;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+button, input, select, textarea { font-family: inherit; }
+
+.app-shell {
+  display: flex;
+  min-height: 100vh;
+}
+
+.app-main {
+  flex: 1;
+  min-width: 0;
+  padding: 24px 28px;
+  overflow-x: auto;
+}
+
+h1 { font-size: 22px; font-weight: 700; margin: 0 0 16px; color: var(--text); }
+h2 { font-size: 16px; font-weight: 600; margin: 0 0 12px; color: var(--text); }
+
+.mono { font-family: 'JetBrains Mono', 'Courier New', monospace; }
+
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.kpi {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px 16px;
+}
+
+.kpi-l {
+  font-size: 8px;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-dim);
+  margin-bottom: 6px;
+}
+
+.kpi-v {
+  font-size: 24px;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.1;
+}
+
+.kpi-s {
+  font-size: 10px;
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--text-dim);
+  margin-top: 4px;
+}
+
+.agent-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px;
+  margin-bottom: 28px;
+}
+
+.agent-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 14px;
+  cursor: pointer;
+  transition: border-color 0.15s, transform 0.15s;
+}
+
+.agent-card:hover {
+  border-color: rgba(83, 74, 183, 0.4);
+  transform: translateY(-1px);
+}
+
+.agent-card-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.agent-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #534ab7, #8b5cf6);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.agent-card-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.agent-card-role {
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-bottom: 6px;
+}
+
+.agent-card-status {
+  font-size: 9px;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 1px 6px;
+  border-radius: 3px;
+  display: inline-block;
+}
+
+.status-idle { background: rgba(107, 114, 128, 0.15); color: var(--text-dim); }
+.status-active { background: rgba(16, 185, 129, 0.15); color: var(--success); }
+.status-pending { background: rgba(59, 130, 246, 0.15); color: var(--info); }
