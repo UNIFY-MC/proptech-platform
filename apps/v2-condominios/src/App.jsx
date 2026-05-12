@@ -8,7 +8,17 @@ import LoginScreen from './components/LoginScreen.jsx'
 import Sidebar from './components/Sidebar.jsx'
 import Dashboard from './views/Dashboard.jsx'
 import Fracoes from './views/Fracoes.jsx'
-import Stub from './views/Stub.jsx'
+import Mora from './views/Mora.jsx'
+import Faturas from './views/Faturas.jsx'
+import Documentos from './views/Documentos.jsx'
+import Energia from './views/Energia.jsx'
+import Seguros from './views/Seguros.jsx'
+import Assembleias from './views/Assembleias.jsx'
+import Comunicacao from './views/Comunicacao.jsx'
+import Agente from './views/Agente.jsx'
+import Inbox from './views/Inbox.jsx'
+import Approvals from './views/Approvals.jsx'
+import Chat from './views/Chat.jsx'
 
 function AppInner() {
   const { authenticated, loading } = useAuth()
@@ -34,20 +44,20 @@ function AppInner() {
           <Sidebar theme={theme} setTheme={setTheme} />
           <main className="app-main">
             <Routes>
-              <Route path="/"             element={<Dashboard />} />
-              <Route path="/fracoes"      element={<Fracoes />} />
-              <Route path="/faturas"      element={<Stub title="Faturas / OCR"  hint="Lista de faturas pendentes + faturas_ocr. Liga edge fn ocr-fatura quando importarmos dados." />} />
-              <Route path="/mora"         element={<Stub title="Mora"           hint="Lista de mora >7d / >30d / >60d. Requer tabela orcamentos (a criar pelo supabase-designer)." />} />
-              <Route path="/documentos"   element={<Stub title="Documentos"     hint="Registo central — escrita só pelo agente docs-condo (Dora)." />} />
-              <Route path="/energia"      element={<Stub title="EV / Energia"   hint="carregadores_contagens — leituras mensais via energia-condo (Enzo)." />} />
-              <Route path="/seguros"      element={<Stub title="Seguros"        hint="seguro_fracoes — apólices individuais por fracção." />} />
-              <Route path="/assembleias"  element={<Stub title="Assembleias"    hint="Convocatórias (mínimo legal 10 dias Art. 1431º CC) + atas + deliberações em JSONB." />} />
-              <Route path="/comunicacao"  element={<Stub title="Comunicação"    hint="Registo imutável de comunicações enviadas — prova legal de envio." />} />
-              <Route path="/inbox"        element={<Stub title="Inbox"          hint="system.inbox_items filtrado por vertical=v2. Realtime via Supabase." />} />
-              <Route path="/approvals"    element={<Stub title="Approvals"      hint="system.approvals_queue filtrado por target_vertical=v2. Botão único de aprovação." />} />
-              <Route path="/chat"         element={<Stub title="Chat com agentes" hint="Composer escreve em system.inbox_items com source=chat — orquestrador-condo roteia." />} />
-              <Route path="/agentes/:slug" element={<Stub title="Agente"        hint="EmployeePage do agente — skills, recipes, instructions. Reutiliza padrão CookAI do apps/dashboard." />} />
-              <Route path="*"             element={<Navigate to="/" replace />} />
+              <Route path="/"              element={<Dashboard />} />
+              <Route path="/fracoes"       element={<Fracoes />} />
+              <Route path="/faturas"       element={<Faturas />} />
+              <Route path="/mora"          element={<Mora />} />
+              <Route path="/documentos"    element={<Documentos />} />
+              <Route path="/energia"       element={<Energia />} />
+              <Route path="/seguros"       element={<Seguros />} />
+              <Route path="/assembleias"   element={<Assembleias />} />
+              <Route path="/comunicacao"   element={<Comunicacao />} />
+              <Route path="/inbox"         element={<Inbox />} />
+              <Route path="/approvals"     element={<Approvals />} />
+              <Route path="/chat"          element={<Chat />} />
+              <Route path="/agentes/:slug" element={<Agente />} />
+              <Route path="*"              element={<Navigate to="/" replace />} />
             </Routes>
           </main>
         </div>
