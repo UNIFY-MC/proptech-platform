@@ -23,6 +23,7 @@ import ContextPage from './views/ContextPage.jsx'
 import InboxUnified from './views/InboxUnified.jsx'
 import AppEmbed from './views/AppEmbed.jsx'
 import FilesPage from './views/FilesPage.jsx'
+import ChatPage from './views/ChatPage.jsx'
 import StubView from './views/StubView.jsx'
 import { useAppShellStore } from './store'
 
@@ -88,7 +89,7 @@ export default function App() {
               <Route path="/recipes"      element={<RecipesPage data={data} />} />
               <Route path="/integrations" element={<IntegrationsPage data={data} />} />
               <Route path="/context"      element={<ContextPage />} />
-              <Route path="/chat"         element={<StubView title="Chat" />} />
+              <Route path="/chat"         element={<ChatPage />} />
               <Route path="/files"        element={<FilesPage />} />
               <Route path="/clients"      element={<StubView title="Clients" />} />
               <Route path="/projects"     element={<StubView title="Projects" />} />
