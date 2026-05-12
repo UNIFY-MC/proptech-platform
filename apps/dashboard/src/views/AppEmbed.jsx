@@ -66,7 +66,11 @@ export default function AppEmbed() {
     return <ServerDownHint app={app} onRetry={() => setReloadKey(k => k + 1)} onBackToDashboard={() => setActiveApp('dashboard')} />
   }
 
-  const base = import.meta.env.DEV ? `/embed/${app.slug}` : (app.prod_url || '')
+  // Em DEV: URL absoluta do dev server da app (evita recursão pelo proxy Vite
+  // do dashboard que cai no SPA fallback). Em PROD: prod_url da BD.
+  const base = import.meta.env.DEV
+    ? (app.dev_url || `http://localhost:5175`)
+    : (app.prod_url || '')
   if (!base) {
     return (
       <div style={{ padding: 40 }}>

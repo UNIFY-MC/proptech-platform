@@ -139,7 +139,9 @@ function Preview({ doc, signedUrl }) {
       return <div style={{ color: 'var(--text-dim)', fontSize: '0.78rem' }}>A obter URL assinada…</div>
     }
     const mime = doc.mime_type ?? ''
-    if (mime === 'application/pdf') {
+    const name = (doc.file_name ?? '').toLowerCase()
+
+    if (mime === 'application/pdf' || name.endsWith('.pdf')) {
       return <embed src={signedUrl} type="application/pdf" style={{ width: '100%', height: '70vh', border: 'none', borderRadius: 6 }} />
     }
     if (mime.startsWith('image/')) {
@@ -151,9 +153,30 @@ function Preview({ doc, signedUrl }) {
     if (mime.startsWith('video/')) {
       return <video controls src={signedUrl} style={{ width: '100%', borderRadius: 6 }} />
     }
+    // Office documents (Word, Excel, PowerPoint) → Microsoft Office viewer
+    // Requer URL pública acessível pela Microsoft. Signed URL Supabase serve.
+    const isOffice =
+      mime.includes('officedocument') || mime === 'application/msword' ||
+      mime === 'application/vnd.ms-excel' || mime === 'application/vnd.ms-powerpoint' ||
+      /\.(docx?|xlsx?|pptx?|odt|ods|odp)$/.test(name)
+    if (isOffice) {
+      const officeUrl = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(signedUrl)}`
+      return (
+        <div>
+          <iframe
+            src={officeUrl}
+            style={{ width: '100%', height: '70vh', border: '1px solid var(--border)', borderRadius: 6, background: '#fff' }}
+            title={doc.title}
+          />
+          <div style={{ fontSize: '0.65rem', color: 'var(--text-dim)', marginTop: 6 }}>
+            Preview via Microsoft Office Online (read-only). Para editar: download abaixo.
+          </div>
+        </div>
+      )
+    }
     return (
       <div style={{ color: 'var(--text-dim)', fontSize: '0.78rem' }}>
-        Preview não disponível para <code>{mime}</code>. Usa "Abrir / Download" abaixo.
+        Preview não disponível para <code>{mime || name}</code>. Usa "Abrir / Download" abaixo.
       </div>
     )
   }
