@@ -349,40 +349,80 @@ function TabVisao({ ano }) {
 }
 
 function TabOrcamento({ ano }) {
-  const [orcs, setOrcs] = useState(null)
+  const [rubricas, setRubricas] = useState(null)
   const [error, setError] = useState(null)
   useEffect(() => {
     let active = true
-    setOrcs(null); setError(null)
-    v2Client.from('orcamentos').select('*').eq('ano', ano).order('descricao')
+    setRubricas(null); setError(null)
+    v2Client.from('orcamento_rubricas')
+      .select('codigo, rubrica, tipo, valor_mensal, valor_total, ordem')
+      .eq('ano', ano).order('ordem')
       .then(({ data, error }) => {
         if (!active) return
-        if (error) setError(error.message); else setOrcs(data || [])
+        if (error) setError(error.message); else setRubricas(data || [])
       })
     return () => { active = false }
   }, [ano])
   if (error) return <div className="error-banner">Erro: {error}</div>
-  if (orcs === null) return <div className="dim">A carregar…</div>
-  if (orcs.length === 0) return (
+  if (rubricas === null) return <div className="dim">A carregar…</div>
+  if (rubricas.length === 0) return (
     <div className="empty-state">
       <div style={{ fontSize: 14, marginBottom: 4 }}>Sem orçamento aprovado para {ano}</div>
       <div style={{ fontSize: 12 }}>Quando a assembleia aprovar um orçamento, aparece aqui.</div>
     </div>
   )
-  const total = orcs.reduce((a, o) => a + Number(o.valor_total ?? 0), 0)
+
+  const despesas = rubricas.filter(r => r.tipo === 'despesa' || r.tipo === 'fcr')
+  const receitas = rubricas.filter(r => r.tipo === 'receita')
+  const totD = despesas.reduce((a, r) => a + Number(r.valor_total ?? 0), 0)
+  const totR = receitas.reduce((a, r) => a + Number(r.valor_total ?? 0), 0)
+
   return (
     <div>
-      <h3 style={{ fontSize: 13, marginBottom: 10 }}>Orçamento aprovado {ano}</h3>
-      <table>
-        <thead><tr><th>Descrição</th><th>Aprovado em</th><th style={{ textAlign: 'right' }}>Valor</th></tr></thead>
-        <tbody>{orcs.map(o => (
-          <tr key={o.id}>
-            <td>{o.descricao ?? '—'}</td>
-            <td className="mono">{fdate(o.aprovado_em)}</td>
-            <td className="mono" style={{ textAlign: 'right' }}>{eur(o.valor_total)}</td>
+      <SecaoOrcamento titulo={`DESPESAS — ORÇAMENTO ${ano}`} rows={despesas} total={totD} ano={ano} />
+      <div style={{ height: 22 }} />
+      <SecaoOrcamento titulo={`RECEITAS — ORÇAMENTO ${ano}`} rows={receitas} total={totR} ano={ano} />
+    </div>
+  )
+}
+
+function SecaoOrcamento({ titulo, rows, total, ano }) {
+  return (
+    <div style={{ background: 'var(--sf)', border: '1px solid var(--bd)', borderRadius: 8, overflow: 'hidden' }}>
+      <div style={{
+        padding: '10px 18px', borderBottom: '2px solid var(--bd)', background: 'var(--sf2)',
+        display: 'flex', alignItems: 'baseline', justifyContent: 'space-between',
+      }}>
+        <span className="mono" style={{ fontSize: 10, fontWeight: 600, letterSpacing: 1, color: 'var(--mu)' }}>{titulo}</span>
+        <span className="mono dim" style={{ fontSize: 9, letterSpacing: 1 }}>{ano}</span>
+      </div>
+      <table style={{ width: '100%' }}>
+        <thead>
+          <tr>
+            <th style={{ width: '50%' }}>Rúbrica</th>
+            <th style={{ textAlign: 'right' }}>Valor Mensal</th>
+            <th style={{ textAlign: 'right', paddingRight: 18 }}>Valor Anual</th>
           </tr>
-        ))}</tbody>
-        <tfoot><tr style={{ background: 'var(--sf2)', fontWeight: 700 }}><td colSpan={2}>Total</td><td className="mono" style={{ textAlign: 'right' }}>{eur(total)}</td></tr></tfoot>
+        </thead>
+        <tbody>
+          {rows.map(r => (
+            <tr key={r.codigo}>
+              <td style={{ paddingLeft: 18 }}>
+                <span className="mono" style={{ fontSize: 10, color: 'var(--mu)', marginRight: 8 }}>{r.codigo}</span>
+                <span style={{ fontSize: 12 }}>{r.rubrica}</span>
+              </td>
+              <td className="mono" style={{ textAlign: 'right' }}>{r.valor_mensal ? eur(r.valor_mensal) : '—'}</td>
+              <td className="mono" style={{ textAlign: 'right', paddingRight: 18 }}>{r.valor_total > 0 ? eur(r.valor_total) : '—'}</td>
+            </tr>
+          ))}
+        </tbody>
+        <tfoot>
+          <tr style={{ background: 'var(--sf2)', fontWeight: 700 }}>
+            <td style={{ paddingLeft: 18 }}>Total</td>
+            <td className="mono" style={{ textAlign: 'right' }}>{eur(total / 12)}</td>
+            <td className="mono" style={{ textAlign: 'right', paddingRight: 18 }}>{eur(total)}</td>
+          </tr>
+        </tfoot>
       </table>
     </div>
   )
@@ -554,7 +594,7 @@ function LinhaOrcReal({ ano, rubrica, efetivo }) {
             )}
             {movs && movs.length > 0 && (
               <table style={{ fontSize: 11 }}>
-                <thead><tr><th>Data</th><th>Descrição</th><th>Ref</th><th style={{ textAlign: 'right' }}>Valor</th></tr></thead>
+                <thead><tr><th>Data</th><th>Descrição</th><th>Ref</th><th style={{ textAlign: 'right' }}>Valor</th><th>PDF</th></tr></thead>
                 <tbody>
                   {movs.slice(0, 30).map((m, i) => (
                     <tr key={i}>
@@ -562,6 +602,7 @@ function LinhaOrcReal({ ano, rubrica, efetivo }) {
                       <td style={{ fontSize: 11 }}>{m.descricao}</td>
                       <td className="mono" style={{ fontSize: 9, color: 'var(--mu)' }}>{m.referencia_banco ?? '—'}</td>
                       <td className="mono" style={{ textAlign: 'right' }}>{eur(m.valor)}</td>
+                      <td><PdfLink referencia={m.referencia_banco} /></td>
                     </tr>
                   ))}
                 </tbody>
@@ -686,7 +727,7 @@ function TabExtrato({ ano }) {
       {visible.length === 0 && <div className="empty-state">Sem movimentos.</div>}
       {visible.length > 0 && (
         <table>
-          <thead><tr><th>Data</th><th>Descrição</th><th>Ref.</th><th style={{ textAlign: 'right' }}>Valor</th><th style={{ textAlign: 'right' }}>Saldo</th><th>Recon.</th></tr></thead>
+          <thead><tr><th>Data</th><th>Descrição</th><th>Ref.</th><th style={{ textAlign: 'right' }}>Valor</th><th style={{ textAlign: 'right' }}>Saldo</th><th>Recon.</th><th>PDF</th></tr></thead>
           <tbody>{visible.map(m => (
             <tr key={m.id}>
               <td className="mono" style={{ fontSize: 11 }}>{fdate(m.data_movimento)}</td>
@@ -695,6 +736,7 @@ function TabExtrato({ ano }) {
               <td className="mono" style={{ textAlign: 'right' }}>{eur(m.valor)}</td>
               <td className="mono" style={{ textAlign: 'right', fontSize: 11 }}>{eur(m.saldo_apos)}</td>
               <td className="mono" style={{ fontSize: 11 }}>{m.reconciliado ? <span style={{ color: 'var(--gr)' }}>✓</span> : <span className="dim">○</span>}</td>
+              <td><PdfLink referencia={m.referencia_banco} /></td>
             </tr>
           ))}</tbody>
         </table>
@@ -764,5 +806,46 @@ function TabDocumentos({ ano }) {
         </table>
       )}
     </div>
+  )
+}
+
+
+/* PdfLink — gera URL signed para bucket faturas/<ano>/<ref>.pdf */
+function PdfLink({ referencia }) {
+  const [url, setUrl] = useState(null)
+  const [error, setError] = useState(null)
+
+  async function loadUrl() {
+    if (!referencia) return
+    setError(null)
+    const ano = referencia.split(".")[0]
+    const path = `${ano}/${referencia}.pdf`
+    const { data, error } = await v2Client.storage.from("faturas").createSignedUrl(path, 600)
+    if (error) setError(error.message)
+    else setUrl(data?.signedUrl)
+  }
+
+  if (!referencia) return <span className="dim" style={{ fontSize: 10 }}>—</span>
+
+  if (url) {
+    return (
+      <a href={url} target="_blank" rel="noopener noreferrer" className="mono" style={{ fontSize: 10, color: "var(--bl)" }}>
+        ver ↗
+      </a>
+    )
+  }
+
+  return (
+    <button
+      onClick={loadUrl}
+      style={{
+        background: "transparent", border: "1px solid var(--bd)", color: "var(--mu)",
+        padding: "2px 8px", borderRadius: 4, fontSize: 9,
+        fontFamily: "DM Mono, monospace", cursor: "pointer",
+      }}
+      title={error || `Abrir faturas/${referencia.split(".")[0]}/${referencia}.pdf`}
+    >
+      {error ? "erro" : "abrir"}
+    </button>
   )
 }
