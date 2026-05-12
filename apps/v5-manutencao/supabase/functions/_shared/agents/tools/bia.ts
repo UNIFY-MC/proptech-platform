@@ -195,6 +195,38 @@ export const BIA_TOOLS: AgentTool[] = [
       required: ["item_type", "title"],
     },
   },
+  {
+    name: "bia_query_context_docs",
+    description:
+      "Procura context docs (SOPs, legislação PT, procedimentos internos, briefs) " +
+      "relevantes para a task actual via full-text search PT (com unaccent). " +
+      "Procura em title + content + ocr_text. Filtra por organização (NULL = globais " +
+      "cross-org). USAR antes de citar regras legais, prazos, valores ou procedimentos — " +
+      "nunca inventes legislação. Para mora, quórum, prazos: procura 'mora', 'assembleia " +
+      "quorum', 'DL 268/94', etc. Retorna snippet + excerpt para usar como contexto.",
+    input_schema: {
+      type: "object",
+      properties: {
+        query: {
+          type: "string",
+          description: "Termos em PT (sem acentos ok — unaccent activo). Ex: 'mora condominio juros' ou 'assembleia quorum'.",
+        },
+        organization_id: {
+          type: "string",
+          description: "UUID da org cujos docs incluir (globais NULL sempre incluídos). Opcional.",
+        },
+        folder_prefix: {
+          type: "string",
+          description: "Prefix do folder_path para restringir (ex: 'legal/' ou 'procedures/'). Opcional.",
+        },
+        limit: {
+          type: "integer",
+          description: "Max docs a retornar (default 3, max 8).",
+        },
+      },
+      required: ["query"],
+    },
+  },
 ];
 
 // ─── Executors ───────────────────────────────────────────────────────────────
@@ -470,6 +502,47 @@ async function bia_add_inbox_item(
   };
 }
 
+// ─── bia_query_context_docs — RAG full-text search PT ────────────────────────
+
+async function bia_query_context_docs(
+  input: {
+    query: string;
+    organization_id?: string | null;
+    folder_prefix?: string | null;
+    limit?: number;
+  },
+  ctx: AgentContext,
+): Promise<unknown> {
+  if (!input.query || String(input.query).trim().length < 2) {
+    throw new Error("query obrigatória (mín. 2 chars)");
+  }
+  const lim = Math.min(Math.max(input.limit ?? 3, 1), 8);
+
+  const { data, error } = await ctx.serviceRole.rpc("fn_search_context_docs", {
+    p_query: String(input.query).trim(),
+    p_organization_id: input.organization_id ?? null,
+    p_folder_prefix: input.folder_prefix ?? null,
+    p_limit: lim,
+  });
+
+  if (error) throw new Error(`fn_search_context_docs: ${error.message}`);
+
+  return {
+    query: input.query,
+    total: data?.length ?? 0,
+    docs: (data ?? []).map((d: any) => ({
+      title: d.title,
+      folder_path: d.folder_path,
+      file_name: d.file_name,
+      type: d.type,
+      tags: d.tags,
+      snippet: d.snippet,
+      excerpt: d.excerpt,
+      rank: d.rank,
+    })),
+  };
+}
+
 // ─── Export ──────────────────────────────────────────────────────────────────
 
 export const biaExecutors: Record<
@@ -482,4 +555,5 @@ export const biaExecutors: Record<
   bia_query_catalogo,
   bia_submit_approval,
   bia_add_inbox_item,
+  bia_query_context_docs,
 };
