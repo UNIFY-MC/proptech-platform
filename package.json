@@ -8,9 +8,11 @@
   ],
   "scripts": {
     "dashboard:build": "node scripts/dashboard-data-build.js",
-    "dashboard:dev": "node scripts/dashboard-data-build.js && cd apps/dashboard && npm run dev"
+    "dashboard:dev": "node scripts/dashboard-data-build.js && cd apps/dashboard && npm run dev",
+    "dev:all": "concurrently -k -n dashboard,v2,v4,v5 -c blue.bold,green.bold,yellow.bold,magenta.bold \"pnpm --filter @proptech/dashboard dev\" \"pnpm --filter v2-condominios dev\" \"pnpm --filter v4-energia dev\" \"pnpm --filter v5-manutencao dev\""
   },
   "devDependencies": {
+    "concurrently": "^9.0.0",
     "gray-matter": "^4.0.3"
   }
 }

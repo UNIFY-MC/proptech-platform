@@ -6,9 +6,10 @@ import {
   LayoutDashboard, Map, Eye, Swords, Layers,
   Bot,
 } from 'lucide-react'
-import { useVerticalStore } from '../store'
+import { useVerticalStore, useAppShellStore } from '../store'
 import { useInboxItems, useApprovals } from '../hooks/useSupabase'
 import { useInboxReads } from '../hooks/useInboxReads'
+import AppSwitcher from './AppSwitcher.jsx'
 
 const DEPT_COLORS = {
   'Manutenção':  '#534AB7',
@@ -45,6 +46,8 @@ function NavItem({ to, label, icon, badge, end }) {
 
 export default function Sidebar({ theme, setTheme, data, lastSync, loading, refresh }) {
   const { activeVertical, setVertical } = useVerticalStore()
+  const { activeAppSlug } = useAppShellStore()
+  const isDashboardMode = activeAppSlug === 'dashboard'
   const { items } = useInboxItems(activeVertical)
   const { approvals } = useApprovals(activeVertical)
   const { readSet } = useInboxReads()
@@ -62,53 +65,63 @@ export default function Sidebar({ theme, setTheme, data, lastSync, loading, refr
         )}
       </div>
 
-      {/* Vertical filter */}
-      <div className="sidebar-vertical">
-        <select
-          className="sidebar-select"
-          value={activeVertical}
-          onChange={(e) => setVertical(e.target.value)}
-        >
-          <option value="all">Todas as verticais</option>
-          <option value="v1">V1 Core</option>
-          <option value="v2">V2 Condomínios</option>
-          <option value="v4">V4 Energia</option>
-          <option value="v5">V5 Manutenção</option>
-        </select>
-      </div>
+      {/* Vertical filter (só no dashboard mode) */}
+      {isDashboardMode && (
+        <div className="sidebar-vertical">
+          <select
+            className="sidebar-select"
+            value={activeVertical}
+            onChange={(e) => setVertical(e.target.value)}
+          >
+            <option value="all">Todas as verticais</option>
+            <option value="v1">V1 Core</option>
+            <option value="v2">V2 Condomínios</option>
+            <option value="v4">V4 Energia</option>
+            <option value="v5">V5 Manutenção</option>
+          </select>
+        </div>
+      )}
 
       {/* Nav sections */}
       <div className="sidebar-nav">
-        <div className="sidebar-section-label">Daily</div>
-        <NavItem to="/inbox"  label="Inbox"  icon={Inbox}        badge={unreadCount} />
-        <NavItem to="/chat"   label="Chat"   icon={MessageSquare} />
-        <NavItem to="/files"  label="Files"  icon={Folder} />
+        {/* App switcher sempre visível no topo (BD-driven via system.apps) */}
+        <AppSwitcher />
 
-        <div className="sidebar-section-label">Manage</div>
-        <NavItem to="/employees" label="Employees" icon={Users} />
-        <NavItem to="/clients"   label="Clients"   icon={Building2} />
-        <NavItem to="/projects"  label="Projects"  icon={FolderKanban} />
-        <NavItem to="/tasks"     label="Tasks"     icon={CheckSquare} />
+        {/* Sidebar interno do dashboard só quando dashboard activo */}
+        {isDashboardMode && (
+          <>
+            <div className="sidebar-section-label">Daily</div>
+            <NavItem to="/inbox"  label="Inbox"  icon={Inbox}        badge={unreadCount} />
+            <NavItem to="/chat"   label="Chat"   icon={MessageSquare} />
+            <NavItem to="/files"  label="Files"  icon={Folder} />
 
-        <div className="sidebar-section-label">Build</div>
-        <NavItem to="/context"      label="Context"      icon={Library} />
-        <NavItem to="/recipes"      label="Recipes"      icon={ChefHat} />
-        <NavItem to="/skills"       label="Skills"       icon={Sparkles} />
-        <NavItem to="/integrations" label="Integrations" icon={Plug} />
+            <div className="sidebar-section-label">Manage</div>
+            <NavItem to="/employees" label="Employees" icon={Users} />
+            <NavItem to="/clients"   label="Clients"   icon={Building2} />
+            <NavItem to="/projects"  label="Projects"  icon={FolderKanban} />
+            <NavItem to="/tasks"     label="Tasks"     icon={CheckSquare} />
 
-        <div className="sidebar-section-label">Strategy</div>
-        <NavItem to="/"           label="Overview"    icon={LayoutDashboard} end />
-        <NavItem to="/roadmap"    label="Roadmap"     icon={Map} />
-        <NavItem to="/watchers"   label="Watchers"    icon={Eye} />
-        <NavItem to="/competitors" label="Competitors" icon={Swords} />
-        <NavItem to="/verticais"  label="Verticais"   icon={Layers} />
+            <div className="sidebar-section-label">Build</div>
+            <NavItem to="/context"      label="Context"      icon={Library} />
+            <NavItem to="/recipes"      label="Recipes"      icon={ChefHat} />
+            <NavItem to="/skills"       label="Skills"       icon={Sparkles} />
+            <NavItem to="/integrations" label="Integrations" icon={Plug} />
 
-        <div className="sidebar-section-label">Dev</div>
-        <NavItem to="/agentes" label="Agentes" icon={Bot} />
+            <div className="sidebar-section-label">Strategy</div>
+            <NavItem to="/"           label="Overview"    icon={LayoutDashboard} end />
+            <NavItem to="/roadmap"    label="Roadmap"     icon={Map} />
+            <NavItem to="/watchers"   label="Watchers"    icon={Eye} />
+            <NavItem to="/competitors" label="Competitors" icon={Swords} />
+            <NavItem to="/verticais"  label="Verticais"   icon={Layers} />
+
+            <div className="sidebar-section-label">Dev</div>
+            <NavItem to="/agentes" label="Agentes" icon={Bot} />
+          </>
+        )}
       </div>
 
-      {/* TASKS · CHATS — employees scrollable */}
-      {employees.length > 0 && (
+      {/* TASKS · CHATS — employees scrollable (só no dashboard mode) */}
+      {isDashboardMode && employees.length > 0 && (
         <div className="sidebar-tasks">
           <div className="sidebar-section-label">Tasks · Chats</div>
           {employees.map(emp => (

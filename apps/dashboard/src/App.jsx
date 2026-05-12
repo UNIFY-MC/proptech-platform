@@ -21,10 +21,14 @@ import RecipesPage from './views/RecipesPage.jsx'
 import IntegrationsPage from './views/IntegrationsPage.jsx'
 import ContextPage from './views/ContextPage.jsx'
 import InboxUnified from './views/InboxUnified.jsx'
+import AppEmbed from './views/AppEmbed.jsx'
 import StubView from './views/StubView.jsx'
+import { useAppShellStore } from './store'
 
 export default function App() {
   const { data, loading, error, lastSync, refresh } = useData()
+  const { activeAppSlug } = useAppShellStore()
+  const showEmbed = activeAppSlug !== 'dashboard'
 
   const [theme, setTheme] = useState(() => localStorage.getItem('dashboard-theme') || 'dark')
 
@@ -54,7 +58,9 @@ export default function App() {
             <div className="loading">A carregar dados do dashboard…</div>
           )}
 
-          {data && (
+          {data && showEmbed && <AppEmbed />}
+
+          {data && !showEmbed && (
             <Routes>
               <Route path="/"             element={<Overview data={data} />} />
               <Route path="/inbox"        element={<InboxUnified />} />
