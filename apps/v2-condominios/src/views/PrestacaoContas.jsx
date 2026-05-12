@@ -110,13 +110,13 @@ export default function PrestacaoContas() {
             </span>
           </div>
           <RR label="Saldo Bancário Final" value={eur(kpis.saldo_bancario_final)} tone="blue" />
-          <RR label="Dívidas Condóminos" value={(kpis.mora_total > 0 ? '+ ' : '') + eur(kpis.mora_total)} tone={kpis.mora_total > 0 ? 'green' : null} sub={kpis.fracoes_em_mora != null ? `${kpis.fracoes_em_mora} fracções` : null} />
-          <RR label="Dívidas a Fornecedores" value={(kpis.dividas_fornecedores > 0 ? '- ' : '') + eur(kpis.dividas_fornecedores)} tone={kpis.dividas_fornecedores > 0 ? 'red' : null} />
+          <RRDrill ano={ano} rubrica="Dividas Condominos" label="Dívidas Condóminos" value={(kpis.mora_total > 0 ? '+ ' : '') + eur(kpis.mora_total)} tone={kpis.mora_total > 0 ? 'green' : null} sub={kpis.fracoes_em_mora != null ? `${kpis.fracoes_em_mora} fracções` : null} />
+          <RRDrill ano={ano} rubrica="Dividas a Fornecedores" label="Dívidas a Fornecedores" value={(kpis.dividas_fornecedores > 0 ? '- ' : '') + eur(kpis.dividas_fornecedores)} tone={kpis.dividas_fornecedores > 0 ? 'red' : null} />
           {kpis.valores_em_analise != null && kpis.valores_em_analise !== 0 && (
-            <RR label="Valores em análise" value={(kpis.valores_em_analise > 0 ? '+ ' : '') + eur(kpis.valores_em_analise)} tone="green" />
+            <RRDrill ano={ano} rubrica="Valores em análise" label="Valores em análise" value={(kpis.valores_em_analise > 0 ? '+ ' : '') + eur(kpis.valores_em_analise)} tone="green" />
           )}
           {kpis.valores_a_devolver != null && kpis.valores_a_devolver !== 0 && (
-            <RR label="Valores a devolver" value={(kpis.valores_a_devolver > 0 ? '- ' : '') + eur(kpis.valores_a_devolver)} tone="red" />
+            <RRDrill ano={ano} rubrica="Valores a devolver" label="Valores a devolver" value={(kpis.valores_a_devolver > 0 ? '- ' : '') + eur(kpis.valores_a_devolver)} tone="red" />
           )}
           <RR label="Fundo Comum de Reserva (10%)" value={eur(kpis.fundo_comum_reserva)} tone="gold" />
           <div style={{
@@ -159,6 +159,78 @@ export default function PrestacaoContas() {
         {tab === 'documentos'  && <TabDocumentos ano={ano} />}
       </div>
     </div>
+  )
+}
+
+function RRDrill({ ano, rubrica, label, value, tone, sub }) {
+  const [open, setOpen] = useState(false)
+  const [rows, setRows] = useState(null)
+  const [error, setError] = useState(null)
+
+  useEffect(() => {
+    if (!open || rows !== null) return
+    const dataRef = `${ano}-12-31`
+    v2Client.from('kpis_detalhe')
+      .select('fracao_codigo, nome_descricao, valor')
+      .eq('data_referencia', dataRef)
+      .eq('rubrica', rubrica)
+      .order('valor', { ascending: false })
+      .then(({ data, error }) => {
+        if (error) setError(error.message)
+        else setRows(data || [])
+      })
+  }, [open, ano, rubrica, rows])
+
+  const color = tone === 'red'   ? 'var(--rd)'
+              : tone === 'green' ? 'var(--gr)'
+              : 'var(--tx)'
+  return (
+    <>
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '10px 18px', borderBottom: '1px solid var(--bd)',
+        cursor: 'pointer',
+        background: open ? 'var(--sf2)' : undefined,
+      }} onClick={() => setOpen(o => !o)}>
+        <div>
+          <span style={{ fontSize: 12 }}>
+            <span className="dim mono" style={{ fontSize: 9, marginRight: 6 }}>{open ? '▾' : '▸'}</span>
+            {label}
+          </span>
+          {sub && <span className="dim mono" style={{ fontSize: 9, marginLeft: 8 }}>{sub}</span>}
+        </div>
+        <span className="mono" style={{ fontSize: 13, color }}>{value}</span>
+      </div>
+      {open && (
+        <div style={{ background: 'var(--bg)', borderBottom: '1px solid var(--bd)', padding: '6px 18px 10px' }}>
+          {error && <div className="error-banner">{error}</div>}
+          {rows === null && !error && <div className="dim" style={{ fontSize: 11, padding: 8 }}>A carregar detalhe…</div>}
+          {rows && rows.length === 0 && (
+            <div className="dim" style={{ fontSize: 11, padding: 8, fontStyle: 'italic' }}>
+              Sem detalhe disponível para {ano} (snapshot V2 legacy só tem detalhe 2025).
+            </div>
+          )}
+          {rows && rows.length > 0 && (
+            <table style={{ fontSize: 11 }}>
+              <thead>
+                <tr><th>Fracção / Ref</th><th>Descrição</th><th style={{ textAlign: 'right' }}>Valor</th></tr>
+              </thead>
+              <tbody>
+                {rows.map((r, i) => (
+                  <tr key={i}>
+                    <td className="mono" style={{ fontSize: 10 }}>{r.fracao_codigo ?? '—'}</td>
+                    <td style={{ fontSize: 11 }}>{r.nome_descricao || <span className="dim">—</span>}</td>
+                    <td className="mono" style={{ textAlign: 'right', color: Number(r.valor) < 0 ? 'var(--rd)' : 'var(--gr)' }}>
+                      {eur(r.valor)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
+    </>
   )
 }
 
