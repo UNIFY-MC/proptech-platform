@@ -10,25 +10,23 @@
  *  • Login email/password via Supabase Auth
  *  • Dashboard com 4 KPIs ligados a v4_energia.contratos_energia
  *  • Toggle light/dark persistido em localStorage.v1theme (chave partilhada com v1-core)
+ *  • Tabs: Painel / Simulador (step 0 = upload fatura OCR) / Leads (+ drawer)
  *  ═══════════════════════════════════════════════════════════════════ */
 
 import React, { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import ClienteSimulator from './components/ClienteSimulator.jsx';
 import StaffLeads from './components/StaffLeads.jsx';
+import LeadDetalheDrawer from './components/LeadDetalheDrawer.jsx';
 
 /* ─────────────────────────────────────────────────────────────────────
  *  CONFIG · Supabase V1 Core Hub
- *  Lê env vars injectadas pelo Vite em build time.
- *  Em dev local: cria apps/v4-energia/.env com as chaves reais.
  * ───────────────────────────────────────────────────────────────────── */
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-// Client para auth (schema público)
 const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// Client apontado ao schema v4_energia para queries de dados
 const sbV4 = createClient(SUPABASE_URL, SUPABASE_KEY, {
   db: { schema: 'v4_energia' },
 });
@@ -36,24 +34,18 @@ const sbV4 = createClient(SUPABASE_URL, SUPABASE_KEY, {
 /* ─────────────────────────────────────────────────────────────────────
  *  HELPERS
  * ───────────────────────────────────────────────────────────────────── */
-
-// Formata número inteiro sem decimais (ex: 1234 → "1 234")
 function fNum(n) {
   if (n == null) return '—';
   return Number(n).toLocaleString('pt-PT', { maximumFractionDigits: 0 });
 }
 
-// Formata valor monetário PT-PT (ex: 1234.5 → "1 235 €")
 function fEur(n) {
   if (n == null) return '—';
-  return (
-    Number(n).toLocaleString('pt-PT', { maximumFractionDigits: 0 }) + ' €'
-  );
+  return Number(n).toLocaleString('pt-PT', { maximumFractionDigits: 0 }) + ' €';
 }
 
 /* ─────────────────────────────────────────────────────────────────────
  *  CSS · design system partilhado com v1-core
- *  Tokens idênticos; injetado via <style> no mount do componente raiz.
  * ───────────────────────────────────────────────────────────────────── */
 const V4_CSS = `
 /* ── RESET & BASE ────────────────────────────── */
@@ -69,12 +61,18 @@ body.dark{background:#0d1117;color:#e6edf3}
   --text:#18160f;--muted:#6b6458;
   --blue:#1a5296;--green:#2d6a4f;--red:#8b1a1a;--gold:#8c6508;--purple:#6b4fa0;
   --mono:'JetBrains Mono','Fira Mono',monospace;
+  --radius:8px;--radius-sm:6px;
+  --bg2:#f0eeeb;--bg3:#e8e6e2;
+  --text2:#6b6458;--text3:#9b9188;
+  --shadow:0 1px 3px rgba(0,0,0,0.06);
 }
 body.dark{
   --bg:#0d1117;--surface:#161b22;--surface2:#1c2333;--surface3:#243047;
   --border:rgba(255,255,255,0.08);--border2:rgba(255,255,255,0.15);
   --text:#e6edf3;--muted:#9198a1;
   --blue:#58a6ff;--green:#3fb950;--red:#ff7b72;--gold:#e3b341;--purple:#d2a8ff;
+  --bg2:#1c2333;--bg3:#243047;
+  --text2:#9198a1;--text3:#6e7681;
 }
 
 /* ── LOGIN ───────────────────────────────────── */
@@ -175,6 +173,9 @@ body.dark{
 
 /* ── LOADING ─────────────────────────────────── */
 .loading{padding:32px;text-align:center;color:var(--muted);font-family:var(--mono);font-size:11px}
+
+/* ── react-pdf worker override ───────────────── */
+.react-pdf__Page__canvas{max-width:100%!important;height:auto!important}
 `;
 
 /* ─────────────────────────────────────────────────────────────────────
@@ -187,13 +188,11 @@ export default function V4EnergiaApp() {
     () => localStorage.getItem('v1theme') || 'light'
   );
 
-  // Aplica tema e persiste em localStorage.v1theme (chave partilhada com v1-core)
   useEffect(() => {
     document.body.classList.toggle('dark', theme === 'dark');
     localStorage.setItem('v1theme', theme);
   }, [theme]);
 
-  // Injeta CSS e fontes no mount
   useEffect(() => {
     const styleEl = document.createElement('style');
     styleEl.id = 'v4-energia-styles';
@@ -211,7 +210,6 @@ export default function V4EnergiaApp() {
     return () => styleEl.remove();
   }, []);
 
-  // Verifica sessão Supabase existente
   useEffect(() => {
     (async () => {
       const { data: { session: s } } = await sb.auth.getSession();
@@ -265,8 +263,6 @@ export default function V4EnergiaApp() {
 
 /* ─────────────────────────────────────────────────────────────────────
  *  LOGIN SCREEN
- *  Email + password via Supabase Auth.
- *  Toggle light/dark disponível antes do login.
  * ───────────────────────────────────────────────────────────────────── */
 function LoginScreen({ onLogin, theme, onToggleTheme }) {
   const [email, setEmail] = useState('');
@@ -337,30 +333,20 @@ function LoginScreen({ onLogin, theme, onToggleTheme }) {
 }
 
 /* ─────────────────────────────────────────────────────────────────────
- *  DASHBOARD
- *  4 KPIs ligados a v4_energia.contratos_energia via Supabase.
- *  Sem sidebar — layout flat: header + grid KPIs.
- *
- *  Queries:
- *    KPI 1 — count(*) WHERE estado = 'activo'
- *    KPI 2 — count(*) WHERE data_pedido >= início do mês actual
- *    KPI 3 — SUM(poupanca_anual) WHERE estado = 'activo'
- *    KPI 4 — SUM(comissao) WHERE estado IN ('a_analisar','proposta_enviada','assinado')
- *
- *  Estados loading: mostra '—' enquanto aguarda.
- *  Se query falhar: mantém '—' e regista erro na consola.
- *  Sem dados (BD vazia): mostra '0' / '0 €' (query bem-sucedida, resultado nulo).
+ *  DASHBOARD — header + tabs + conteúdo
  * ───────────────────────────────────────────────────────────────────── */
 function Dashboard({ session, theme, onToggleTheme, onLogout }) {
   const email = session?.user?.email || '';
 
-  // Tab activa — 'painel' | 'simulador' | 'leads'
   const [tab, setTab] = useState(
     () => localStorage.getItem('v4tab') || 'painel'
   );
   useEffect(() => { localStorage.setItem('v4tab', tab); }, [tab]);
 
-  // Estado de cada KPI: null = loading, string = valor formatado
+  // Estado do drawer de detalhe de lead
+  const [openLead, setOpenLead] = useState(null); // leadId | null
+
+  // KPIs
   const [kpiActivos, setKpiActivos] = useState(null);
   const [kpiLeads, setKpiLeads] = useState(null);
   const [kpiPoupanca, setKpiPoupanca] = useState(null);
@@ -379,14 +365,12 @@ function Dashboard({ session, theme, onToggleTheme, onLogout }) {
     ]);
   }
 
-  // KPI 1 — Contratos activos: count(*) WHERE estado = 'activo'
   async function carregarContratosActivos() {
     try {
       const { count, error } = await sbV4
         .from('contratos_energia')
         .select('*', { count: 'exact', head: true })
         .eq('estado', 'activo');
-
       if (error) throw error;
       setKpiActivos(fNum(count ?? 0));
     } catch (err) {
@@ -395,19 +379,15 @@ function Dashboard({ session, theme, onToggleTheme, onLogout }) {
     }
   }
 
-  // KPI 2 — Leads este mês: count(*) WHERE data_pedido >= início do mês
   async function carregarLeadsEsteMes() {
     try {
       const agora = new Date();
       const inicioMes = new Date(agora.getFullYear(), agora.getMonth(), 1)
-        .toISOString()
-        .split('T')[0]; // YYYY-MM-DD
-
+        .toISOString().split('T')[0];
       const { count, error } = await sbV4
         .from('contratos_energia')
         .select('*', { count: 'exact', head: true })
         .gte('data_pedido', inicioMes);
-
       if (error) throw error;
       setKpiLeads(fNum(count ?? 0));
     } catch (err) {
@@ -416,20 +396,14 @@ function Dashboard({ session, theme, onToggleTheme, onLogout }) {
     }
   }
 
-  // KPI 3 — Poupança gerada: SUM(poupanca_anual) WHERE estado = 'activo'
   async function carregarPoupancaGerada() {
     try {
       const { data, error } = await sbV4
         .from('contratos_energia')
         .select('poupanca_anual')
         .eq('estado', 'activo');
-
       if (error) throw error;
-
-      const soma = (data || []).reduce(
-        (acc, row) => acc + (row.poupanca_anual ?? 0),
-        0
-      );
+      const soma = (data || []).reduce((acc, row) => acc + (row.poupanca_anual ?? 0), 0);
       setKpiPoupanca(fEur(soma) + '/ano');
     } catch (err) {
       console.error('[V4 KPI] poupança gerada:', err.message);
@@ -437,20 +411,14 @@ function Dashboard({ session, theme, onToggleTheme, onLogout }) {
     }
   }
 
-  // KPI 4 — Comissão em pipeline: SUM(comissao) WHERE estado IN (...)
   async function carregarComissaoPipeline() {
     try {
       const { data, error } = await sbV4
         .from('contratos_energia')
         .select('comissao')
         .in('estado', ['a_analisar', 'proposta_enviada', 'assinado']);
-
       if (error) throw error;
-
-      const soma = (data || []).reduce(
-        (acc, row) => acc + (row.comissao ?? 0),
-        0
-      );
+      const soma = (data || []).reduce((acc, row) => acc + (row.comissao ?? 0), 0);
       setKpiComissao(fEur(soma));
     } catch (err) {
       console.error('[V4 KPI] comissão pipeline:', err.message);
@@ -459,30 +427,10 @@ function Dashboard({ session, theme, onToggleTheme, onLogout }) {
   }
 
   const kpis = [
-    {
-      label: 'Contratos activos',
-      valor: kpiActivos,
-      sub: 'contratos em vigor',
-      cor: 'c-blue',
-    },
-    {
-      label: 'Leads este mês',
-      valor: kpiLeads,
-      sub: 'novos contactos',
-      cor: 'c-purple',
-    },
-    {
-      label: 'Poupança gerada',
-      valor: kpiPoupanca,
-      sub: 'estimativa acumulada',
-      cor: 'c-green',
-    },
-    {
-      label: 'Comissão em pipeline',
-      valor: kpiComissao,
-      sub: 'receita estimada',
-      cor: 'c-gold',
-    },
+    { label: 'Contratos activos',    valor: kpiActivos,  sub: 'contratos em vigor',   cor: 'c-blue'   },
+    { label: 'Leads este mês',        valor: kpiLeads,    sub: 'novos contactos',       cor: 'c-purple' },
+    { label: 'Poupança gerada',       valor: kpiPoupanca, sub: 'estimativa acumulada',  cor: 'c-green'  },
+    { label: 'Comissão em pipeline',  valor: kpiComissao, sub: 'receita estimada',      cor: 'c-gold'   },
   ];
 
   return (
@@ -503,18 +451,15 @@ function Dashboard({ session, theme, onToggleTheme, onLogout }) {
 
       {/* TABS */}
       <div className="tabs">
-        <button
-          className={`tab ${tab === 'painel' ? 'active' : ''}`}
-          onClick={() => setTab('painel')}
-        >Painel</button>
-        <button
-          className={`tab ${tab === 'simulador' ? 'active' : ''}`}
-          onClick={() => setTab('simulador')}
-        >Simulador</button>
-        <button
-          className={`tab ${tab === 'leads' ? 'active' : ''}`}
-          onClick={() => setTab('leads')}
-        >Leads</button>
+        <button className={`tab ${tab === 'painel' ? 'active' : ''}`} onClick={() => setTab('painel')}>
+          Painel
+        </button>
+        <button className={`tab ${tab === 'simulador' ? 'active' : ''}`} onClick={() => setTab('simulador')}>
+          Simulador
+        </button>
+        <button className={`tab ${tab === 'leads' ? 'active' : ''}`} onClick={() => setTab('leads')}>
+          Leads
+        </button>
       </div>
 
       {/* CONTEÚDO */}
@@ -544,7 +489,7 @@ function Dashboard({ session, theme, onToggleTheme, onLogout }) {
             <div className="ph">
               <div>
                 <div className="pt">Simulador</div>
-                <div className="ps">Compara tarifas de electricidade · 8 comercializadores</div>
+                <div className="ps">Compara tarifas · carrega a tua fatura ou preenche manualmente</div>
               </div>
             </div>
             <ClienteSimulator />
@@ -559,7 +504,14 @@ function Dashboard({ session, theme, onToggleTheme, onLogout }) {
                 <div className="ps">Pipeline de contratos · gestão de estados</div>
               </div>
             </div>
-            <StaffLeads />
+            {/* StaffLeads recebe onRowClick para abrir o drawer */}
+            <StaffLeads onRowClick={(id) => setOpenLead(id)} />
+            {/* Drawer de detalhe — montado sempre, visibilidade via prop open */}
+            <LeadDetalheDrawer
+              leadId={openLead}
+              open={openLead != null}
+              onClose={() => setOpenLead(null)}
+            />
           </>
         )}
       </main>
