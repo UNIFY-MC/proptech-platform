@@ -165,6 +165,25 @@ Estas regras são executadas pelo **CEO orchestrator** ao arrancar e a cada `/st
 - Tabelas limpas dentro de cada schema: `apolices`, não `v3_apolices`
 - Schema `core` para transversal: `pessoas`, `imoveis`, `empresas`, `servicos_ativos`, `leads`, `oportunidades`, `interacoes`, `ofertas`, `api_keys`, `staff`
 
+### Exposição de schemas custom ao PostgREST
+
+Adicionar schema custom ao REST do Supabase **não** se faz pelo Dashboard UI nem pela Management API — ambos mentem (mostram "exposed" sem propagar para o pod). A fonte de verdade real é `pg_roles.rolconfig` da role `authenticator`. Procedimento canónico no SQL Editor:
+
+```sql
+ALTER ROLE authenticator SET pgrst.db_schemas =
+  'public, graphql_public, core, system, v2_condominios, v3_seguros,
+   v4_energia, v5_manutencao, v1_owners_club, marketing';
+NOTIFY pgrst, 'reload config';
+```
+
+**Diagnóstico** quando aparece `PGRST106 Invalid schema` no REST:
+
+```sql
+SELECT rolconfig FROM pg_roles WHERE rolname = 'authenticator';
+```
+
+Ver `.claude/strategy/adrs/ADR-V2-002-postgrest-schema-exposure.md` (commit `a861c6b`).
+
 ---
 
 ## 🎨 Design System (extraído de `apps/v1-core/`)
