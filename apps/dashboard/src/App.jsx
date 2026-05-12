@@ -19,6 +19,8 @@ import BiaTaskLauncher from './views/BiaTaskLauncher.jsx'
 import SkillsPage from './views/SkillsPage.jsx'
 import RecipesPage from './views/RecipesPage.jsx'
 import IntegrationsPage from './views/IntegrationsPage.jsx'
+import ContextPage from './views/ContextPage.jsx'
+import InboxUnified from './views/InboxUnified.jsx'
 import StubView from './views/StubView.jsx'
 
 export default function App() {
@@ -55,7 +57,8 @@ export default function App() {
           {data && (
             <Routes>
               <Route path="/"             element={<Overview data={data} />} />
-              <Route path="/inbox"        element={<Activity data={data} />} />
+              <Route path="/inbox"        element={<InboxUnified />} />
+              <Route path="/activity"     element={<Activity data={data} />} />
               <Route path="/employees"         element={<EmployeesPage data={data} />} />
               <Route path="/employees/bia"            element={<BiaTaskLauncher />} />
               <Route path="/employees/bia/scorecard"  element={<BiaScorecard />} />
@@ -68,6 +71,7 @@ export default function App() {
               <Route path="/skills"       element={<SkillsPage data={data} />} />
               <Route path="/recipes"      element={<RecipesPage data={data} />} />
               <Route path="/integrations" element={<IntegrationsPage data={data} />} />
+              <Route path="/context"      element={<ContextPage />} />
               <Route path="/chat"         element={<StubView title="Chat" />} />
               <Route path="/files"        element={<StubView title="Files" />} />
               <Route path="/clients"      element={<StubView title="Clients" />} />
