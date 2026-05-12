@@ -1,6 +1,7 @@
+// Botão genérico — tokens canónicos v1-core (blue primário, não amber).
 export default function Btn({ children, onClick, primary, danger, disabled, full, small, color, type }) {
-  const bg = primary ? (color || 'var(--amber)') : danger ? 'var(--red)' : 'transparent';
-  const bc = primary ? (color || 'var(--amber)') : danger ? 'var(--red)' : 'var(--border2)';
+  const bg = primary ? (color || 'var(--blue)') : danger ? 'var(--red)' : 'transparent';
+  const bc = primary ? (color || 'var(--blue)') : danger ? 'var(--red)' : 'var(--border2)';
   const tc = primary || danger ? '#fff' : 'var(--text2)';
   return (
     <button type={type || 'button'} onClick={onClick} disabled={disabled} style={{

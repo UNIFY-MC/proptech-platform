@@ -10,12 +10,13 @@ const ESTADOS = [
   { id:'activo',            l:'Activo' },
 ];
 
+// Cores de estado — tokens canónicos v1-core (sem amber/teal/gray legados)
 const ESTADO_COR = {
-  novo:             { bg:'var(--amber-light)',  fg:'var(--amber-dark)' },
-  a_analisar:       { bg:'var(--blue-light)',   fg:'var(--blue-dark)'  },
-  proposta_enviada: { bg:'var(--teal-light)',   fg:'var(--teal-dark)'  },
-  assinado:         { bg:'var(--green-light)',  fg:'var(--green-dark)' },
-  activo:           { bg:'var(--gray-light)',   fg:'var(--gray-dark)'  },
+  novo:             { bg:'rgba(140,101,8,0.1)',  fg:'var(--gold)'  },
+  a_analisar:       { bg:'rgba(26,82,150,0.1)',  fg:'var(--blue)'  },
+  proposta_enviada: { bg:'rgba(107,79,160,0.1)', fg:'var(--purple)'},
+  assinado:         { bg:'rgba(45,106,79,0.1)',  fg:'var(--green)' },
+  activo:           { bg:'rgba(107,100,88,0.1)', fg:'var(--muted)' },
 };
 
 const SEG_ICON = { particular:'👤', empresa:'🏢', condominio:'🏗️' };
@@ -149,7 +150,7 @@ export default function StaffLeads() {
                   <td style={td}>{l.comercializadora_atual || '—'}</td>
                   <td style={td}>{fEur(l.valor_atual)}/mês</td>
                   <td style={td}>{fEur(l.valor_novo)}/mês</td>
-                  <td style={{ ...td, color:'var(--teal)', fontWeight:500 }}>{fEur(poupAno)}</td>
+                  <td style={{ ...td, color:'var(--green)', fontWeight:600, fontFamily:'var(--mono)' }}>{fEur(poupAno)}</td>
                   <td style={td}>{fEur(l.comissao)}</td>
                   <td style={td}>{fData(l.data_pedido)}</td>
                   <td style={td}>

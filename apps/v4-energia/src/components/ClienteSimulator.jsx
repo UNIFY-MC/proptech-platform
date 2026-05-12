@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react';
 import Btn from './Btn.jsx';
 import Info from './Info.jsx';
 import StepBar from './StepBar.jsx';
-import { KVA_LIST, runMotor } from '../lib/motor.js';
-import { getComercializadoras, criarLead } from '../lib/queries.js';
+import { KVA_LIST, calcularPropostas } from '../lib/motor.js';
+import { criarLead } from '../lib/queries.js';
 
 const S = {
   card:  { background:'var(--bg)', border:'0.5px solid var(--border)', borderRadius:'var(--radius)', padding:'14px 16px', boxShadow:'var(--shadow)' },
@@ -23,7 +23,6 @@ export default function ClienteSimulator() {
   const [comercAtual, setComercAtual] = useState('EDP Comercial');
   const [valorAtual, setValorAtual] = useState(67.4);
   const [cpe, setCpe] = useState('');
-  const [comerz, setComerz] = useState([]);
   const [results, setResults] = useState([]);
   const [selIdx, setSelIdx] = useState(0);
   const [erroFetch, setErroFetch] = useState('');
@@ -35,24 +34,30 @@ export default function ClienteSimulator() {
   const [enviando, setEnviando] = useState(false);
   const [enviado, setEnviado] = useState(false);
   const [erroEnvio, setErroEnvio] = useState('');
-
-  useEffect(() => {
-    getComercializadoras()
-      .then(setComerz)
-      .catch((e) => setErroFetch(e.message));
-  }, []);
+  const [aCarregarMotor, setACarregarMotor] = useState(false);
 
   const escolhido = results[selIdx];
 
-  const correrMotor = () => {
-    if (comerz.length === 0) {
-      setErroFetch('Sem comercializadoras activas na base de dados.');
-      return;
+  const correrMotor = async () => {
+    setACarregarMotor(true);
+    setErroFetch('');
+    try {
+      // calcularPropostas lê tarifas de BD; usa fallback hardcoded se BD vazia
+      const propostas = await calcularPropostas({ kwh_mensal: kwh, kva, segmento: seg });
+      // Adicionar campo saving relativo ao valorAtual introduzido pelo utilizador
+      const res = propostas.map((p) => ({
+        ...p,
+        saving: +(valorAtual - p.mensal).toFixed(2),
+        annual: +((valorAtual - p.mensal) * 12).toFixed(0),
+      }));
+      setResults(res);
+      setSelIdx(0);
+      setStep(4);
+    } catch (e) {
+      setErroFetch('Erro ao calcular propostas: ' + e.message);
+    } finally {
+      setACarregarMotor(false);
     }
-    const res = runMotor(kwh, kva, valorAtual, seg, comerz);
-    setResults(res);
-    setSelIdx(0);
-    setStep(4);
   };
 
   const submeter = async () => {
@@ -85,7 +90,7 @@ export default function ClienteSimulator() {
 
   const reset = () => {
     setStep(1); setResults([]); setSelIdx(0);
-    setShowForm(false); setEnviado(false);
+    setShowForm(false); setEnviado(false); setErroFetch('');
     setLeadNome(''); setLeadEmail(''); setLeadTel('');
   };
 
@@ -202,8 +207,8 @@ export default function ClienteSimulator() {
 
           <div style={{ display:'flex', justifyContent:'space-between', marginTop:20 }}>
             <Btn onClick={() => setStep(2)}>← Voltar</Btn>
-            <Btn primary onClick={correrMotor} disabled={comerz.length === 0}>
-              Ver poupança possível →
+            <Btn primary onClick={correrMotor} disabled={aCarregarMotor}>
+              {aCarregarMotor ? 'A calcular…' : 'Ver poupança possível →'}
             </Btn>
           </div>
         </div>
@@ -213,21 +218,23 @@ export default function ClienteSimulator() {
       {step === 4 && results.length > 0 && !enviado && (
         <div>
           <div style={{
-            ...S.card, background:'var(--amber-light)',
-            borderColor:'var(--amber)', marginBottom:14,
+            ...S.card,
+            background:'rgba(26,82,150,0.06)',
+            borderColor:'var(--blue)', marginBottom:14,
           }}>
-            <p style={{ fontSize:11, fontWeight:500, color:'var(--amber-mid)', margin:'0 0 3px' }}>
+            <p style={{ fontSize:11, fontWeight:500, color:'var(--muted)', margin:'0 0 3px', fontFamily:'var(--mono)', textTransform:'uppercase', letterSpacing:'0.08em' }}>
               Melhor alternativa — motor próprio TAR 2026 ERSE
             </p>
-            <p style={{ fontSize:20, fontWeight:500, color:'var(--amber-dark)', margin:'0 0 3px' }}>
+            <p style={{ fontSize:20, fontWeight:600, color:'var(--blue)', margin:'0 0 3px' }}>
               {results[0].nome} · €{results[0].mensal.toFixed(2)}/mês
             </p>
-            <p style={{ fontSize:13, color:'var(--amber-dark)', margin:0 }}>
-              Poupança anual estimada: <strong>€{Math.max(0, results[0].annual)}</strong>
+            <p style={{ fontSize:13, color:'var(--text)', margin:0 }}>
+              Poupança anual estimada: <strong style={{ color:'var(--green)' }}>€{Math.max(0, results[0].annual)}</strong>
               {seg === 'condominio' && (
                 <span style={{
                   marginLeft:8, fontSize:11, padding:'2px 9px', borderRadius:5,
-                  background:'var(--teal-light)', color:'var(--teal-dark)', fontWeight:500,
+                  background:'rgba(45,106,79,0.1)', color:'var(--green)', fontWeight:600,
+                  fontFamily:'var(--mono)',
                 }}>desconto grupo 5% incluído</span>
               )}
             </p>
@@ -236,16 +243,16 @@ export default function ClienteSimulator() {
           <div style={{ ...S.card, background:'var(--bg2)', marginBottom:10 }}>
             <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
               <div>
-                <p style={{ fontSize:11, color:'var(--text2)', margin:'0 0 2px' }}>
+                <p style={{ fontSize:11, color:'var(--muted)', margin:'0 0 2px', fontFamily:'var(--mono)', textTransform:'uppercase', letterSpacing:'0.06em' }}>
                   Contrato actual — {comercAtual}
                 </p>
-                <p style={{ fontSize:18, fontWeight:500, margin:0 }}>
+                <p style={{ fontSize:18, fontWeight:500, margin:0, fontFamily:'var(--mono)' }}>
                   €{valorAtual.toFixed(2)}/mês
                 </p>
               </div>
               <div style={{ textAlign:'right' }}>
-                <p style={{ fontSize:11, color:'var(--text2)', margin:'0 0 2px' }}>por ano</p>
-                <p style={{ fontSize:16, fontWeight:500, margin:0 }}>
+                <p style={{ fontSize:11, color:'var(--muted)', margin:'0 0 2px' }}>por ano</p>
+                <p style={{ fontSize:16, fontWeight:500, margin:0, fontFamily:'var(--mono)' }}>
                   €{(valorAtual * 12).toFixed(0)}
                 </p>
               </div>
@@ -256,50 +263,66 @@ export default function ClienteSimulator() {
             <div key={r.id || r.nome} onClick={() => setSelIdx(i)} style={{
               ...S.card, marginBottom:8, cursor:'pointer',
               display:'flex', alignItems:'center', gap:14,
-              borderColor: selIdx === i ? 'var(--amber)' : 'var(--border)',
+              borderColor: selIdx === i ? 'var(--blue)' : 'var(--border)',
               borderWidth: selIdx === i ? 1.5 : 0.5,
-              background: selIdx === i ? 'var(--amber-light)' : 'var(--bg)',
+              background: selIdx === i ? 'rgba(26,82,150,0.05)' : 'var(--bg)',
             }}>
               <div style={{ flex:1 }}>
-                <p style={{ fontSize:13, fontWeight:500, margin:'0 0 6px' }}>
-                  {r.nome} {i === 0 && (
+                <p style={{ fontSize:13, fontWeight:500, margin:'0 0 6px', display:'flex', alignItems:'center', gap:6, flexWrap:'wrap' }}>
+                  {r.nome}
+                  {i === 0 && (
                     <span style={{
-                      marginLeft:6, fontSize:11, padding:'2px 8px', borderRadius:5,
-                      background:'var(--teal-light)', color:'var(--teal-dark)', fontWeight:500,
+                      fontSize:9, padding:'2px 8px', borderRadius:4,
+                      background:'rgba(45,106,79,0.12)', color:'var(--green)', fontWeight:600,
+                      fontFamily:'var(--mono)', textTransform:'uppercase', letterSpacing:'0.08em',
                     }}>Melhor preço</span>
                   )}
+                  {r.tipo_oferta === 'verde' && (
+                    <span style={{
+                      fontSize:9, padding:'2px 8px', borderRadius:4,
+                      background:'rgba(45,106,79,0.08)', color:'var(--green)', fontWeight:600,
+                      fontFamily:'var(--mono)', textTransform:'uppercase', letterSpacing:'0.08em',
+                    }}>Verde</span>
+                  )}
+                  {r.fonte && r.fonte !== 'manual' && (
+                    <span style={{
+                      fontSize:9, padding:'2px 8px', borderRadius:4,
+                      background:'rgba(140,101,8,0.1)', color:'var(--gold)', fontWeight:600,
+                      fontFamily:'var(--mono)', textTransform:'uppercase', letterSpacing:'0.08em',
+                    }}>{r.fonte === 'fallback' ? 'Fallback' : r.fonte === 'erse_scraper' ? 'ERSE' : 'BD'}</span>
+                  )}
                 </p>
-                <div style={{ height:4, background:'var(--bg3)', borderRadius:2 }}>
+                <div style={{ height:4, background:'var(--surface2)', borderRadius:2 }}>
                   <div style={{
                     height:4,
                     width: Math.min(100, Math.round(r.mensal / valorAtual * 100)) + '%',
-                    background: i === 0 ? 'var(--amber)' : 'var(--border2)',
+                    background: i === 0 ? 'var(--blue)' : 'var(--border)',
                     borderRadius:2,
                   }} />
                 </div>
               </div>
               <div style={{ textAlign:'right', minWidth:110 }}>
-                <p style={{ fontSize:19, fontWeight:500, margin:0 }}>
+                <p style={{ fontSize:19, fontWeight:600, margin:0, fontFamily:'var(--mono)' }}>
                   €{r.mensal.toFixed(2)}
                 </p>
                 {r.saving > 0 ? (
                   <>
-                    <p style={{ fontSize:12, color:'var(--teal)', margin:0, fontWeight:500 }}>
+                    <p style={{ fontSize:12, color:'var(--green)', margin:0, fontWeight:600, fontFamily:'var(--mono)' }}>
                       −€{r.saving.toFixed(2)}/mês
                     </p>
-                    <p style={{ fontSize:11, color:'var(--text2)', margin:0 }}>
-                      −€{r.annual}/ano
+                    <p style={{ fontSize:11, color:'var(--muted)', margin:0, fontFamily:'var(--mono)' }}>
+                      −€{Math.abs(r.annual)}/ano
                     </p>
                   </>
                 ) : (
-                  <p style={{ fontSize:12, color:'var(--text3)', margin:0 }}>sem poupança</p>
+                  <p style={{ fontSize:12, color:'var(--muted)', margin:0 }}>sem poupança</p>
                 )}
               </div>
             </div>
           ))}
 
-          <p style={{ fontSize:11, color:'var(--text3)', margin:'8px 0 14px' }}>
-            Calculado com TAR 2026 ERSE + {comerz.length} comercializadoras. Motor próprio, actualizado mensalmente.
+          <p style={{ fontSize:11, color:'var(--muted)', margin:'8px 0 14px', fontFamily:'var(--mono)' }}>
+            Calculado com TAR 2026 ERSE + {results.length} tarifas de BD. Actualizado automaticamente.
           </p>
 
           {!showForm && (
@@ -318,7 +341,7 @@ export default function ClienteSimulator() {
           )}
 
           {showForm && (
-            <div style={{ ...S.card, marginTop:14, borderColor:'var(--teal)' }}>
+            <div style={{ ...S.card, marginTop:14, borderColor:'var(--blue)' }}>
               <p style={{ fontSize:13, fontWeight:500, marginBottom:12 }}>
                 Os seus dados de contacto
               </p>
@@ -352,17 +375,17 @@ export default function ClienteSimulator() {
       {enviado && escolhido && (
         <div>
           <div style={{
-            ...S.card, borderColor:'var(--teal)',
-            background:'var(--teal-light)', marginBottom:16,
+            ...S.card, borderColor:'var(--green)',
+            background:'rgba(45,106,79,0.07)', marginBottom:16,
           }}>
-            <p style={{ fontSize:11, fontWeight:500, color:'var(--teal-dark)', margin:'0 0 4px' }}>
+            <p style={{ fontSize:11, fontWeight:600, color:'var(--green)', margin:'0 0 4px', fontFamily:'var(--mono)', textTransform:'uppercase', letterSpacing:'0.08em' }}>
               Pedido submetido com sucesso
             </p>
-            <p style={{ fontSize:19, fontWeight:500, color:'var(--teal-dark)', margin:'0 0 4px' }}>
+            <p style={{ fontSize:19, fontWeight:600, color:'var(--green)', margin:'0 0 4px', fontFamily:'var(--mono)' }}>
               {escolhido.nome} · €{escolhido.mensal.toFixed(2)}/mês
             </p>
-            <p style={{ fontSize:13, color:'var(--teal-dark)', margin:0 }}>
-              Poupança estimada: <strong>€{escolhido.annual}/ano</strong> · Sem custo para si
+            <p style={{ fontSize:13, color:'var(--text)', margin:0 }}>
+              Poupança estimada: <strong style={{ color:'var(--green)' }}>€{Math.abs(escolhido.annual)}/ano</strong> · Sem custo para si
             </p>
           </div>
           <div style={S.card}>
