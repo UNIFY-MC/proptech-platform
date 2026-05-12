@@ -9,7 +9,7 @@
  *  V1 SCOPE
  *  • Login email/password via Supabase Auth
  *  • Dashboard com 4 KPIs ligados a v4_energia.contratos_energia
- *  • Toggle light/dark persistido em localStorage.v4theme
+ *  • Toggle light/dark persistido em localStorage.v1theme (chave partilhada com v1-core)
  *  ═══════════════════════════════════════════════════════════════════ */
 
 import React, { useState, useEffect } from 'react';
@@ -169,13 +169,13 @@ export default function V4EnergiaApp() {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
   const [theme, setTheme] = useState(
-    () => localStorage.getItem('v4theme') || 'light'
+    () => localStorage.getItem('v1theme') || 'light'
   );
 
-  // Aplica tema e persiste em localStorage.v4theme (chave distinta de v1theme)
+  // Aplica tema e persiste em localStorage.v1theme (chave partilhada com v1-core)
   useEffect(() => {
     document.body.classList.toggle('dark', theme === 'dark');
-    localStorage.setItem('v4theme', theme);
+    localStorage.setItem('v1theme', theme);
   }, [theme]);
 
   // Injeta CSS e fontes no mount
