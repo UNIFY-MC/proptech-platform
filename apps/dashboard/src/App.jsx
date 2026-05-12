@@ -3,7 +3,6 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import { useData } from './hooks/useData.js'
 import { DrawerProvider } from './context/DrawerContext.jsx'
 import Sidebar from './components/Sidebar.jsx'
-import AppSubSidebar from './components/AppSubSidebar.jsx'
 import Overview from './components/Overview.jsx'
 import Activity from './components/Activity.jsx'
 import Agents from './components/Agents.jsx'
@@ -58,9 +57,6 @@ export default function App() {
             refresh={refresh}
           />
         )}
-
-        {/* Sidebar secundária — só quando há app embebida activa (2ª coluna) */}
-        {showEmbed && <AppSubSidebar />}
 
         <main className={mainClass}>
           {error && (

@@ -496,20 +496,31 @@ body {
   top: 0;
   height: 100vh;
   overflow: hidden;
+  transition: width 0.18s ease;
 }
 
-/* Sidebar secundário — só visível quando uma app embebida está activa */
-.app-subsidebar {
-  width: 230px;
-  flex-shrink: 0;
-  background: var(--bg);
-  border-right: 1px solid var(--border);
-  display: flex;
-  flex-direction: column;
-  position: sticky;
-  top: 0;
-  height: 100vh;
-  overflow: hidden;
+/* Estado colapsado — só ícones */
+.app-sidebar.collapsed {
+  width: 48px;
+}
+.app-sidebar.collapsed .sidebar-brand-title,
+.app-sidebar.collapsed .sidebar-brand-sub,
+.app-sidebar.collapsed .sidebar-vertical,
+.app-sidebar.collapsed .sidebar-section-label,
+.app-sidebar.collapsed .sidebar-link span,
+.app-sidebar.collapsed .sidebar-link code,
+.app-sidebar.collapsed .sidebar-tasks,
+.app-sidebar.collapsed .sidebar-footer .btn-refresh,
+.app-sidebar.collapsed .sidebar-sync {
+  display: none !important;
+}
+.app-sidebar.collapsed .sidebar-link {
+  padding: 8px 0 !important;
+  justify-content: center !important;
+}
+.app-sidebar.collapsed .sidebar-brand {
+  justify-content: center !important;
+  padding: 12px 8px !important;
 }
 
 .app-main {

@@ -28,8 +28,10 @@ const useAppShellStore = create(
     (set) => ({
       activeAppSlug: 'dashboard',     // 'dashboard' | 'v2' | 'v4' | 'v5'
       activePath:    '/',             // path interno da app embebida
+      sidebarCollapsed: false,        // colapsar sidebar primário para dar mais espaço
       setActiveApp:  (slug) => set({ activeAppSlug: slug, activePath: '/' }),
       setActivePath: (path) => set({ activePath: path }),
+      toggleSidebar: () => set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
     }),
     { name: 'cc:app-shell' }
   )

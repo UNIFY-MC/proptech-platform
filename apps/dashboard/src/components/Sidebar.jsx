@@ -4,7 +4,7 @@ import {
   Users, Building2, FolderKanban, CheckSquare,
   ChefHat, Sparkles, Plug, Library,
   LayoutDashboard, Map, Eye, Swords, Layers,
-  Bot,
+  Bot, PanelLeftClose, PanelLeft,
 } from 'lucide-react'
 import { useVerticalStore, useAppShellStore } from '../store'
 import { useInboxItems, useApprovals } from '../hooks/useSupabase'
@@ -46,7 +46,7 @@ function NavItem({ to, label, icon, badge, end }) {
 
 export default function Sidebar({ theme, setTheme, data, lastSync, loading, refresh }) {
   const { activeVertical, setVertical } = useVerticalStore()
-  const { activeAppSlug } = useAppShellStore()
+  const { activeAppSlug, sidebarCollapsed, toggleSidebar } = useAppShellStore()
   const isDashboardMode = activeAppSlug === 'dashboard'
   const { items } = useInboxItems(activeVertical)
   const { approvals } = useApprovals(activeVertical)
@@ -56,13 +56,28 @@ export default function Sidebar({ theme, setTheme, data, lastSync, loading, refr
   const employees = (data?.employees || []).filter(e => matchVertical(e, activeVertical))
 
   return (
-    <aside className="app-sidebar">
-      {/* Brand — sempre visível */}
-      <div className="sidebar-brand">
-        <div className="sidebar-brand-title">Agentic Ops</div>
-        {data?.meta?.branch && (
-          <div className="sidebar-brand-sub">{data.meta.branch}</div>
+    <aside className={'app-sidebar' + (sidebarCollapsed ? ' collapsed' : '')}>
+      {/* Brand — sempre visível + botão collapse */}
+      <div className="sidebar-brand" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        {!sidebarCollapsed && (
+          <div>
+            <div className="sidebar-brand-title">Agentic Ops</div>
+            {data?.meta?.branch && (
+              <div className="sidebar-brand-sub">{data.meta.branch}</div>
+            )}
+          </div>
         )}
+        <button
+          onClick={toggleSidebar}
+          title={sidebarCollapsed ? 'Expandir sidebar' : 'Colapsar sidebar'}
+          style={{
+            background: 'none', border: 'none', cursor: 'pointer',
+            color: 'var(--text-dim)', padding: 4,
+            display: 'flex', alignItems: 'center',
+          }}
+        >
+          {sidebarCollapsed ? <PanelLeft size={16} /> : <PanelLeftClose size={16} />}
+        </button>
       </div>
 
       {/* Vertical filter (só no dashboard mode) */}
