@@ -52,22 +52,15 @@ export default function PrestacaoContas() {
     <div>
       <div style={{
         padding: '10px 14px',
-        background: kpis?.fonte === 'snapshot' ? 'rgba(227,179,65,0.08)' : 'rgba(88,166,255,0.08)',
-        border: '1px solid ' + (kpis?.fonte === 'snapshot' ? 'rgba(227,179,65,0.20)' : 'rgba(88,166,255,0.20)'),
+        background: 'rgba(88,166,255,0.08)',
+        border: '1px solid rgba(88,166,255,0.20)',
         borderRadius: 6,
         fontSize: 12,
-        color: kpis?.fonte === 'snapshot' ? 'var(--go)' : 'var(--bl)',
+        color: 'var(--bl)',
         marginBottom: 18,
         fontFamily: 'DM Mono, monospace',
       }}>
-        ● {isGlobal ? `Global (a mostrar ${ano})` : ano}
-        {' '}
-        {kpis?.fonte === 'snapshot'
-          ? `(snapshot frozen — congelado em ${new Date(kpis.congelado_em).toLocaleDateString('pt-PT')})`
-          : ano === CURRENT_YEAR ? '(em curso · dados live)' : '(fechado · sem snapshot)'}
-        <span className="dim" style={{ marginLeft: 12, fontSize: 10 }}>
-          Filtro: topbar
-        </span>
+        ● Jan – Dez {ano}
       </div>
 
       {error && <div className="error-banner">Erro: {error}</div>}
@@ -81,16 +74,20 @@ export default function PrestacaoContas() {
 
       <div style={{
         background: 'var(--sf)', border: '1px solid var(--bd)', borderRadius: 8,
-        padding: '12px 18px', marginBottom: 14,
+        padding: '14px 18px', marginBottom: 14,
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        gap: 18,
       }}>
-        <span style={{ fontSize: 13, fontWeight: 600 }}>Resultado do período</span>
+        <span className="mono" style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 1, color: 'var(--mu)' }}>
+          Resultado do período
+        </span>
         <span className="mono" style={{
-          fontSize: 14,
+          flex: 1, textAlign: 'center', fontSize: 16, fontWeight: 700,
           color: kpis && kpis.resultado_periodo >= 0 ? 'var(--gr)' : 'var(--rd)',
         }}>
           {kpis ? (kpis.resultado_periodo >= 0 ? '+ ' : '') + eur(kpis.resultado_periodo) : '—'}
         </span>
+        <span style={{ width: 130 }}></span>
       </div>
 
       {kpis && (
@@ -392,53 +389,188 @@ function TabOrcamento({ ano }) {
 }
 
 function TabOrcVsReal({ ano }) {
-  const [orcs, setOrcs] = useState(null)
-  const [ext, setExt] = useState(null)
+  const [rubricas, setRubricas] = useState(null)
+  const [efetivos, setEfetivos] = useState(null)
   const [error, setError] = useState(null)
+
   useEffect(() => {
     let active = true
-    setOrcs(null); setExt(null); setError(null)
-    const i = `${ano}-01-01`, f = `${ano}-12-31`
+    setRubricas(null); setEfetivos(null); setError(null)
     Promise.all([
-      v2Client.from('orcamentos').select('valor_total').eq('ano', ano),
-      v2Client.from('extrato_bancario').select('data_movimento, saldo_apos').gte('data_movimento', i).lte('data_movimento', f).order('data_movimento').limit(5000),
-    ]).then(([o, e]) => {
+      v2Client.from('orcamento_rubricas')
+        .select('codigo, rubrica, tipo, valor_total, ordem')
+        .eq('ano', ano).order('ordem'),
+      v2Client.from('orcamento_efetivo')
+        .select('codigo, valor_efetivo, n_movs').eq('ano', ano),
+    ]).then(([r, e]) => {
       if (!active) return
-      if (o.error || e.error) { setError(o.error?.message || e.error?.message); return }
-      setOrcs(o.data || []); setExt(e.data || [])
+      if (r.error || e.error) { setError(r.error?.message || e.error?.message); return }
+      setRubricas(r.data || [])
+      setEfetivos(e.data || [])
     })
     return () => { active = false }
   }, [ano])
+
+  const efetivoMap = useMemo(() => {
+    const m = {}
+    for (const e of efetivos || []) m[e.codigo] = e
+    // alias R001+R002 → R001 (Excel só usa R001)
+    if (m['R001'] && !m['R001+R002']) m['R001+R002'] = m['R001']
+    return m
+  }, [efetivos])
+
   if (error) return <div className="error-banner">Erro: {error}</div>
-  if (orcs === null || ext === null) return <div className="dim">A carregar…</div>
-  const orcTotal = orcs.reduce((a, o) => a + Number(o.valor_total ?? 0), 0)
-  let real = 0, prev = ext[0] ? Number(ext[0].saldo_apos ?? 0) : 0
-  for (let i = 1; i < ext.length; i++) {
-    const sa = Number(ext[i].saldo_apos ?? 0)
-    if (sa < prev) real += (prev - sa)
-    prev = sa
-  }
-  if (orcTotal === 0) return (
-    <div className="empty-state">
-      <div style={{ fontSize: 14, marginBottom: 4 }}>Sem orçamento para comparar</div>
-      <div style={{ fontSize: 12 }}>Despesas reais em {ano}: <span className="mono">{eur(real)}</span>.</div>
-    </div>
-  )
-  const desvio = real - orcTotal
-  const desvioPct = (desvio / orcTotal) * 100
+  if (rubricas === null || efetivos === null) return <div className="dim">A carregar…</div>
+
+  const despesas = rubricas.filter(r => r.tipo === 'despesa' || r.tipo === 'fcr')
+  const receitas = rubricas.filter(r => r.tipo === 'receita')
+
   return (
     <div>
-      <h3 style={{ fontSize: 13, marginBottom: 10 }}>Orçamento vs Realizado {ano}</h3>
-      <div className="kpi-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
-        <div className="kpi"><div className="kpi-l">Orçamentado</div><div className="kpi-v">{eur(orcTotal)}</div></div>
-        <div className="kpi kpi-red"><div className="kpi-l">Realizado</div><div className="kpi-v">{eur(real)}</div></div>
-        <div className={'kpi ' + (desvio > 0 ? 'kpi-red' : 'kpi-green')}>
-          <div className="kpi-l">Desvio</div>
-          <div className="kpi-v">{desvio >= 0 ? '+' : ''}{eur(desvio)}</div>
-          <div className="kpi-s">{desvioPct >= 0 ? '+' : ''}{desvioPct.toFixed(1)}%</div>
-        </div>
-      </div>
+      <SecaoOrcReal ano={ano} titulo={`DESPESAS — ORÇAMENTO VS EFETIVO`} rows={despesas} efetivoMap={efetivoMap} sinal={-1} />
+      <div style={{ height: 22 }} />
+      <SecaoOrcReal ano={ano} titulo={`RECEITAS — ORÇAMENTO VS EFETIVO`} rows={receitas} efetivoMap={efetivoMap} sinal={+1} />
     </div>
+  )
+}
+
+function SecaoOrcReal({ ano, titulo, rows, efetivoMap, sinal }) {
+  const totals = rows.reduce((acc, r) => {
+    const orc = Number(r.valor_total ?? 0)
+    const ef = Number(efetivoMap[r.codigo]?.valor_efetivo ?? 0)
+    acc.orc += orc; acc.ef += ef
+    return acc
+  }, { orc: 0, ef: 0 })
+
+  return (
+    <div style={{ background: 'var(--sf)', border: '1px solid var(--bd)', borderRadius: 8, overflow: 'hidden' }}>
+      <div style={{
+        padding: '10px 18px', borderBottom: '2px solid var(--bd)', background: 'var(--sf2)',
+        display: 'flex', alignItems: 'baseline', justifyContent: 'space-between',
+      }}>
+        <span className="mono" style={{ fontSize: 10, fontWeight: 600, letterSpacing: 1, color: 'var(--mu)' }}>
+          {titulo}
+        </span>
+        <span className="mono dim" style={{ fontSize: 9, letterSpacing: 1 }}>{ano}</span>
+      </div>
+      <table style={{ width: '100%' }}>
+        <thead>
+          <tr>
+            <th style={{ width: '38%' }}>Rúbrica</th>
+            <th style={{ textAlign: 'right' }}>Orçamentado</th>
+            <th style={{ textAlign: 'right' }}>Efetivo</th>
+            <th style={{ textAlign: 'right' }}>Desvio</th>
+            <th style={{ textAlign: 'right', width: 110 }}>Execução</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map(r => (
+            <LinhaOrcReal key={r.codigo} ano={ano} rubrica={r} efetivo={efetivoMap[r.codigo]} />
+          ))}
+        </tbody>
+        <tfoot>
+          <tr style={{ background: 'var(--sf2)', fontWeight: 700 }}>
+            <td style={{ paddingLeft: 18 }}>Total {sinal < 0 ? 'Despesas' : 'Receitas'}</td>
+            <td className="mono" style={{ textAlign: 'right' }}>{eur(totals.orc)}</td>
+            <td className="mono" style={{ textAlign: 'right' }}>{eur(totals.ef)}</td>
+            <td className="mono" style={{ textAlign: 'right', color: (totals.ef - totals.orc) >= 0 ? (sinal > 0 ? 'var(--gr)' : 'var(--rd)') : (sinal > 0 ? 'var(--rd)' : 'var(--gr)') }}>
+              {(totals.ef - totals.orc) >= 0 ? '+' : ''}{eur(totals.ef - totals.orc)}
+            </td>
+            <td className="mono" style={{ textAlign: 'right', paddingRight: 18 }}>
+              {totals.orc > 0 ? `${Math.round((totals.ef/totals.orc)*100)}%` : '—'}
+            </td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  )
+}
+
+function LinhaOrcReal({ ano, rubrica, efetivo }) {
+  const [open, setOpen] = useState(false)
+  const [movs, setMovs] = useState(null)
+  const [errMov, setErrMov] = useState(null)
+  const orc = Number(rubrica.valor_total ?? 0)
+  const ef = Number(efetivo?.valor_efetivo ?? 0)
+  const desvio = ef - orc
+  const pct = orc > 0 ? Math.round((ef / orc) * 100) : null
+
+  useEffect(() => {
+    if (!open || movs !== null) return
+    const i = `${ano}-01-01`, f = `${ano}-12-31`
+    v2Client.from('extrato_bancario')
+      .select('data_movimento, descricao, valor, saldo_apos, referencia_banco')
+      .gte('data_movimento', i).lte('data_movimento', f)
+      .order('data_movimento')
+      .limit(500)
+      .then(({ data, error }) => {
+        if (error) setErrMov(error.message)
+        else {
+          const key = rubrica.codigo.toLowerCase()
+          const filtered = (data || []).filter(m => {
+            const desc = (m.descricao || '').toLowerCase()
+            return desc.includes(key) ||
+              (key === '2a006' && desc.includes('easyfresh')) ||
+              (key === '2a001' && desc.includes('lithoesp')) ||
+              (key === '2a007' && (desc.includes('manuten') || desc.includes('ferrovial'))) ||
+              (key === '2a015' && desc.includes('zurich'))
+          })
+          setMovs(filtered)
+        }
+      })
+  }, [open, ano, rubrica.codigo, movs])
+
+  const desvioColor = desvio === 0 ? 'var(--mu)' : (desvio > 0 ? 'var(--rd)' : 'var(--gr)')
+  const execPct = pct != null ? pct : 0
+  const execColor = pct == null ? 'var(--mu)' : (pct <= 100 ? 'var(--gr)' : 'var(--rd)')
+
+  return (
+    <>
+      <tr style={{ cursor: 'pointer', background: open ? 'var(--sf2)' : undefined }} onClick={() => setOpen(o => !o)}>
+        <td style={{ paddingLeft: 18 }}>
+          <span className="mono dim" style={{ fontSize: 9, marginRight: 6 }}>{open ? '▾' : '▸'}</span>
+          <span className="mono" style={{ fontSize: 10, color: 'var(--mu)', marginRight: 8 }}>{rubrica.codigo}</span>
+          <span style={{ fontSize: 12 }}>{rubrica.rubrica}</span>
+        </td>
+        <td className="mono" style={{ textAlign: 'right' }}>{orc > 0 ? eur(orc) : '—'}</td>
+        <td className="mono" style={{ textAlign: 'right' }}>{ef > 0 ? eur(ef) : '—'}</td>
+        <td className="mono" style={{ textAlign: 'right', color: desvioColor }}>
+          {desvio === 0 ? '0,00 €' : (desvio > 0 ? '+' : '') + eur(desvio)}
+        </td>
+        <td className="mono" style={{ textAlign: 'right', paddingRight: 18, color: execColor }}>
+          {pct == null ? '—' : `${pct}%`}
+        </td>
+      </tr>
+      {open && (
+        <tr>
+          <td colSpan={5} style={{ background: 'var(--bg)', padding: '8px 24px' }}>
+            {errMov && <div className="error-banner">{errMov}</div>}
+            {movs === null && !errMov && <div className="dim" style={{ fontSize: 11 }}>A carregar movimentos…</div>}
+            {movs && movs.length === 0 && (
+              <div className="dim" style={{ fontSize: 11, fontStyle: 'italic' }}>
+                Sem movimentos no extrato bancário associados a {rubrica.codigo}.
+                {efetivo?.n_movs > 0 && ` Efetivo ${efetivo.n_movs} movs vem dos extratos categorizados (Excel).`}
+              </div>
+            )}
+            {movs && movs.length > 0 && (
+              <table style={{ fontSize: 11 }}>
+                <thead><tr><th>Data</th><th>Descrição</th><th>Ref</th><th style={{ textAlign: 'right' }}>Valor</th></tr></thead>
+                <tbody>
+                  {movs.slice(0, 30).map((m, i) => (
+                    <tr key={i}>
+                      <td className="mono" style={{ fontSize: 10 }}>{fdate(m.data_movimento)}</td>
+                      <td style={{ fontSize: 11 }}>{m.descricao}</td>
+                      <td className="mono" style={{ fontSize: 9, color: 'var(--mu)' }}>{m.referencia_banco ?? '—'}</td>
+                      <td className="mono" style={{ textAlign: 'right' }}>{eur(m.valor)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </td>
+        </tr>
+      )}
+    </>
   )
 }
 
