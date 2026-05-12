@@ -28,17 +28,19 @@ ALTER TABLE v2_condominios.kpis_ano_fechado ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS kpis_read_staff ON v2_condominios.kpis_ano_fechado;
 CREATE POLICY kpis_read_staff ON v2_condominios.kpis_ano_fechado FOR SELECT TO authenticated USING (public.is_staff());
 
--- Seed 2024 (legacy screenshot Prata Lote 2A)
+-- Seed 2024 + 2025 (legacy screenshots Prata Lote 2A)
 INSERT INTO v2_condominios.kpis_ano_fechado (
   ano, saldo_bancario_inicial, receitas, despesas, saldo_bancario_final,
   mora_total, dividas_fornecedores, valores_em_analise, valores_a_devolver,
   fundo_comum_reserva, saldo_financeiro, notas
-) VALUES (
-  2024, 0, 83278.73, 52252.45, 31026.28,
-  1767.07, 1872.45, 23573.38, 1611.16,
-  6551.05, 52883.12,
-  'Seed inicial — valores do legacy V2 prataowners.pt screenshot Prata Lote 2A 2024'
-) ON CONFLICT (ano) DO NOTHING;
+) VALUES
+  (2024, 0,         83278.73, 52252.45, 31026.28,
+   1767.07, 1872.45, 23573.38, 1611.16, 6551.05, 52883.12,
+   'Seed — legacy V2 prataowners.pt Prata Lote 2A 2024 (31 Dez 2024)'),
+  (2025, 31026.28,  85242.91, 39024.04, 77245.15,
+   8138.82, 1549.80, 13770.09, 6175.58, 6526.32, 91428.68,
+   'Seed — legacy V2 prataowners.pt Prata Lote 2A 2025 (31 Dez 2025)')
+ON CONFLICT (ano) DO NOTHING;
 
 -- RPC actualizado (snapshot para anos fechados, live para resto)
 -- Ver migração separada 20260512_v2_dashboard_kpis_use_snapshot.
