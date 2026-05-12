@@ -52,19 +52,21 @@ export default function PrestacaoContas() {
     <div>
       <div style={{
         padding: '10px 14px',
-        background: 'rgba(88,166,255,0.08)',
-        border: '1px solid rgba(88,166,255,0.20)',
+        background: kpis?.fonte === 'snapshot' ? 'rgba(227,179,65,0.08)' : 'rgba(88,166,255,0.08)',
+        border: '1px solid ' + (kpis?.fonte === 'snapshot' ? 'rgba(227,179,65,0.20)' : 'rgba(88,166,255,0.20)'),
         borderRadius: 6,
         fontSize: 12,
-        color: 'var(--bl)',
+        color: kpis?.fonte === 'snapshot' ? 'var(--go)' : 'var(--bl)',
         marginBottom: 18,
         fontFamily: 'DM Mono, monospace',
       }}>
         ● {isGlobal ? `Global (a mostrar ${ano})` : ano}
         {' '}
-        {ano === CURRENT_YEAR ? '(em curso)' : '(fechado)'}
+        {kpis?.fonte === 'snapshot'
+          ? `(snapshot frozen — congelado em ${new Date(kpis.congelado_em).toLocaleDateString('pt-PT')})`
+          : ano === CURRENT_YEAR ? '(em curso · dados live)' : '(fechado · sem snapshot)'}
         <span className="dim" style={{ marginLeft: 12, fontSize: 10 }}>
-          Filtro definido na topbar
+          Filtro: topbar
         </span>
       </div>
 
@@ -108,8 +110,14 @@ export default function PrestacaoContas() {
             </span>
           </div>
           <RR label="Saldo Bancário Final" value={eur(kpis.saldo_bancario_final)} tone="blue" />
-          <RR label="Dívidas Condóminos" value={(kpis.mora_total > 0 ? '+ ' : '') + eur(kpis.mora_total)} tone={kpis.mora_total > 0 ? 'green' : null} sub={`${kpis.fracoes_em_mora ?? 0} fracções`} />
+          <RR label="Dívidas Condóminos" value={(kpis.mora_total > 0 ? '+ ' : '') + eur(kpis.mora_total)} tone={kpis.mora_total > 0 ? 'green' : null} sub={kpis.fracoes_em_mora != null ? `${kpis.fracoes_em_mora} fracções` : null} />
           <RR label="Dívidas a Fornecedores" value={(kpis.dividas_fornecedores > 0 ? '- ' : '') + eur(kpis.dividas_fornecedores)} tone={kpis.dividas_fornecedores > 0 ? 'red' : null} />
+          {kpis.valores_em_analise != null && kpis.valores_em_analise !== 0 && (
+            <RR label="Valores em análise" value={(kpis.valores_em_analise > 0 ? '+ ' : '') + eur(kpis.valores_em_analise)} tone="green" />
+          )}
+          {kpis.valores_a_devolver != null && kpis.valores_a_devolver !== 0 && (
+            <RR label="Valores a devolver" value={(kpis.valores_a_devolver > 0 ? '- ' : '') + eur(kpis.valores_a_devolver)} tone="red" />
+          )}
           <RR label="Fundo Comum de Reserva (10%)" value={eur(kpis.fundo_comum_reserva)} tone="gold" />
           <div style={{
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',

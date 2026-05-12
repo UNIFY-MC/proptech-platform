@@ -1,116 +1,208 @@
-import { useEffect, useState } from 'react'
-import { v2Client } from '../lib/clients.js'
+import { useEffect, useMemo, useState } from 'react'
+import { v2Client, systemClient } from '../lib/clients.js'
 
-// Mora: quotas emitidas em recebimentos cuja data_pagamento é NULL
-// e data_emissao está no passado. Agrupar por fracção, com aging.
+function agingBucket(dias) {
+  if (dias < 0)   return { label: 'a vencer',   tone: 'dim',     nivel: 0 }
+  if (dias < 7)   return { label: '< 7d',       tone: 'dim',     nivel: 0 }
+  if (dias < 30)  return { label: '> 7d',       tone: 'warning', nivel: 1 }
+  if (dias < 60)  return { label: '> 30d',      tone: 'warning', nivel: 2 }
+  if (dias < 90)  return { label: '> 60d',      tone: 'danger',  nivel: 3 }
+  return            { label: '> 90d (legal)',   tone: 'danger',  nivel: 4 }
+}
 
-function agingBucket(diasAtraso) {
-  if (diasAtraso < 7)  return { label: '< 7d',  color: 'var(--text-dim)' }
-  if (diasAtraso < 30) return { label: '> 7d',  color: 'var(--warning)' }
-  if (diasAtraso < 60) return { label: '> 30d', color: 'var(--warning)' }
-  if (diasAtraso < 90) return { label: '> 60d', color: 'var(--danger)' }
-  return { label: '> 90d (legal)', color: 'var(--danger)' }
+function nivelToAcao(nivel) {
+  if (nivel <= 1) return { tipo: 'aviso_1', label: 'Aviso 1º' }
+  if (nivel === 2) return { tipo: 'aviso_2', label: 'Aviso 2º' }
+  if (nivel === 3) return { tipo: 'compliance', label: 'Compliance' }
+  return { tipo: 'legal', label: 'Via Legal' }
+}
+
+function eur(n) {
+  if (n == null) return '—'
+  return Number(n).toLocaleString('pt-PT', { style: 'currency', currency: 'EUR', maximumFractionDigits: 2 })
+}
+function fdate(iso) {
+  if (!iso) return '—'
+  const d = new Date(iso)
+  return isNaN(d.getTime()) ? '—' : d.toLocaleDateString('pt-PT')
 }
 
 export default function Mora() {
-  const [recebimentos, setRecebimentos] = useState(null)
+  const [rows, setRows] = useState(null)
   const [error, setError] = useState(null)
+  const [submitting, setSubmitting] = useState(null) // row.id em curso
+  const [feedback, setFeedback] = useState(null)
 
   useEffect(() => {
     let active = true
     async function load() {
       const { data, error } = await v2Client
         .from('recebimentos')
-        .select('*, fracoes:fracao_id(codigo)')
+        .select('id, fracao_id, valor_emitido, valor_pago, vencimento, periodo, estado, fracoes:fracao_id(codigo)')
         .in('estado', ['pendente', 'mora', 'acordo'])
         .order('vencimento', { ascending: true })
         .limit(500)
       if (!active) return
       if (error) setError(error.message)
-      else setRecebimentos(data ?? [])
+      else setRows(data ?? [])
     }
     load()
     return () => { active = false }
   }, [])
 
   const hoje = new Date()
-  const total = (recebimentos ?? []).reduce((acc, r) => acc + Number(r.valor ?? 0), 0)
+  const enriched = useMemo(() => {
+    if (!rows) return null
+    return rows.map(r => {
+      const divida = Number(r.valor_emitido ?? 0) - Number(r.valor_pago ?? 0)
+      const dias = r.vencimento ? Math.floor((hoje - new Date(r.vencimento)) / 86400000) : 0
+      const bucket = agingBucket(dias)
+      return { ...r, divida, dias, bucket }
+    }).filter(r => r.divida > 0)
+  }, [rows])
+
+  const totals = useMemo(() => {
+    if (!enriched) return null
+    return {
+      divida: enriched.reduce((a, r) => a + r.divida, 0),
+      fracoes: new Set(enriched.map(r => r.fracao_id)).size,
+      criticas: enriched.filter(r => r.bucket.nivel >= 3).length,
+    }
+  }, [enriched])
+
+  async function dispararAviso(row) {
+    setFeedback(null)
+    setSubmitting(row.id)
+    const acao = nivelToAcao(row.bucket.nivel)
+    const payload = {
+      vertical: 'v2_condominios',
+      source: 'mora-ui',
+      target_agent: acao.tipo === 'legal' ? 'compliance-condo' : 'financeiro-condo',
+      title: `${acao.label} — fracção ${row.fracoes?.codigo ?? row.fracao_id?.slice(0,8)}`,
+      description: `Dívida ${eur(row.divida)} · ${row.dias} dias de atraso · vencimento ${fdate(row.vencimento)}`,
+      payload: {
+        tipo: acao.tipo,
+        recebimento_id: row.id,
+        fracao_id: row.fracao_id,
+        fracao_codigo: row.fracoes?.codigo,
+        valor_divida: row.divida,
+        dias_atraso: row.dias,
+        vencimento: row.vencimento,
+        periodo: row.periodo,
+        nivel: row.bucket.nivel,
+      },
+      status: 'pending',
+    }
+
+    const { error: insertErr } = await systemClient
+      .from('inbox_items')
+      .insert(payload)
+
+    setSubmitting(null)
+    if (insertErr) {
+      setFeedback({ ok: false, msg: `Falhou: ${insertErr.message}` })
+    } else {
+      setFeedback({ ok: true, msg: `${acao.label} criado em Inbox para ${payload.target_agent}.` })
+    }
+  }
 
   return (
     <div>
       <h1>Mora</h1>
-      <p style={{ color: 'var(--text-dim)', fontSize: 13, marginTop: -8, marginBottom: 16 }}>
-        Quotas emitidas e ainda não pagas. Aging legal: &gt;7d aviso 1º, &gt;30d aviso 2º, &gt;60d compliance, &gt;90d via legal.
+      <p className="dim" style={{ fontSize: 13, marginTop: -8, marginBottom: 16 }}>
+        Quotas vencidas. Aging legal: &gt;7d aviso 1º, &gt;30d aviso 2º, &gt;60d compliance, &gt;90d via legal.
+        Click numa acção → cria item em <code className="mono">inbox_items</code> para o agente.
       </p>
 
-      <div className="kpi-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
-        <div className="kpi">
+      <div className="kpi-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
+        <div className="kpi kpi-red">
           <div className="kpi-l">Total em dívida</div>
-          <div className="kpi-v" style={{ color: total > 0 ? 'var(--danger)' : 'var(--text)' }}>
-            {total > 0 ? `${total.toFixed(2)} €` : '—'}
-          </div>
-          <div className="kpi-s">{recebimentos?.length ?? 0} linhas</div>
+          <div className="kpi-v">{totals === null ? '…' : eur(totals.divida)}</div>
+          <div className="kpi-s">{enriched?.length ?? 0} quotas</div>
         </div>
         <div className="kpi">
           <div className="kpi-l">Fracções afectadas</div>
-          <div className="kpi-v">
-            {recebimentos ? new Set(recebimentos.map(r => r.fracao_id)).size : '—'}
-          </div>
+          <div className="kpi-v">{totals?.fracoes ?? '…'}</div>
           <div className="kpi-s">distintas</div>
+        </div>
+        <div className="kpi kpi-red">
+          <div className="kpi-l">Críticas (≥ 60d)</div>
+          <div className="kpi-v">{totals?.criticas ?? '…'}</div>
+          <div className="kpi-s">requer compliance ou legal</div>
         </div>
       </div>
 
-      {error && (
+      {error && <div className="error-banner">Erro: {error}</div>}
+      {feedback && (
         <div style={{
-          padding: '10px 14px', background: 'rgba(239,68,68,0.12)',
-          color: 'var(--danger)', borderRadius: 6, fontSize: 13, marginBottom: 16,
-        }}>Erro: {error}</div>
+          padding: '8px 12px', marginBottom: 14, borderRadius: 6, fontSize: 12,
+          background: feedback.ok ? 'rgba(63,185,80,0.10)' : 'rgba(255,123,114,0.10)',
+          color: feedback.ok ? 'var(--gr)' : 'var(--rd)',
+          border: `1px solid ${feedback.ok ? 'rgba(63,185,80,0.30)' : 'rgba(255,123,114,0.30)'}`,
+        }}>{feedback.msg}</div>
       )}
 
-      {recebimentos === null && !error && (
-        <div style={{ color: 'var(--text-dim)', fontSize: 13 }}>A carregar…</div>
-      )}
-
-      {recebimentos && recebimentos.length === 0 && !error && (
-        <div style={{
-          padding: '40px 20px', textAlign: 'center', color: 'var(--text-dim)',
-          background: 'var(--bg-card-soft)', border: '1px dashed var(--border)', borderRadius: 8,
-        }}>
+      {rows === null && !error && <div className="dim">A carregar…</div>}
+      {enriched && enriched.length === 0 && !error && (
+        <div className="empty-state">
           <div style={{ fontSize: 14, marginBottom: 6 }}>Sem mora</div>
-          <div style={{ fontSize: 12 }}>
-            Não há quotas por pagar. Quando o <code className="mono">financeiro-condo</code> (Fina) emitir quotas e algumas ficarem por pagar, aparecem aqui.
-          </div>
+          <div style={{ fontSize: 12 }}>Não há quotas por pagar.</div>
         </div>
       )}
 
-      {recebimentos && recebimentos.length > 0 && (
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+      {enriched && enriched.length > 0 && (
+        <table>
           <thead>
-            <tr style={{ textAlign: 'left', color: 'var(--text-dim)', fontSize: 8, fontFamily: 'JetBrains Mono, monospace', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-              <th style={{ padding: '8px 10px', borderBottom: '1px solid var(--border)' }}>Fracção</th>
-              <th style={{ padding: '8px 10px', borderBottom: '1px solid var(--border)' }}>Emissão</th>
-              <th style={{ padding: '8px 10px', borderBottom: '1px solid var(--border)' }}>Valor</th>
-              <th style={{ padding: '8px 10px', borderBottom: '1px solid var(--border)' }}>Aging</th>
+            <tr>
+              <th>Fracção</th>
+              <th>Vencimento</th>
+              <th style={{ textAlign: 'right' }}>Dívida</th>
+              <th>Aging</th>
+              <th>Acção</th>
             </tr>
           </thead>
           <tbody>
-            {recebimentos.map(r => {
-              const dias = Math.floor((hoje - new Date(r.data_emissao)) / 86400000)
-              const bucket = agingBucket(dias)
+            {enriched.map(r => {
+              const acao = nivelToAcao(r.bucket.nivel)
+              const isSubmitting = submitting === r.id
+              const toneColor = r.bucket.tone === 'danger'  ? 'var(--rd)'
+                              : r.bucket.tone === 'warning' ? 'var(--go)'
+                              : 'var(--mu)'
+              const btnColor = r.bucket.nivel >= 3 ? 'var(--rd)' : 'var(--go)'
               return (
-                <tr key={r.id} style={{ borderBottom: '1px solid var(--border-soft)' }}>
-                  <td style={{ padding: '8px 10px', fontFamily: 'JetBrains Mono, monospace' }}>{r.fracao_id?.slice(0, 8) ?? '—'}</td>
-                  <td style={{ padding: '8px 10px' }}>{r.data_emissao ?? '—'}</td>
-                  <td style={{ padding: '8px 10px', fontFamily: 'JetBrains Mono, monospace', textAlign: 'right' }}>
-                    {Number(r.valor ?? 0).toFixed(2)} €
-                  </td>
-                  <td style={{ padding: '8px 10px' }}>
-                    <span style={{
-                      fontSize: 10, fontFamily: 'JetBrains Mono, monospace', fontWeight: 600,
-                      padding: '1px 6px', borderRadius: 3, background: 'var(--bg-elevated)', color: bucket.color,
+                <tr key={r.id}>
+                  <td className="mono" style={{ fontWeight: 600 }}>{r.fracoes?.codigo ?? r.fracao_id?.slice(0,8)}</td>
+                  <td className="mono" style={{ fontSize: 11 }}>{fdate(r.vencimento)}</td>
+                  <td className="mono" style={{ textAlign: 'right', color: 'var(--rd)' }}>{eur(r.divida)}</td>
+                  <td>
+                    <span className="mono" style={{
+                      fontSize: 10, padding: '2px 8px', borderRadius: 4,
+                      background: 'var(--sf2)', color: toneColor, fontWeight: 600,
                     }}>
-                      {bucket.label} ({dias}d)
+                      {r.bucket.label} · {r.dias}d
                     </span>
+                  </td>
+                  <td>
+                    <button
+                      onClick={() => dispararAviso(r)}
+                      disabled={isSubmitting}
+                      style={{
+                        padding: '4px 10px',
+                        background: 'transparent',
+                        color: btnColor,
+                        border: `1px solid ${btnColor}`,
+                        borderRadius: 4,
+                        fontSize: 10,
+                        fontFamily: 'DM Mono, monospace',
+                        fontWeight: 600,
+                        textTransform: 'uppercase',
+                        letterSpacing: 0.5,
+                        cursor: isSubmitting ? 'wait' : 'pointer',
+                        opacity: isSubmitting ? 0.4 : 1,
+                      }}
+                    >
+                      {isSubmitting ? '…' : acao.label}
+                    </button>
                   </td>
                 </tr>
               )
