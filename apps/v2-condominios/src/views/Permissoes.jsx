@@ -1,16 +1,496 @@
+import { useEffect, useState, useMemo, useCallback } from 'react'
+import { v2Client } from '../lib/clients.js'
+
+const TABS = [
+  { id: 'utilizadores', label: 'Utilizadores' },
+  { id: 'grupos',       label: 'Grupos & Permissões' },
+  { id: 'logs',         label: 'Logs de Actividade' },
+]
+
+const ACTIONS = [
+  { key: 'view',   col: 'can_view',   short: 'VER' },
+  { key: 'edit',   col: 'can_edit',   short: 'EDT' },
+  { key: 'create', col: 'can_create', short: 'NEW' },
+  { key: 'delete', col: 'can_delete', short: 'DEL' },
+]
+
+function fdt(iso) {
+  if (!iso) return '—'
+  const d = new Date(iso)
+  if (isNaN(d.getTime())) return '—'
+  return d.toLocaleString('pt-PT', { dateStyle: 'short', timeStyle: 'short' })
+}
+
+function groupColorClass(color) {
+  switch (color) {
+    case 'green':  return 'b-green'
+    case 'blue':   return 'b-blue'
+    case 'gold':   return 'b-gold'
+    case 'purple': return 'b-purple'
+    case 'red':    return 'b-red'
+    default:       return 'b'
+  }
+}
+
 export default function Permissoes() {
+  const [tab, setTab] = useState('utilizadores')
+
   return (
     <div>
-      <h1>Permissões</h1>
+      <h1>Permissões & Logs</h1>
       <p className="dim" style={{ fontSize: 13, marginBottom: 16 }}>
-        Gestão de papéis e acessos (developer view).
+        Gestão de utilizadores (staff + condóminos), matriz de permissões por grupo e rasto de actividade.
       </p>
-      <div className="empty-state">
-        <div style={{ fontSize: 14, marginBottom: 4 }}>Por construir</div>
-        <div style={{ fontSize: 12 }}>
-          UI sobre <code className="mono">core.staff_roles</code> + <code className="mono">core.memberships</code> + RLS policy inspection.
-        </div>
+
+      <div style={{ display: 'flex', gap: 4, borderBottom: '1px solid var(--bd)', marginBottom: 18 }}>
+        {TABS.map(t => (
+          <button
+            key={t.id}
+            onClick={() => setTab(t.id)}
+            style={{
+              padding: '8px 14px',
+              background: 'transparent',
+              border: 'none',
+              borderBottom: tab === t.id ? '2px solid var(--go)' : '2px solid transparent',
+              color: tab === t.id ? 'var(--tx)' : 'var(--mu)',
+              fontSize: 12,
+              fontFamily: 'DM Mono, monospace',
+              textTransform: 'uppercase',
+              letterSpacing: 1,
+              cursor: 'pointer',
+              fontWeight: tab === t.id ? 600 : 400,
+            }}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'utilizadores' && <TabUtilizadores />}
+      {tab === 'grupos'       && <TabGrupos />}
+      {tab === 'logs'         && <TabLogs />}
+    </div>
+  )
+}
+
+/* ─────────────── Tab 1: Utilizadores ─────────────── */
+
+function TabUtilizadores() {
+  const [staff, setStaff] = useState(null)
+  const [tokens, setTokens] = useState(null)
+  const [error, setError] = useState(null)
+
+  useEffect(() => {
+    let active = true
+    async function load() {
+      const [sResp, tResp] = await Promise.all([
+        v2Client
+          .from('staff_login_aliases')
+          .select('login, email, nome, permission_group_code, active, last_login_at, created_at')
+          .eq('active', true)
+          .order('login'),
+        v2Client
+          .from('portal_tokens')
+          .select('token, fracao_id, condomino_id, email_legacy, nome_legacy, permission_group_code, active, last_used_at, created_at')
+          .eq('active', true)
+          .order('last_used_at', { ascending: false, nullsFirst: false })
+          .limit(150),
+      ])
+      if (!active) return
+      if (sResp.error) { setError(sResp.error.message); return }
+      if (tResp.error) { setError(tResp.error.message); return }
+      setStaff(sResp.data || [])
+      setTokens(tResp.data || [])
+    }
+    load()
+    return () => { active = false }
+  }, [])
+
+  if (error) return <div className="error-banner">Erro: {error}</div>
+
+  return (
+    <div>
+      {/* Staff */}
+      <h3 style={{ fontSize: 14, marginBottom: 10, color: 'var(--tx)' }}>
+        Equipa interna{' '}
+        <span className="dim" style={{ fontSize: 11, fontWeight: 400 }}>
+          ({staff?.length ?? '…'} aliases activos)
+        </span>
+      </h3>
+      {staff === null && <div className="dim">A carregar…</div>}
+      {staff && staff.length === 0 && (
+        <div className="empty-state" style={{ marginBottom: 24 }}>Sem aliases staff registados.</div>
+      )}
+      {staff && staff.length > 0 && (
+        <table style={{ marginBottom: 28 }}>
+          <thead>
+            <tr>
+              <th>Login</th>
+              <th>Nome</th>
+              <th>Email</th>
+              <th>Grupo</th>
+              <th>Último login</th>
+              <th>Desde</th>
+            </tr>
+          </thead>
+          <tbody>
+            {staff.map(s => (
+              <tr key={s.login}>
+                <td className="mono" style={{ fontWeight: 600 }}>{s.login}</td>
+                <td>{s.nome ?? <span className="dim">—</span>}</td>
+                <td className="mono" style={{ fontSize: 11 }}>{s.email ?? '—'}</td>
+                <td><span className="b b-gold">{s.permission_group_code}</span></td>
+                <td className="mono" style={{ fontSize: 11 }}>{fdt(s.last_login_at)}</td>
+                <td className="mono">{s.created_at?.slice(0, 10) ?? '—'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+
+      {/* Condóminos com portal_tokens */}
+      <h3 style={{ fontSize: 14, marginBottom: 10, color: 'var(--tx)' }}>
+        Condóminos com acesso portal{' '}
+        <span className="dim" style={{ fontSize: 11, fontWeight: 400 }}>
+          ({tokens?.length ?? '…'} tokens activos)
+        </span>
+      </h3>
+      {tokens === null && <div className="dim">A carregar…</div>}
+      {tokens && tokens.length === 0 && (
+        <div className="empty-state">Sem condóminos com portal token activo.</div>
+      )}
+      {tokens && tokens.length > 0 && (
+        <table>
+          <thead>
+            <tr>
+              <th>Nome</th>
+              <th>Email</th>
+              <th>Token (UUID)</th>
+              <th>Grupo</th>
+              <th>Último uso</th>
+            </tr>
+          </thead>
+          <tbody>
+            {tokens.map(t => (
+              <tr key={t.token}>
+                <td>{t.nome_legacy ?? <span className="dim">— (sem nome)</span>}</td>
+                <td className="mono" style={{ fontSize: 11 }}>{t.email_legacy ?? '—'}</td>
+                <td className="mono" style={{ fontSize: 10 }}>{t.token?.slice(0, 13)}…</td>
+                <td><span className="b b-green">{t.permission_group_code}</span></td>
+                <td className="mono" style={{ fontSize: 11 }}>{fdt(t.last_used_at)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </div>
+  )
+}
+
+/* ─────────────── Tab 2: Grupos & Permissões ─────────────── */
+
+function TabGrupos() {
+  const [groups, setGroups] = useState(null)
+  const [sections, setSections] = useState(null)
+  const [grants, setGrants] = useState(null)
+  const [error, setError] = useState(null)
+  const [saving, setSaving] = useState(null)
+
+  useEffect(() => {
+    let active = true
+    async function load() {
+      const [g, s, p] = await Promise.all([
+        v2Client.from('permission_groups').select('code, label, color, ordem').order('ordem'),
+        v2Client.from('portal_sections').select('code, label, ordem').order('ordem'),
+        v2Client.from('permission_grants').select('group_code, section_code, can_view, can_edit, can_create, can_delete'),
+      ])
+      if (!active) return
+      if (g.error || s.error || p.error) {
+        setError(g.error?.message || s.error?.message || p.error?.message)
+        return
+      }
+      setGroups(g.data)
+      setSections(s.data)
+      setGrants(p.data)
+    }
+    load()
+    return () => { active = false }
+  }, [])
+
+  const grantMap = useMemo(() => {
+    const m = {}
+    for (const g of grants || []) {
+      m[`${g.group_code}:${g.section_code}`] = g
+    }
+    return m
+  }, [grants])
+
+  const toggle = useCallback(async (groupCode, sectionCode, action) => {
+    const key = `${groupCode}:${sectionCode}:${action.key}`
+    const current = grantMap[`${groupCode}:${sectionCode}`]?.[action.col] === true
+    setSaving(key)
+    const { error: rpcErr } = await v2Client.rpc('set_permission_grant', {
+      p_group_code: groupCode,
+      p_section_code: sectionCode,
+      p_action: action.key,
+      p_value: !current,
+    })
+    if (rpcErr) {
+      setError(rpcErr.message)
+      setSaving(null)
+      return
+    }
+    setGrants(prev => {
+      const idx = prev.findIndex(x => x.group_code === groupCode && x.section_code === sectionCode)
+      if (idx >= 0) {
+        const next = [...prev]
+        next[idx] = { ...next[idx], [action.col]: !current }
+        return next
+      }
+      const row = { group_code: groupCode, section_code: sectionCode, can_view: false, can_edit: false, can_create: false, can_delete: false }
+      row[action.col] = !current
+      return [...prev, row]
+    })
+    setSaving(null)
+  }, [grantMap])
+
+  if (error) return <div className="error-banner">Erro: {error}</div>
+  if (groups === null || sections === null || grants === null) return <div className="dim">A carregar matriz…</div>
+
+  return (
+    <div>
+      <p className="dim" style={{ fontSize: 12, marginBottom: 14 }}>
+        Clica numa célula para ligar/desligar permissão. Cada grupo combina secção × acção
+        (<span className="mono">VER · EDT · NEW · DEL</span>). Alterações ficam em <code className="mono">activity_logs</code>.
+      </p>
+
+      <div style={{ overflowX: 'auto', background: 'var(--sf)', border: '1px solid var(--bd)', borderRadius: 8 }}>
+        <table style={{ minWidth: 900 }}>
+          <thead>
+            <tr>
+              <th style={{ position: 'sticky', left: 0, background: 'var(--sf2)', zIndex: 1 }}>Secção</th>
+              {groups.map(g => (
+                <th
+                  key={g.code}
+                  colSpan={ACTIONS.length}
+                  style={{ textAlign: 'center', borderLeft: '1px solid var(--bd)' }}
+                >
+                  <div>
+                    <span className={`b ${groupColorClass(g.color)}`}>{g.label}</span>
+                  </div>
+                  <div className="dim mono" style={{ fontSize: 9, fontWeight: 400, marginTop: 3 }}>
+                    {g.code}
+                  </div>
+                </th>
+              ))}
+            </tr>
+            <tr>
+              <th style={{ position: 'sticky', left: 0, background: 'var(--sf2)', zIndex: 1 }}></th>
+              {groups.flatMap(g => ACTIONS.map(a => (
+                <th
+                  key={`${g.code}-${a.key}`}
+                  style={{ textAlign: 'center', fontSize: 8, padding: '4px 2px' }}
+                >
+                  {a.short}
+                </th>
+              )))}
+            </tr>
+          </thead>
+          <tbody>
+            {sections.map(sec => (
+              <tr key={sec.code}>
+                <td style={{ position: 'sticky', left: 0, background: 'var(--sf)', fontWeight: 500, fontSize: 12 }}>
+                  {sec.label}
+                  <div className="dim mono" style={{ fontSize: 9 }}>{sec.code}</div>
+                </td>
+                {groups.flatMap(g => ACTIONS.map(a => {
+                  const row = grantMap[`${g.code}:${sec.code}`]
+                  const allowed = row?.[a.col] === true
+                  const key = `${g.code}:${sec.code}:${a.key}`
+                  const isSaving = saving === key
+                  return (
+                    <td
+                      key={key}
+                      style={{ textAlign: 'center', padding: '2px 2px', borderLeft: '1px solid var(--bd)' }}
+                    >
+                      <button
+                        onClick={() => toggle(g.code, sec.code, a)}
+                        disabled={isSaving}
+                        style={{
+                          width: 22, height: 22, borderRadius: 4,
+                          border: '1px solid ' + (allowed ? 'var(--gr)' : 'var(--bd)'),
+                          background: allowed ? 'rgba(63,185,80,0.15)' : 'transparent',
+                          color: allowed ? 'var(--gr)' : 'var(--mu)',
+                          cursor: isSaving ? 'wait' : 'pointer',
+                          fontSize: 12,
+                          fontWeight: 700,
+                          opacity: isSaving ? 0.4 : 1,
+                        }}
+                        title={`${g.label} → ${sec.label} → ${a.key}`}
+                      >
+                        {allowed ? '✓' : ''}
+                      </button>
+                    </td>
+                  )
+                }))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   )
+}
+
+/* ─────────────── Tab 3: Logs de Actividade ─────────────── */
+
+function TabLogs() {
+  const [logs, setLogs] = useState(null)
+  const [error, setError] = useState(null)
+  const [filterOrigem, setFilterOrigem] = useState('')
+  const [filterTipo, setFilterTipo] = useState('')
+  const [search, setSearch] = useState('')
+
+  useEffect(() => {
+    let active = true
+    async function load() {
+      let q = v2Client
+        .from('activity_logs')
+        .select('id, ts, user_email, user_label, origem, tipo, detalhe, resultado, ip, user_agent')
+        .order('ts', { ascending: false })
+        .limit(300)
+      if (filterOrigem) q = q.eq('origem', filterOrigem)
+      if (filterTipo)   q = q.eq('tipo', filterTipo)
+      const { data, error } = await q
+      if (!active) return
+      if (error) setError(error.message)
+      else setLogs(data ?? [])
+    }
+    load()
+    return () => { active = false }
+  }, [filterOrigem, filterTipo])
+
+  const visible = useMemo(() => {
+    if (!logs) return null
+    if (!search.trim()) return logs
+    const s = search.trim().toLowerCase()
+    return logs.filter(l =>
+      (l.detalhe || '').toLowerCase().includes(s) ||
+      (l.user_email || '').toLowerCase().includes(s) ||
+      (l.user_label || '').toLowerCase().includes(s) ||
+      (l.ip || '').toLowerCase().includes(s)
+    )
+  }, [logs, search])
+
+  return (
+    <div>
+      <div style={{ display: 'flex', gap: 10, marginBottom: 14, flexWrap: 'wrap', alignItems: 'center' }}>
+        <select value={filterOrigem} onChange={e => setFilterOrigem(e.target.value)} style={selectStyle}>
+          <option value="">Todas origens</option>
+          <option value="staff">staff</option>
+          <option value="portal">portal</option>
+          <option value="agent">agent</option>
+          <option value="system">system</option>
+          <option value="api">api</option>
+        </select>
+
+        <select value={filterTipo} onChange={e => setFilterTipo(e.target.value)} style={selectStyle}>
+          <option value="">Todos tipos</option>
+          <option value="login">login</option>
+          <option value="logout">logout</option>
+          <option value="view">view</option>
+          <option value="edit">edit</option>
+          <option value="create">create</option>
+          <option value="delete">delete</option>
+          <option value="approval">approval</option>
+          <option value="permission_change">permission_change</option>
+          <option value="error">error</option>
+        </select>
+
+        <input
+          type="search"
+          placeholder="Procurar (detalhe / utilizador / ip)"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          style={{
+            ...selectStyle,
+            minWidth: 280,
+            fontFamily: 'DM Sans, sans-serif',
+            textTransform: 'none',
+            letterSpacing: 0,
+          }}
+        />
+
+        <span className="dim mono" style={{ fontSize: 10, marginLeft: 'auto' }}>
+          {visible?.length ?? 0} {visible?.length === 1 ? 'evento' : 'eventos'}
+        </span>
+      </div>
+
+      {error && <div className="error-banner">Erro: {error}</div>}
+      {logs === null && !error && <div className="dim">A carregar…</div>}
+      {visible && visible.length === 0 && !error && (
+        <div className="empty-state">Sem eventos correspondentes aos filtros.</div>
+      )}
+      {visible && visible.length > 0 && (
+        <table>
+          <thead>
+            <tr>
+              <th>Quando</th>
+              <th>Origem</th>
+              <th>Tipo</th>
+              <th>Utilizador</th>
+              <th>Detalhe</th>
+              <th>IP</th>
+              <th>Resultado</th>
+            </tr>
+          </thead>
+          <tbody>
+            {visible.map(l => (
+              <tr key={l.id}>
+                <td className="mono" style={{ fontSize: 11, whiteSpace: 'nowrap' }}>{fdt(l.ts)}</td>
+                <td><OrigemBadge value={l.origem} /></td>
+                <td><span className="mono" style={{ fontSize: 10, color: 'var(--mu)' }}>{l.tipo}</span></td>
+                <td className="mono" style={{ fontSize: 11 }}>{l.user_label ?? l.user_email ?? '—'}</td>
+                <td style={{ fontSize: 12 }}>{l.detalhe ?? '—'}</td>
+                <td className="mono" style={{ fontSize: 10, color: 'var(--mu)' }}>{l.ip ?? '—'}</td>
+                <td><ResultBadge value={l.resultado} /></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </div>
+  )
+}
+
+const selectStyle = {
+  background: 'var(--sf)',
+  border: '1px solid var(--bd)',
+  color: 'var(--tx)',
+  padding: '5px 10px',
+  borderRadius: 6,
+  fontSize: 11,
+  fontFamily: 'DM Mono, monospace',
+  textTransform: 'uppercase',
+  letterSpacing: 0.5,
+}
+
+function OrigemBadge({ value }) {
+  if (!value) return <span className="dim">—</span>
+  const palette = {
+    portal: 'b-blue',
+    staff:  'b-gold',
+    api:    'b-purple',
+    agent:  'b-green',
+    system: 'b',
+  }
+  return <span className={`b ${palette[value] || 'b'}`}>{value}</span>
+}
+
+function ResultBadge({ value }) {
+  if (!value || value === 'ok') return <span className="mono" style={{ color: 'var(--gr)', fontSize: 11 }}>✓ ok</span>
+  if (value === 'error' || value === 'denied' || value === 'erro') {
+    return <span className="mono" style={{ color: 'var(--rd)', fontSize: 11 }}>✗ {value}</span>
+  }
+  return <span className="mono" style={{ fontSize: 11 }}>{value}</span>
 }
