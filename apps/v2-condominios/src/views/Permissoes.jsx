@@ -73,28 +73,33 @@ export default function Permissoes() {
   )
 }
 
-/* ─────────────── Tab 1: Utilizadores ─────────────── */
+/* ─────────────── Tab 1: Utilizadores (lista unificada com filtro grupo + search) ─────────────── */
+
+const GRUPOS_FILTER = [
+  { value: '', label: 'Todos os grupos' },
+  { value: 'condomino', label: 'Condóminos' },
+  { value: 'operacional', label: 'Operacional' },
+  { value: 'administrador', label: 'Administrador' },
+  { value: 'developer', label: 'Developer' },
+]
 
 function TabUtilizadores() {
   const [staff, setStaff] = useState(null)
   const [tokens, setTokens] = useState(null)
   const [error, setError] = useState(null)
+  const [filterGrupo, setFilterGrupo] = useState('')
+  const [search, setSearch] = useState('')
 
   useEffect(() => {
     let active = true
     async function load() {
       const [sResp, tResp] = await Promise.all([
-        v2Client
-          .from('staff_login_aliases')
+        v2Client.from('staff_login_aliases')
           .select('login, email, nome, permission_group_code, active, last_login_at, created_at')
-          .eq('active', true)
-          .order('login'),
-        v2Client
-          .from('portal_tokens')
+          .eq('active', true).order('login'),
+        v2Client.from('portal_tokens')
           .select('token, fracao_id, condomino_id, email_legacy, nome_legacy, permission_group_code, active, last_used_at, created_at')
-          .eq('active', true)
-          .order('last_used_at', { ascending: false, nullsFirst: false })
-          .limit(150),
+          .eq('active', true).order('last_used_at', { ascending: false, nullsFirst: false }).limit(500),
       ])
       if (!active) return
       if (sResp.error) { setError(sResp.error.message); return }
@@ -106,78 +111,102 @@ function TabUtilizadores() {
     return () => { active = false }
   }, [])
 
+  // Lista unificada: staff + tokens condóminos
+  const unified = useMemo(() => {
+    if (!staff || !tokens) return null
+    const rows = [
+      ...staff.map(s => ({
+        kind: 'staff',
+        key: 'staff:' + s.login,
+        login: s.login,
+        nome: s.nome,
+        email: s.email,
+        grupo: s.permission_group_code,
+        last_seen: s.last_login_at,
+        created_at: s.created_at,
+        fracao: null,
+      })),
+      ...tokens.map(t => ({
+        kind: 'condomino',
+        key: 'tok:' + t.token,
+        login: t.token?.slice(0, 8),
+        nome: t.nome_legacy,
+        email: t.email_legacy,
+        grupo: t.permission_group_code,
+        last_seen: t.last_used_at,
+        created_at: t.created_at,
+        fracao: t.fracao_id?.slice(0, 8),
+      })),
+    ]
+    let filtered = rows
+    if (filterGrupo) filtered = filtered.filter(r => r.grupo === filterGrupo)
+    if (search.trim()) {
+      const s = search.trim().toLowerCase()
+      filtered = filtered.filter(r =>
+        (r.nome || '').toLowerCase().includes(s) ||
+        (r.email || '').toLowerCase().includes(s) ||
+        (r.login || '').toLowerCase().includes(s) ||
+        (r.fracao || '').toLowerCase().includes(s)
+      )
+    }
+    return filtered.sort((a, b) => (b.last_seen || '').localeCompare(a.last_seen || ''))
+  }, [staff, tokens, filterGrupo, search])
+
   if (error) return <div className="error-banner">Erro: {error}</div>
 
   return (
     <div>
-      {/* Staff */}
-      <h3 style={{ fontSize: 14, marginBottom: 10, color: 'var(--tx)' }}>
-        Equipa interna{' '}
-        <span className="dim" style={{ fontSize: 11, fontWeight: 400 }}>
-          ({staff?.length ?? '…'} aliases activos)
+      <div style={{ display: 'flex', gap: 10, marginBottom: 14, alignItems: 'center', flexWrap: 'wrap' }}>
+        <select value={filterGrupo} onChange={e => setFilterGrupo(e.target.value)} style={selectStyle}>
+          {GRUPOS_FILTER.map(g => <option key={g.value} value={g.value}>{g.label}</option>)}
+        </select>
+        <input
+          type="search"
+          placeholder="Pesquisar nome, email ou login…"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          style={{ ...selectStyle, minWidth: 320, textTransform: 'none', letterSpacing: 0, fontFamily: 'DM Sans, sans-serif' }}
+        />
+        <span className="dim mono" style={{ fontSize: 10, marginLeft: 'auto' }}>
+          {unified === null ? '…' : `${unified.length} utilizador${unified.length === 1 ? '' : 'es'} (filtrado)`}
         </span>
-      </h3>
-      {staff === null && <div className="dim">A carregar…</div>}
-      {staff && staff.length === 0 && (
-        <div className="empty-state" style={{ marginBottom: 24 }}>Sem aliases staff registados.</div>
+      </div>
+
+      {unified === null && <div className="dim">A carregar…</div>}
+      {unified && unified.length === 0 && (
+        <div className="empty-state">Sem utilizadores correspondentes aos filtros.</div>
       )}
-      {staff && staff.length > 0 && (
-        <table style={{ marginBottom: 28 }}>
+      {unified && unified.length > 0 && (
+        <table>
           <thead>
             <tr>
-              <th>Login</th>
+              <th>Tipo</th>
+              <th>Login / Token</th>
               <th>Nome</th>
               <th>Email</th>
+              <th>Fracção</th>
               <th>Grupo</th>
-              <th>Último login</th>
+              <th>Último acesso</th>
               <th>Desde</th>
             </tr>
           </thead>
           <tbody>
-            {staff.map(s => (
-              <tr key={s.login}>
-                <td className="mono" style={{ fontWeight: 600 }}>{s.login}</td>
-                <td>{s.nome ?? <span className="dim">—</span>}</td>
-                <td className="mono" style={{ fontSize: 11 }}>{s.email ?? '—'}</td>
-                <td><span className="b b-gold">{s.permission_group_code}</span></td>
-                <td className="mono" style={{ fontSize: 11 }}>{fdt(s.last_login_at)}</td>
-                <td className="mono">{s.created_at?.slice(0, 10) ?? '—'}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-
-      {/* Condóminos com portal_tokens */}
-      <h3 style={{ fontSize: 14, marginBottom: 10, color: 'var(--tx)' }}>
-        Condóminos com acesso portal{' '}
-        <span className="dim" style={{ fontSize: 11, fontWeight: 400 }}>
-          ({tokens?.length ?? '…'} tokens activos)
-        </span>
-      </h3>
-      {tokens === null && <div className="dim">A carregar…</div>}
-      {tokens && tokens.length === 0 && (
-        <div className="empty-state">Sem condóminos com portal token activo.</div>
-      )}
-      {tokens && tokens.length > 0 && (
-        <table>
-          <thead>
-            <tr>
-              <th>Nome</th>
-              <th>Email</th>
-              <th>Token (UUID)</th>
-              <th>Grupo</th>
-              <th>Último uso</th>
-            </tr>
-          </thead>
-          <tbody>
-            {tokens.map(t => (
-              <tr key={t.token}>
-                <td>{t.nome_legacy ?? <span className="dim">— (sem nome)</span>}</td>
-                <td className="mono" style={{ fontSize: 11 }}>{t.email_legacy ?? '—'}</td>
-                <td className="mono" style={{ fontSize: 10 }}>{t.token?.slice(0, 13)}…</td>
-                <td><span className="b b-green">{t.permission_group_code}</span></td>
-                <td className="mono" style={{ fontSize: 11 }}>{fdt(t.last_used_at)}</td>
+            {unified.map(u => (
+              <tr key={u.key}>
+                <td>
+                  {u.kind === 'staff'
+                    ? <span className="b b-gold">staff</span>
+                    : <span className="b b-green">condómino</span>}
+                </td>
+                <td className="mono" style={{ fontWeight: 600, fontSize: 11 }}>{u.login ?? '—'}</td>
+                <td>{u.nome ?? <span className="dim">—</span>}</td>
+                <td className="mono" style={{ fontSize: 10 }}>{u.email ?? '—'}</td>
+                <td className="mono" style={{ fontSize: 10 }}>{u.fracao ?? '—'}</td>
+                <td>
+                  <span className={`b ${groupColorClass(grupoColor(u.grupo))}`}>{u.grupo}</span>
+                </td>
+                <td className="mono" style={{ fontSize: 11 }}>{fdt(u.last_seen)}</td>
+                <td className="mono" style={{ fontSize: 10 }}>{u.created_at?.slice(0, 10) ?? '—'}</td>
               </tr>
             ))}
           </tbody>
@@ -185,6 +214,16 @@ function TabUtilizadores() {
       )}
     </div>
   )
+}
+
+function grupoColor(code) {
+  switch (code) {
+    case 'developer':     return 'purple'
+    case 'administrador': return 'gold'
+    case 'operacional':   return 'blue'
+    case 'condomino':     return 'green'
+    default:              return 'grey'
+  }
 }
 
 /* ─────────────── Tab 2: Grupos & Permissões ─────────────── */
