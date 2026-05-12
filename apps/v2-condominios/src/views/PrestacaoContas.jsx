@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { v2Client } from '../lib/clients.js'
+import { useYear } from '../context/YearContext.jsx'
 
 const TABS = [
   { id: 'visao',         label: 'Visão Geral' },
@@ -11,7 +12,6 @@ const TABS = [
 ]
 
 const MESES = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
-const YEARS = [2024, 2025, 2026]
 const CURRENT_YEAR = new Date().getFullYear()
 
 function eur(n) {
@@ -30,7 +30,9 @@ function fdate(iso) {
 
 export default function PrestacaoContas() {
   const [tab, setTab] = useState('visao')
-  const [ano, setAno] = useState(CURRENT_YEAR)
+  const { year, isGlobal, anoNumero } = useYear()
+  // Para Global, fallback ano corrente (KPIs precisam de ano específico)
+  const ano = isGlobal ? CURRENT_YEAR : (anoNumero || CURRENT_YEAR)
   const [kpis, setKpis] = useState(null)
   const [error, setError] = useState(null)
 
@@ -48,21 +50,6 @@ export default function PrestacaoContas() {
 
   return (
     <div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-        <span className="mono" style={{ fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 1, color: 'var(--mu)', marginRight: 6 }}>
-          Ano
-        </span>
-        {YEARS.map(y => (
-          <button
-            key={y}
-            className={'year-pill' + (y === ano ? ' active' : '')}
-            onClick={() => setAno(y)}
-          >
-            {y}
-          </button>
-        ))}
-      </div>
-
       <div style={{
         padding: '10px 14px',
         background: 'rgba(88,166,255,0.08)',
@@ -73,7 +60,12 @@ export default function PrestacaoContas() {
         marginBottom: 18,
         fontFamily: 'DM Mono, monospace',
       }}>
-        ● {ano} {ano === CURRENT_YEAR ? '(em curso)' : '(fechado)'}
+        ● {isGlobal ? `Global (a mostrar ${ano})` : ano}
+        {' '}
+        {ano === CURRENT_YEAR ? '(em curso)' : '(fechado)'}
+        <span className="dim" style={{ marginLeft: 12, fontSize: 10 }}>
+          Filtro definido na topbar
+        </span>
       </div>
 
       {error && <div className="error-banner">Erro: {error}</div>}
@@ -99,7 +91,6 @@ export default function PrestacaoContas() {
         </span>
       </div>
 
-      {/* Resumo Financeiro (paridade legacy) */}
       {kpis && (
         <div style={{
           background: 'var(--sf)', border: '1px solid var(--bd)', borderRadius: 8,
@@ -125,7 +116,7 @@ export default function PrestacaoContas() {
             padding: '12px 18px', borderTop: '2px solid var(--bd)', background: 'var(--sf2)',
           }}>
             <span style={{ fontSize: 13, fontWeight: 700 }}>Saldo Financeiro Líquido</span>
-            <span className="mono" style={{ fontSize: 14, fontWeight: 700, color: 'var(--tx)' }}>
+            <span className="mono" style={{ fontSize: 14, fontWeight: 700 }}>
               {eur(kpis.saldo_financeiro)}
             </span>
           </div>
@@ -134,8 +125,8 @@ export default function PrestacaoContas() {
 
       {kpis && kpis.receitas > 0 && (
         <p className="dim" style={{ fontSize: 10, marginBottom: 12, fontStyle: 'italic' }}>
-          Valores derivados do extrato bancário ({ano}). Inclui transferências internas (e.g. EUPAGO → conta).
-          Para excluir, classificar movimentos em <code className="mono">extrato_bancario</code>.
+          Valores derivados do extrato bancário ({ano}) via delta de saldo_apos.
+          Inclui transferências internas (e.g. EUPAGO → conta). Para excluir, classificar movimentos em <code className="mono">extrato_bancario</code>.
         </p>
       )}
 
@@ -163,7 +154,6 @@ export default function PrestacaoContas() {
   )
 }
 
-/* Linha do Resumo Financeiro */
 function RR({ label, value, tone, sub }) {
   const color = tone === 'red'   ? 'var(--rd)'
               : tone === 'green' ? 'var(--gr)'
@@ -186,39 +176,44 @@ function RR({ label, value, tone, sub }) {
 
 /* Tab: Visão Geral — receitas/despesas mensais com barras */
 function TabVisao({ ano }) {
-  const [rec, setRec] = useState(null)
   const [ext, setExt] = useState(null)
   const [error, setError] = useState(null)
 
   useEffect(() => {
     let active = true
-    setRec(null); setExt(null); setError(null)
+    setExt(null); setError(null)
     const i = `${ano}-01-01`, f = `${ano}-12-31`
-    Promise.all([
-      v2Client.from('recebimentos').select('data_pagamento, valor_pago').gte('data_pagamento', i).lte('data_pagamento', f).limit(5000),
-      v2Client.from('extrato_bancario').select('data_movimento, valor').gte('data_movimento', i).lte('data_movimento', f).limit(5000),
-    ]).then(([r, e]) => {
-      if (!active) return
-      if (r.error || e.error) { setError(r.error?.message || e.error?.message); return }
-      setRec(r.data || []); setExt(e.data || [])
-    })
+    v2Client.from('extrato_bancario')
+      .select('data_movimento, saldo_apos')
+      .gte('data_movimento', i).lte('data_movimento', f)
+      .order('data_movimento')
+      .limit(5000)
+      .then(({ data, error }) => {
+        if (!active) return
+        if (error) setError(error.message); else setExt(data || [])
+      })
     return () => { active = false }
   }, [ano])
 
   const monthly = useMemo(() => {
-    if (!rec || !ext) return null
+    if (!ext) return null
     const m = Array.from({ length: 12 }, () => ({ receitas: 0, despesas: 0 }))
-    for (const r of rec) {
-      if (!r.data_pagamento) continue
-      m[new Date(r.data_pagamento).getMonth()].receitas += Number(r.valor_pago ?? 0)
-    }
-    for (const e of ext) {
+    let prev = 0
+    // Para a 1ª iteração precisamos do saldo anterior ao período. Aproximação: primeiro saldo_apos - delta.
+    // Simplificação: usar prev=0 para o 1º mov (pode introduzir 1 outlier no Jan, mas é só visualização).
+    if (ext.length > 0) prev = Number(ext[0].saldo_apos ?? 0) - 0
+    for (let i = 0; i < ext.length; i++) {
+      const e = ext[i]
       if (!e.data_movimento) continue
-      const v = Number(e.valor ?? 0)
-      if (v < 0) m[new Date(e.data_movimento).getMonth()].despesas += -v
+      const sa = Number(e.saldo_apos ?? 0)
+      const delta = sa - prev
+      const mes = new Date(e.data_movimento).getMonth()
+      if (delta > 0) m[mes].receitas += delta
+      else if (delta < 0) m[mes].despesas += -delta
+      prev = sa
     }
     return m
-  }, [rec, ext])
+  }, [ext])
 
   if (error) return <div className="error-banner">Erro: {error}</div>
   if (!monthly) return <div className="dim">A carregar…</div>
@@ -276,7 +271,6 @@ function TabVisao({ ano }) {
   )
 }
 
-/* Tab: Orçamento */
 function TabOrcamento({ ano }) {
   const [orcs, setOrcs] = useState(null)
   const [error, setError] = useState(null)
@@ -295,9 +289,7 @@ function TabOrcamento({ ano }) {
   if (orcs.length === 0) return (
     <div className="empty-state">
       <div style={{ fontSize: 14, marginBottom: 4 }}>Sem orçamento aprovado para {ano}</div>
-      <div style={{ fontSize: 12 }}>
-        Quando a assembleia aprovar um orçamento, fica em <code className="mono">orcamentos</code> e aparece aqui com distribuição.
-      </div>
+      <div style={{ fontSize: 12 }}>Quando a assembleia aprovar um orçamento, aparece aqui.</div>
     </div>
   )
   const total = orcs.reduce((a, o) => a + Number(o.valor_total ?? 0), 0)
@@ -319,7 +311,6 @@ function TabOrcamento({ ano }) {
   )
 }
 
-/* Tab: Orçamento vs Real */
 function TabOrcVsReal({ ano }) {
   const [orcs, setOrcs] = useState(null)
   const [ext, setExt] = useState(null)
@@ -330,7 +321,7 @@ function TabOrcVsReal({ ano }) {
     const i = `${ano}-01-01`, f = `${ano}-12-31`
     Promise.all([
       v2Client.from('orcamentos').select('valor_total').eq('ano', ano),
-      v2Client.from('extrato_bancario').select('valor').gte('data_movimento', i).lte('data_movimento', f).limit(5000),
+      v2Client.from('extrato_bancario').select('data_movimento, saldo_apos').gte('data_movimento', i).lte('data_movimento', f).order('data_movimento').limit(5000),
     ]).then(([o, e]) => {
       if (!active) return
       if (o.error || e.error) { setError(o.error?.message || e.error?.message); return }
@@ -341,7 +332,12 @@ function TabOrcVsReal({ ano }) {
   if (error) return <div className="error-banner">Erro: {error}</div>
   if (orcs === null || ext === null) return <div className="dim">A carregar…</div>
   const orcTotal = orcs.reduce((a, o) => a + Number(o.valor_total ?? 0), 0)
-  const real = ext.filter(e => Number(e.valor) < 0).reduce((a, e) => a + Math.abs(Number(e.valor)), 0)
+  let real = 0, prev = ext[0] ? Number(ext[0].saldo_apos ?? 0) : 0
+  for (let i = 1; i < ext.length; i++) {
+    const sa = Number(ext[i].saldo_apos ?? 0)
+    if (sa < prev) real += (prev - sa)
+    prev = sa
+  }
   if (orcTotal === 0) return (
     <div className="empty-state">
       <div style={{ fontSize: 14, marginBottom: 4 }}>Sem orçamento para comparar</div>
@@ -366,7 +362,6 @@ function TabOrcVsReal({ ano }) {
   )
 }
 
-/* Tab: Orçamento por Fração */
 function TabOrcFracao({ ano }) {
   const [orcs, setOrcs] = useState(null)
   const [fracoes, setFracoes] = useState(null)
@@ -392,7 +387,7 @@ function TabOrcFracao({ ano }) {
     <div>
       <h3 style={{ fontSize: 13, marginBottom: 6 }}>Distribuição por fracção {ano}</h3>
       <p className="dim" style={{ fontSize: 11, marginBottom: 12 }}>
-        Quota anual = orçamento × permilagem / 1000. Quota mensal = anual / 12.
+        Quota anual = orçamento × permilagem / 1000. Mensal = anual / 12.
       </p>
       {orcTotal === 0 && (
         <div className="error-banner" style={{ background: 'rgba(227,179,65,0.10)', color: 'var(--go)', borderColor: 'rgba(227,179,65,0.30)' }}>
@@ -427,7 +422,6 @@ function TabOrcFracao({ ano }) {
   )
 }
 
-/* Tab: Extrato Bancário */
 function TabExtrato({ ano }) {
   const [movs, setMovs] = useState(null)
   const [error, setError] = useState(null)
@@ -436,8 +430,7 @@ function TabExtrato({ ano }) {
     let active = true
     setMovs(null); setError(null)
     const i = `${ano}-01-01`, f = `${ano}-12-31`
-    v2Client
-      .from('extrato_bancario')
+    v2Client.from('extrato_bancario')
       .select('id, data_movimento, descricao, valor, saldo_apos, reconciliado, referencia_banco')
       .gte('data_movimento', i).lte('data_movimento', f)
       .order('data_movimento', { ascending: false }).limit(1000)
@@ -449,37 +442,32 @@ function TabExtrato({ ano }) {
   }, [ano])
   const visible = useMemo(() => {
     if (!movs) return null
-    if (filter === 'credito') return movs.filter(m => Number(m.valor) > 0)
-    if (filter === 'debito')  return movs.filter(m => Number(m.valor) < 0)
     if (filter === 'nao_rec') return movs.filter(m => !m.reconciliado)
     return movs
   }, [movs, filter])
   const stats = useMemo(() => {
     if (!visible) return null
-    const cred = visible.filter(m => Number(m.valor) > 0).reduce((a, m) => a + Number(m.valor), 0)
-    const deb  = visible.filter(m => Number(m.valor) < 0).reduce((a, m) => a + Number(m.valor), 0)
     const naoRec = visible.filter(m => !m.reconciliado).length
-    return { cred, deb, naoRec }
+    return { naoRec, total: visible.reduce((a, m) => a + Number(m.valor ?? 0), 0) }
   }, [visible])
   if (error) return <div className="error-banner">Erro: {error}</div>
   if (movs === null) return <div className="dim">A carregar…</div>
   return (
     <div>
       <div style={{ display: 'flex', gap: 8, marginBottom: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-        {[['todos','TODOS'],['credito','CRÉDITO'],['debito','DÉBITO'],['nao_rec','NÃO RECONCILIADO']].map(([k, l]) => (
+        {[['todos','TODOS'],['nao_rec','NÃO RECONCILIADO']].map(([k, l]) => (
           <button key={k} onClick={() => setFilter(k)} style={{
             padding: '5px 12px',
             background: filter === k ? 'var(--sf2)' : 'transparent',
             border: '1px solid ' + (filter === k ? 'var(--go)' : 'var(--bd)'),
             color: filter === k ? 'var(--tx)' : 'var(--mu)',
-            borderRadius: 5,
-            fontFamily: 'DM Mono, monospace', fontSize: 10, letterSpacing: 0.5,
+            borderRadius: 5, fontFamily: 'DM Mono, monospace', fontSize: 10, letterSpacing: 0.5,
             cursor: 'pointer',
           }}>{l}</button>
         ))}
         {stats && (
           <span className="mono dim" style={{ marginLeft: 'auto', fontSize: 10 }}>
-            {visible.length} mov · crédito {eur0(stats.cred)} · débito {eur0(stats.deb)} · {stats.naoRec} não reconciliados
+            {visible.length} mov · soma {eur0(stats.total)} · {stats.naoRec} não reconciliados
           </span>
         )}
       </div>
@@ -487,26 +475,22 @@ function TabExtrato({ ano }) {
       {visible.length > 0 && (
         <table>
           <thead><tr><th>Data</th><th>Descrição</th><th>Ref.</th><th style={{ textAlign: 'right' }}>Valor</th><th style={{ textAlign: 'right' }}>Saldo</th><th>Recon.</th></tr></thead>
-          <tbody>{visible.map(m => {
-            const v = Number(m.valor)
-            return (
-              <tr key={m.id}>
-                <td className="mono" style={{ fontSize: 11 }}>{fdate(m.data_movimento)}</td>
-                <td style={{ fontSize: 12 }}>{m.descricao ?? '—'}</td>
-                <td className="mono" style={{ fontSize: 10, color: 'var(--mu)' }}>{m.referencia_banco ?? '—'}</td>
-                <td className="mono" style={{ textAlign: 'right', color: v >= 0 ? 'var(--gr)' : 'var(--rd)' }}>{v >= 0 ? '+' : ''}{eur(v)}</td>
-                <td className="mono" style={{ textAlign: 'right', fontSize: 11 }}>{eur(m.saldo_apos)}</td>
-                <td className="mono" style={{ fontSize: 11 }}>{m.reconciliado ? <span style={{ color: 'var(--gr)' }}>✓</span> : <span className="dim">○</span>}</td>
-              </tr>
-            )
-          })}</tbody>
+          <tbody>{visible.map(m => (
+            <tr key={m.id}>
+              <td className="mono" style={{ fontSize: 11 }}>{fdate(m.data_movimento)}</td>
+              <td style={{ fontSize: 12 }}>{m.descricao ?? '—'}</td>
+              <td className="mono" style={{ fontSize: 10, color: 'var(--mu)' }}>{m.referencia_banco ?? '—'}</td>
+              <td className="mono" style={{ textAlign: 'right' }}>{eur(m.valor)}</td>
+              <td className="mono" style={{ textAlign: 'right', fontSize: 11 }}>{eur(m.saldo_apos)}</td>
+              <td className="mono" style={{ fontSize: 11 }}>{m.reconciliado ? <span style={{ color: 'var(--gr)' }}>✓</span> : <span className="dim">○</span>}</td>
+            </tr>
+          ))}</tbody>
         </table>
       )}
     </div>
   )
 }
 
-/* Tab: Documentos */
 function TabDocumentos({ ano }) {
   const [docs, setDocs] = useState(null)
   const [error, setError] = useState(null)
@@ -547,7 +531,7 @@ function TabDocumentos({ ano }) {
         </span>
       </div>
       {docs === null && <div className="dim">A carregar…</div>}
-      {docs && docs.length === 0 && <div className="empty-state">Sem documentos arquivados em {ano}.</div>}
+      {docs && docs.length === 0 && <div className="empty-state">Sem documentos em {ano}.</div>}
       {docs && docs.length > 0 && (
         <table>
           <thead><tr><th>Tipo</th><th>Título</th><th>Ficheiro</th><th>OCR</th><th style={{ textAlign: 'right' }}>Conf.</th><th>Data</th></tr></thead>
@@ -557,7 +541,7 @@ function TabDocumentos({ ano }) {
               <td style={{ fontSize: 12 }}>{d.titulo ?? '—'}</td>
               <td className="mono" style={{ fontSize: 10, color: 'var(--mu)' }}>{d.filename_original ?? '—'}</td>
               <td className="mono" style={{ fontSize: 11 }}>
-                {d.estado_ocr === 'ok'   ? <span style={{ color: 'var(--gr)' }}>✓ ok</span> :
+                {d.estado_ocr === 'ok' ? <span style={{ color: 'var(--gr)' }}>✓ ok</span> :
                  d.estado_ocr === 'erro' ? <span style={{ color: 'var(--rd)' }}>✗ erro</span> :
                  d.estado_ocr ?? '—'}
               </td>

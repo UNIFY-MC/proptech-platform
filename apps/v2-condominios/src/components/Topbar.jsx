@@ -1,9 +1,8 @@
 import { useState } from 'react'
-
-const YEARS = ['2024', '2025', '2026', 'Global']
+import { useYear, YEAR_OPTIONS } from '../context/YearContext.jsx'
 
 export default function Topbar() {
-  const [year, setYear] = useState('2026')
+  const { year, setYear } = useYear()
   const [lang, setLang] = useState('PT')
 
   return (
@@ -17,7 +16,7 @@ export default function Topbar() {
 
       <div className="year-pills" role="tablist" aria-label="Filtro por ano">
         <button className="tb-btn" disabled style={{ opacity: 0.5, cursor: 'default' }}>PRATA 2A</button>
-        {YEARS.map(y => (
+        {YEAR_OPTIONS.map(y => (
           <button
             key={y}
             className={'year-pill' + (year === y ? ' active' : '')}

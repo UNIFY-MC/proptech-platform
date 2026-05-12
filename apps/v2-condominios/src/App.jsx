@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from '@proptech/auth'
 import { DrawerProvider } from '@proptech/ui/DrawerContext'
+import { YearProvider } from './context/YearContext.jsx'
 import { mainClient, coreClient } from './lib/clients.js'
 import V2AuthSync from './lib/V2AuthSync.jsx'
 import LoginScreen from './components/LoginScreen.jsx'
@@ -50,6 +51,7 @@ function AppInner() {
   return (
     <V2AuthSync>
       <DrawerProvider>
+       <YearProvider>
         <div className="app-shell">
           <Sidebar theme={theme} setTheme={setTheme} />
           <div className="app-main-wrap">
@@ -84,6 +86,7 @@ function AppInner() {
             </main>
           </div>
         </div>
+       </YearProvider>
       </DrawerProvider>
     </V2AuthSync>
   )
