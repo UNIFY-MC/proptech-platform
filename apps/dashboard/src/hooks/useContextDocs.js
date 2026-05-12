@@ -24,6 +24,20 @@ function pickStorageProvider(file) {
   return 'supabase'
 }
 
+// Supabase Storage só aceita ASCII safe (a-z, 0-9, -, _, ., /).
+// Acentos, espaços, ç → sanitizados. Mantemos extensão.
+function sanitizeStorageKey(filename) {
+  const parts = String(filename).split('.')
+  const ext = parts.length > 1 ? '.' + parts.pop().toLowerCase().replace(/[^a-z0-9]/g, '') : ''
+  const base = parts.join('.')
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')   // remove diacritics
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]+/g, '-')                      // outros chars → -
+    .replace(/-+/g, '-').replace(/^-|-$/g, '')           // collapse + trim
+    || 'file'
+  return base + ext
+}
+
 function inferDocType(mime, name) {
   const ext = (name?.split('.').pop() || '').toLowerCase()
   if (mime === 'application/pdf' || ext === 'pdf') return 'file'
@@ -151,8 +165,12 @@ export function useContextDocOps() {
 
       if (provider === 'supabase') {
         const orgFolder = orgId || 'global'
-        const fp = folderPath ? `${folderPath}/` : ''
-        const storagePath = `${orgFolder}/${fp}${file.name}`
+        // Path sanitizado (ASCII-only) para evitar Storage InvalidKey
+        const fpSanitized = folderPath
+          ? folderPath.split('/').map(sanitizeStorageKey).join('/') + '/'
+          : ''
+        const safeName = sanitizeStorageKey(file.name)
+        const storagePath = `${orgFolder}/${fpSanitized}${safeName}`
         const { error: upErr } = await supabase.storage.from(SUPABASE_BUCKET)
           .upload(storagePath, file, { upsert: true, contentType: file.type })
         if (upErr) throw upErr
