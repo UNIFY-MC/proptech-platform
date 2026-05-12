@@ -10,8 +10,8 @@ export default function Energia() {
     async function load() {
       const { data, error } = await v2Client
         .from('carregadores_contagens')
-        .select('*')
-        .order('data_leitura', { ascending: false })
+        .select('*, fracoes:fracao_id(codigo)')
+        .order('periodo', { ascending: false })
         .limit(100)
       if (!active) return
       if (error) setError(error.message)

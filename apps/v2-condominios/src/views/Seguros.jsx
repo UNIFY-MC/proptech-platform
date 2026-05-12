@@ -10,7 +10,7 @@ export default function Seguros() {
     async function load() {
       const { data, error } = await v2Client
         .from('seguro_fracoes')
-        .select('*, fracoes:fracao_id(letra, andar, tipologia)')
+        .select('*, fracoes:fracao_id(codigo, permilagem)')
         .order('data_renovacao', { ascending: true, nullsFirst: false })
         .limit(200)
       if (!active) return

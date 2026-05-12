@@ -21,9 +21,9 @@ export default function Mora() {
     async function load() {
       const { data, error } = await v2Client
         .from('recebimentos')
-        .select('*')
-        .is('data_pagamento', null)
-        .order('data_emissao', { ascending: true })
+        .select('*, fracoes:fracao_id(codigo)')
+        .in('estado', ['pendente', 'mora', 'acordo'])
+        .order('vencimento', { ascending: true })
         .limit(500)
       if (!active) return
       if (error) setError(error.message)

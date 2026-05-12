@@ -11,7 +11,7 @@ export default function Faturas() {
       const { data, error } = await v2Client
         .from('faturas_pendentes')
         .select('*, fornecedores:fornecedor_id(id, nome, nif, categoria)')
-        .order('data_vencimento', { ascending: true, nullsFirst: false })
+        .order('vencimento', { ascending: true, nullsFirst: false })
         .limit(200)
       if (!active) return
       if (error) setError(error.message)

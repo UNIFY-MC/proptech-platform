@@ -10,8 +10,8 @@ export default function Documentos() {
     async function load() {
       const { data, error } = await v2Client
         .from('documentos')
-        .select('*, documentos_drive(drive_link), faturas_ocr(valor_total, confianca)')
-        .order('criado_em', { ascending: false })
+        .select('id, titulo, filename_original, tipo, estado_ocr, confianca_ocr, created_at, documentos_drive(drive_url, drive_file_id), faturas_ocr(valor_total, conf_valor)')
+        .order('created_at', { ascending: false })
         .limit(200)
       if (!active) return
       if (error) setError(error.message)
@@ -55,21 +55,22 @@ export default function Documentos() {
               background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8,
               padding: '12px 14px',
             }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {d.titulo ?? d.nome_ficheiro ?? '(sem título)'}
+              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--tx)', marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {d.titulo ?? d.filename_original ?? '(sem título)'}
               </div>
-              <div style={{ fontSize: 11, color: 'var(--text-dim)', marginBottom: 6 }}>
-                {d.tipo_documento ?? 'genérico'} · {d.criado_em?.slice(0, 10) ?? '—'}
+              <div style={{ fontSize: 11, color: 'var(--mu)', marginBottom: 6 }}>
+                {d.tipo ?? 'genérico'} · {d.created_at?.slice(0, 10) ?? '—'}
               </div>
               {d.faturas_ocr?.length > 0 && (
-                <div style={{ fontSize: 11, fontFamily: 'JetBrains Mono, monospace', color: 'var(--text-dim)' }}>
-                  OCR: {Number(d.faturas_ocr[0].valor_total ?? 0).toFixed(2)} € · conf {Math.round((d.faturas_ocr[0].confianca ?? 0) * 100)}%
+                <div style={{ fontSize: 11, fontFamily: 'DM Mono, monospace', color: 'var(--mu)' }}>
+                  OCR: {Number(d.faturas_ocr[0].valor_total ?? 0).toFixed(2)} €
+                  {d.faturas_ocr[0].conf_valor != null && ` · conf ${Math.round(d.faturas_ocr[0].conf_valor * 100)}%`}
                 </div>
               )}
               {d.documentos_drive?.length > 0 && (
-                <a href={d.documentos_drive[0].drive_link} target="_blank" rel="noreferrer" style={{
-                  fontSize: 11, color: 'var(--primary)', textDecoration: 'none', marginTop: 6, display: 'inline-block',
-                }}>↗ Abrir no Drive</a>
+                <a href={d.documentos_drive[0].drive_url} target="_blank" rel="noreferrer" style={{
+                  fontSize: 11, color: 'var(--bl)', textDecoration: 'none', marginTop: 6, display: 'inline-block',
+                }}>↗ Abrir documento</a>
               )}
             </div>
           ))}
