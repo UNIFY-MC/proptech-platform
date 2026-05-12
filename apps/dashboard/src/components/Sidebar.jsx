@@ -2,7 +2,7 @@ import { NavLink } from 'react-router-dom'
 import {
   Inbox, MessageSquare, Folder,
   Users, Building2, FolderKanban, CheckSquare,
-  ChefHat, Sparkles, Plug,
+  ChefHat, Sparkles, Plug, Library,
   LayoutDashboard, Map, Eye, Swords, Layers,
   Bot,
 } from 'lucide-react'
@@ -91,6 +91,7 @@ export default function Sidebar({ theme, setTheme, data, lastSync, loading, refr
         <NavItem to="/tasks"     label="Tasks"     icon={CheckSquare} />
 
         <div className="sidebar-section-label">Build</div>
+        <NavItem to="/context"      label="Context"      icon={Library} />
         <NavItem to="/recipes"      label="Recipes"      icon={ChefHat} />
         <NavItem to="/skills"       label="Skills"       icon={Sparkles} />
         <NavItem to="/integrations" label="Integrations" icon={Plug} />
