@@ -38,3 +38,39 @@ export function createCoreClient(anonKey) {
     },
   })
 }
+
+/**
+ * Factory para o cliente do schema `v2_condominios` (sem session persistence).
+ * Mesmo padrão que createCoreClient: caller sincroniza JWT via setSession
+ * a cada mudança de auth state. Usado por apps/v2-condominios.
+ *
+ * @param {string} anonKey - import.meta.env.VITE_SUPABASE_ANON_KEY do app consumer
+ */
+export function createV2Client(anonKey) {
+  return createClient(SUPABASE_URL, anonKey, {
+    db: { schema: 'v2_condominios' },
+    auth: {
+      storageKey: 'sb-v2-auth',
+      persistSession: false,
+      autoRefreshToken: false,
+    },
+  })
+}
+
+/**
+ * Factory para o cliente do schema `system` (sem session persistence).
+ * Inbox items, approvals queue, agentic ops. Usado por apps/dashboard e
+ * verticais que escrevem tarefas/aprovações.
+ *
+ * @param {string} anonKey - import.meta.env.VITE_SUPABASE_ANON_KEY do app consumer
+ */
+export function createSystemClient(anonKey) {
+  return createClient(SUPABASE_URL, anonKey, {
+    db: { schema: 'system' },
+    auth: {
+      storageKey: 'sb-system-auth',
+      persistSession: false,
+      autoRefreshToken: false,
+    },
+  })
+}
