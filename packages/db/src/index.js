@@ -75,6 +75,24 @@ export function createSystemClient(anonKey) {
   })
 }
 
+/**
+ * Factory para o cliente do schema `iam` (Identity and Access Management).
+ * Permissões, login aliases, portal tokens, activity logs — TODOS cross-vertical.
+ * Decidido em ADR-013 (.claude/strategy/adrs/013-centralizar-iam.md).
+ *
+ * @param {string} anonKey - import.meta.env.VITE_SUPABASE_ANON_KEY do app consumer
+ */
+export function createIamClient(anonKey) {
+  return createClient(SUPABASE_URL, anonKey, {
+    db: { schema: 'iam' },
+    auth: {
+      storageKey: 'sb-iam-auth',
+      persistSession: false,
+      autoRefreshToken: false,
+    },
+  })
+}
+
 // V2 Condo Hub legacy — projecto Supabase em produção em prataowners.pt.
 // READ-ONLY. NUNCA escrever (ver CLAUDE.md guard-rail 4).
 // Usado por apps/v2-condominios para mostrar dados reais (97 fracções, 593

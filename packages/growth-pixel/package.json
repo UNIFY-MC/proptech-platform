@@ -1,0 +1,11 @@
+{
+  "name": "@proptech/growth-pixel",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Pixel JS para tracking de eventos de growth (pageview, form submit, custom) cross-vertical. ADR-015.",
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./hook": "./src/useGrowthPixel.js"
+  }
+}

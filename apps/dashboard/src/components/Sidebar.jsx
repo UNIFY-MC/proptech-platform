@@ -5,6 +5,7 @@ import {
   ChefHat, Sparkles, Plug, Library,
   LayoutDashboard, Map, Eye, Swords, Layers,
   Bot, PanelLeftClose, PanelLeft,
+  TrendingUp, UserPlus, Target, Zap,
 } from 'lucide-react'
 import { useVerticalStore, useAppShellStore } from '../store'
 import { useInboxItems, useApprovals } from '../hooks/useSupabase'
@@ -110,6 +111,12 @@ export default function Sidebar({ theme, setTheme, data, lastSync, loading, refr
             <NavItem to="/inbox"  label="Inbox"  icon={Inbox}        badge={unreadCount} />
             <NavItem to="/chat"   label="Chat"   icon={MessageSquare} />
             <NavItem to="/files"  label="Files"  icon={Folder} />
+
+            <div className="sidebar-section-label">Growth</div>
+            <NavItem to="/growth/funnel"        label="Funil"          icon={TrendingUp} />
+            <NavItem to="/growth/leads"         label="Leads"          icon={UserPlus} />
+            <NavItem to="/growth/oportunidades" label="Oportunidades"  icon={Target} />
+            <NavItem to="/growth/rules"         label="Regras"         icon={Zap} />
 
             <div className="sidebar-section-label">Manage</div>
             <NavItem to="/employees" label="Employees" icon={Users} />

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from '@proptech/auth'
 import { DrawerProvider } from '@proptech/ui/DrawerContext'
+import { useGrowthPixel } from '@proptech/growth-pixel/hook'
 import { YearProvider } from './context/YearContext.jsx'
 import { mainClient, coreClient } from './lib/clients.js'
 import V2AuthSync from './lib/V2AuthSync.jsx'
@@ -34,6 +35,9 @@ import V2Legacy from './views/V2Legacy.jsx'
 function AppInner() {
   const { authenticated, loading } = useAuth()
   const [theme, setTheme] = useState(() => localStorage.getItem('v2theme') || 'dark')
+
+  // Growth pixel — tracka pageviews + form submits cross-vertical (ADR-015)
+  useGrowthPixel({ vertical: 'v2', autoPageview: true, autoForms: false })
 
   useEffect(() => {
     document.body.setAttribute('data-theme', theme)
