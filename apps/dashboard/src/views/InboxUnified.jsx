@@ -20,6 +20,7 @@ import { useDrawer } from '../context/DrawerContext'
 import InboxItemDrawer from '../components/inbox/InboxItemDrawer'
 import AskAnythingBar from '../components/inbox/AskAnythingBar.jsx'
 import ExpandableInboxRow from '../components/inbox/ExpandableInboxRow.jsx'
+import ConfigureFeedDrawerInner from '../components/inbox/ConfigureFeedDrawer.jsx'
 import { useTasks } from '../hooks/useTasks.js'
 import { useNavigate } from 'react-router-dom'
 
@@ -550,33 +551,7 @@ function ApprovalQuickDrawer({ approval, onApprove, onReject }) {
 
 // ─── Configure Feed drawer (placeholder) ────────────────────────────────────
 function ConfigureFeedDrawer({ onClose }) {
-  return (
-    <div style={{
-      position: 'fixed', top: 0, right: 0, bottom: 0,
-      width: 'min(420px, 100vw)',
-      background: 'var(--bg)', borderLeft: '1px solid var(--border)',
-      boxShadow: '-8px 0 24px rgba(0,0,0,0.18)',
-      display: 'flex', flexDirection: 'column', zIndex: 1000,
-    }}>
-      <div style={{
-        padding: '14px 20px', borderBottom: '1px solid var(--border)',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-      }}>
-        <div style={{ fontSize: '0.95rem', fontWeight: 600 }}>Configure Feed</div>
-        <button onClick={onClose} style={{
-          background: 'none', border: 'none', cursor: 'pointer',
-          color: 'var(--text-dim)', fontSize: '1.4rem', padding: '0 4px',
-        }}>×</button>
-      </div>
-      <div style={{ padding: 20, fontSize: '0.78rem', color: 'var(--text-dim)', lineHeight: 1.6 }}>
-        <p>Configuração de quais sources/verticais aparecem no feed.</p>
-        <p style={{ marginTop: 12, fontStyle: 'italic' }}>
-          Sprint próximo: toggles por source (Bia, Watcher, Approvals, Social),
-          mute por vertical, frequência de digest.
-        </p>
-      </div>
-    </div>
-  )
+  return <ConfigureFeedDrawerInner onClose={onClose} />
 }
 
 // ─── Styles ──────────────────────────────────────────────────────────────────

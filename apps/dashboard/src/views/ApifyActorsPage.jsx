@@ -7,7 +7,11 @@
 //  - Recent runs panel: últimas 10 runs (system_apify_runs view)
 
 import { useState, useEffect } from 'react'
-import { Plus, Play, X, Trash2, ExternalLink, Instagram, Twitter, Linkedin, Globe, Sparkles, Clock, CheckCircle2, AlertCircle } from 'lucide-react'
+import {
+  Plus, Play, X, Trash2, ExternalLink,
+  Instagram, Twitter, Linkedin, Globe, Sparkles, Clock, CheckCircle2, AlertCircle,
+  Music, Youtube, MessageSquare, Search, Building2, DollarSign,
+} from 'lucide-react'
 import { useWatcherSources } from '../hooks/useWatcherSources.js'
 import { supabase } from '../lib/supabase.js'
 
@@ -19,6 +23,14 @@ const PRESETS = [
     icon: Instagram, color: '#ec4899',
     input_template: { username: ['handle_concorrente'], resultsLimit: 5 },
     cost: '$0.02/run',
+  },
+  {
+    actor_id: 'clockworks/free-tiktok-scraper',
+    label: 'TikTok — profile posts (free tier)',
+    platform: 'tiktok', output_mapper: 'instagram_post',
+    icon: Music, color: '#ff0050',
+    input_template: { profiles: ['handle_aqui'], resultsPerPage: 5 },
+    cost: 'FREE',
   },
   {
     actor_id: 'apidojo/twitter-scraper',
@@ -34,6 +46,46 @@ const PRESETS = [
     platform: 'linkedin', output_mapper: 'linkedin_post',
     icon: Linkedin, color: '#0a66c2',
     input_template: { profileUrls: ['https://linkedin.com/in/exemplo'] },
+    cost: '$0.10/run',
+  },
+  {
+    actor_id: 'apify/youtube-scraper',
+    label: 'YouTube — videos por canal',
+    platform: 'youtube', output_mapper: 'page_content',
+    icon: Youtube, color: '#ff0000',
+    input_template: { startUrls: [{ url: 'https://youtube.com/@channel' }], maxResults: 10 },
+    cost: '$0.04/run',
+  },
+  {
+    actor_id: 'trudax/reddit-scraper-lite',
+    label: 'Reddit — search/subreddit (free)',
+    platform: 'reddit', output_mapper: 'page_content',
+    icon: MessageSquare, color: '#ff4500',
+    input_template: { searches: ['condomínio Portugal'], maxItems: 10 },
+    cost: 'FREE',
+  },
+  {
+    actor_id: 'apify/google-search-scraper',
+    label: 'Google SERP — tracking de queries',
+    platform: 'web', output_mapper: 'page_content',
+    icon: Search, color: '#4285f4',
+    input_template: { queries: 'condomínios Lisboa\\ngestão condomínio Porto', resultsPerPage: 10 },
+    cost: '$0.05/run',
+  },
+  {
+    actor_id: 'epctex/idealista-scraper',
+    label: 'Idealista — listings PT',
+    platform: 'web', output_mapper: 'page_content',
+    icon: Building2, color: '#ff6e00',
+    input_template: { startUrls: [{ url: 'https://www.idealista.pt/comprar-casas/lisboa/' }], maxItems: 20 },
+    cost: '$0.05/run',
+  },
+  {
+    actor_id: 'apify/crunchbase-company-scraper',
+    label: 'Crunchbase — funding signals',
+    platform: 'web', output_mapper: 'page_content',
+    icon: DollarSign, color: '#0288d1',
+    input_template: { companies: ['spock-energia', 'fuelio'] },
     cost: '$0.10/run',
   },
   {
