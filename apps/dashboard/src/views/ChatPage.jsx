@@ -21,6 +21,7 @@ import {
 import { useEmployee } from '../hooks/useEmployee.js'
 import { useApps } from '../hooks/useApps.js'
 import { useNotificationsStore } from '../store'
+import { useAgentChat } from '../hooks/useAgentChat.js'
 
 // Quick-action cards — alinhadas com o que a Bia já sabe fazer + atalhos futuros
 const QUICK_ACTIONS = [
@@ -72,6 +73,7 @@ export default function ChatPage() {
   const addToast = useNotificationsStore(s => s.addToast)
   const { apps } = useApps()
   const { running, lastResult, runTask } = useEmployee(employeeId)
+  const { messages, send, pending, clear } = useAgentChat()
 
   useEffect(() => {
     inputRef.current?.focus()
@@ -87,15 +89,14 @@ export default function ChatPage() {
 
   async function handleSubmit(e) {
     e?.preventDefault?.()
-    if (!prompt.trim()) return
-    // Sprint 1: bia-chat ainda só suporta os 3 task types estruturados.
-    // Para freeform usa-se o launcher na página /employees/bia.
-    addToast({
-      type: 'info',
-      message: 'Free-form chat: Sprint 2 (precisa de bia-chat aceitar task_type=freeform com tools). Por agora usa /employees/bia ou os quick-actions.',
-    })
-    // setPrompt('')
+    if (!prompt.trim() || pending) return
+    const text = prompt
+    setPrompt('')
+    await send(text)
   }
+
+  const hasConversation = messages.length > 0
+  const isBusy = pending || running
 
   const activeMode = MODES.find(m => m.id === mode) || MODES[0]
   const ModeIcon = activeMode.icon
@@ -110,42 +111,67 @@ export default function ChatPage() {
       {/* Top bar — New Chat dropdown stub */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '14px 0', marginBottom: 40,
+        padding: '14px 0', marginBottom: hasConversation ? 14 : 40,
       }}>
-        <button style={{
-          background: 'none', border: 'none', cursor: 'pointer',
-          color: 'var(--text)', fontSize: '0.92rem', fontWeight: 600,
-          display: 'flex', alignItems: 'center', gap: 6,
-        }}>
-          New Chat
+        <button
+          onClick={clear}
+          style={{
+            background: 'none', border: 'none', cursor: 'pointer',
+            color: 'var(--text)', fontSize: '0.92rem', fontWeight: 600,
+            display: 'flex', alignItems: 'center', gap: 6,
+          }}>
+          {hasConversation ? '↺ New Chat' : 'New Chat'}
           <ChevronDown size={14} style={{ color: 'var(--text-dim)' }} />
         </button>
         <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)' }}>
-          {running ? '⏳ A pensar…' : ''}
+          {isBusy ? '⏳ A pensar…' : ''}
         </div>
       </div>
 
-      {/* Center: brand + headline */}
+      {/* Conversation thread (quando há mensagens) */}
+      {hasConversation && (
+        <div style={{
+          flex: 1,
+          width: '100%',
+          maxWidth: 720,
+          margin: '0 auto',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 14,
+          paddingBottom: 16,
+        }}>
+          {messages.map((m, i) => (
+            <ChatBubble key={i} message={m} />
+          ))}
+        </div>
+      )}
+
+      {/* Center: brand + headline (só quando não há conversa) */}
       <div style={{
         flex: 1, display: 'flex', flexDirection: 'column',
-        alignItems: 'center', justifyContent: 'center',
+        alignItems: 'center', justifyContent: hasConversation ? 'flex-end' : 'center',
         gap: 30, paddingBottom: 30,
       }}>
-        <div style={{
-          width: 56, height: 56, borderRadius: 14,
-          background: 'linear-gradient(135deg, var(--primary), #8b5cf6)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}>
-          <Sparkles size={26} color="#fff" />
-        </div>
-        <h1 style={{
-          margin: 0, fontSize: '1.6rem', fontWeight: 600,
-          color: 'var(--text)', textAlign: 'center',
-        }}>
-          Em que te posso ajudar hoje?
-        </h1>
+        {!hasConversation && (
+          <>
+            <div style={{
+              width: 56, height: 56, borderRadius: 14,
+              background: 'linear-gradient(135deg, var(--primary), #8b5cf6)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <Sparkles size={26} color="#fff" />
+            </div>
+            <h1 style={{
+              margin: 0, fontSize: '1.6rem', fontWeight: 600,
+              color: 'var(--text)', textAlign: 'center',
+            }}>
+              Em que te posso ajudar hoje?
+            </h1>
+          </>
+        )}
 
-        {/* Quick-action cards */}
+        {/* Quick-action cards (só quando não há conversa) */}
+        {!hasConversation && (
         <div style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
@@ -183,6 +209,7 @@ export default function ChatPage() {
             </button>
           ))}
         </div>
+        )}
 
         {/* Scope/Mode pill bar */}
         <div style={{
@@ -215,7 +242,7 @@ export default function ChatPage() {
             value={prompt}
             onChange={e => setPrompt(e.target.value)}
             placeholder={`Pergunta ao ${employeeId === 'bia' ? 'Bia' : employeeId}…`}
-            disabled={running}
+            disabled={isBusy}
             maxLength={1000}
             style={{
               border: 'none', outline: 'none',
@@ -292,17 +319,17 @@ export default function ChatPage() {
             </button>
 
             <button type="submit"
-              disabled={running || !prompt.trim()}
+              disabled={isBusy || !prompt.trim()}
               style={{
                 marginLeft: 'auto',
-                background: prompt.trim() ? 'var(--primary)' : 'var(--bg-elevated)',
-                color: prompt.trim() ? '#fff' : 'var(--text-dim)',
+                background: prompt.trim() && !isBusy ? 'var(--primary)' : 'var(--bg-elevated)',
+                color: prompt.trim() && !isBusy ? '#fff' : 'var(--text-dim)',
                 border: 'none', borderRadius: '50%',
                 width: 32, height: 32,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                cursor: prompt.trim() ? 'pointer' : 'not-allowed',
+                cursor: prompt.trim() && !isBusy ? 'pointer' : 'not-allowed',
               }}>
-              {running ? '…' : <ArrowUp size={15} />}
+              {isBusy ? '…' : <ArrowUp size={15} />}
             </button>
           </div>
         </form>
@@ -342,4 +369,71 @@ const iconBtn = {
   width: 28, height: 28,
   display: 'flex', alignItems: 'center', justifyContent: 'center',
   cursor: 'pointer', color: 'var(--text-dim)', padding: 0,
+}
+
+// ─── ChatBubble — render mensagem do histórico ──────────────
+function ChatBubble({ message }) {
+  const isUser = message.role === 'user'
+  return (
+    <div style={{
+      display: 'flex',
+      flexDirection: isUser ? 'row-reverse' : 'row',
+      gap: 10,
+      alignItems: 'flex-start',
+    }}>
+      <div style={{
+        width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
+        background: isUser
+          ? 'var(--bg-elevated)'
+          : 'linear-gradient(135deg, var(--primary), #8b5cf6)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: '0.7rem', fontWeight: 700,
+        color: isUser ? 'var(--text)' : '#fff',
+      }}>
+        {isUser ? 'M' : <Sparkles size={13} />}
+      </div>
+      <div style={{
+        flex: 1,
+        background: message.error
+          ? 'rgba(239,68,68,0.08)'
+          : isUser ? 'var(--bg-elevated)' : 'var(--bg-card)',
+        border: '1px solid ' + (message.error ? 'var(--danger)' : 'var(--border)'),
+        borderRadius: 10,
+        padding: '10px 14px',
+        fontSize: '0.85rem',
+        color: 'var(--text)',
+        lineHeight: 1.5,
+        whiteSpace: 'pre-wrap',
+      }}>
+        {message.content}
+        {message.tool_calls && message.tool_calls.length > 0 && (
+          <div style={{
+            marginTop: 8,
+            padding: '6px 8px',
+            background: 'var(--bg-elevated)',
+            borderRadius: 5,
+            fontSize: '0.62rem',
+            fontFamily: 'JetBrains Mono, monospace',
+            color: 'var(--text-dim)',
+          }}>
+            <div style={{ marginBottom: 4, fontWeight: 700, color: 'var(--primary)' }}>
+              Tools usadas:
+            </div>
+            {message.tool_calls.map((tc, i) => (
+              <div key={i} style={{ marginBottom: 3 }}>
+                <span style={{ color: 'var(--info)' }}>{tc.name}</span>
+                {tc.result?.error
+                  ? <span style={{ color: 'var(--danger)' }}> · {tc.result.error}</span>
+                  : tc.result?.ok || tc.result?.task_id
+                    ? <span style={{ color: 'var(--success)' }}> · ok</span>
+                    : tc.result?.tasks
+                      ? <span> · {tc.result.tasks.length} resultados</span>
+                      : null}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  )
 }

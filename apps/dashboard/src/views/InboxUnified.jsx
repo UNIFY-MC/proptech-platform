@@ -20,6 +20,8 @@ import { useDrawer } from '../context/DrawerContext'
 import InboxItemDrawer from '../components/inbox/InboxItemDrawer'
 import AskAnythingBar from '../components/inbox/AskAnythingBar.jsx'
 import ExpandableInboxRow from '../components/inbox/ExpandableInboxRow.jsx'
+import { useTasks } from '../hooks/useTasks.js'
+import { useNavigate } from 'react-router-dom'
 
 const FILTER_OPTIONS = [
   { id: 'all',       label: 'All' },
@@ -83,6 +85,35 @@ export default function InboxUnified() {
   const { openDrawer, closeDrawer } = useDrawer()
   const { primeiroNome, stats } = useUserContext()
   const { bySlug: watcherBySlug } = useWatcherProfiles()
+  const { createTask } = useTasks()
+  const navigate = useNavigate()
+
+  async function handleCreateTask({ kind, item }) {
+    const isEmployee = kind === 'employee'
+    const titlePrompt = isEmployee
+      ? `Task para empregado (a partir de "${item.title}")\nTítulo:`
+      : `Nova ideia (a partir de "${item.title}")\nTítulo:`
+    const title = window.prompt(titlePrompt, item.title)
+    if (!title) return
+    const verticalGuess = item.vertical || null
+    const taskId = await createTask({
+      title,
+      description_md: item.raw?.payload?.summary_md
+                   || item.raw?.payload?.title
+                   || item.body
+                   || null,
+      kind: isEmployee ? 'task' : 'idea',
+      vertical: verticalGuess,
+      source_kind: 'inbox_item',
+      source_id: item.raw?.id || null,
+      tags: ['from-inbox'],
+    })
+    if (taskId) {
+      if (window.confirm('Task criada. Ir para /tasks?')) navigate('/tasks')
+    } else {
+      alert('Erro a criar task — verifica consola')
+    }
+  }
 
   // Daily Roundup mais recente (não dismissed)
   const todayRoundup = useMemo(() => {
@@ -255,9 +286,7 @@ export default function InboxUnified() {
                 onClickLegacy={openItem}
                 onMarkRead={async (id) => { await markAsRead(id) }}
                 onArchive={() => { /* refresh via realtime */ }}
-                onCreateTask={({ kind, item }) => {
-                  alert(`Criar task "${kind}" a partir de "${item.title}" — Sprint β (system.tasks schema)`)
-                }}
+                onCreateTask={handleCreateTask}
               />
             ))}
           </DaySection>
@@ -271,9 +300,7 @@ export default function InboxUnified() {
                 onClickLegacy={openItem}
                 onMarkRead={async (id) => { await markAsRead(id) }}
                 onArchive={() => {}}
-                onCreateTask={({ kind, item }) => {
-                  alert(`Criar task "${kind}" a partir de "${item.title}" — Sprint β`)
-                }}
+                onCreateTask={handleCreateTask}
               />
             ))}
           </DaySection>

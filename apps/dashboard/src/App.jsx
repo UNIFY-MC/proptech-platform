@@ -31,6 +31,7 @@ import GrowthOportunidades from './views/GrowthOportunidades.jsx'
 import GrowthRules from './views/GrowthRules.jsx'
 import DepartmentPage from './views/DepartmentPage.jsx'
 import MultiView from './views/MultiView.jsx'
+import TasksPage from './views/TasksPage.jsx'
 import StubView from './views/StubView.jsx'
 import { useAppShellStore } from './store'
 
@@ -119,7 +120,7 @@ export default function App() {
               <Route path="/multiview"           element={<MultiView />} />
               <Route path="/clients"      element={<StubView title="Clients" />} />
               <Route path="/projects"     element={<StubView title="Projects" />} />
-              <Route path="/tasks"        element={<StubView title="Tasks" />} />
+              <Route path="/tasks"        element={<TasksPage />} />
               {/* Legacy live views */}
               <Route path="/live-inbox"   element={<InboxView />} />
               <Route path="/approvals"    element={<ApprovalsView />} />
