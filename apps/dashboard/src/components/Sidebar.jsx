@@ -7,27 +7,41 @@ import {
   Bot, PanelLeftClose, PanelLeft,
   TrendingUp, UserPlus, Target, Zap,
   Plug2, Settings as SettingsIcon, Briefcase,
+  Megaphone, DollarSign, MessageCircle, Scale, Code, Settings,
 } from 'lucide-react'
 import { useVerticalStore, useAppShellStore } from '../store'
 import { useInboxItems } from '../hooks/useSupabase'
 import { useInboxReads } from '../hooks/useInboxReads'
+import { useData } from '../hooks/useData.js'
+import SidebarGroup from './SidebarGroup.jsx'
+import { DEPARTMENTS, countByDept } from '../lib/departments.js'
+
+const DEPT_ICON_MAP = {
+  Megaphone, TrendingUp, Settings, DollarSign, MessageCircle, Scale, Code, Users,
+}
 
 const IC = ({ icon: Icon }) => (
   <Icon size={15} style={{ color: 'var(--text-dim)', flexShrink: 0, marginRight: 8 }} />
 )
 
-function NavItem({ to, label, icon, badge, end }) {
+function NavItem({ to, label, icon, badge, end, accent }) {
+  const style = accent ? { '--dept-accent': accent } : undefined
   return (
     <NavLink
       to={to}
       end={end}
+      style={style}
       className={({ isActive }) => 'sidebar-link' + (isActive ? ' active' : '')}
     >
       <span style={{ display: 'flex', alignItems: 'center', flex: 1, minWidth: 0 }}>
+        {accent && <span className="sidebar-dot" style={{ background: accent }} />}
         {icon && <IC icon={icon} />}
         <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label}</span>
       </span>
       {badge > 0 && <span className="sidebar-badge">{badge}</span>}
+      {badge === 0 && (
+        <span className="sidebar-badge sidebar-badge-dim">{badge}</span>
+      )}
     </NavLink>
   )
 }
@@ -38,22 +52,26 @@ export default function Sidebar() {
   const isDashboardMode = activeAppSlug === 'dashboard'
   const { items } = useInboxItems(activeVertical)
   const { readSet } = useInboxReads()
+  const { data } = useData()
 
-  // Em app embedded, não mostramos sidebar do dashboard — a app embedded tem o seu próprio
+  // Em app embedded, esconde sidebar do dashboard
   if (!isDashboardMode) return null
 
   const unreadCount = items.filter(i => !readSet.has(i.id)).length
+  const employees = data?.employees || []
+  const deptCounts = countByDept(employees, activeVertical)
+  const totalAgents = Object.values(deptCounts).reduce((a, b) => a + b, 0)
 
   return (
     <aside className={'app-sidebar' + (sidebarCollapsed ? ' collapsed' : '')}>
-      {/* Header — apenas botão collapse (brand está no Topbar global) */}
       <div className="sidebar-header" style={{
-        padding: '8px 12px',
+        padding: '6px 12px',
         borderBottom: '1px solid var(--border)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'flex-end',
         flexShrink: 0,
+        height: 32,
       }}>
         <button
           onClick={toggleSidebar}
@@ -64,51 +82,68 @@ export default function Sidebar() {
             display: 'flex', alignItems: 'center',
           }}
         >
-          {sidebarCollapsed ? <PanelLeft size={15} /> : <PanelLeftClose size={15} />}
+          {sidebarCollapsed ? <PanelLeft size={14} /> : <PanelLeftClose size={14} />}
         </button>
       </div>
 
       <div className="sidebar-nav">
-        <div className="sidebar-section-label">Daily</div>
-        <NavItem to="/inbox"  label="Inbox"  icon={Inbox}        badge={unreadCount} />
-        <NavItem to="/chat"   label="Chat"   icon={MessageSquare} />
-        <NavItem to="/files"  label="Files"  icon={Folder} />
+        <SidebarGroup id="daily" label="Daily" badge={unreadCount > 0 ? unreadCount : null}>
+          <NavItem to="/inbox" label="Inbox" icon={Inbox} badge={unreadCount} />
+          <NavItem to="/chat"  label="Chat"  icon={MessageSquare} />
+          <NavItem to="/files" label="Files" icon={Folder} />
+        </SidebarGroup>
 
-        <div className="sidebar-section-label">Departments</div>
-        <NavItem to="/departments" label="Visão geral" icon={Briefcase} end />
+        <SidebarGroup id="departments" label="Departments" badge={totalAgents}>
+          <NavItem to="/departments" label="Visão geral" icon={Briefcase} end />
+          {DEPARTMENTS.map(d => (
+            <NavItem
+              key={d.id}
+              to={`/departments/${d.id}`}
+              label={d.label}
+              icon={DEPT_ICON_MAP[d.icon]}
+              badge={deptCounts[d.id]}
+              accent={d.color}
+            />
+          ))}
+        </SidebarGroup>
 
-        <div className="sidebar-section-label">Growth</div>
-        <NavItem to="/growth/funnel"        label="Funil"          icon={TrendingUp} />
-        <NavItem to="/growth/leads"         label="Leads"          icon={UserPlus} />
-        <NavItem to="/growth/oportunidades" label="Oportunidades"  icon={Target} />
-        <NavItem to="/growth/rules"         label="Regras"         icon={Zap} />
+        <SidebarGroup id="growth" label="Growth">
+          <NavItem to="/growth/funnel"        label="Funil"          icon={TrendingUp} />
+          <NavItem to="/growth/leads"         label="Leads"          icon={UserPlus} />
+          <NavItem to="/growth/oportunidades" label="Oportunidades"  icon={Target} />
+          <NavItem to="/growth/rules"         label="Regras"         icon={Zap} />
+        </SidebarGroup>
 
-        <div className="sidebar-section-label">Manage</div>
-        <NavItem to="/employees" label="Employees" icon={Users} />
-        <NavItem to="/clients"   label="Clients"   icon={Building2} />
-        <NavItem to="/projects"  label="Projects"  icon={FolderKanban} />
-        <NavItem to="/tasks"     label="Tasks"     icon={CheckSquare} />
+        <SidebarGroup id="manage" label="Manage">
+          <NavItem to="/employees" label="Employees" icon={Users} />
+          <NavItem to="/clients"   label="Clients"   icon={Building2} />
+          <NavItem to="/projects"  label="Projects"  icon={FolderKanban} />
+          <NavItem to="/tasks"     label="Tasks"     icon={CheckSquare} />
+        </SidebarGroup>
 
-        <div className="sidebar-section-label">Build</div>
-        <NavItem to="/context"      label="Context"      icon={Library} />
-        <NavItem to="/recipes"      label="Recipes"      icon={ChefHat} />
-        <NavItem to="/skills"       label="Skills"       icon={Sparkles} />
-        <NavItem to="/integrations" label="Integrations" icon={Plug} />
+        <SidebarGroup id="build" label="Build">
+          <NavItem to="/context"      label="Context"      icon={Library} />
+          <NavItem to="/recipes"      label="Recipes"      icon={ChefHat} />
+          <NavItem to="/skills"       label="Skills"       icon={Sparkles} />
+          <NavItem to="/integrations" label="Integrations" icon={Plug} />
+        </SidebarGroup>
 
-        <div className="sidebar-section-label">Strategy</div>
-        <NavItem to="/"           label="Overview"    icon={LayoutDashboard} end />
-        <NavItem to="/roadmap"    label="Roadmap"     icon={Map} />
-        <NavItem to="/watchers"   label="Watchers"    icon={Eye} />
-        <NavItem to="/competitors" label="Competitors" icon={Swords} />
-        <NavItem to="/verticais"  label="Verticais"   icon={Layers} />
+        <SidebarGroup id="strategy" label="Strategy">
+          <NavItem to="/"           label="Overview"    icon={LayoutDashboard} end />
+          <NavItem to="/roadmap"    label="Roadmap"     icon={Map} />
+          <NavItem to="/watchers"   label="Watchers"    icon={Eye} />
+          <NavItem to="/competitors" label="Competitors" icon={Swords} />
+          <NavItem to="/verticais"  label="Verticais"   icon={Layers} />
+        </SidebarGroup>
 
-        <div className="sidebar-section-label">Settings</div>
-        <NavItem to="/connections" label="Connections" icon={Plug2} />
-        <NavItem to="/skills"      label="Skills"      icon={Sparkles} />
-        <NavItem to="/company"     label="Company"     icon={SettingsIcon} />
+        <SidebarGroup id="settings" label="Settings">
+          <NavItem to="/connections" label="Connections" icon={Plug2} />
+          <NavItem to="/company"     label="Company"     icon={SettingsIcon} />
+        </SidebarGroup>
 
-        <div className="sidebar-section-label">Dev</div>
-        <NavItem to="/agentes" label="Agentes" icon={Bot} />
+        <SidebarGroup id="dev" label="Dev">
+          <NavItem to="/agentes" label="Agentes" icon={Bot} />
+        </SidebarGroup>
       </div>
     </aside>
   )
