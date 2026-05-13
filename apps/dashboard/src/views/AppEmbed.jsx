@@ -5,6 +5,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { useAppShellStore } from '../store'
 import { useApps } from '../hooks/useApps.js'
+import SurfaceSwitcher from '../components/SurfaceSwitcher.jsx'
+import ComingSoonSurface from '../components/ComingSoonSurface.jsx'
 
 const HEALTH_TIMEOUT_MS = 4000
 
@@ -62,6 +64,28 @@ export default function AppEmbed() {
   }
   if (!app.embed) return null
 
+  // Surfaces coming-soon: placeholder uniforme + permite switching para siblings reais
+  if (app.coming_soon) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+        <div style={{
+          padding: '6px 14px',
+          background: 'var(--bg-card)',
+          borderBottom: '1px solid var(--border)',
+          display: 'flex', alignItems: 'center', gap: 10,
+          fontSize: '0.7rem', color: 'var(--text-dim)',
+          flexShrink: 0, height: 32, boxSizing: 'border-box',
+        }}>
+          <span style={{ fontWeight: 600, color: 'var(--text)' }}>{app.label}</span>
+          <SurfaceSwitcher apps={apps} currentApp={app} />
+        </div>
+        <div style={{ flex: 1, overflow: 'auto' }}>
+          <ComingSoonSurface app={app} />
+        </div>
+      </div>
+    )
+  }
+
   if (import.meta.env.DEV && healthCheck.alive === false) {
     return <ServerDownHint app={app} onRetry={() => setReloadKey(k => k + 1)} onBackToDashboard={() => setActiveApp('dashboard')} />
   }
@@ -94,6 +118,7 @@ export default function AppEmbed() {
         flexShrink: 0, height: 32, boxSizing: 'border-box',
       }}>
         <span style={{ fontWeight: 600, color: 'var(--text)' }}>{app.label}</span>
+        <SurfaceSwitcher apps={apps} currentApp={app} />
         <code style={{
           fontFamily: 'JetBrains Mono, monospace', fontSize: '0.65rem',
           color: 'var(--info)', opacity: 0.7,
