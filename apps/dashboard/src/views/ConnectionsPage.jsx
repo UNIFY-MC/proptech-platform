@@ -3,9 +3,10 @@
 // + atalhos para correr edge fns manualmente (teste).
 // Listas dos secrets (NEWS_API_KEY, IG_GRAPH_TOKEN) em modo "configurado/não"
 
-import { useState } from 'react'
-import { Plus, Newspaper, Instagram, Rss, Globe, Play, Trash2, X } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Plus, Newspaper, Instagram, Rss, Globe, Play, Trash2, X, CheckCircle2, AlertCircle, Clock } from 'lucide-react'
 import { useWatcherSources } from '../hooks/useWatcherSources.js'
+import { supabase } from '../lib/supabase.js'
 
 const KIND_META = {
   news_query:      { icon: Newspaper, label: 'News query',     color: '#3b82f6' },
@@ -116,6 +117,76 @@ const inputStyle = {
   fontFamily: 'inherit',
 }
 
+function CronStatusPanel() {
+  const [jobs, setJobs] = useState([])
+  useEffect(() => {
+    if (!supabase) return
+    let cancelled = false
+    async function load() {
+      const { data } = await supabase.from('cron_jobs_status').select('*')
+      if (!cancelled) setJobs(data || [])
+    }
+    load()
+    const t = setInterval(load, 30_000)
+    return () => { cancelled = true; clearInterval(t) }
+  }, [])
+
+  if (jobs.length === 0) {
+    return (
+      <div style={{
+        padding: 10, marginBottom: 12,
+        background: 'var(--bg-card)',
+        border: '1px dashed var(--border)', borderRadius: 6,
+        fontSize: '0.7rem', color: 'var(--text-dim)',
+      }}>
+        ⏰ Cron jobs não configurados — aplica <code>20260513_watchers_cron.sql</code> em Supabase + define GUC
+        <code> app.settings.supabase_url</code> e <code>service_role_key</code>.
+      </div>
+    )
+  }
+
+  return (
+    <div style={{
+      display: 'grid',
+      gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+      gap: 8,
+      marginBottom: 16,
+    }}>
+      {jobs.map(j => {
+        const ok = j.last_status === 'succeeded' || !j.last_status
+        const Icon = j.last_status === 'failed' ? AlertCircle : (j.last_status === 'succeeded' ? CheckCircle2 : Clock)
+        const color = j.last_status === 'failed' ? '#ef4444' : (j.last_status === 'succeeded' ? '#10b981' : '#6b7280')
+        return (
+          <div key={j.jobname} style={{
+            padding: '10px 12px',
+            background: 'var(--bg-card)',
+            border: '1px solid var(--border)',
+            borderLeft: `3px solid ${color}`,
+            borderRadius: 6,
+            display: 'flex', flexDirection: 'column', gap: 4,
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <Icon size={12} color={color} />
+              <span style={{ fontSize: '0.7rem', fontFamily: 'JetBrains Mono, monospace', fontWeight: 600, color: 'var(--text)' }}>
+                {j.jobname.replace(/_/g, '-')}
+              </span>
+            </div>
+            <div style={{ fontSize: '0.58rem', color: 'var(--text-dim)', fontFamily: 'JetBrains Mono, monospace' }}>
+              <code>{j.schedule}</code>
+            </div>
+            <div style={{ fontSize: '0.6rem', color: 'var(--text-dim)' }}>
+              {j.last_run_at
+                ? `Last: ${new Date(j.last_run_at).toLocaleString('pt-PT', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}`
+                : 'Nunca correu'}
+              {j.last_status && ` · ${j.last_status}`}
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 export default function ConnectionsPage() {
   const { sources, create, toggle, remove } = useWatcherSources()
   const [createOpen, setCreateOpen] = useState(false)
@@ -137,7 +208,7 @@ export default function ConnectionsPage() {
         <div>
           <h1 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700, color: 'var(--text)' }}>Connections</h1>
           <p style={{ margin: '2px 0 0', fontSize: '0.7rem', color: 'var(--text-dim)' }}>
-            Watcher sources: notícias, Instagram, RSS, concorrência. Edge fns puxam conteúdo → Inbox.
+            Watcher sources: notícias, Instagram, X, concorrência, RSS. Edge fns puxam conteúdo → Inbox.
           </p>
         </div>
         <div style={{ flex: 1 }} />
@@ -145,7 +216,13 @@ export default function ConnectionsPage() {
           <Play size={11} /> News
         </button>
         <button onClick={() => runWatcher('watcher-instagram')} style={smallBtn} title="Correr watcher-instagram manualmente">
-          <Play size={11} /> Instagram
+          <Play size={11} /> IG
+        </button>
+        <button onClick={() => runWatcher('watcher-x')} style={smallBtn} title="Correr watcher-x manualmente">
+          <Play size={11} /> X
+        </button>
+        <button onClick={() => runWatcher('watcher-competitor')} style={smallBtn} title="Correr watcher-competitor manualmente">
+          <Play size={11} /> Competitor
         </button>
         <button onClick={() => runWatcher('daily-roundup')} style={smallBtn} title="Correr daily-roundup manualmente">
           <Play size={11} /> Roundup
@@ -157,6 +234,8 @@ export default function ConnectionsPage() {
           display: 'inline-flex', alignItems: 'center', gap: 5,
         }}><Plus size={12} /> Source</button>
       </div>
+
+      <CronStatusPanel />
 
       {runResult && (
         <div style={{
@@ -225,12 +304,21 @@ export default function ConnectionsPage() {
         background: 'var(--bg-card)', border: '1px dashed var(--border)',
         borderRadius: 8, fontSize: '0.72rem', color: 'var(--text-dim)', lineHeight: 1.5,
       }}>
-        <div style={{ color: 'var(--text)', fontWeight: 600, marginBottom: 6 }}>Secrets configurados (verifica no Supabase Edge):</div>
+        <div style={{ color: 'var(--text)', fontWeight: 600, marginBottom: 6 }}>Secrets necessários (verifica no Supabase Edge Functions → Secrets):</div>
         <ul style={{ margin: 0, paddingLeft: 18 }}>
-          <li><code>NEWS_API_KEY</code> — necessário para watcher-news (NewsAPI.org)</li>
-          <li><code>IG_GRAPH_TOKEN</code> — necessário para watcher-instagram (Facebook Graph long-lived token)</li>
-          <li><code>ANTHROPIC_API_KEY</code> — necessário para agent-chat + daily-roundup (futuro AI summary)</li>
+          <li><code>ANTHROPIC_API_KEY</code> — agent-chat, daily-roundup (resumo IA), watcher-competitor + watcher-x (análise "why it matters")</li>
+          <li><code>NEWS_API_KEY</code> — watcher-news (newsapi.org · free 100/dia)</li>
+          <li><code>IG_GRAPH_TOKEN</code> — watcher-instagram (Facebook Graph long-lived)</li>
         </ul>
+        <div style={{ marginTop: 10, color: 'var(--text)', fontWeight: 600 }}>X / Twitter:</div>
+        <div>Sem secret. Configura RSS bridge no campo <code>rss_url</code> da source (kind=x_search):</div>
+        <ul style={{ margin: '4px 0', paddingLeft: 18 }}>
+          <li><code>rss.app</code> — cria conta, adiciona handle, copia URL do feed RSS</li>
+          <li><code>rsshub.app/twitter/user/&lt;handle&gt;</code> — gratuito, instável às vezes</li>
+        </ul>
+        <div style={{ marginTop: 10, color: 'var(--text)', fontWeight: 600 }}>LinkedIn:</div>
+        <div>Sem API pública. Opções pagas: <code>Apify LinkedIn actor</code> (~$30/mês) ou <code>PhantomBuster</code> (~$30/mês).
+        Quando configurares, podes adicionar source kind=linkedin_user com <code>config.scraper_url</code>.</div>
       </div>
 
       {createOpen && <CreateSourceModal onClose={() => setCreateOpen(false)} onCreate={create} />}
