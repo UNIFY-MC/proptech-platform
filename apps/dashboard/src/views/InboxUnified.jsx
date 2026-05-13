@@ -19,6 +19,7 @@ import { useWatcherProfiles } from '../hooks/useWatcherProfiles.js'
 import { useDrawer } from '../context/DrawerContext'
 import InboxItemDrawer from '../components/inbox/InboxItemDrawer'
 import AskAnythingBar from '../components/inbox/AskAnythingBar.jsx'
+import ExpandableInboxRow from '../components/inbox/ExpandableInboxRow.jsx'
 
 const FILTER_OPTIONS = [
   { id: 'all',       label: 'All' },
@@ -248,14 +249,32 @@ export default function InboxUnified() {
         {groups.today.length > 0 && (
           <DaySection label="Hoje" count={groups.today.length}>
             {groups.today.map(item => (
-              <FeedRow key={item.id} item={item} onClick={() => openItem(item)} />
+              <ExpandableInboxRow
+                key={item.id}
+                item={item}
+                onClickLegacy={openItem}
+                onMarkRead={async (id) => { await markAsRead(id) }}
+                onArchive={() => { /* refresh via realtime */ }}
+                onCreateTask={({ kind, item }) => {
+                  alert(`Criar task "${kind}" a partir de "${item.title}" — Sprint β (system.tasks schema)`)
+                }}
+              />
             ))}
           </DaySection>
         )}
         {groups.earlier.length > 0 && (
           <DaySection label="Anterior" count={groups.earlier.length}>
             {groups.earlier.map(item => (
-              <FeedRow key={item.id} item={item} onClick={() => openItem(item)} />
+              <ExpandableInboxRow
+                key={item.id}
+                item={item}
+                onClickLegacy={openItem}
+                onMarkRead={async (id) => { await markAsRead(id) }}
+                onArchive={() => {}}
+                onCreateTask={({ kind, item }) => {
+                  alert(`Criar task "${kind}" a partir de "${item.title}" — Sprint β`)
+                }}
+              />
             ))}
           </DaySection>
         )}
