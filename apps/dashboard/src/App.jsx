@@ -29,6 +29,7 @@ import GrowthFunnel from './views/GrowthFunnel.jsx'
 import GrowthLeads from './views/GrowthLeads.jsx'
 import GrowthOportunidades from './views/GrowthOportunidades.jsx'
 import GrowthRules from './views/GrowthRules.jsx'
+import DepartmentPage from './views/DepartmentPage.jsx'
 import StubView from './views/StubView.jsx'
 import { useAppShellStore } from './store'
 
@@ -112,6 +113,8 @@ export default function App() {
               <Route path="/growth/leads"        element={<GrowthLeads />} />
               <Route path="/growth/oportunidades" element={<GrowthOportunidades />} />
               <Route path="/growth/rules"        element={<GrowthRules />} />
+              <Route path="/departments"         element={<DepartmentPage />} />
+              <Route path="/departments/:slug"   element={<DepartmentPage />} />
               <Route path="/clients"      element={<StubView title="Clients" />} />
               <Route path="/projects"     element={<StubView title="Projects" />} />
               <Route path="/tasks"        element={<StubView title="Tasks" />} />

@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom'
 import SkillModal from '../components/SkillModal.jsx'
 import RecipeModal from '../components/RecipeModal.jsx'
 import EmployeeHeader from '../components/EmployeeHeader.jsx'
+import { DEPARTMENTS, deptFor } from '../lib/departments.js'
 
 const TRIGGER_COLORS = {
   event:    { bg: 'rgba(59,130,246,0.12)',  color: 'var(--info)',     label: 'EVENT'  },
@@ -110,6 +111,124 @@ function MarkdownProse({ text }) {
 }
 
 const PREVIEW_LEN = 400
+
+// DeptEditor — dropdown editável do departamento do agent
+// DEV (persistência local): mostra snippet PowerShell para o user aplicar manualmente
+// PROD (futuro): chamará edge function system-update-agent que escreve em BD
+function DeptEditor({ emp }) {
+  const current = deptFor(emp.department) || DEPARTMENTS.find(d => d.id === 'operations')
+  const [draft, setDraft] = useState(current?.id || 'operations')
+  const [dirty, setDirty] = useState(false)
+  const [snippet, setSnippet] = useState(null)
+
+  function onChange(e) {
+    setDraft(e.target.value)
+    setDirty(e.target.value !== current?.id)
+  }
+
+  function save() {
+    const ps = `python -c "import json; p='.claude/employees/${emp.id}.meta.json'; d=json.load(open(p,encoding='utf-8')); d['department']='${draft}'; json.dump(d, open(p,'w',encoding='utf-8'), ensure_ascii=False, indent=2)"`
+    setSnippet(ps)
+  }
+
+  const cur = deptFor(draft)
+
+  return (
+    <div style={{
+      background: 'var(--bg-card-soft)',
+      border: '1px solid var(--border-soft)',
+      borderLeft: `3px solid ${cur?.color || 'var(--border)'}`,
+      borderRadius: 8,
+      padding: '10px 14px',
+      marginBottom: 12,
+    }}>
+      <div style={{
+        fontSize: '0.55rem',
+        color: 'var(--text-dim)',
+        textTransform: 'uppercase',
+        letterSpacing: '0.1em',
+        fontWeight: 700,
+        marginBottom: 4,
+      }}>Departamento</div>
+      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+        <select
+          value={draft}
+          onChange={onChange}
+          style={{
+            flex: 1,
+            background: 'var(--bg-card-elevated)',
+            border: '1px solid var(--border-soft)',
+            borderRadius: 5,
+            color: 'var(--text)',
+            fontSize: '0.78rem',
+            padding: '5px 8px',
+            outline: 'none',
+            cursor: 'pointer',
+          }}
+        >
+          {DEPARTMENTS.map(d => (
+            <option key={d.id} value={d.id}>
+              {d.label}{d.planned ? ' (planeado)' : ''}
+            </option>
+          ))}
+        </select>
+        {dirty && (
+          <button
+            onClick={save}
+            style={{
+              background: 'var(--primary)',
+              border: 'none',
+              color: '#fff',
+              padding: '5px 10px',
+              borderRadius: 5,
+              fontSize: '0.7rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+            }}
+          >Guardar</button>
+        )}
+      </div>
+      {snippet && (
+        <div style={{
+          marginTop: 8,
+          padding: 10,
+          background: 'var(--bg-card-elevated)',
+          border: '1px solid var(--border-soft)',
+          borderRadius: 5,
+          fontSize: '0.62rem',
+          color: 'var(--text-dim)',
+        }}>
+          <div style={{ marginBottom: 6, color: 'var(--text)' }}>
+            ⚠ Persistência local — corre este comando no terminal do projecto:
+          </div>
+          <code style={{
+            display: 'block',
+            fontFamily: 'JetBrains Mono, monospace',
+            fontSize: '0.6rem',
+            color: 'var(--info)',
+            wordBreak: 'break-all',
+            padding: 6,
+            background: 'var(--bg-card)',
+            borderRadius: 3,
+          }}>{snippet}</code>
+          <button
+            onClick={() => navigator.clipboard?.writeText(snippet).then(() => setSnippet(null))}
+            style={{
+              marginTop: 6,
+              background: 'none',
+              border: '1px solid var(--border-soft)',
+              color: 'var(--text-dim)',
+              padding: '3px 8px',
+              borderRadius: 4,
+              fontSize: '0.6rem',
+              cursor: 'pointer',
+            }}
+          >Copiar e fechar</button>
+        </div>
+      )}
+    </div>
+  )
+}
 
 export default function EmployeePage({ data }) {
   const { slug } = useParams()
@@ -270,6 +389,9 @@ export default function EmployeePage({ data }) {
           maxHeight: 'calc(100vh - 48px)',
           overflowY: 'auto',
         }}>
+          {/* Department editor */}
+          <DeptEditor emp={emp} />
+
           {/* Quick stats */}
           <div style={{
             background: 'var(--bg-card-soft)', border: '1px solid var(--border-soft)',
