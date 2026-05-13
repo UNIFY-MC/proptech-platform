@@ -38,7 +38,48 @@ function ageLabel(iso) {
   return `${Math.floor(h / 24)}d`
 }
 
-function renderMd(md) {
+// Checkbox interactivo persistido em localStorage por itemId+lineIdx
+function InteractiveCheckbox({ itemId, lineIdx, defaultChecked, label }) {
+  const storageKey = `roundup-check:${itemId}:${lineIdx}`
+  const initial = (() => {
+    try { return localStorage.getItem(storageKey) === '1' || defaultChecked } catch { return defaultChecked }
+  })()
+  const [checked, setChecked] = useState(initial)
+  function toggle() {
+    const next = !checked
+    setChecked(next)
+    try { localStorage.setItem(storageKey, next ? '1' : '0') } catch {}
+  }
+  return (
+    <label style={{
+      display: 'flex', gap: 10, alignItems: 'flex-start',
+      padding: '6px 8px',
+      borderRadius: 6,
+      cursor: 'pointer',
+      fontSize: '0.82rem',
+      color: checked ? 'var(--text-dim)' : 'var(--text)',
+      textDecoration: checked ? 'line-through' : 'none',
+      lineHeight: 1.5,
+      transition: 'background 0.1s',
+    }} onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-elevated)'}
+       onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+      <span style={{
+        width: 16, height: 16, borderRadius: 4,
+        border: '1.5px solid ' + (checked ? '#10b981' : 'var(--text-dim)'),
+        background: checked ? '#10b981' : 'transparent',
+        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+        flexShrink: 0, marginTop: 2,
+        transition: 'all 0.15s',
+      }}>
+        {checked && <span style={{ color: '#fff', fontSize: 11, lineHeight: 1, fontWeight: 700 }}>✓</span>}
+      </span>
+      <input type="checkbox" checked={checked} onChange={toggle} style={{ display: 'none' }} />
+      <span dangerouslySetInnerHTML={{ __html: label.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }} />
+    </label>
+  )
+}
+
+function renderMd(md, itemId) {
   if (!md) return null
   const lines = md.split('\n')
   const out = []
@@ -51,6 +92,13 @@ function renderMd(md) {
     }
     if (t.startsWith('### ')) {
       out.push(<h4 key={key++} style={{ fontSize: '0.82rem', fontWeight: 600, margin: '6px 0 3px', color: 'var(--text)' }}>{t.slice(4)}</h4>); continue
+    }
+    // Checkbox interactivo: - [ ] ou - [x]
+    const cb = t.match(/^[-*]\s+\[([ xX])\]\s+(.+)$/)
+    if (cb) {
+      out.push(<InteractiveCheckbox key={key} itemId={itemId} lineIdx={key} defaultChecked={cb[1].toLowerCase() === 'x'} label={cb[2]} />)
+      key++
+      continue
     }
     if (t.startsWith('- ') || t.startsWith('* ')) {
       out.push(

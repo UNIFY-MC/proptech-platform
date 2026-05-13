@@ -1,353 +1,342 @@
-// ConfigureFeedDrawer — drawer lateral do /inbox
-// 3 tabs:
-//   1. Sugeridos  — curated list de system.suggested_influencers
-//                   (PropTech PT — concorrentes, VCs, news, etc)
-//   2. A seguir   — watcher_sources active=true (toggle on/off)
-//   3. Filtros    — placeholder para mute por vertical, source type
-//
-// Sugerido com botão "Seguir" → INSERT em watcher_sources
-// Active = highlight ✓ ao lado
+// ConfigureFeedDrawer — Feed Configuration modal estilo CookAI
+// Layout: 7 SOURCES counter + Synthesize button + Watch All + tabs por sector
+// + grid 3-col (avatar + nome + @handle + botão add/checkmark)
+// + section CUSTOM no fundo com pills coloridas (sources manuais)
 
-import { useState } from 'react'
-import {
-  X, Plus, Check, Instagram, Linkedin, Twitter, Globe, Rss, Youtube,
-  Music, MessageSquare, Sparkles, Shield, Building2, Briefcase, TrendingUp,
-} from 'lucide-react'
+import { useState, useMemo } from 'react'
+import { X, Plus, Check, Sparkles, Eye } from 'lucide-react'
 import { useSuggestedInfluencers } from '../../hooks/useSuggestedInfluencers.js'
 import { useWatcherSources } from '../../hooks/useWatcherSources.js'
 
-const PLATFORM_META = {
-  instagram: { icon: Instagram,    color: '#ec4899', label: 'Instagram' },
-  linkedin:  { icon: Linkedin,     color: '#0a66c2', label: 'LinkedIn'  },
-  x:         { icon: Twitter,      color: '#1d9bf0', label: 'X / Twitter' },
-  tiktok:    { icon: Music,        color: '#ff0050', label: 'TikTok'    },
-  youtube:   { icon: Youtube,      color: '#ff0000', label: 'YouTube'   },
-  web:       { icon: Globe,        color: '#10b981', label: 'Web'       },
-  rss:       { icon: Rss,          color: '#f59e0b', label: 'RSS'       },
-  reddit:    { icon: MessageSquare,color: '#ff4500', label: 'Reddit'    },
-}
-
-const CATEGORY_ICON = {
-  'Concorrente directo V2':   Building2,
-  'Concorrente directo V4':   TrendingUp,
-  'Marketplace imobiliário':  Building2,
-  'VC PropTech PT':           Briefcase,
-  'VC tech PT':               Briefcase,
-  'Real estate luxury PT':    Sparkles,
-  'Imprensa imobiliário PT':  Rss,
-}
-
-const TABS = [
-  { id: 'suggested', label: 'Sugeridos' },
-  { id: 'following', label: 'A seguir' },
-  { id: 'filters',   label: 'Filtros' },
+const SECTORS = [
+  { id: 'all',          label: 'All' },
+  { id: 'real_estate',  label: 'Real Estate' },
+  { id: 'proptech',     label: 'PropTech' },
+  { id: 'concorrentes', label: 'Concorrentes' },
+  { id: 'venture',      label: 'VC' },
+  { id: 'news',         label: 'News' },
+  { id: 'own',          label: 'Marca' },
 ]
 
+// Cor de pill custom — distingue por hash do label
+const CUSTOM_COLORS = ['#ef4444', '#ec4899', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6']
+function customColor(label) {
+  let h = 0
+  for (let i = 0; i < label.length; i++) h = (h * 31 + label.charCodeAt(i)) >>> 0
+  return CUSTOM_COLORS[h % CUSTOM_COLORS.length]
+}
+
+function avatarLetters(name) {
+  if (!name) return '?'
+  const parts = name.replace(/^@/, '').split(/[\s_.-]+/).filter(Boolean)
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase()
+  return parts[0].slice(0, 2).toUpperCase()
+}
+
+function avatarGradient(name) {
+  let h = 0
+  for (let i = 0; i < (name || '').length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0
+  const palette = [
+    ['#534AB7', '#8b5cf6'], ['#ec4899', '#f59e0b'], ['#10b981', '#06b6d4'],
+    ['#3b82f6', '#0ea5e9'], ['#f59e0b', '#ef4444'], ['#84cc16', '#10b981'],
+    ['#a855f7', '#ec4899'], ['#0a66c2', '#3b82f6'],
+  ]
+  const p = palette[h % palette.length]
+  return `linear-gradient(135deg, ${p[0]}, ${p[1]})`
+}
+
 export default function ConfigureFeedDrawer({ onClose }) {
-  const [tab, setTab] = useState('suggested')
-  const [platformFilter, setPlatformFilter] = useState('all')
+  const [tab, setTab] = useState('all')
   const { suggestions, follow } = useSuggestedInfluencers()
-  const { sources, toggle, remove, refresh } = useWatcherSources()
+  const { sources, toggle, remove, create, refresh } = useWatcherSources()
+  const [customInput, setCustomInput] = useState('')
 
-  // Sugeridos: filter por plataforma
-  const visibleSuggestions = platformFilter === 'all'
-    ? suggestions
-    : suggestions.filter(s => s.platform === platformFilter)
+  // Counts por sector
+  const counts = useMemo(() => {
+    const c = { all: suggestions.length }
+    for (const s of suggestions) c[s.sector] = (c[s.sector] || 0) + 1
+    return c
+  }, [suggestions])
 
-  // A seguir = watcher_sources com active=true
-  const followingSources = sources.filter(s => s.active)
+  const visible = tab === 'all' ? suggestions : suggestions.filter(s => s.sector === tab)
 
-  // Counts por plataforma para pills
-  const counts = suggestions.reduce((acc, s) => {
-    acc[s.platform] = (acc[s.platform] || 0) + 1
-    return acc
-  }, { all: suggestions.length })
+  // Custom sources = watcher_sources active com config.suggested_id === null (não vieram de uma sugestão)
+  const customSources = sources.filter(s => s.active && !s.config?.suggested_id)
 
-  async function handleFollow(sugg) {
-    await follow(sugg)
+  // Total sources (a seguir)
+  const totalActive = sources.filter(s => s.active).length
+
+  async function handleAddCustom(e) {
+    e?.preventDefault?.()
+    if (!customInput.trim()) return
+    const raw = customInput.trim()
+    // Detecta tipo: @handle = instagram_user, url = competitor_site
+    const isHandle = raw.startsWith('@')
+    const isUrl = raw.includes('://') || raw.includes('.')
+    if (isHandle) {
+      await create({
+        kind: 'instagram_user',
+        label: raw,
+        config: { handle: raw.slice(1) },
+        active: true,
+      })
+    } else if (isUrl) {
+      const url = raw.startsWith('http') ? raw : 'https://' + raw
+      await create({
+        kind: 'competitor_site',
+        label: new URL(url).hostname,
+        config: { url },
+        active: true,
+      })
+    } else {
+      // Default: trata como news query
+      await create({
+        kind: 'news_query',
+        label: raw,
+        config: { query: raw, language: 'pt', country: 'pt' },
+        active: true,
+      })
+    }
+    setCustomInput('')
+    await refresh()
+  }
+
+  async function handleFollowAll() {
+    const toFollow = suggestions.filter(s => !s.already_following && (tab === 'all' || s.sector === tab))
+    for (const s of toFollow) {
+      // eslint-disable-next-line no-await-in-loop
+      await follow(s)
+    }
     await refresh()
   }
 
   return (
     <div style={{
-      position: 'fixed', top: 0, right: 0, bottom: 0,
-      width: 'min(520px, 100vw)',
-      background: 'var(--bg)', borderLeft: '1px solid var(--border)',
-      boxShadow: '-8px 0 24px rgba(0,0,0,0.18)',
-      display: 'flex', flexDirection: 'column', zIndex: 1000,
-    }}>
-      {/* Header */}
-      <div style={{
-        padding: '14px 18px', borderBottom: '1px solid var(--border)',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      position: 'fixed', inset: 0,
+      background: 'rgba(0,0,0,0.55)',
+      display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
+      zIndex: 1000,
+      paddingTop: 60, paddingBottom: 40,
+      overflowY: 'auto',
+    }} onClick={onClose}>
+      <div onClick={e => e.stopPropagation()} style={{
+        background: 'var(--bg-card)',
+        border: '1px solid var(--border)',
+        borderRadius: 14,
+        width: 'min(1040px, 96vw)',
+        boxShadow: '0 20px 60px rgba(0,0,0,0.45)',
+        padding: '20px 28px 24px',
+        display: 'flex', flexDirection: 'column',
+        gap: 14,
       }}>
-        <div>
-          <div style={{ fontSize: '0.95rem', fontWeight: 700 }}>Configurar feed</div>
-          <div style={{ fontSize: '0.65rem', color: 'var(--text-dim)', marginTop: 2 }}>
-            Sugestões curated para Property007 + sources activas
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <h2 style={{ margin: 0, fontSize: '1.35rem', fontWeight: 700, color: 'var(--text)' }}>
+            Feed Configuration
+          </h2>
+          <span style={{
+            background: 'var(--bg-elevated)',
+            color: 'var(--text)',
+            padding: '4px 10px',
+            borderRadius: 99,
+            fontSize: '0.62rem',
+            fontFamily: 'JetBrains Mono, monospace',
+            fontWeight: 700,
+            letterSpacing: '0.08em',
+            textTransform: 'uppercase',
+          }}>
+            {totalActive} sources
+          </span>
+          <button style={{
+            background: 'var(--bg-elevated)',
+            border: '1px solid var(--border)',
+            color: 'var(--text)',
+            padding: '6px 14px', borderRadius: 99,
+            cursor: 'pointer',
+            fontSize: '0.72rem', fontWeight: 600,
+            display: 'inline-flex', alignItems: 'center', gap: 5,
+          }} onClick={() => alert('Synthesize: agente lê todos os items 24h e gera meta-resumo (Sprint próximo)')}>
+            <Sparkles size={12} /> Synthesize
+          </button>
+          <div style={{ flex: 1 }} />
+          <button onClick={onClose} style={{
+            background: 'none', border: 'none', cursor: 'pointer',
+            color: 'var(--text-dim)', padding: 4,
+          }}><X size={18} /></button>
+        </div>
+
+        {/* Tabs + Watch All */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+          {SECTORS.map(s => {
+            const active = tab === s.id
+            const n = counts[s.id] || 0
+            return (
+              <button key={s.id} onClick={() => setTab(s.id)} style={{
+                padding: '6px 14px',
+                borderRadius: 99,
+                background: active ? 'var(--text)' : 'var(--bg-elevated)',
+                color: active ? 'var(--bg)' : 'var(--text-dim)',
+                border: '1px solid ' + (active ? 'var(--text)' : 'var(--border)'),
+                cursor: 'pointer',
+                fontSize: '0.72rem',
+                fontWeight: active ? 700 : 500,
+                display: 'inline-flex', alignItems: 'center', gap: 5,
+              }}>
+                {s.label}
+                {n > 0 && (
+                  <span style={{
+                    opacity: 0.7,
+                    fontFamily: 'JetBrains Mono, monospace',
+                    fontSize: '0.6rem',
+                  }}>{n}</span>
+                )}
+              </button>
+            )
+          })}
+          <div style={{ flex: 1 }} />
+          <button onClick={handleFollowAll} style={{
+            background: 'var(--primary)', color: '#fff', border: 'none',
+            padding: '6px 14px', borderRadius: 99, cursor: 'pointer',
+            fontSize: '0.72rem', fontWeight: 600,
+            display: 'inline-flex', alignItems: 'center', gap: 5,
+          }}>
+            <Eye size={12} /> Watch All
+          </button>
+        </div>
+
+        {/* Grid 3-col */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(3, 1fr)',
+          gap: 10,
+        }}>
+          {visible.map(s => (
+            <SuggestionCard key={s.id} sugg={s} onFollow={() => follow(s).then(refresh)} />
+          ))}
+          {visible.length === 0 && (
+            <div style={{
+              gridColumn: '1 / -1',
+              padding: 30, textAlign: 'center',
+              color: 'var(--text-dim)', fontSize: '0.78rem',
+              background: 'var(--bg-elevated)', borderRadius: 8,
+            }}>
+              Sem sugestões neste sector.
+            </div>
+          )}
+        </div>
+
+        {/* CUSTOM section */}
+        <div style={{ marginTop: 10 }}>
+          <div style={{
+            fontSize: '0.62rem', fontWeight: 700,
+            color: 'var(--text-dim)', textTransform: 'uppercase',
+            letterSpacing: '0.1em', marginBottom: 8,
+          }}>Custom</div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
+            {customSources.map(src => {
+              const label = src.config?.handle ? `@${src.config.handle}` : (src.label || '?')
+              const color = customColor(label)
+              return (
+                <span key={src.id} style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 5,
+                  padding: '5px 10px',
+                  borderRadius: 99,
+                  background: `${color}25`,
+                  border: `1px solid ${color}55`,
+                  color: color,
+                  fontSize: '0.7rem', fontWeight: 600,
+                }}>
+                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: color }} />
+                  {label}
+                  <button onClick={() => { if (confirm(`Remover ${label}?`)) remove(src.id) }} style={{
+                    background: 'none', border: 'none', cursor: 'pointer',
+                    color: color, padding: 0, display: 'inline-flex',
+                  }}><X size={11} /></button>
+                </span>
+              )
+            })}
+
+            <form onSubmit={handleAddCustom} style={{ display: 'inline-flex', gap: 4 }}>
+              <input
+                value={customInput}
+                onChange={e => setCustomInput(e.target.value)}
+                placeholder="+ @handle / url / query"
+                style={{
+                  background: 'var(--bg-elevated)',
+                  border: '1px solid var(--border)',
+                  borderRadius: 99,
+                  padding: '5px 12px',
+                  fontSize: '0.7rem',
+                  color: 'var(--text)',
+                  outline: 'none',
+                  width: 200,
+                }}
+              />
+            </form>
           </div>
         </div>
-        <button onClick={onClose} style={{
-          background: 'none', border: 'none', cursor: 'pointer',
-          color: 'var(--text-dim)', padding: '0 4px',
-        }}><X size={18} /></button>
-      </div>
-
-      {/* Tabs */}
-      <div style={{
-        display: 'flex', borderBottom: '1px solid var(--border)',
-      }}>
-        {TABS.map(t => (
-          <button key={t.id} onClick={() => setTab(t.id)} style={{
-            flex: 1, padding: '10px 12px',
-            background: 'none', border: 'none', cursor: 'pointer',
-            color: tab === t.id ? 'var(--primary)' : 'var(--text-dim)',
-            fontSize: '0.74rem',
-            fontWeight: tab === t.id ? 600 : 500,
-            borderBottom: tab === t.id ? '2px solid var(--primary)' : '2px solid transparent',
-          }}>
-            {t.label}
-            {t.id === 'following' && followingSources.length > 0 && (
-              <span style={{
-                marginLeft: 5,
-                fontFamily: 'JetBrains Mono, monospace',
-                fontSize: '0.6rem',
-                opacity: 0.7,
-              }}>{followingSources.length}</span>
-            )}
-          </button>
-        ))}
-      </div>
-
-      {/* Tab content */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '12px 14px' }}>
-
-        {tab === 'suggested' && (
-          <>
-            {/* Platform pills filter */}
-            <div style={{ display: 'flex', gap: 5, marginBottom: 12, flexWrap: 'wrap' }}>
-              <PillBtn active={platformFilter === 'all'} onClick={() => setPlatformFilter('all')}>
-                Todas <span style={{ opacity: 0.6 }}>{counts.all}</span>
-              </PillBtn>
-              {Object.entries(PLATFORM_META).map(([id, meta]) => {
-                if (!counts[id]) return null
-                const Icon = meta.icon
-                const active = platformFilter === id
-                return (
-                  <PillBtn key={id}
-                    active={active}
-                    color={meta.color}
-                    onClick={() => setPlatformFilter(id)}>
-                    <Icon size={10} /> {meta.label} <span style={{ opacity: 0.6 }}>{counts[id]}</span>
-                  </PillBtn>
-                )
-              })}
-            </div>
-
-            {/* Suggestions list */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              {visibleSuggestions.map(s => (
-                <SuggestionRow key={s.id} sugg={s} onFollow={() => handleFollow(s)} />
-              ))}
-            </div>
-            {visibleSuggestions.length === 0 && (
-              <div style={{ padding: 24, textAlign: 'center', color: 'var(--text-dim)', fontSize: '0.78rem' }}>
-                Sem sugestões nesta plataforma.
-              </div>
-            )}
-          </>
-        )}
-
-        {tab === 'following' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            {followingSources.length === 0 && (
-              <div style={{
-                padding: 24, textAlign: 'center',
-                color: 'var(--text-dim)', fontSize: '0.78rem',
-                background: 'var(--bg-card)', border: '1px dashed var(--border)', borderRadius: 6,
-              }}>
-                Ainda não segues ninguém. Vai a "Sugeridos" para adicionar.
-              </div>
-            )}
-            {followingSources.map(s => (
-              <FollowingRow key={s.id} source={s}
-                onToggle={() => toggle(s.id, !s.active)}
-                onRemove={() => { if (confirm(`Deixar de seguir "${s.label}"?`)) remove(s.id) }} />
-            ))}
-          </div>
-        )}
-
-        {tab === 'filters' && (
-          <div style={{ padding: 12, fontSize: '0.78rem', color: 'var(--text-dim)', lineHeight: 1.5 }}>
-            <p style={{ margin: '0 0 10px', color: 'var(--text)' }}>Filtros do feed</p>
-            <p style={{ margin: 0 }}>
-              Mute por vertical · frequência digest · tipos de cards (news/instagram/competitor/roundup).
-            </p>
-            <p style={{ marginTop: 12, fontStyle: 'italic' }}>
-              Sprint próximo: implementação por toggle.
-            </p>
-          </div>
-        )}
       </div>
     </div>
   )
 }
 
-function PillBtn({ active, color = 'var(--primary)', onClick, children }) {
-  return (
-    <button onClick={onClick} style={{
-      display: 'inline-flex', alignItems: 'center', gap: 4,
-      padding: '4px 9px', borderRadius: 99,
-      background: active ? `${color}22` : 'var(--bg-elevated)',
-      border: `1px solid ${active ? color : 'var(--border)'}`,
-      color: active ? color : 'var(--text-dim)',
-      fontSize: '0.65rem', fontWeight: active ? 600 : 500,
-      cursor: 'pointer',
-    }}>{children}</button>
-  )
-}
-
-function SuggestionRow({ sugg, onFollow }) {
-  const meta = PLATFORM_META[sugg.platform] || PLATFORM_META.web
-  const Icon = meta.icon
-  const CatIcon = CATEGORY_ICON[sugg.category]
+function SuggestionCard({ sugg, onFollow }) {
   const isFollowing = sugg.already_following
+  const displayLabel = sugg.display_name || sugg.handle
+  const handleLabel = sugg.handle?.startsWith('http')
+    ? new URL(sugg.handle).hostname
+    : (sugg.handle?.startsWith('@') ? sugg.handle : `@${sugg.handle}`)
 
   return (
     <div style={{
-      background: 'var(--bg-card)',
-      border: '1px solid var(--border)',
-      borderLeft: `3px solid ${sugg.is_competitor ? '#ef4444' : meta.color}`,
-      borderRadius: 6,
+      display: 'flex', alignItems: 'center', gap: 10,
       padding: '10px 12px',
-      display: 'flex',
-      alignItems: 'flex-start',
-      gap: 10,
-      opacity: isFollowing ? 0.6 : 1,
+      background: 'var(--bg-elevated)',
+      border: '1px solid var(--border)',
+      borderRadius: 8,
+      opacity: isFollowing ? 0.85 : 1,
     }}>
-      <Icon size={15} color={meta.color} style={{ flexShrink: 0, marginTop: 2 }} />
-
+      {sugg.avatar_url ? (
+        <img src={sugg.avatar_url} alt={displayLabel} referrerPolicy="no-referrer"
+          onError={(e) => { e.currentTarget.style.display = 'none' }}
+          style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+      ) : (
+        <div style={{
+          width: 36, height: 36, borderRadius: '50%',
+          background: avatarGradient(displayLabel),
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          color: '#fff', fontSize: '0.7rem', fontWeight: 700,
+          fontFamily: 'JetBrains Mono, monospace',
+          flexShrink: 0,
+        }}>{avatarLetters(displayLabel)}</div>
+      )}
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap', marginBottom: 2 }}>
-          <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text)' }}>
-            {sugg.display_name || sugg.handle}
-          </span>
-          {sugg.is_competitor && (
-            <span style={{
-              fontSize: '0.5rem',
-              padding: '1px 5px',
-              borderRadius: 3,
-              background: 'rgba(239,68,68,0.15)',
-              color: '#ef4444',
-              fontWeight: 700,
-              fontFamily: 'JetBrains Mono, monospace',
-            }}>COMP</span>
-          )}
-          {sugg.vertical && (
-            <span style={{
-              fontSize: '0.55rem',
-              padding: '1px 5px',
-              borderRadius: 3,
-              background: 'var(--bg-elevated)',
-              color: 'var(--text-dim)',
-              fontFamily: 'JetBrains Mono, monospace',
-            }}>{sugg.vertical.toUpperCase()}</span>
-          )}
-        </div>
-
-        {sugg.category && (
-          <div style={{
-            fontSize: '0.62rem', color: 'var(--text-dim)',
-            display: 'inline-flex', alignItems: 'center', gap: 4,
-            marginBottom: 4,
-          }}>
-            {CatIcon && <CatIcon size={9} />}
-            {sugg.category}
-          </div>
-        )}
-
-        {sugg.why_suggest && (
-          <div style={{ fontSize: '0.7rem', color: 'var(--text)', lineHeight: 1.4 }}>
-            {sugg.why_suggest}
-          </div>
-        )}
-
-        {sugg.apify_actor && (
-          <div style={{
-            fontSize: '0.55rem', color: 'var(--text-dim)',
-            fontFamily: 'JetBrains Mono, monospace', marginTop: 4,
-          }}>via {sugg.apify_actor}</div>
-        )}
+        <div style={{
+          fontSize: '0.82rem', fontWeight: 600, color: 'var(--text)',
+          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+        }}>{displayLabel}</div>
+        <div style={{
+          fontSize: '0.62rem', color: 'var(--text-dim)',
+          fontFamily: 'JetBrains Mono, monospace',
+          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+        }}>{handleLabel}</div>
       </div>
-
       <button
-        disabled={isFollowing}
         onClick={onFollow}
+        disabled={isFollowing}
+        title={isFollowing ? 'A seguir' : 'Seguir'}
         style={{
-          display: 'inline-flex', alignItems: 'center', gap: 4,
-          padding: '5px 10px', borderRadius: 5,
-          background: isFollowing ? 'var(--bg-elevated)' : 'var(--text)',
-          color: isFollowing ? 'var(--text-dim)' : 'var(--bg)',
-          border: 'none',
-          fontSize: '0.65rem', fontWeight: 600,
-          cursor: isFollowing ? 'not-allowed' : 'pointer',
+          width: 26, height: 26, borderRadius: '50%',
+          background: isFollowing ? 'rgba(16,185,129,0.18)' : 'var(--bg-card)',
+          border: '1px solid ' + (isFollowing ? '#10b981' : 'var(--border)'),
+          color: isFollowing ? '#10b981' : 'var(--text-dim)',
+          cursor: isFollowing ? 'default' : 'pointer',
+          display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
           flexShrink: 0,
         }}
       >
-        {isFollowing ? <><Check size={11} /> A seguir</> : <><Plus size={11} /> Seguir</>}
+        {isFollowing ? <Check size={13} /> : <Plus size={13} />}
       </button>
-    </div>
-  )
-}
-
-function FollowingRow({ source, onToggle, onRemove }) {
-  const platform = source.config?.platform
-                || (source.kind === 'instagram_user' ? 'instagram'
-                  : source.kind === 'x_search' ? 'x'
-                  : source.kind === 'linkedin_user' ? 'linkedin'
-                  : source.kind === 'rss' ? 'rss'
-                  : source.kind === 'competitor_site' ? 'web'
-                  : source.kind === 'apify_actor' ? (source.config?.platform || 'web')
-                  : 'web')
-  const meta = PLATFORM_META[platform] || PLATFORM_META.web
-  const Icon = meta.icon
-  const handle = source.config?.handle || source.config?.url
-
-  return (
-    <div style={{
-      background: 'var(--bg-card)',
-      border: '1px solid var(--border)',
-      borderLeft: `3px solid ${meta.color}`,
-      borderRadius: 6,
-      padding: '8px 12px',
-      display: 'flex',
-      alignItems: 'center',
-      gap: 8,
-      opacity: source.active ? 1 : 0.5,
-    }}>
-      <Icon size={13} color={meta.color} style={{ flexShrink: 0 }} />
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: '0.78rem', fontWeight: 500, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {source.label}
-        </div>
-        {handle && (
-          <div style={{ fontSize: '0.6rem', color: 'var(--text-dim)', fontFamily: 'JetBrains Mono, monospace' }}>
-            {handle}
-          </div>
-        )}
-      </div>
-      <button onClick={onToggle} style={{
-        padding: '3px 8px', borderRadius: 4,
-        background: source.active ? `${meta.color}22` : 'var(--bg-elevated)',
-        color: source.active ? meta.color : 'var(--text-dim)',
-        border: 'none', cursor: 'pointer',
-        fontSize: '0.62rem', fontWeight: 600,
-      }}>{source.active ? 'On' : 'Off'}</button>
-      <button onClick={onRemove} style={{
-        padding: 4, borderRadius: 3,
-        background: 'none', border: 'none', cursor: 'pointer',
-        color: 'var(--text-dim)', display: 'inline-flex',
-      }} title="Remover"><X size={11} /></button>
     </div>
   )
 }
