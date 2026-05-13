@@ -8,7 +8,7 @@ import {
   TrendingUp, UserPlus, Target, Zap,
   Plug2, Settings as SettingsIcon, Briefcase,
   Megaphone, DollarSign, MessageCircle, Scale, Code, Settings,
-  Monitor, Calendar,
+  Monitor, Calendar, AtSign,
 } from 'lucide-react'
 import { useVerticalStore, useAppShellStore } from '../store'
 import { useInboxItems } from '../hooks/useSupabase'
@@ -89,11 +89,12 @@ export default function Sidebar() {
 
       <div className="sidebar-nav">
         <SidebarGroup id="daily" label="Daily" badge={unreadCount > 0 ? unreadCount : null}>
-          <NavItem to="/inbox"    label="Inbox"    icon={Inbox} badge={unreadCount} />
-          <NavItem to="/chat"     label="Chat"     icon={MessageSquare} />
-          <NavItem to="/calendar" label="Calendário" icon={Calendar} />
-          <NavItem to="/tasks"    label="Tasks"    icon={CheckSquare} />
-          <NavItem to="/files"    label="Files"    icon={Folder} />
+          <NavItem to="/inbox"       label="Inbox"       icon={Inbox} badge={unreadCount} />
+          <NavItem to="/chat"        label="Chat"        icon={MessageSquare} />
+          <NavItem to="/calendar"    label="Calendário"  icon={Calendar} />
+          <NavItem to="/tasks"       label="Tasks"       icon={CheckSquare} />
+          <NavItem to="/influencers" label="Influencers" icon={AtSign} />
+          <NavItem to="/files"       label="Files"       icon={Folder} />
         </SidebarGroup>
 
         <SidebarGroup id="departments" label="Departments" badge={totalAgents}>

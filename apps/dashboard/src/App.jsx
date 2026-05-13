@@ -35,6 +35,7 @@ import TasksPage from './views/TasksPage.jsx'
 import ConnectionsPage from './views/ConnectionsPage.jsx'
 import CalendarPage from './views/CalendarPage.jsx'
 import SkillReviewPage from './views/SkillReviewPage.jsx'
+import InfluencersPage from './views/InfluencersPage.jsx'
 import StubView from './views/StubView.jsx'
 import { useAppShellStore } from './store'
 
@@ -125,6 +126,7 @@ export default function App() {
               <Route path="/connections"  element={<ConnectionsPage />} />
               <Route path="/calendar"     element={<CalendarPage />} />
               <Route path="/skills/review" element={<SkillReviewPage />} />
+              <Route path="/influencers"   element={<InfluencersPage />} />
               <Route path="/projects"     element={<StubView title="Projects" />} />
               <Route path="/tasks"        element={<TasksPage />} />
               {/* Legacy live views */}
