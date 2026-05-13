@@ -143,8 +143,9 @@ export default function Sidebar() {
         </SidebarGroup>
 
         <SidebarGroup id="settings" label="Settings">
-          <NavItem to="/connections" label="Connections" icon={Plug2} />
-          <NavItem to="/company"     label="Company"     icon={SettingsIcon} />
+          <NavItem to="/connections"   label="Connections"   icon={Plug2} />
+          <NavItem to="/apify-actors"  label="Apify actors"  icon={Sparkles} />
+          <NavItem to="/company"       label="Company"       icon={SettingsIcon} />
         </SidebarGroup>
 
         <SidebarGroup id="dev" label="Dev">
