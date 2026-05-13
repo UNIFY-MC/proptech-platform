@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useData } from './hooks/useData.js'
 import { DrawerProvider } from './context/DrawerContext.jsx'
+import Topbar from './components/Topbar.jsx'
 import Sidebar from './components/Sidebar.jsx'
 import Overview from './components/Overview.jsx'
 import Activity from './components/Activity.jsx'
@@ -52,7 +53,18 @@ export default function App() {
   return (
     <DrawerProvider>
       <div className="app-layout">
-        {/* Sidebar primária — sempre visível, excepto quando estamos dentro de outra app */}
+        {/* Topbar — navegação global (apps + utilities) */}
+        {!IS_EMBEDDED && (
+          <Topbar
+            theme={theme}
+            setTheme={setTheme}
+            lastSync={lastSync}
+            loading={loading}
+            refresh={refresh}
+          />
+        )}
+
+        {/* Sidebar — navegação contextual dentro da app activa */}
         {!IS_EMBEDDED && (
           <Sidebar
             theme={theme}

@@ -6,27 +6,14 @@ import {
   LayoutDashboard, Map, Eye, Swords, Layers,
   Bot, PanelLeftClose, PanelLeft,
   TrendingUp, UserPlus, Target, Zap,
+  Plug2, Settings as SettingsIcon, Briefcase,
 } from 'lucide-react'
 import { useVerticalStore, useAppShellStore } from '../store'
-import { useInboxItems, useApprovals } from '../hooks/useSupabase'
+import { useInboxItems } from '../hooks/useSupabase'
 import { useInboxReads } from '../hooks/useInboxReads'
-import AppSwitcher from './AppSwitcher.jsx'
-
-const DEPT_COLORS = {
-  'Manutenção':  '#534AB7',
-  'Condomínios': '#10b981',
-  'Marketing':   '#3b82f6',
-}
-
-function matchVertical(emp, activeV) {
-  if (activeV === 'all') return true
-  const v = activeV.toUpperCase()
-  if ((emp.vertical || '').toUpperCase().startsWith(v)) return true
-  return (emp.secondary_verticals || []).some(sv => sv.toUpperCase().startsWith(v))
-}
 
 const IC = ({ icon: Icon }) => (
-  <Icon size={16} style={{ color: 'var(--text-dim)', flexShrink: 0, marginRight: 8 }} />
+  <Icon size={15} style={{ color: 'var(--text-dim)', flexShrink: 0, marginRight: 8 }} />
 )
 
 function NavItem({ to, label, icon, badge, end }) {
@@ -45,149 +32,83 @@ function NavItem({ to, label, icon, badge, end }) {
   )
 }
 
-export default function Sidebar({ theme, setTheme, data, lastSync, loading, refresh }) {
-  const { activeVertical, setVertical } = useVerticalStore()
+export default function Sidebar() {
+  const { activeVertical } = useVerticalStore()
   const { activeAppSlug, sidebarCollapsed, toggleSidebar } = useAppShellStore()
   const isDashboardMode = activeAppSlug === 'dashboard'
   const { items } = useInboxItems(activeVertical)
-  const { approvals } = useApprovals(activeVertical)
   const { readSet } = useInboxReads()
 
+  // Em app embedded, não mostramos sidebar do dashboard — a app embedded tem o seu próprio
+  if (!isDashboardMode) return null
+
   const unreadCount = items.filter(i => !readSet.has(i.id)).length
-  const employees = (data?.employees || []).filter(e => matchVertical(e, activeVertical))
 
   return (
     <aside className={'app-sidebar' + (sidebarCollapsed ? ' collapsed' : '')}>
-      {/* Brand — sempre visível + botão collapse */}
-      <div className="sidebar-brand" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        {!sidebarCollapsed && (
-          <div>
-            <div className="sidebar-brand-title">Agentic Ops</div>
-            {data?.meta?.branch && (
-              <div className="sidebar-brand-sub">{data.meta.branch}</div>
-            )}
-          </div>
-        )}
+      {/* Header — apenas botão collapse (brand está no Topbar global) */}
+      <div className="sidebar-header" style={{
+        padding: '8px 12px',
+        borderBottom: '1px solid var(--border)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'flex-end',
+        flexShrink: 0,
+      }}>
         <button
           onClick={toggleSidebar}
-          title={sidebarCollapsed ? 'Expandir sidebar' : 'Colapsar sidebar'}
+          title={sidebarCollapsed ? 'Expandir' : 'Colapsar'}
           style={{
             background: 'none', border: 'none', cursor: 'pointer',
             color: 'var(--text-dim)', padding: 4,
             display: 'flex', alignItems: 'center',
           }}
         >
-          {sidebarCollapsed ? <PanelLeft size={16} /> : <PanelLeftClose size={16} />}
+          {sidebarCollapsed ? <PanelLeft size={15} /> : <PanelLeftClose size={15} />}
         </button>
       </div>
 
-      {/* Vertical filter (só no dashboard mode) */}
-      {isDashboardMode && (
-        <div className="sidebar-vertical">
-          <select
-            className="sidebar-select"
-            value={activeVertical}
-            onChange={(e) => setVertical(e.target.value)}
-          >
-            <option value="all">Todas as verticais</option>
-            <option value="v1">V1 Core</option>
-            <option value="v2">V2 Condomínios</option>
-            <option value="v4">V4 Energia</option>
-            <option value="v5">V5 Manutenção</option>
-          </select>
-        </div>
-      )}
-
-      {/* Nav sections */}
       <div className="sidebar-nav">
-        {/* APPS sempre no topo (BD-driven via system.apps) */}
-        <AppSwitcher />
+        <div className="sidebar-section-label">Daily</div>
+        <NavItem to="/inbox"  label="Inbox"  icon={Inbox}        badge={unreadCount} />
+        <NavItem to="/chat"   label="Chat"   icon={MessageSquare} />
+        <NavItem to="/files"  label="Files"  icon={Folder} />
 
-        {/* Sidebar interno do dashboard só visível em dashboard mode.
-            Quando uma app está activa, os items dela aparecem na 2ª coluna (AppSubSidebar). */}
-        {isDashboardMode && (
-          <>
-            <div className="sidebar-section-label">Daily</div>
-            <NavItem to="/inbox"  label="Inbox"  icon={Inbox}        badge={unreadCount} />
-            <NavItem to="/chat"   label="Chat"   icon={MessageSquare} />
-            <NavItem to="/files"  label="Files"  icon={Folder} />
+        <div className="sidebar-section-label">Departments</div>
+        <NavItem to="/departments" label="Visão geral" icon={Briefcase} end />
 
-            <div className="sidebar-section-label">Growth</div>
-            <NavItem to="/growth/funnel"        label="Funil"          icon={TrendingUp} />
-            <NavItem to="/growth/leads"         label="Leads"          icon={UserPlus} />
-            <NavItem to="/growth/oportunidades" label="Oportunidades"  icon={Target} />
-            <NavItem to="/growth/rules"         label="Regras"         icon={Zap} />
+        <div className="sidebar-section-label">Growth</div>
+        <NavItem to="/growth/funnel"        label="Funil"          icon={TrendingUp} />
+        <NavItem to="/growth/leads"         label="Leads"          icon={UserPlus} />
+        <NavItem to="/growth/oportunidades" label="Oportunidades"  icon={Target} />
+        <NavItem to="/growth/rules"         label="Regras"         icon={Zap} />
 
-            <div className="sidebar-section-label">Manage</div>
-            <NavItem to="/employees" label="Employees" icon={Users} />
-            <NavItem to="/clients"   label="Clients"   icon={Building2} />
-            <NavItem to="/projects"  label="Projects"  icon={FolderKanban} />
-            <NavItem to="/tasks"     label="Tasks"     icon={CheckSquare} />
+        <div className="sidebar-section-label">Manage</div>
+        <NavItem to="/employees" label="Employees" icon={Users} />
+        <NavItem to="/clients"   label="Clients"   icon={Building2} />
+        <NavItem to="/projects"  label="Projects"  icon={FolderKanban} />
+        <NavItem to="/tasks"     label="Tasks"     icon={CheckSquare} />
 
-            <div className="sidebar-section-label">Build</div>
-            <NavItem to="/context"      label="Context"      icon={Library} />
-            <NavItem to="/recipes"      label="Recipes"      icon={ChefHat} />
-            <NavItem to="/skills"       label="Skills"       icon={Sparkles} />
-            <NavItem to="/integrations" label="Integrations" icon={Plug} />
+        <div className="sidebar-section-label">Build</div>
+        <NavItem to="/context"      label="Context"      icon={Library} />
+        <NavItem to="/recipes"      label="Recipes"      icon={ChefHat} />
+        <NavItem to="/skills"       label="Skills"       icon={Sparkles} />
+        <NavItem to="/integrations" label="Integrations" icon={Plug} />
 
-            <div className="sidebar-section-label">Strategy</div>
-            <NavItem to="/"           label="Overview"    icon={LayoutDashboard} end />
-            <NavItem to="/roadmap"    label="Roadmap"     icon={Map} />
-            <NavItem to="/watchers"   label="Watchers"    icon={Eye} />
-            <NavItem to="/competitors" label="Competitors" icon={Swords} />
-            <NavItem to="/verticais"  label="Verticais"   icon={Layers} />
+        <div className="sidebar-section-label">Strategy</div>
+        <NavItem to="/"           label="Overview"    icon={LayoutDashboard} end />
+        <NavItem to="/roadmap"    label="Roadmap"     icon={Map} />
+        <NavItem to="/watchers"   label="Watchers"    icon={Eye} />
+        <NavItem to="/competitors" label="Competitors" icon={Swords} />
+        <NavItem to="/verticais"  label="Verticais"   icon={Layers} />
 
-            <div className="sidebar-section-label">Dev</div>
-            <NavItem to="/agentes" label="Agentes" icon={Bot} />
-          </>
-        )}
-      </div>
+        <div className="sidebar-section-label">Settings</div>
+        <NavItem to="/connections" label="Connections" icon={Plug2} />
+        <NavItem to="/skills"      label="Skills"      icon={Sparkles} />
+        <NavItem to="/company"     label="Company"     icon={SettingsIcon} />
 
-      {/* TASKS · CHATS — só no dashboard mode */}
-      {isDashboardMode && employees.length > 0 && (
-        <div className="sidebar-tasks">
-          <div className="sidebar-section-label">Tasks · Chats</div>
-          {employees.map(emp => (
-            <NavLink
-              key={emp.id}
-              to={`/employees/${emp.id}`}
-              className={({ isActive }) => 'sidebar-task-item' + (isActive ? ' active' : '')}
-            >
-              <div
-                className="sidebar-avatar"
-                style={{ borderColor: DEPT_COLORS[emp.department] || 'var(--border)' }}
-              >
-                {emp.avatarInitial || emp.name?.[0]?.toUpperCase() || '?'}
-              </div>
-              <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {emp.name}
-              </span>
-              {emp.status === 'active' && (
-                <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#10b981', flexShrink: 0 }} />
-              )}
-            </NavLink>
-          ))}
-        </div>
-      )}
-
-      {/* Footer */}
-      <div className="sidebar-footer">
-        <button
-          className="btn-theme"
-          onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-          title={theme === 'dark' ? 'Mudar para tema claro' : 'Mudar para tema escuro'}
-        >
-          {theme === 'dark' ? '☀️' : '🌙'}
-        </button>
-        <button
-          className="btn-refresh"
-          onClick={refresh}
-          disabled={loading}
-          style={{ padding: '4px 8px', fontSize: '0.65rem' }}
-        >
-          {loading ? '⏳' : '🔄'}
-        </button>
-        {lastSync && <div className="sidebar-sync">{lastSync}</div>}
+        <div className="sidebar-section-label">Dev</div>
+        <NavItem to="/agentes" label="Agentes" icon={Bot} />
       </div>
     </aside>
   )

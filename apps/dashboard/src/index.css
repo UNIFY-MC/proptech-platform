@@ -478,14 +478,136 @@ body {
   .col-hide-sm { display: none; }
 }
 
-/* ── Cook.ai sidebar layout ─────────────────────────── */
+/* ── Cook.ai 2D shell: top panel + sidebar + main ─────────── */
 
 .app-layout {
-  display: flex;
+  display: grid;
+  grid-template-rows: 48px 1fr;
+  grid-template-columns: auto 1fr;
+  grid-template-areas:
+    "topbar topbar"
+    "sidebar main";
   min-height: 100vh;
 }
 
+/* Topbar — navegação global */
+.app-topbar {
+  grid-area: topbar;
+  height: 48px;
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  gap: 10px;
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+
+.topbar-brand {
+  display: flex;
+  align-items: center;
+}
+
+.topbar-brand-title {
+  font-size: 0.9rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  background: linear-gradient(135deg, #534AB7, #8b5cf6);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.topbar-divider {
+  width: 1px;
+  height: 22px;
+  background: var(--border);
+  margin: 0 4px;
+}
+
+.topbar-tabs {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 100%;
+}
+
+.topbar-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px;
+  height: 100%;
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  font-size: 0.75rem;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: color 0.12s, border-color 0.12s;
+}
+.topbar-tab:hover { color: var(--text); }
+.topbar-tab.active {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+  font-weight: 600;
+}
+
+.topbar-vertical-select {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 0.72rem;
+  padding: 4px 8px;
+  border-radius: 5px;
+  cursor: pointer;
+  outline: none;
+}
+
+.topbar-icon-btn {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 5px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  font-size: 0.85rem;
+  transition: background 0.12s, color 0.12s;
+}
+.topbar-icon-btn:hover { background: var(--bg-elevated); color: var(--text); }
+.topbar-icon-btn:disabled { opacity: 0.4; cursor: default; }
+
+.topbar-badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  min-width: 14px;
+  height: 14px;
+  padding: 0 3px;
+  border-radius: 7px;
+  background: var(--danger);
+  color: white;
+  font-size: 0.55rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.topbar-sync {
+  font-size: 0.62rem;
+  color: var(--text-dim);
+  font-family: 'JetBrains Mono', monospace;
+}
+
 .app-sidebar {
+  grid-area: sidebar;
   width: 220px;
   flex-shrink: 0;
   background: var(--bg-card);
@@ -493,8 +615,8 @@ body {
   display: flex;
   flex-direction: column;
   position: sticky;
-  top: 0;
-  height: 100vh;
+  top: 48px;
+  height: calc(100vh - 48px);
   overflow: hidden;
   transition: width 0.18s ease;
 }
@@ -524,10 +646,11 @@ body {
 }
 
 .app-main {
-  flex: 1;
+  grid-area: main;
   min-width: 0;
   padding: 20px;
   overflow-y: auto;
+  height: calc(100vh - 48px);
 }
 
 /* Quando há app embebida, main area é o iframe a full bleed (sem padding) */
