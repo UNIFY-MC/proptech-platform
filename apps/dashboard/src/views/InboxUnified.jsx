@@ -15,6 +15,7 @@ import { useInboxReads } from '../hooks/useInboxReads'
 import { useVerticalStore } from '../store'
 import { useApprovalActions } from '../hooks/useApprovalActions'
 import { useUserContext } from '../hooks/useUserContext.js'
+import { useWatcherProfiles } from '../hooks/useWatcherProfiles.js'
 import { useDrawer } from '../context/DrawerContext'
 import InboxItemDrawer from '../components/inbox/InboxItemDrawer'
 import AskAnythingBar from '../components/inbox/AskAnythingBar.jsx'
@@ -72,12 +73,15 @@ export default function InboxUnified() {
   )
 
   const { activeVertical } = useVerticalStore()
-  const { items: inboxItems } = useInboxItems(activeVertical)
-  const { approvals } = useApprovals(activeVertical)
+  // No Inbox vemos tudo (cross-vertical) — filtro por vertical fica na app de cada vertical
+  const inboxFilter = activeVertical === 'all' ? null : null
+  const { items: inboxItems } = useInboxItems(inboxFilter)
+  const { approvals } = useApprovals(inboxFilter)
   const { readSet, markAsRead } = useInboxReads()
   const { approveItem, rejectItem } = useApprovalActions()
   const { openDrawer, closeDrawer } = useDrawer()
   const { primeiroNome, stats } = useUserContext()
+  const { bySlug: watcherBySlug } = useWatcherProfiles()
 
   // Daily Roundup mais recente (não dismissed)
   const todayRoundup = useMemo(() => {
@@ -99,15 +103,19 @@ export default function InboxUnified() {
     const out = []
     for (const it of inboxItems) {
       if (todayRoundup && it.id === todayRoundup.id) continue
+      const watcherSlug = it.payload?.watcher_slug
+      const watcher = watcherSlug ? watcherBySlug[watcherSlug] : null
       out.push({
         kind: 'inbox', id: 'i_' + it.id,
         source: it.source, vertical: it.vertical, type: it.item_type,
         title: it.title, body: it.body, created_at: it.created_at,
         raw: it, isRead: readSet.has(it.id),
         severity: it.payload?.severity ?? 'info',
+        watcher,    // { name, role, photo_url } ou null
       })
     }
     for (const ap of approvals) {
+      const watcher = watcherBySlug[`${ap.source_agent}-prata`] || watcherBySlug[ap.source_agent] || null
       out.push({
         kind: 'approval', id: 'a_' + ap.id,
         source: ap.source_agent, vertical: ap.target_vertical, type: ap.action_type,
@@ -115,11 +123,12 @@ export default function InboxUnified() {
         body: ap.edited_message || ap.draft_message,
         created_at: ap.created_at, raw: ap,
         isRead: ap.status !== 'pending', severity: 'warning',
+        watcher,
       })
     }
     out.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
     return out
-  }, [inboxItems, approvals, readSet, todayRoundup])
+  }, [inboxItems, approvals, readSet, todayRoundup, watcherBySlug])
 
   const filtered = useMemo(() => {
     switch (filter) {
@@ -354,6 +363,9 @@ function FeedRow({ item, onClick }) {
   const src = SOURCE_META[item.source] || SOURCE_META.system
   const isApproval = item.kind === 'approval'
   const badgeType = isApproval ? null : (TYPE_BADGE[item.type] || TYPE_BADGE.system)
+  const watcher = item.watcher
+  const authorName = watcher?.name || src.label
+  const authorPhoto = watcher?.photo_url || null
 
   return (
     <button onClick={onClick}
@@ -386,23 +398,33 @@ function FeedRow({ item, onClick }) {
         overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
       }}>{item.title}</div>
 
-      {/* Author avatar + name */}
+      {/* Author avatar (real photo se watcher tem) + name */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: 8,
-        flex: '0 0 auto',
+        flex: '0 0 auto', maxWidth: 200,
       }}>
-        <div style={{
-          width: 22, height: 22, borderRadius: '50%',
-          background: src.color,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          color: '#fff', fontSize: '0.55rem', fontWeight: 700,
-          fontFamily: 'JetBrains Mono, monospace',
-          flexShrink: 0,
-        }}>{src.initials}</div>
+        {authorPhoto ? (
+          <img src={authorPhoto} alt={authorName}
+            referrerPolicy="no-referrer"
+            onError={(e) => { e.currentTarget.style.display = 'none' }}
+            style={{
+              width: 22, height: 22, borderRadius: '50%',
+              objectFit: 'cover', flexShrink: 0,
+              border: '1px solid var(--border)',
+            }} />
+        ) : (
+          <div style={{
+            width: 22, height: 22, borderRadius: '50%',
+            background: src.color,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: '#fff', fontSize: '0.55rem', fontWeight: 700,
+            fontFamily: 'JetBrains Mono, monospace', flexShrink: 0,
+          }}>{src.initials}</div>
+        )}
         <span style={{
           fontSize: '0.72rem', color: 'var(--text-dim)',
-          whiteSpace: 'nowrap',
-        }}>{src.label}</span>
+          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+        }}>{authorName}</span>
       </div>
 
       {/* Body snippet */}
