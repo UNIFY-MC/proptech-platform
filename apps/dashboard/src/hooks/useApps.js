@@ -83,8 +83,17 @@ export function useApps() {
         setError(appsRes.error?.message ?? null)
         // mantém FALLBACK_APPS já em state
       } else {
-        setApps(appsRes.data)
-        setError(null)
+        // Migration 20260513 ainda pode não estar aplicada — se os dados live
+        // não têm campo `vertical`, mantemos o FALLBACK (que tem o catálogo
+        // multi-surface completo). Quando a migration estiver aplicada e o
+        // schema PostgREST recarregar, passa a usar os dados live.
+        const hasNewSchema = 'vertical' in (appsRes.data[0] || {})
+        if (!hasNewSchema) {
+          setError('cookai_apps sem campos multi-surface — a usar FALLBACK_APPS')
+        } else {
+          setApps(appsRes.data)
+          setError(null)
+        }
       }
       setRoutes(routesRes.data ?? [])
       setLoading(false)
