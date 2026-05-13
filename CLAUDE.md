@@ -160,10 +160,13 @@ Estas regras são executadas pelo **CEO orchestrator** ao arrancar e a cada `/st
 - 30 tabelas, ~5.000 linhas reais
 - Tabelas chave: `condominos`, `fracoes`, `documentos` (2733), `recebimentos` (593), `extrato_bancario` (1056), `faturas_pendentes`, `faturas_ocr`, `carregadores_contagens` (359), `documentos_drive`, `seguro_fracoes`, `utilizadores_portal` (64), `audit_log`
 
-### Estratégia de schemas (decisão canónica · Opção C)
+### Estratégia de schemas (decisão canónica · Opção C + ADR-013)
 - Schemas por vertical: `v3_seguros`, `v4_energia`, `v5_manutencao`, `v10_owners_club`
 - Tabelas limpas dentro de cada schema: `apolices`, não `v3_apolices`
 - Schema `core` para transversal: `pessoas`, `imoveis`, `empresas`, `servicos_ativos`, `leads`, `oportunidades`, `interacoes`, `ofertas`, `api_keys`, `staff`
+- Schema **`iam`** (ADR-013, 2026-05-13) para Identity & Access Management cross-vertical: `permission_groups`, `permission_sections` (naming `<vertical>.<seccao>`, ex: `v2.fracoes`, `v5.ordens`), `permission_grants`, `staff_login_aliases`, `portal_tokens`, `activity_logs`. RPCs: `iam.has_permission(section, action)`, `iam.user_can(section, action)` (helper RLS), `iam.get_my_permissions()`, `iam.staff_login_lookup(alias)`, `iam.portal_token_login(token)`. **TODAS as verticais devem usar `iam` para permissões — não criar tabelas próprias.**
+- Schema `system` para agentic ops: `inbox_items`, `approvals_queue` (futuro ADR-016: `agent_runs` + `agent_policies` + `notifications`)
+- Schema `marketing` (futuro ADR-015): `leads`, `campanhas`, `segmentos`, `interacoes`, `oportunidades`, `cross_sell_rules`
 
 ### Exposição de schemas custom ao PostgREST
 
@@ -171,7 +174,7 @@ Adicionar schema custom ao REST do Supabase **não** se faz pelo Dashboard UI ne
 
 ```sql
 ALTER ROLE authenticator SET pgrst.db_schemas =
-  'public, graphql_public, core, system, v2_condominios, v3_seguros,
+  'public, graphql_public, core, system, iam, marketing, v2_condominios, v3_seguros,
    v4_energia, v5_manutencao, v1_owners_club, marketing';
 NOTIFY pgrst, 'reload config';
 ```
