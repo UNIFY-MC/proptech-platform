@@ -8,12 +8,11 @@
  */
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 import { mapApifyItem, type InboxDraft } from "../_shared/apify-mappers.ts"
+import { analyseMultiVertical } from "../_shared/multi-vertical-analyser.ts"
 
 const SUPABASE_URL  = Deno.env.get("SUPABASE_URL") || ""
 const SERVICE_KEY   = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || ""
 const APIFY_TOKEN   = Deno.env.get("APIFY_TOKEN") || ""
-const ANTHROPIC_KEY = Deno.env.get("ANTHROPIC_API_KEY") || ""
-const MODEL         = "claude-haiku-4-5-20251001"
 
 const cors = {
   "Access-Control-Allow-Origin":  "*",
@@ -32,44 +31,7 @@ async function fetchDatasetItems(datasetId: string): Promise<Record<string, unkn
   return await res.json()
 }
 
-async function analyseItem(text: string, sourceLabel: string, platform: string): Promise<{ why_it_matters: string, suggested_mission: string } | null> {
-  if (!ANTHROPIC_KEY) return null
-  const prompt = `És analista de inteligência competitiva e marketing da Property007 (PropTech Portugal).
-
-Conteúdo de "${sourceLabel}" (${platform}):
-"""
-${text.slice(0, 800)}
-"""
-
-Responde APENAS JSON válido (sem markdown):
-{
-  "why_it_matters": "Frase única PT-PT (max 200 chars) explicando porque é relevante para o nosso negócio PropTech",
-  "suggested_mission": "Acção concreta breve em PT-PT (max 100 chars)"
-}`
-
-  try {
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "x-api-key": ANTHROPIC_KEY,
-        "anthropic-version": "2023-06-01",
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({
-        model: MODEL,
-        max_tokens: 400,
-        messages: [{ role: "user", content: prompt }],
-      }),
-    })
-    if (!res.ok) return null
-    const data = await res.json()
-    const text = (data.content?.[0]?.text || "").trim()
-    const clean = text.replace(/^```(?:json)?\s*/, "").replace(/```\s*$/, "")
-    return JSON.parse(clean)
-  } catch {
-    return null
-  }
-}
+// analyseItem agora usa o shared multi-vertical analyser
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors })
@@ -156,20 +118,22 @@ Deno.serve(async (req) => {
       if ((count || 0) > 0) continue
     }
 
-    // Análise IA opcional
+    // Análise IA multi-vertical
     const analyseText = (draft.payload.caption as string) || (draft.payload.summary_md as string) || draft.body || ""
-    const analysis = await analyseItem(analyseText, draft.source_name || src.label, platform)
+    const analysis = await analyseMultiVertical(analyseText, draft.source_name || src.label, platform)
 
     if (analysis) {
       draft.payload.why_it_matters    = analysis.why_it_matters
       draft.payload.suggested_mission = analysis.suggested_mission
+      draft.payload.primary_vertical  = analysis.primary_vertical
+      draft.payload.relevance         = analysis.relevance
     }
     draft.payload.watcher_source_id = sourceId
     draft.payload.apify_run_id      = actorRunId
 
     const { error } = await sb.schema("system").from("inbox_items").insert({
       ...draft,
-      vertical: src.vertical,
+      vertical: analysis?.primary_vertical || src.vertical,
     })
     if (!error) imported++
   }

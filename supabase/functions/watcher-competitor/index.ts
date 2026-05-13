@@ -12,11 +12,10 @@
  */
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 import { DOMParser } from "https://deno.land/x/deno_dom@v0.1.45/deno-dom-wasm.ts"
+import { analyseMultiVertical } from "../_shared/multi-vertical-analyser.ts"
 
 const SUPABASE_URL  = Deno.env.get("SUPABASE_URL") || ""
 const SERVICE_KEY   = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || ""
-const ANTHROPIC_KEY = Deno.env.get("ANTHROPIC_API_KEY") || ""
-const MODEL         = "claude-haiku-4-5-20251001"
 
 const cors = {
   "Access-Control-Allow-Origin":  "*",
@@ -81,52 +80,23 @@ async function extractSignal(url: string): Promise<{ signal: CompetitorSignal, h
   }
 }
 
-async function analyseChange(currentSignal: CompetitorSignal, previousSnapshot: CompetitorSignal | null, sourceLabel: string): Promise<{ why_it_matters: string, suggested_mission: string } | null> {
-  if (!ANTHROPIC_KEY) return null
-  const prompt = `És um analista de inteligência competitiva da Property007 (PropTech Portugal).
-Detectei mudança no site do concorrente "${sourceLabel}".
+// analyseChange agora usa o shared multi-vertical analyser (composto contexto + state)
+async function analyseChange(currentSignal: CompetitorSignal, previousSnapshot: CompetitorSignal | null, sourceLabel: string) {
+  const diffContent = `Diff de site concorrente "${sourceLabel}":
 
-ESTADO ANTERIOR:
+ANTERIOR:
 - title: ${previousSnapshot?.title || "(primeiro snapshot)"}
 - h1: ${previousSnapshot?.h1 || "(primeiro snapshot)"}
 - description: ${previousSnapshot?.description || "(primeiro snapshot)"}
-- body: ${previousSnapshot?.body_excerpt?.slice(0, 400) || "(primeiro snapshot)"}
+- body: ${previousSnapshot?.body_excerpt?.slice(0, 400) || ""}
 
-ESTADO ACTUAL:
+ACTUAL:
 - title: ${currentSignal.title}
 - h1: ${currentSignal.h1}
 - description: ${currentSignal.description}
-- body: ${currentSignal.body_excerpt.slice(0, 400)}
+- body: ${currentSignal.body_excerpt.slice(0, 400)}`
 
-Responde APENAS um JSON válido (sem markdown):
-{
-  "why_it_matters": "Frase única em PT-PT explicando porque é relevante esta mudança para o nosso negócio (max 200 chars)",
-  "suggested_mission": "Acção concreta que devemos tomar (max 100 chars)"
-}`
-
-  try {
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "x-api-key": ANTHROPIC_KEY,
-        "anthropic-version": "2023-06-01",
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({
-        model: MODEL,
-        max_tokens: 400,
-        messages: [{ role: "user", content: prompt }],
-      }),
-    })
-    if (!res.ok) return null
-    const data = await res.json()
-    const text = (data.content?.[0]?.text || "").trim()
-    const clean = text.replace(/^```(?:json)?\s*/, "").replace(/```\s*$/, "")
-    return JSON.parse(clean)
-  } catch (e) {
-    console.warn("[watcher-competitor] AI analysis failed:", e)
-    return null
-  }
+  return await analyseMultiVertical(diffContent, sourceLabel, "diff site concorrente")
 }
 
 Deno.serve(async (req) => {
@@ -192,6 +162,8 @@ Deno.serve(async (req) => {
         watcher_source_id: src.id,
         why_it_matters:    analysis?.why_it_matters || null,
         suggested_mission: analysis?.suggested_mission || null,
+        primary_vertical:  analysis?.primary_vertical || null,
+        relevance:         analysis?.relevance || null,
       },
       source_url: url,
       source_name: src.label,

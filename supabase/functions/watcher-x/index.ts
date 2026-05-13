@@ -16,11 +16,10 @@
  * com a URL completa do feed. Sem rss_url → skip silencioso.
  */
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
+import { analyseMultiVertical } from "../_shared/multi-vertical-analyser.ts"
 
 const SUPABASE_URL  = Deno.env.get("SUPABASE_URL") || ""
 const SERVICE_KEY   = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || ""
-const ANTHROPIC_KEY = Deno.env.get("ANTHROPIC_API_KEY") || ""
-const MODEL         = "claude-haiku-4-5-20251001"
 
 const cors = {
   "Access-Control-Allow-Origin":  "*",
@@ -66,44 +65,8 @@ function stripHtml(s: string): string {
   return s.replace(/<[^>]+>/g, "").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/&quot;/g, '"').trim()
 }
 
-async function analyseTweet(text: string, handle: string): Promise<{ why_it_matters: string, suggested_mission: string } | null> {
-  if (!ANTHROPIC_KEY) return null
-  const prompt = `És analista de oportunidades de marketing/conteúdo da Property007 (PropTech Portugal).
-
-Post de ${handle}:
-"""
-${text.slice(0, 800)}
-"""
-
-Responde APENAS um JSON válido (sem markdown):
-{
-  "why_it_matters": "Frase única em PT-PT (max 200 chars) explicando porque é relevante para o nosso negócio PropTech",
-  "suggested_mission": "Acção concreta breve (max 100 chars)"
-}`
-
-  try {
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "x-api-key": ANTHROPIC_KEY,
-        "anthropic-version": "2023-06-01",
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({
-        model: MODEL,
-        max_tokens: 400,
-        messages: [{ role: "user", content: prompt }],
-      }),
-    })
-    if (!res.ok) return null
-    const data = await res.json()
-    const text = (data.content?.[0]?.text || "").trim()
-    const clean = text.replace(/^```(?:json)?\s*/, "").replace(/```\s*$/, "")
-    return JSON.parse(clean)
-  } catch {
-    return null
-  }
-}
+// analyseTweet substituído por analyseMultiVertical (shared module)
+// Mantém backwards compat: devolve null se ANTHROPIC_KEY ausente.
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors })
@@ -148,13 +111,13 @@ Deno.serve(async (req) => {
         if (src.last_seen_key && (item.guid === src.last_seen_key || item.link === src.last_seen_key)) break
 
         const cleanText = stripHtml(item.description || item.title)
-        const analysis = await analyseTweet(cleanText, handle)
+        const analysis = await analyseMultiVertical(cleanText, handle, "tweet")
 
         const { error: insErr } = await sb.schema("system").from("inbox_items").insert({
           title: `${handle.startsWith("@") ? handle : "@" + handle} — ${item.title.slice(0, 100)}`,
           body:  cleanText.slice(0, 240),
-          kind:  "instagram",  // reusa visual instagram-like
-          vertical: src.vertical,
+          kind:  "instagram",
+          vertical: analysis?.primary_vertical || src.vertical,
           source: "watcher",
           payload: {
             caption: cleanText,
@@ -163,6 +126,8 @@ Deno.serve(async (req) => {
             published_at: item.pubDate || null,
             why_it_matters:    analysis?.why_it_matters || null,
             suggested_mission: analysis?.suggested_mission || null,
+            primary_vertical:  analysis?.primary_vertical || null,
+            relevance:         analysis?.relevance || null,
             watcher_source_id: src.id,
           },
           source_url: item.link,

@@ -235,13 +235,28 @@ export default function ExpandableInboxRow({ item, onClickLegacy, onMarkRead, on
 function ExpandedCard({ item, payload, kind, authorName, onArchive, onCreateTask }) {
   const imageUrl = payload.image_url || payload.image
   const summary = payload.summary_md || payload.content_md || item.body || ''
-  const whyItMatters = payload.why_it_matters || payload.analysis || null
+  const whyRaw = payload.why_it_matters || payload.analysis || null
   const suggestedMission = payload.suggested_mission || (kind === 'instagram' || kind === 'news' ? deriveSuggestion(payload, kind) : null)
   const stats = payload.stats
-  const engagement = payload.engagement  // { likes, replies, replies_url }
+  const engagement = payload.engagement
   const isPostLike = kind === 'instagram' || kind === 'news' || kind === 'competitor'
+  const relevance = payload.relevance
 
-  const Md = useMemo(() => renderMd(summary), [summary])
+  const Md = useMemo(() => renderMd(summary, item.raw?.id), [summary, item.raw?.id])
+
+  // Why-it-matters multi-vertical: aceita string legacy ou objeto {global, v2, v4, ...}
+  const whyByVertical = useMemo(() => {
+    if (!whyRaw) return null
+    if (typeof whyRaw === 'string') return { global: whyRaw }
+    if (typeof whyRaw === 'object') return whyRaw
+    return null
+  }, [whyRaw])
+  const verticalKeys = whyByVertical ? Object.keys(whyByVertical) : []
+  const primaryVertical = payload.primary_vertical
+  const defaultTab = primaryVertical && whyByVertical?.[primaryVertical]
+    ? primaryVertical
+    : (verticalKeys.includes('global') ? 'global' : verticalKeys[0])
+  const [whyTab, setWhyTab] = useState(defaultTab)
 
   return (
     <div style={{
@@ -340,8 +355,8 @@ function ExpandedCard({ item, payload, kind, authorName, onArchive, onCreateTask
         {/* Markdown body se não é post-like (roundup, op, alert) */}
         {!isPostLike && Md && <div>{Md}</div>}
 
-        {/* 2. Why it matters — análise */}
-        {whyItMatters && (
+        {/* 2. Why it matters — análise multi-vertical com switcher */}
+        {whyByVertical && verticalKeys.length > 0 && (
           <div style={{
             background: 'var(--bg-card)',
             borderLeft: '3px solid #f59e0b',
@@ -349,19 +364,59 @@ function ExpandedCard({ item, payload, kind, authorName, onArchive, onCreateTask
             padding: '12px 16px',
           }}>
             <div style={{
-              fontSize: '0.6rem',
-              fontWeight: 700,
-              color: '#f59e0b',
-              textTransform: 'uppercase',
-              letterSpacing: '0.08em',
-              marginBottom: 6,
-            }}>Why it matters</div>
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              marginBottom: 8,
+              flexWrap: 'wrap',
+            }}>
+              <span style={{
+                fontSize: '0.6rem',
+                fontWeight: 700,
+                color: '#f59e0b',
+                textTransform: 'uppercase',
+                letterSpacing: '0.08em',
+              }}>Why it matters</span>
+              {relevance != null && (
+                <span style={{
+                  fontSize: '0.55rem',
+                  padding: '1px 6px',
+                  borderRadius: 3,
+                  background: relevance >= 8 ? 'rgba(239,68,68,0.15)'
+                            : relevance >= 5 ? 'rgba(245,158,11,0.15)'
+                            : 'var(--bg-elevated)',
+                  color: relevance >= 8 ? '#ef4444'
+                       : relevance >= 5 ? '#f59e0b'
+                       : 'var(--text-dim)',
+                  fontFamily: 'JetBrains Mono, monospace',
+                  fontWeight: 700,
+                }}>relevance {relevance}/10</span>
+              )}
+              {verticalKeys.length > 1 && (
+                <div style={{ marginLeft: 'auto', display: 'inline-flex', gap: 3, padding: 2, background: 'var(--bg-elevated)', borderRadius: 5 }}>
+                  {verticalKeys.map(v => (
+                    <button key={v}
+                      onClick={() => setWhyTab(v)}
+                      style={{
+                        padding: '2px 8px', borderRadius: 3,
+                        background: whyTab === v ? 'var(--bg-card)' : 'none',
+                        border: 'none', cursor: 'pointer',
+                        color: whyTab === v ? '#f59e0b' : 'var(--text-dim)',
+                        fontSize: '0.58rem',
+                        fontWeight: whyTab === v ? 700 : 500,
+                        fontFamily: 'JetBrains Mono, monospace',
+                        textTransform: 'uppercase',
+                      }}>{v === 'global' ? '🌐 global' : v}</button>
+                  ))}
+                </div>
+              )}
+            </div>
             <p style={{
               margin: 0,
               fontSize: '0.82rem',
               color: 'var(--text)',
               lineHeight: 1.55,
-            }}>{whyItMatters}</p>
+            }}>{whyByVertical[whyTab] || whyByVertical.global}</p>
           </div>
         )}
 
