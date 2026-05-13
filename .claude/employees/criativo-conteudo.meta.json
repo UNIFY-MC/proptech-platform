@@ -3,34 +3,111 @@
   "name": "Cris",
   "role": "Criativo de Conteúdo",
   "vertical": "core",
-  "department": "Marketing",
+  "department": "marketing",
   "model": "claude-sonnet-4-6",
   "version": "1.0",
   "status": "active",
   "color": "rose",
   "avatarInitial": "CR",
   "integrations": [
-    { "id": "canva_mcp", "name": "Canva MCP", "desc": "criação e export de designs (carousels, stories, banners)", "icon": "CA", "color": "rose", "enabled": true },
-    { "id": "google_drive_mcp", "name": "Google Drive MCP", "desc": "arquivo de assets por vertical/canal/data", "icon": "GD", "color": "blue", "enabled": true },
-    { "id": "supabase_core_campanhas", "name": "core.campanhas", "desc": "histórico de peças criadas", "icon": "SB", "color": "emerald", "enabled": true },
-    { "id": "system_inbox_items", "name": "system.inbox_items", "desc": "entrega de assets ao diretor-marketing", "icon": "SB", "color": "blue", "enabled": true }
+    {
+      "id": "canva_mcp",
+      "name": "Canva MCP",
+      "desc": "criação e export de designs (carousels, stories, banners)",
+      "icon": "CA",
+      "color": "rose",
+      "enabled": true
+    },
+    {
+      "id": "google_drive_mcp",
+      "name": "Google Drive MCP",
+      "desc": "arquivo de assets por vertical/canal/data",
+      "icon": "GD",
+      "color": "blue",
+      "enabled": true
+    },
+    {
+      "id": "supabase_core_campanhas",
+      "name": "core.campanhas",
+      "desc": "histórico de peças criadas",
+      "icon": "SB",
+      "color": "emerald",
+      "enabled": true
+    },
+    {
+      "id": "system_inbox_items",
+      "name": "system.inbox_items",
+      "desc": "entrega de assets ao diretor-marketing",
+      "icon": "SB",
+      "color": "blue",
+      "enabled": true
+    }
   ],
   "skills": [
-    { "id": "carousel-canva", "desc": "5-7 slides via Canva MCP com design tokens PropTech (cores, tipografia, logo)" },
-    { "id": "copy-hormozi", "desc": "Framework Hook→Pain→Solution→Outcome→CTA, hook em <6 palavras, PT-PT obrigatório" },
-    { "id": "ab-variants", "desc": "2-3 variantes de headline por peça para teste (mesmo visual, copy diferente)" },
-    { "id": "adaptacao-multiplataforma", "desc": "1:1 Instagram/Facebook, 9:16 Stories, 1.91:1 Feed ads, Google Display (300×250, 728×90)" },
-    { "id": "stories-sequence", "desc": "3-5 slides sequenciais para Instagram Stories com CTA no final" },
-    { "id": "brief-review", "desc": "Confirma elementos obrigatórios antes de criar: vertical + ICP + mensagem + formato + canal" }
+    {
+      "id": "carousel-canva",
+      "desc": "5-7 slides via Canva MCP com design tokens PropTech (cores, tipografia, logo)"
+    },
+    {
+      "id": "copy-hormozi",
+      "desc": "Framework Hook→Pain→Solution→Outcome→CTA, hook em <6 palavras, PT-PT obrigatório"
+    },
+    {
+      "id": "ab-variants",
+      "desc": "2-3 variantes de headline por peça para teste (mesmo visual, copy diferente)"
+    },
+    {
+      "id": "adaptacao-multiplataforma",
+      "desc": "1:1 Instagram/Facebook, 9:16 Stories, 1.91:1 Feed ads, Google Display (300×250, 728×90)"
+    },
+    {
+      "id": "stories-sequence",
+      "desc": "3-5 slides sequenciais para Instagram Stories com CTA no final"
+    },
+    {
+      "id": "brief-review",
+      "desc": "Confirma elementos obrigatórios antes de criar: vertical + ICP + mensagem + formato + canal"
+    }
   ],
   "recipes": [
-    { "id": "brief-to-assets", "trigger": "manual", "trigger_label": "on_brief", "desc": "Brief recebido → assets entregues em <24h (urgente) ou <48h (normal)" },
-    { "id": "weekly-asset-library", "trigger": "schedule", "trigger_label": "0 16 * * 5", "desc": "Sexta: organizar biblioteca por vertical/canal/data no Google Drive" },
-    { "id": "creative-refresh", "trigger": "manual", "trigger_label": "on_fatigue_alert", "desc": "CTR <1% >7 dias → nova variante hook para campanha activa" }
+    {
+      "id": "brief-to-assets",
+      "trigger": "manual",
+      "trigger_label": "on_brief",
+      "desc": "Brief recebido → assets entregues em <24h (urgente) ou <48h (normal)"
+    },
+    {
+      "id": "weekly-asset-library",
+      "trigger": "schedule",
+      "trigger_label": "0 16 * * 5",
+      "desc": "Sexta: organizar biblioteca por vertical/canal/data no Google Drive"
+    },
+    {
+      "id": "creative-refresh",
+      "trigger": "manual",
+      "trigger_label": "on_fatigue_alert",
+      "desc": "CTR <1% >7 dias → nova variante hook para campanha activa"
+    }
   ],
   "peerReads": [
-    { "stage": "current", "value": "diretor-marketing (brief) + gestor-ads (feedback CTR)" },
-    { "stage": "sprint_next", "value": "publisher-social (formatos aprovados)" }
+    {
+      "stage": "current",
+      "value": "diretor-marketing (brief) + gestor-ads (feedback CTR)"
+    },
+    {
+      "stage": "sprint_next",
+      "value": "publisher-social (formatos aprovados)"
+    }
   ],
-  "cost": { "current": 10, "currency": "USD", "period": "30d", "notes": "Sonnet — múltiplos briefs mensais + iterações de copy + A/B variants" }
+  "cost": {
+    "current": 10,
+    "currency": "USD",
+    "period": "30d",
+    "notes": "Sonnet — múltiplos briefs mensais + iterações de copy + A/B variants"
+  },
+  "verticals": [
+    "V2",
+    "V4",
+    "V5"
+  ]
 }

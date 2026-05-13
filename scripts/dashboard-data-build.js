@@ -549,11 +549,16 @@ function parseEmployees() {
       const meta = JSON.parse(raw)
       const mdPath = join(employeeDir, file.replace('.meta.json', '.md'))
       const mdRaw = existsSync(mdPath) ? readFileSync(mdPath, 'utf8') : ''
+      // Compatibilidade: aceita verticals[] novo ou constrói de vertical + secondary_verticals legacy
+      const verticals = Array.isArray(meta.verticals) && meta.verticals.length > 0
+        ? meta.verticals
+        : [meta.vertical, ...(meta.secondary_verticals || [])].filter(Boolean)
       employees.push({
         id: meta.id,
         name: meta.name,
         role: meta.role,
         department: meta.department,
+        verticals,
         vertical: meta.vertical,
         secondary_verticals: meta.secondary_verticals || [],
         model: meta.model || '',
@@ -571,13 +576,35 @@ function parseEmployees() {
     } catch { /* skip malformed file */ }
   }
   employees.sort((a, b) => {
-    const DEPT_ORDER = ['Manutenção', 'Condomínios', 'Marketing']
+    // Ordem nova (horizontal): marketing → sales → operations → finance → support → legal → engineering → hr
+    // Aceita também legacy (Manutenção/Condomínios/Marketing) no fim
+    const DEPT_ORDER = ['marketing', 'sales', 'operations', 'finance', 'support', 'legal', 'engineering', 'hr',
+                        'Manutenção', 'Condomínios', 'Marketing']
     const da = DEPT_ORDER.indexOf(a.department)
     const db = DEPT_ORDER.indexOf(b.department)
     if (da !== db) return (da === -1 ? 99 : da) - (db === -1 ? 99 : db)
     return a.name.localeCompare(b.name)
   })
   return employees
+}
+
+// Catálogo canónico de 8 departamentos horizontais (espelha apps/dashboard/src/lib/departments.js)
+const DEPARTMENTS_CATALOG = [
+  { id: 'marketing',   label: 'Marketing',   color: '#3b82f6', icon: 'Megaphone',     order: 1 },
+  { id: 'sales',       label: 'Sales',       color: '#ec4899', icon: 'TrendingUp',    order: 2 },
+  { id: 'operations',  label: 'Operations',  color: '#10b981', icon: 'Settings',      order: 3 },
+  { id: 'finance',     label: 'Finance',     color: '#f59e0b', icon: 'DollarSign',    order: 4 },
+  { id: 'support',     label: 'Support',     color: '#06b6d4', icon: 'MessageCircle', order: 5 },
+  { id: 'legal',       label: 'Legal',       color: '#8b5cf6', icon: 'Scale',         order: 6 },
+  { id: 'engineering', label: 'Engineering', color: '#6b7280', icon: 'Code',          order: 7 },
+  { id: 'hr',          label: 'HR',          color: '#d946ef', icon: 'Users',         order: 8, planned: true },
+]
+
+function buildDepartments(employees) {
+  return DEPARTMENTS_CATALOG.map(d => ({
+    ...d,
+    count: employees.filter(e => e.department === d.id).length,
+  }))
 }
 
 function parseBia() {
@@ -763,6 +790,7 @@ const data = {
   watchers: watchersResult,
   agents: agentsResult,
   employees: employeesResult,
+  departments: buildDepartments(employeesResult),
   bia: biaResult,
   skills: skillsResult,
   recentActivity: activityResult.slice(0, 20),

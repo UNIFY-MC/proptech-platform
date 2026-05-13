@@ -3,35 +3,123 @@
   "name": "Paula",
   "role": "Publisher Social Media",
   "vertical": "core",
-  "department": "Marketing",
+  "department": "marketing",
   "model": "claude-haiku-4-5-20251001",
   "version": "1.0",
   "status": "active",
   "color": "pink",
   "avatarInitial": "PS",
   "integrations": [
-    { "id": "facebook_ads_mcp", "name": "Facebook Ads MCP", "desc": "publicar em Instagram + Facebook via Meta API", "icon": "FB", "color": "blue", "enabled": true },
-    { "id": "canva_mcp", "name": "Canva MCP", "desc": "exportar assets finais prontos para publicação", "icon": "CA", "color": "rose", "enabled": true },
-    { "id": "supabase_core_publicacoes", "name": "core.publicacoes", "desc": "registo de publicações + URLs + engagement", "icon": "SB", "color": "emerald", "enabled": true },
-    { "id": "supabase_core_campanhas", "name": "core.campanhas", "desc": "alinhar orgânico com campanhas pagas activas", "icon": "SB", "color": "emerald", "enabled": true },
-    { "id": "system_approvals_queue", "name": "system.approvals_queue", "desc": "verificar aprovação antes de publicar", "icon": "SB", "color": "amber", "enabled": true },
-    { "id": "system_inbox_items", "name": "system.inbox_items", "desc": "confirmações e flags de engagement", "icon": "SB", "color": "blue", "enabled": true }
+    {
+      "id": "facebook_ads_mcp",
+      "name": "Facebook Ads MCP",
+      "desc": "publicar em Instagram + Facebook via Meta API",
+      "icon": "FB",
+      "color": "blue",
+      "enabled": true
+    },
+    {
+      "id": "canva_mcp",
+      "name": "Canva MCP",
+      "desc": "exportar assets finais prontos para publicação",
+      "icon": "CA",
+      "color": "rose",
+      "enabled": true
+    },
+    {
+      "id": "supabase_core_publicacoes",
+      "name": "core.publicacoes",
+      "desc": "registo de publicações + URLs + engagement",
+      "icon": "SB",
+      "color": "emerald",
+      "enabled": true
+    },
+    {
+      "id": "supabase_core_campanhas",
+      "name": "core.campanhas",
+      "desc": "alinhar orgânico com campanhas pagas activas",
+      "icon": "SB",
+      "color": "emerald",
+      "enabled": true
+    },
+    {
+      "id": "system_approvals_queue",
+      "name": "system.approvals_queue",
+      "desc": "verificar aprovação antes de publicar",
+      "icon": "SB",
+      "color": "amber",
+      "enabled": true
+    },
+    {
+      "id": "system_inbox_items",
+      "name": "system.inbox_items",
+      "desc": "confirmações e flags de engagement",
+      "icon": "SB",
+      "color": "blue",
+      "enabled": true
+    }
   ],
   "skills": [
-    { "id": "publicacao-peak-time", "desc": "Instagram 19h-21h (seg-sex) / Facebook 13h-15h (seg-qui) / LinkedIn 08h-09h (ter-qui)" },
-    { "id": "hashtag-strategy", "desc": "10-15 hashtags estratificadas por vertical: 3 nicho, 5 médio, 2 grande" },
-    { "id": "cross-posting", "desc": "Adapta caption e formato por plataforma — nunca copia igual de Instagram para LinkedIn" },
-    { "id": "calendario-editorial", "desc": "Mantém 4 semanas à frente: a criar / aprovado / agendado / publicado" },
-    { "id": "engagement-monitoring", "desc": "Likes, shares, comentários, saves — flag ao diretor-marketing se outlier em <24h" }
+    {
+      "id": "publicacao-peak-time",
+      "desc": "Instagram 19h-21h (seg-sex) / Facebook 13h-15h (seg-qui) / LinkedIn 08h-09h (ter-qui)"
+    },
+    {
+      "id": "hashtag-strategy",
+      "desc": "10-15 hashtags estratificadas por vertical: 3 nicho, 5 médio, 2 grande"
+    },
+    {
+      "id": "cross-posting",
+      "desc": "Adapta caption e formato por plataforma — nunca copia igual de Instagram para LinkedIn"
+    },
+    {
+      "id": "calendario-editorial",
+      "desc": "Mantém 4 semanas à frente: a criar / aprovado / agendado / publicado"
+    },
+    {
+      "id": "engagement-monitoring",
+      "desc": "Likes, shares, comentários, saves — flag ao diretor-marketing se outlier em <24h"
+    }
   ],
   "recipes": [
-    { "id": "daily-publish", "trigger": "schedule", "trigger_label": "0 * * * *", "desc": "Verificar calendário — algo a publicar hoje no horário definido (±15 min)" },
-    { "id": "weekly-engagement-digest", "trigger": "schedule", "trigger_label": "0 16 * * 5", "desc": "Sexta 16h00: top 3 e bottom 3 posts por reach e engagement rate" },
-    { "id": "monthly-schedule-review", "trigger": "schedule", "trigger_label": "0 10 1 * *", "desc": "Dia 1: propor ajuste de frequência ou horários com base em 30 dias de dados" }
+    {
+      "id": "daily-publish",
+      "trigger": "schedule",
+      "trigger_label": "0 * * * *",
+      "desc": "Verificar calendário — algo a publicar hoje no horário definido (±15 min)"
+    },
+    {
+      "id": "weekly-engagement-digest",
+      "trigger": "schedule",
+      "trigger_label": "0 16 * * 5",
+      "desc": "Sexta 16h00: top 3 e bottom 3 posts por reach e engagement rate"
+    },
+    {
+      "id": "monthly-schedule-review",
+      "trigger": "schedule",
+      "trigger_label": "0 10 1 * *",
+      "desc": "Dia 1: propor ajuste de frequência ou horários com base em 30 dias de dados"
+    }
   ],
   "peerReads": [
-    { "stage": "current", "value": "diretor-marketing (calendário aprovado) + criativo-conteudo (assets)" },
-    { "stage": "sprint_next", "value": "gestor-leads (engagement → leads orgânicos)" }
+    {
+      "stage": "current",
+      "value": "diretor-marketing (calendário aprovado) + criativo-conteudo (assets)"
+    },
+    {
+      "stage": "sprint_next",
+      "value": "gestor-leads (engagement → leads orgânicos)"
+    }
   ],
-  "cost": { "current": 3, "currency": "USD", "period": "30d", "notes": "Haiku — publicações simples, monitoring leve, alto volume baixo custo" }
+  "cost": {
+    "current": 3,
+    "currency": "USD",
+    "period": "30d",
+    "notes": "Haiku — publicações simples, monitoring leve, alto volume baixo custo"
+  },
+  "verticals": [
+    "V2",
+    "V4",
+    "V5"
+  ]
 }

@@ -3,32 +3,100 @@
   "name": "Ana",
   "role": "Atendimento & Triagem",
   "vertical": "V2 Condomínios",
-  "department": "Condomínios",
+  "department": "support",
   "model": "claude-haiku-4-5",
   "version": "1.0",
   "status": "active",
   "color": "cyan",
   "avatarInitial": "A",
   "integrations": [
-    { "id": "supabase_core_pessoas", "name": "core.pessoas", "desc": "identificar remetente por email/tel", "icon": "SB", "color": "emerald", "enabled": true },
-    { "id": "supabase_v2_historico", "name": "v2_condominios.historico_pedidos", "desc": "histórico de interacções do condómino", "icon": "SB", "color": "emerald", "enabled": true },
-    { "id": "email_webhook", "name": "Email Webhook", "desc": "incoming email → inbox_item", "icon": "EM", "color": "blue", "enabled": true },
-    { "id": "portal_webhook", "name": "Portal Condómino", "desc": "form submit → inbox_item", "icon": "PW", "color": "slate", "enabled": false, "planned": true }
+    {
+      "id": "supabase_core_pessoas",
+      "name": "core.pessoas",
+      "desc": "identificar remetente por email/tel",
+      "icon": "SB",
+      "color": "emerald",
+      "enabled": true
+    },
+    {
+      "id": "supabase_v2_historico",
+      "name": "v2_condominios.historico_pedidos",
+      "desc": "histórico de interacções do condómino",
+      "icon": "SB",
+      "color": "emerald",
+      "enabled": true
+    },
+    {
+      "id": "email_webhook",
+      "name": "Email Webhook",
+      "desc": "incoming email → inbox_item",
+      "icon": "EM",
+      "color": "blue",
+      "enabled": true
+    },
+    {
+      "id": "portal_webhook",
+      "name": "Portal Condómino",
+      "desc": "form submit → inbox_item",
+      "icon": "PW",
+      "color": "slate",
+      "enabled": false,
+      "planned": true
+    }
   ],
   "skills": [
-    { "id": "identify-sender", "desc": "Cruza email/tel com core.pessoas — retorna pessoa_id + edificio_id + fracção" },
-    { "id": "classify-intent", "desc": "Classifica pedido em 12 categorias com score de confiança" },
-    { "id": "assess-urgency", "desc": "Determina urgência: emergência/urgente/normal com base em conteúdo" },
-    { "id": "enrich-context", "desc": "Adiciona histórico do condómino, OTs abertas, mora actual ao brief" },
-    { "id": "route-to-employee", "desc": "Cria inbox_item para employee destino com brief completo e metadata" }
+    {
+      "id": "identify-sender",
+      "desc": "Cruza email/tel com core.pessoas — retorna pessoa_id + edificio_id + fracção"
+    },
+    {
+      "id": "classify-intent",
+      "desc": "Classifica pedido em 12 categorias com score de confiança"
+    },
+    {
+      "id": "assess-urgency",
+      "desc": "Determina urgência: emergência/urgente/normal com base em conteúdo"
+    },
+    {
+      "id": "enrich-context",
+      "desc": "Adiciona histórico do condómino, OTs abertas, mora actual ao brief"
+    },
+    {
+      "id": "route-to-employee",
+      "desc": "Cria inbox_item para employee destino com brief completo e metadata"
+    }
   ],
   "recipes": [
-    { "id": "email-intake", "trigger": "event", "trigger_label": "email_webhook", "desc": "Processa email recebido, classifica e encaminha em <2 min" },
-    { "id": "portal-intake", "trigger": "event", "trigger_label": "portal_form_submit", "desc": "Processa pedido do portal condómino, classifica e encaminha" }
+    {
+      "id": "email-intake",
+      "trigger": "event",
+      "trigger_label": "email_webhook",
+      "desc": "Processa email recebido, classifica e encaminha em <2 min"
+    },
+    {
+      "id": "portal-intake",
+      "trigger": "event",
+      "trigger_label": "portal_form_submit",
+      "desc": "Processa pedido do portal condómino, classifica e encaminha"
+    }
   ],
   "peerReads": [
-    { "stage": "current", "value": "manutencao-condo + financeiro-condo (contexto OTs e mora)" },
-    { "stage": "sprint_next", "value": "manutencao-condo + financeiro-condo + seguros-condo" }
+    {
+      "stage": "current",
+      "value": "manutencao-condo + financeiro-condo (contexto OTs e mora)"
+    },
+    {
+      "stage": "sprint_next",
+      "value": "manutencao-condo + financeiro-condo + seguros-condo"
+    }
   ],
-  "cost": { "current": 3, "currency": "USD", "period": "30d", "notes": "Haiku — volume alto mas custo mínimo por classificação" }
+  "cost": {
+    "current": 3,
+    "currency": "USD",
+    "period": "30d",
+    "notes": "Haiku — volume alto mas custo mínimo por classificação"
+  },
+  "verticals": [
+    "V2"
+  ]
 }

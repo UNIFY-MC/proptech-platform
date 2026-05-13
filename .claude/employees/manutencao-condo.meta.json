@@ -3,36 +3,123 @@
   "name": "Marco",
   "role": "Gestor de Manutenção",
   "vertical": "V2",
-  "secondary_verticals": ["V5"],
-  "department": "Condomínios",
+  "secondary_verticals": [
+    "V5"
+  ],
+  "department": "operations",
   "model": "claude-sonnet-4-6",
   "version": "1.0",
   "status": "active",
   "color": "orange",
   "avatarInitial": "M",
   "integrations": [
-    { "id": "supabase_v5_manutencao", "name": "v5_manutencao schema", "desc": "OTs, prestadores, orçamentos", "icon": "SB", "color": "emerald", "enabled": true },
-    { "id": "supabase_v2_fracoes", "name": "v2_condominios.fracoes", "desc": "localização das avarias", "icon": "SB", "color": "emerald", "enabled": true },
-    { "id": "resend", "name": "Resend (via Cami)", "desc": "notificação a prestadores após aprovação", "icon": "RS", "color": "cyan", "enabled": true },
-    { "id": "whatsapp", "name": "WhatsApp (via Cami)", "desc": "urgências a prestadores (futuro)", "icon": "WA", "color": "green", "enabled": false, "planned": true },
-    { "id": "moloni", "name": "Moloni (futuro)", "desc": "recibos fiscais de prestadores", "icon": "ML", "color": "amber", "enabled": false, "planned": true }
+    {
+      "id": "supabase_v5_manutencao",
+      "name": "v5_manutencao schema",
+      "desc": "OTs, prestadores, orçamentos",
+      "icon": "SB",
+      "color": "emerald",
+      "enabled": true
+    },
+    {
+      "id": "supabase_v2_fracoes",
+      "name": "v2_condominios.fracoes",
+      "desc": "localização das avarias",
+      "icon": "SB",
+      "color": "emerald",
+      "enabled": true
+    },
+    {
+      "id": "resend",
+      "name": "Resend (via Cami)",
+      "desc": "notificação a prestadores após aprovação",
+      "icon": "RS",
+      "color": "cyan",
+      "enabled": true
+    },
+    {
+      "id": "whatsapp",
+      "name": "WhatsApp (via Cami)",
+      "desc": "urgências a prestadores (futuro)",
+      "icon": "WA",
+      "color": "green",
+      "enabled": false,
+      "planned": true
+    },
+    {
+      "id": "moloni",
+      "name": "Moloni (futuro)",
+      "desc": "recibos fiscais de prestadores",
+      "icon": "ML",
+      "color": "amber",
+      "enabled": false,
+      "planned": true
+    }
   ],
   "skills": [
-    { "id": "triage-avaria", "desc": "Classifica tipo técnico + urgência (emergência/urgente/normal) com base em descrição" },
-    { "id": "score-prestador", "desc": "Calcula score: rating×0.4 + taxa_prazo×0.3 + proximidade×0.2 + disponibilidade×0.1" },
-    { "id": "abrir-ot", "desc": "Cria OT com contexto completo — adjudica <€200 ou submete approvals_queue" },
-    { "id": "acompanhar-ot", "desc": "Verifica OTs abertas >48h sem update — cria flags proporcionais" },
-    { "id": "fechar-ot", "desc": "Fecha OT, verifica valor final vs. orçamento, lança custo em financeiro-condo" },
-    { "id": "actualizar-rating-prestador", "desc": "Actualiza score do prestador com base no resultado e prazo da OT" }
+    {
+      "id": "triage-avaria",
+      "desc": "Classifica tipo técnico + urgência (emergência/urgente/normal) com base em descrição"
+    },
+    {
+      "id": "score-prestador",
+      "desc": "Calcula score: rating×0.4 + taxa_prazo×0.3 + proximidade×0.2 + disponibilidade×0.1"
+    },
+    {
+      "id": "abrir-ot",
+      "desc": "Cria OT com contexto completo — adjudica <€200 ou submete approvals_queue"
+    },
+    {
+      "id": "acompanhar-ot",
+      "desc": "Verifica OTs abertas >48h sem update — cria flags proporcionais"
+    },
+    {
+      "id": "fechar-ot",
+      "desc": "Fecha OT, verifica valor final vs. orçamento, lança custo em financeiro-condo"
+    },
+    {
+      "id": "actualizar-rating-prestador",
+      "desc": "Actualiza score do prestador com base no resultado e prazo da OT"
+    }
   ],
   "recipes": [
-    { "id": "avaria-intake", "trigger": "event", "trigger_label": "inbox_item_manutencao", "desc": "Recebe avaria da Ana, classifica, selecciona prestador, abre OT" },
-    { "id": "ot-followup", "trigger": "schedule", "trigger_label": "0 9 * * *", "desc": "Diário: verificar OTs abertas sem actualização >48h" },
-    { "id": "fecho-ot", "trigger": "event", "trigger_label": "prestador_confirmou_conclusao", "desc": "Prestador confirma → fechar OT + lançar custo" }
+    {
+      "id": "avaria-intake",
+      "trigger": "event",
+      "trigger_label": "inbox_item_manutencao",
+      "desc": "Recebe avaria da Ana, classifica, selecciona prestador, abre OT"
+    },
+    {
+      "id": "ot-followup",
+      "trigger": "schedule",
+      "trigger_label": "0 9 * * *",
+      "desc": "Diário: verificar OTs abertas sem actualização >48h"
+    },
+    {
+      "id": "fecho-ot",
+      "trigger": "event",
+      "trigger_label": "prestador_confirmou_conclusao",
+      "desc": "Prestador confirma → fechar OT + lançar custo"
+    }
   ],
   "peerReads": [
-    { "stage": "current", "value": "atendimento-condo (avarias incoming), financeiro-condo (custos OT)" },
-    { "stage": "sprint_next", "value": "atendimento-condo + financeiro-condo + compliance-condo (obras >€2k)" }
+    {
+      "stage": "current",
+      "value": "atendimento-condo (avarias incoming), financeiro-condo (custos OT)"
+    },
+    {
+      "stage": "sprint_next",
+      "value": "atendimento-condo + financeiro-condo + compliance-condo (obras >€2k)"
+    }
   ],
-  "cost": { "current": 10, "currency": "USD", "period": "30d", "notes": "Sonnet — volume event-driven (2-4 OTs/edifício/mês)" }
+  "cost": {
+    "current": 10,
+    "currency": "USD",
+    "period": "30d",
+    "notes": "Sonnet — volume event-driven (2-4 OTs/edifício/mês)"
+  },
+  "verticals": [
+    "V2",
+    "V5"
+  ]
 }
