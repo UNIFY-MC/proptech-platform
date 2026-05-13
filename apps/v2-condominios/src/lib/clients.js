@@ -3,6 +3,7 @@ import {
   createCoreClient,
   createV2Client,
   createSystemClient,
+  createIamClient,
   createV2LegacyClient,
 } from '@proptech/db'
 
@@ -22,6 +23,9 @@ export const mainClient   = createMainClient(anonKey)
 export const coreClient   = createCoreClient(anonKey)
 export const v2Client     = createV2Client(anonKey)
 export const systemClient = createSystemClient(anonKey)
+// iam schema (ADR-013): permissões + login aliases + activity logs cross-vertical.
+// Substitui acesso directo a v2_condominios.permission_* / activity_logs / portal_tokens.
+export const iamClient    = createIamClient(anonKey)
 
 // V2 Condo Hub legacy (prataowners.pt) — READ-ONLY.
 // Identidade separada (não partilha JWT com V1). Anon-only por defeito;

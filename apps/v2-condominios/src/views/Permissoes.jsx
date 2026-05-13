@@ -1,5 +1,10 @@
 import { useEffect, useState, useMemo, useCallback } from 'react'
-import { v2Client } from '../lib/clients.js'
+import { v2Client, iamClient } from '../lib/clients.js'
+
+// ADR-013: lê de schema iam (cross-vertical) em vez de v2_condominios.*
+// As tabelas v2_condominios.permission_* foram migradas para iam.*
+// Compatibilidade: v2_condominios.has_permission() etc. ainda funcionam
+// como proxies (delegam para iam.*).
 
 const TABS = [
   { id: 'utilizadores', label: 'Utilizadores' },
@@ -94,10 +99,10 @@ function TabUtilizadores() {
     let active = true
     async function load() {
       const [sResp, tResp] = await Promise.all([
-        v2Client.from('staff_login_aliases')
+        iamClient.from('staff_login_aliases')
           .select('login, email, nome, permission_group_code, active, last_login_at, created_at')
           .eq('active', true).order('login'),
-        v2Client.from('portal_tokens')
+        iamClient.from('portal_tokens')
           .select('token, fracao_id, condomino_id, email_legacy, nome_legacy, permission_group_code, active, last_used_at, created_at')
           .eq('active', true).order('last_used_at', { ascending: false, nullsFirst: false }).limit(500),
       ])
@@ -239,9 +244,9 @@ function TabGrupos() {
     let active = true
     async function load() {
       const [g, s, p] = await Promise.all([
-        v2Client.from('permission_groups').select('code, label, color, ordem').order('ordem'),
-        v2Client.from('portal_sections').select('code, label, ordem').order('ordem'),
-        v2Client.from('permission_grants').select('group_code, section_code, can_view, can_edit, can_create, can_delete'),
+        iamClient.from('permission_groups').select('code, label, color, ordem').order('ordem'),
+        iamClient.from('permission_sections').select('code, label, vertical, ordem').order('ordem'),
+        iamClient.from('permission_grants').select('group_code, section_code, can_view, can_edit, can_create, can_delete'),
       ])
       if (!active) return
       if (g.error || s.error || p.error) {
@@ -268,7 +273,7 @@ function TabGrupos() {
     const key = `${groupCode}:${sectionCode}:${action.key}`
     const current = grantMap[`${groupCode}:${sectionCode}`]?.[action.col] === true
     setSaving(key)
-    const { error: rpcErr } = await v2Client.rpc('set_permission_grant', {
+    const { error: rpcErr } = await iamClient.rpc('set_permission_grant', {
       p_group_code: groupCode,
       p_section_code: sectionCode,
       p_action: action.key,
@@ -293,15 +298,43 @@ function TabGrupos() {
     setSaving(null)
   }, [grantMap])
 
+  // Filter sections by vertical (toolbar)
+  const [filterVertical, setFilterVertical] = useState('')
+  const visibleSections = useMemo(() => {
+    if (!sections) return []
+    if (!filterVertical) return sections
+    return sections.filter(s => s.vertical === filterVertical)
+  }, [sections, filterVertical])
+
   if (error) return <div className="error-banner">Erro: {error}</div>
   if (groups === null || sections === null || grants === null) return <div className="dim">A carregar matriz…</div>
+
+  const verticais = [...new Set(sections.map(s => s.vertical))].sort()
 
   return (
     <div>
       <p className="dim" style={{ fontSize: 12, marginBottom: 14 }}>
         Clica numa célula para ligar/desligar permissão. Cada grupo combina secção × acção
-        (<span className="mono">VER · EDT · NEW · DEL</span>). Alterações ficam em <code className="mono">activity_logs</code>.
+        (<span className="mono">VER · EDT · NEW · DEL</span>). Alterações ficam em <code className="mono">iam.activity_logs</code>.
+        <span style={{ marginLeft: 8 }}>Schema: <code className="mono">iam.permission_grants</code> (cross-vertical · ADR-013).</span>
       </p>
+
+      <div style={{ display: 'flex', gap: 8, marginBottom: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+        <select
+          value={filterVertical}
+          onChange={e => setFilterVertical(e.target.value)}
+          style={{
+            background: 'var(--sf)', border: '1px solid var(--bd)', color: 'var(--tx)',
+            padding: '5px 10px', borderRadius: 6, fontSize: 11,
+            fontFamily: 'DM Mono, monospace', textTransform: 'uppercase', letterSpacing: 0.5,
+          }}
+        >
+          <option value="">Todas as verticais ({sections.length} secções)</option>
+          {verticais.map(v => (
+            <option key={v} value={v}>{v} ({sections.filter(s => s.vertical === v).length})</option>
+          ))}
+        </select>
+      </div>
 
       <div style={{ overflowX: 'auto', background: 'var(--sf)', border: '1px solid var(--bd)', borderRadius: 8 }}>
         <table style={{ minWidth: 900 }}>
@@ -336,7 +369,7 @@ function TabGrupos() {
             </tr>
           </thead>
           <tbody>
-            {sections.map(sec => (
+            {visibleSections.map(sec => (
               <tr key={sec.code}>
                 <td style={{ position: 'sticky', left: 0, background: 'var(--sf)', fontWeight: 500, fontSize: 12 }}>
                   {sec.label}
@@ -386,6 +419,7 @@ function TabGrupos() {
 function TabLogs() {
   const [logs, setLogs] = useState(null)
   const [error, setError] = useState(null)
+  const [filterVertical, setFilterVertical] = useState('')
   const [filterOrigem, setFilterOrigem] = useState('')
   const [filterTipo, setFilterTipo] = useState('')
   const [search, setSearch] = useState('')
@@ -393,13 +427,16 @@ function TabLogs() {
   useEffect(() => {
     let active = true
     async function load() {
-      let q = v2Client
+      // iam.activity_logs agora inclui coluna `vertical` para distinguir
+      // logs V2 vs V5 vs V4 etc. (ADR-013)
+      let q = iamClient
         .from('activity_logs')
-        .select('id, ts, user_email, user_label, origem, tipo, detalhe, resultado, ip, user_agent')
+        .select('id, ts, user_email, user_label, vertical, origem, tipo, detalhe, resultado, ip, user_agent')
         .order('ts', { ascending: false })
         .limit(300)
-      if (filterOrigem) q = q.eq('origem', filterOrigem)
-      if (filterTipo)   q = q.eq('tipo', filterTipo)
+      if (filterVertical) q = q.eq('vertical', filterVertical)
+      if (filterOrigem)   q = q.eq('origem', filterOrigem)
+      if (filterTipo)     q = q.eq('tipo', filterTipo)
       const { data, error } = await q
       if (!active) return
       if (error) setError(error.message)
@@ -407,7 +444,7 @@ function TabLogs() {
     }
     load()
     return () => { active = false }
-  }, [filterOrigem, filterTipo])
+  }, [filterVertical, filterOrigem, filterTipo])
 
   const visible = useMemo(() => {
     if (!logs) return null
@@ -424,6 +461,16 @@ function TabLogs() {
   return (
     <div>
       <div style={{ display: 'flex', gap: 10, marginBottom: 14, flexWrap: 'wrap', alignItems: 'center' }}>
+        <select value={filterVertical} onChange={e => setFilterVertical(e.target.value)} style={selectStyle}>
+          <option value="">Todas as verticais</option>
+          <option value="v2">V2 Condomínios</option>
+          <option value="v3">V3 Seguros</option>
+          <option value="v4">V4 Energia</option>
+          <option value="v5">V5 Manutenção</option>
+          <option value="marketing">Marketing</option>
+          <option value="system">System</option>
+          <option value="iam">IAM</option>
+        </select>
         <select value={filterOrigem} onChange={e => setFilterOrigem(e.target.value)} style={selectStyle}>
           <option value="">Todas origens</option>
           <option value="staff">staff</option>
@@ -475,6 +522,7 @@ function TabLogs() {
           <thead>
             <tr>
               <th>Quando</th>
+              <th>Vertical</th>
               <th>Origem</th>
               <th>Tipo</th>
               <th>Utilizador</th>
@@ -487,6 +535,7 @@ function TabLogs() {
             {visible.map(l => (
               <tr key={l.id}>
                 <td className="mono" style={{ fontSize: 11, whiteSpace: 'nowrap' }}>{fdt(l.ts)}</td>
+                <td><VerticalBadge value={l.vertical} /></td>
                 <td><OrigemBadge value={l.origem} /></td>
                 <td><span className="mono" style={{ fontSize: 10, color: 'var(--mu)' }}>{l.tipo}</span></td>
                 <td className="mono" style={{ fontSize: 11 }}>{l.user_label ?? l.user_email ?? '—'}</td>
@@ -532,4 +581,19 @@ function ResultBadge({ value }) {
     return <span className="mono" style={{ color: 'var(--rd)', fontSize: 11 }}>✗ {value}</span>
   }
   return <span className="mono" style={{ fontSize: 11 }}>{value}</span>
+}
+
+function VerticalBadge({ value }) {
+  if (!value) return <span className="dim">—</span>
+  const palette = {
+    v2:        'b-blue',
+    v3:        'b-purple',
+    v4:        'b-gold',
+    v5:        'b-green',
+    v10:       'b-purple',
+    marketing: 'b-red',
+    system:    'b',
+    iam:       'b',
+  }
+  return <span className={`b ${palette[value] || 'b'}`} style={{ fontSize: 9 }}>{value}</span>
 }
