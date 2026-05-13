@@ -61,13 +61,18 @@ proptech-platform/
 ├── .gitignore                   ← Ignora node_modules/, .env, dist/, builds
 ├── CLAUDE.md                    ← Este ficheiro
 └── apps/
-    ├── v1-core/                 ← React (Vite) · port do admin/index.html
-    │   ├── src/App.jsx          ← 1941 linhas · Supabase + Chart.js
-    │   ├── src/main.jsx
+    ├── dashboard/               ← Hub central (port 5180) · CookAI-style Agent Command Center
+    │   │                          IAM + Billing + Growth integrados (ADR-013/014/015)
+    │   ├── src/App.jsx          ← Routes /growth/funnel, /growth/leads, /growth/oportunidades, /growth/rules
     │   ├── package.json
     │   └── vite.config.js
-    └── (v3-seguros, v4-energia, ... a construir)
+    ├── v2-condominios/          ← V2 produção (port 5172) · prataowners.pt
+    ├── v4-energia/              ← V4 em construção (port livre) · simulador tarifas
+    ├── v5-manutencao/           ← V5 produção (port 5175) · catálogo serviços
+    └── (v3-seguros, v6-reabilitacao, ... a construir)
 ```
+
+> **Nota cleanup 2026-05-13:** `apps/core/` e `apps/v1-core/` (cópias legacy do admin/index.html, 1941 linhas duplicadas) **removidos** com a centralização. Tudo o que era "core" é agora `apps/dashboard/` + schemas centrais (`core`, `iam`, `growth`, `system`).
 
 ---
 
@@ -189,7 +194,7 @@ Ver `.claude/strategy/adrs/ADR-V2-002-postgrest-schema-exposure.md` (commit `a86
 
 ---
 
-## 🎨 Design System (extraído de `apps/v1-core/`)
+## 🎨 Design System (extraído originalmente do admin/index.html legacy, mantido em `packages/ui` + `apps/dashboard`)
 
 ### Cores (light + dark modes)
 ```css
@@ -367,7 +372,7 @@ O hook `SubagentStop` faz auto-commit + auto-push em branches de sprint. NÃO de
 Se algum agente sugere "automatizar merge a `main` no hook", recusar — viola Regra D2.
 
 Abordagem:
-1. Estrutura idêntica a `apps/v1-core/`
+1. Estrutura idêntica a `apps/v2-condominios/` (apps/v1-core e apps/core foram removidos em 2026-05-13)
 2. Design system partilhado (mesmas fontes, mesmos tokens)
 3. Schema Supabase em `v4_energia` no V1 Core Hub
 4. Scope v1: simulador tarifas + contratos + formulário de mudança de comercializador
