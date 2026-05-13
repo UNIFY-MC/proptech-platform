@@ -88,17 +88,20 @@ export default function InboxUnified() {
   const { createTask } = useTasks()
   const navigate = useNavigate()
 
-  async function handleCreateTask({ kind, item }) {
+  async function handleCreateTask({ kind, item, suggestion }) {
     const isEmployee = kind === 'employee'
+    const defaultTitle = suggestion || item.title
     const titlePrompt = isEmployee
       ? `Task para empregado (a partir de "${item.title}")\nTítulo:`
       : `Nova ideia (a partir de "${item.title}")\nTítulo:`
-    const title = window.prompt(titlePrompt, item.title)
+    const title = window.prompt(titlePrompt, defaultTitle)
     if (!title) return
     const verticalGuess = item.vertical || null
     const taskId = await createTask({
       title,
-      description_md: item.raw?.payload?.summary_md
+      description_md: item.raw?.payload?.why_it_matters
+                   || item.raw?.payload?.summary_md
+                   || item.raw?.payload?.caption
                    || item.raw?.payload?.title
                    || item.body
                    || null,
@@ -106,7 +109,12 @@ export default function InboxUnified() {
       vertical: verticalGuess,
       source_kind: 'inbox_item',
       source_id: item.raw?.id || null,
-      tags: ['from-inbox'],
+      tags: ['from-inbox', item.raw?.kind].filter(Boolean),
+      payload: {
+        source_url: item.raw?.source_url,
+        source_name: item.raw?.source_name,
+        suggestion,
+      },
     })
     if (taskId) {
       if (window.confirm('Task criada. Ir para /tasks?')) navigate('/tasks')
