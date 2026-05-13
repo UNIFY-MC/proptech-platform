@@ -1,34 +1,127 @@
 // Topbar — navegação global 2D do dashboard
-// Esquerda: brand + tabs de apps (Dashboard / V2 / V4 / V5)
+// Esquerda: brand + tab Dashboard + dropdowns por vertical (V2/V3/V4/V5/V10)
 // Direita: vertical filter + notif + theme + sync + profile placeholder
 //
-// Click numa tab muda activeAppSlug (useAppShellStore); o AppEmbed encarrega-se
-// do iframe quando slug !== 'dashboard'.
+// Cada tab vertical é um dropdown que lista TODAS as surfaces dessa vertical
+// (staff/cliente/prestador × desktop/mobile/tablet). Coming-soon items dim.
 
+import { useState, useRef, useEffect } from 'react'
 import * as Icons from 'lucide-react'
-import { Bell, Search, Sun, Moon, User } from 'lucide-react'
-import { useApps } from '../hooks/useApps.js'
+import { Bell, Search, Sun, Moon, User, ChevronDown, LayoutDashboard, Clock } from 'lucide-react'
+import { useApps, VERTICALS, appsByVertical, defaultSurfaceOf } from '../hooks/useApps.js'
 import { useInboxItems } from '../hooks/useSupabase.js'
 import { useInboxReads } from '../hooks/useInboxReads.js'
 import { useVerticalStore, useAppShellStore } from '../store'
+import { roleFor, surfaceFor } from '../lib/surfaces.js'
 
 const FALLBACK_ICON = Icons.Square
-
-function AppIcon({ name, size = 14 }) {
+function AppIcon({ name, size = 14, color }) {
   const Comp = (name && Icons[name]) || FALLBACK_ICON
-  return <Comp size={size} style={{ flexShrink: 0 }} />
+  return <Comp size={size} style={{ flexShrink: 0, color }} />
 }
 
-function AppTab({ app, isActive, onClick }) {
+// Tab simples para a app Dashboard (sem dropdown)
+function DashboardTab({ isActive, onClick }) {
   return (
     <button
       onClick={onClick}
       className={'topbar-tab' + (isActive ? ' active' : '')}
-      title={app.label}
+      title="Dashboard"
     >
-      <AppIcon name={app.icon} />
-      <span>{app.label}</span>
+      <LayoutDashboard size={14} />
+      <span>Dashboard</span>
     </button>
+  )
+}
+
+// Tab de vertical com dropdown de surfaces
+function VerticalTab({ vertical, apps, activeSlug, onPickSlug }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef(null)
+  const surfaces = appsByVertical(apps, vertical.id)
+  const isActive = surfaces.some(s => s.slug === activeSlug)
+  const activeSurface = surfaces.find(s => s.slug === activeSlug)
+
+  useEffect(() => {
+    function onClickOutside(e) {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false)
+    }
+    if (open) document.addEventListener('mousedown', onClickOutside)
+    return () => document.removeEventListener('mousedown', onClickOutside)
+  }, [open])
+
+  if (surfaces.length === 0) return null
+
+  function pickDefault() {
+    const def = defaultSurfaceOf(apps, vertical.id)
+    if (def) onPickSlug(def.slug)
+    setOpen(false)
+  }
+
+  return (
+    <div ref={ref} style={{ position: 'relative', display: 'inline-flex', height: '100%' }}>
+      <button
+        onClick={pickDefault}
+        className={'topbar-tab' + (isActive ? ' active' : '')}
+        title={vertical.label}
+        style={{ paddingRight: 4 }}
+      >
+        <AppIcon name={vertical.icon} />
+        <span>{vertical.label}</span>
+        {isActive && activeSurface && (
+          <span style={{
+            fontSize: '0.6rem',
+            color: 'var(--text-dim)',
+            fontFamily: 'JetBrains Mono, monospace',
+            marginLeft: 4,
+          }}>
+            · {roleFor(activeSurface.role)?.label || activeSurface.role}
+          </span>
+        )}
+      </button>
+      <button
+        onClick={() => setOpen(o => !o)}
+        className={'topbar-tab topbar-tab-caret' + (isActive ? ' active' : '') + (open ? ' open' : '')}
+        title={`Surfaces de ${vertical.label}`}
+        style={{ padding: '0 6px' }}
+      >
+        <ChevronDown size={12} />
+      </button>
+
+      {open && (
+        <div className="topbar-dropdown">
+          {surfaces.map(s => {
+            const r = roleFor(s.role)
+            const sf = surfaceFor(s.surface)
+            return (
+              <button
+                key={s.slug}
+                onClick={() => { onPickSlug(s.slug); setOpen(false) }}
+                className={'topbar-dropdown-item' + (s.slug === activeSlug ? ' active' : '')}
+                style={{ opacity: s.coming_soon ? 0.55 : 1 }}
+              >
+                <AppIcon name={s.icon} size={13} color={r?.color || 'var(--text-dim)'} />
+                <span style={{ flex: 1, textAlign: 'left' }}>{s.label}</span>
+                <span style={{
+                  fontSize: '0.55rem',
+                  fontFamily: 'JetBrains Mono, monospace',
+                  color: 'var(--text-dim)',
+                }}>{sf?.label || s.surface}</span>
+                {s.coming_soon && (
+                  <span style={{
+                    fontSize: '0.55rem',
+                    color: 'var(--warning)',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 2,
+                  }}><Clock size={9} /> soon</span>
+                )}
+              </button>
+            )
+          })}
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -41,33 +134,32 @@ export default function Topbar({ theme, setTheme, lastSync, loading, refresh }) 
   const unread = items.filter(i => !readSet.has(i.id)).length
 
   const isDashboard = activeAppSlug === 'dashboard'
-  const appList = apps.filter(a => a.active)
 
   return (
     <header className="app-topbar">
-      {/* Brand */}
       <div className="topbar-brand">
         <span className="topbar-brand-title">PropTech</span>
       </div>
-
       <div className="topbar-divider" />
 
-      {/* App tabs */}
       <nav className="topbar-tabs">
-        {appList.map(app => (
-          <AppTab
-            key={app.slug}
-            app={app}
-            isActive={app.slug === activeAppSlug}
-            onClick={() => setActiveApp(app.slug)}
+        <DashboardTab
+          isActive={activeAppSlug === 'dashboard'}
+          onClick={() => setActiveApp('dashboard')}
+        />
+        {VERTICALS.map(v => (
+          <VerticalTab
+            key={v.id}
+            vertical={v}
+            apps={apps}
+            activeSlug={activeAppSlug}
+            onPickSlug={setActiveApp}
           />
         ))}
       </nav>
 
       <div style={{ flex: 1 }} />
 
-      {/* Right cluster — só aparece em dashboard mode (em apps embedded
-          a own topbar das apps faz o controlo) */}
       {isDashboard && (
         <>
           <select
