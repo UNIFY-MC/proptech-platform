@@ -8,6 +8,7 @@ import {
   TrendingUp, UserPlus, Target, Zap,
   Plug2, Settings as SettingsIcon, Briefcase,
   Megaphone, DollarSign, MessageCircle, Scale, Code, Settings,
+  Monitor,
 } from 'lucide-react'
 import { useVerticalStore, useAppShellStore } from '../store'
 import { useInboxItems } from '../hooks/useSupabase'
@@ -129,11 +130,12 @@ export default function Sidebar() {
         </SidebarGroup>
 
         <SidebarGroup id="strategy" label="Strategy">
-          <NavItem to="/"           label="Overview"    icon={LayoutDashboard} end />
-          <NavItem to="/roadmap"    label="Roadmap"     icon={Map} />
-          <NavItem to="/watchers"   label="Watchers"    icon={Eye} />
-          <NavItem to="/competitors" label="Competitors" icon={Swords} />
-          <NavItem to="/verticais"  label="Verticais"   icon={Layers} />
+          <NavItem to="/"            label="Overview"        icon={LayoutDashboard} end />
+          <NavItem to="/multiview"   label="Multi-Surface"   icon={Monitor} />
+          <NavItem to="/roadmap"     label="Roadmap"         icon={Map} />
+          <NavItem to="/watchers"    label="Watchers"        icon={Eye} />
+          <NavItem to="/competitors" label="Competitors"     icon={Swords} />
+          <NavItem to="/verticais"   label="Verticais"       icon={Layers} />
         </SidebarGroup>
 
         <SidebarGroup id="settings" label="Settings">

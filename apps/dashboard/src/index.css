@@ -827,6 +827,68 @@ body {
   font-weight: 500 !important;
 }
 
+/* SurfaceCard — slot do MultiView */
+.surface-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+.surface-card-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: var(--bg-elevated);
+  border-bottom: 1px solid var(--border);
+  font-size: 0.7rem;
+  min-height: 32px;
+}
+.surface-card-title {
+  font-weight: 600;
+  color: var(--text);
+  font-size: 0.72rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.surface-card-viewport {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 0.6rem;
+  padding: 3px 5px;
+  border-radius: 3px;
+  cursor: pointer;
+  outline: none;
+  max-width: 130px;
+}
+.surface-card-btn {
+  background: none;
+  border: 1px solid transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 3px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  transition: background 0.1s, color 0.1s;
+}
+.surface-card-btn:hover { background: var(--bg-card); color: var(--text); }
+.surface-card-btn.active { background: rgba(83,74,183,0.15); color: var(--primary); }
+.surface-card-body {
+  padding: 14px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  background: var(--bg);
+}
+
 .sidebar-link {
   display: flex;
   align-items: center;
