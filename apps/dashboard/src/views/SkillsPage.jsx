@@ -9,8 +9,12 @@
 import { useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import * as Lucide from 'lucide-react'
-import { Sparkles, Search, Plus, ClipboardCheck, X, Loader2, ExternalLink } from 'lucide-react'
+import { Sparkles, Search, Plus, ClipboardCheck, X, Loader2, ExternalLink, Edit2, Play, Check, Save, FlaskConical } from 'lucide-react'
 import { useSkills } from '../hooks/useSkills.js'
+import { supabase } from '../lib/supabase.js'
+
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL
+const ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY
 
 // Macro-categorias (agrupa as 25+ da BD em 8 user-facing buckets)
 const MACRO_CATEGORIES = [
@@ -43,8 +47,62 @@ function tagColor(skill) {
   return '#9ca3af'
 }
 
-// ─── SkillDetailModal ─────────────────────────────────────────────────────
-function SkillDetailModal({ skill, onClose }) {
+// ─── SkillDetailModal com Edit / Test / Promote ────────────────────────────
+function SkillDetailModal({ skill: initialSkill, onClose, onUpdate }) {
+  const [skill, setSkill] = useState(initialSkill)
+  const [editMode, setEditMode] = useState(false)
+  const [editForm, setEditForm] = useState({
+    receipt_md: initialSkill.receipt_md || '',
+    prompt_template: initialSkill.prompt_template || '',
+    description: initialSkill.description || '',
+  })
+  const [saving, setSaving] = useState(false)
+  const [testInput, setTestInput] = useState('')
+  const [testOutput, setTestOutput] = useState(null)
+  const [testing, setTesting] = useState(false)
+  const [showTest, setShowTest] = useState(false)
+
+  const handleSave = async () => {
+    if (!supabase) return
+    setSaving(true)
+    await supabase.schema('system').from('skills').update({
+      receipt_md: editForm.receipt_md,
+      prompt_template: editForm.prompt_template,
+      description: editForm.description,
+    }).eq('id', skill.id)
+    setSkill({ ...skill, ...editForm })
+    setEditMode(false)
+    setSaving(false)
+    onUpdate && onUpdate()
+  }
+
+  const handlePromote = async () => {
+    if (!supabase) return
+    await supabase.schema('system').from('skills').update({ status: 'active' }).eq('id', skill.id)
+    setSkill({ ...skill, status: 'active' })
+    onUpdate && onUpdate()
+  }
+
+  const handleTest = async () => {
+    setTesting(true)
+    setTestOutput(null)
+    try {
+      // Dispara skill-create com context = testInput (simula run)
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/skill-create`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${ANON_KEY}`, 'apikey': ANON_KEY },
+        body: JSON.stringify({ skill_tag: skill.tag, context: testInput || skill.description }),
+      })
+      const data = await res.json()
+      setTestOutput(data)
+    } catch (e) {
+      setTestOutput({ error: String(e) })
+    }
+    setTesting(false)
+  }
+
+  const isPending = skill.status === 'pending_receipt'
+
   return (
     <div
       onClick={onClose}
@@ -58,8 +116,8 @@ function SkillDetailModal({ skill, onClose }) {
         onClick={(e) => e.stopPropagation()}
         style={{
           background: 'var(--bg-card)', border: '1px solid var(--border)',
-          borderRadius: 10, padding: 24, width: 600, maxWidth: '100%',
-          maxHeight: '85vh', overflowY: 'auto',
+          borderRadius: 10, padding: 24, width: 680, maxWidth: '100%',
+          maxHeight: '88vh', overflowY: 'auto',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 16 }}>
@@ -74,7 +132,7 @@ function SkillDetailModal({ skill, onClose }) {
           <div style={{ flex: 1, minWidth: 0 }}>
             <h2 style={{ margin: 0, fontSize: 18, color: 'var(--text)' }}>{skill.name}</h2>
             <div style={{ fontSize: 11, color: 'var(--text-dim)', fontFamily: 'JetBrains Mono, monospace', marginTop: 4 }}>
-              {skill.tag} · {skill.category}
+              {skill.tag} · {skill.category} · {skill.status}
             </div>
           </div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-dim)', padding: 4 }}>
@@ -82,10 +140,78 @@ function SkillDetailModal({ skill, onClose }) {
           </button>
         </div>
 
-        {skill.description && (
+        {/* Action buttons row */}
+        <div style={{ display: 'flex', gap: 6, marginBottom: 16, flexWrap: 'wrap' }}>
+          {!editMode ? (
+            <button onClick={() => setEditMode(true)} style={btnSecondary}>
+              <Edit2 size={11} /> Edit
+            </button>
+          ) : (
+            <>
+              <button onClick={handleSave} disabled={saving} style={btnPrimary}>
+                {saving ? <Loader2 size={11} className="spin" /> : <Save size={11} />} Save
+              </button>
+              <button onClick={() => { setEditMode(false); setEditForm({ receipt_md: skill.receipt_md, prompt_template: skill.prompt_template, description: skill.description }) }} style={btnSecondary}>
+                Cancel
+              </button>
+            </>
+          )}
+          <button onClick={() => setShowTest(!showTest)} style={btnSecondary}>
+            <FlaskConical size={11} /> Test
+          </button>
+          {isPending && (
+            <button onClick={handlePromote} style={btnPromote}>
+              <Check size={11} /> Promote to Active
+            </button>
+          )}
+        </div>
+
+        {/* Description */}
+        {editMode ? (
+          <Section label="Description">
+            <textarea
+              rows={2}
+              value={editForm.description}
+              onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+              style={textareaStyle}
+            />
+          </Section>
+        ) : skill.description && (
           <p style={{ fontSize: 13, color: 'var(--text-dim)', lineHeight: 1.5, marginTop: 0 }}>{skill.description}</p>
         )}
 
+        {/* Test panel (collapsible) */}
+        {showTest && (
+          <div style={{
+            background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.3)',
+            borderRadius: 8, padding: 12, marginTop: 16,
+          }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#60a5fa', marginBottom: 8, fontFamily: 'JetBrains Mono, monospace', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+              Test Skill (dry-run via skill-create)
+            </div>
+            <textarea
+              value={testInput}
+              onChange={(e) => setTestInput(e.target.value)}
+              placeholder="Input opcional (contexto que o agent recebe)…"
+              rows={2}
+              style={textareaStyle}
+            />
+            <button onClick={handleTest} disabled={testing} style={{ ...btnPrimary, marginTop: 8 }}>
+              {testing ? <Loader2 size={11} className="spin" /> : <Play size={11} />} Run Test
+            </button>
+            {testOutput && (
+              <pre style={{
+                marginTop: 10, padding: 10, background: 'var(--bg-elevated)',
+                border: '1px solid var(--border)', borderRadius: 5,
+                fontSize: 10, color: 'var(--text)', lineHeight: 1.5,
+                fontFamily: 'JetBrains Mono, monospace',
+                maxHeight: 200, overflow: 'auto', whiteSpace: 'pre-wrap',
+              }}>{JSON.stringify(testOutput, null, 2)}</pre>
+            )}
+          </div>
+        )}
+
+        {/* Connectors */}
         {skill.connectors?.length > 0 && (
           <Section label="Connectors">
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
@@ -100,27 +226,55 @@ function SkillDetailModal({ skill, onClose }) {
           </Section>
         )}
 
-        {skill.receipt_md && (
-          <Section label="Receipt">
+        {/* Receipt — editável */}
+        <Section label="Receipt (recipe passo-a-passo)">
+          {editMode ? (
+            <textarea
+              rows={8}
+              value={editForm.receipt_md}
+              onChange={(e) => setEditForm({ ...editForm, receipt_md: e.target.value })}
+              style={{ ...textareaStyle, fontFamily: 'JetBrains Mono, monospace', fontSize: 11 }}
+              placeholder="1. Passo um&#10;2. Passo dois&#10;..."
+            />
+          ) : skill.receipt_md ? (
             <pre style={{
               fontSize: 11, color: 'var(--text)', whiteSpace: 'pre-wrap',
               fontFamily: 'JetBrains Mono, monospace', lineHeight: 1.6,
               background: 'var(--bg-elevated)', padding: 12, borderRadius: 6,
               margin: 0, maxHeight: 240, overflow: 'auto',
             }}>{skill.receipt_md}</pre>
-          </Section>
-        )}
+          ) : (
+            <div style={{
+              padding: 12, background: 'var(--bg-elevated)', borderRadius: 6,
+              fontSize: 11, color: 'var(--text-dim)', fontStyle: 'italic',
+            }}>Sem receita ainda. {isPending ? 'Click "Test" para auto-gerar via Claude Haiku.' : 'Click "Edit" para criar.'}</div>
+          )}
+        </Section>
 
-        {skill.prompt_template && (
-          <Section label="Prompt Template">
+        {/* Prompt Template — editável */}
+        <Section label="Prompt Template">
+          {editMode ? (
+            <textarea
+              rows={3}
+              value={editForm.prompt_template}
+              onChange={(e) => setEditForm({ ...editForm, prompt_template: e.target.value })}
+              style={{ ...textareaStyle, fontFamily: 'JetBrains Mono, monospace', fontSize: 11 }}
+              placeholder="Produz {{format}} sobre {{topic}}..."
+            />
+          ) : skill.prompt_template ? (
             <code style={{
               fontSize: 11, color: 'var(--text)', display: 'block',
               fontFamily: 'JetBrains Mono, monospace', lineHeight: 1.5,
               background: 'var(--bg-elevated)', padding: 12, borderRadius: 6,
               wordBreak: 'break-word',
             }}>{skill.prompt_template}</code>
-          </Section>
-        )}
+          ) : (
+            <div style={{
+              padding: 12, background: 'var(--bg-elevated)', borderRadius: 6,
+              fontSize: 11, color: 'var(--text-dim)', fontStyle: 'italic',
+            }}>Sem template ainda.</div>
+          )}
+        </Section>
 
         {skill.fallback_agent && (
           <Section label="Fallback agent">
@@ -133,10 +287,38 @@ function SkillDetailModal({ skill, onClose }) {
         <div style={{ marginTop: 18, display: 'flex', gap: 12, fontSize: 11, color: 'var(--text-dim)', fontFamily: 'JetBrains Mono, monospace' }}>
           <span>usage: {skill.usage_count || 0}×</span>
           {skill.auto_generated && <span>auto-generated</span>}
+          {skill.last_used_at && <span>last: {new Date(skill.last_used_at).toLocaleDateString('pt-PT')}</span>}
         </div>
       </div>
     </div>
   )
+}
+
+const btnPrimary = {
+  display: 'inline-flex', alignItems: 'center', gap: 5,
+  padding: '6px 12px', borderRadius: 5,
+  background: 'var(--primary)', border: 'none', color: '#fff',
+  fontSize: 11, fontWeight: 600, cursor: 'pointer',
+}
+const btnSecondary = {
+  display: 'inline-flex', alignItems: 'center', gap: 5,
+  padding: '6px 12px', borderRadius: 5,
+  background: 'transparent', border: '1px solid var(--border)', color: 'var(--text)',
+  fontSize: 11, fontWeight: 500, cursor: 'pointer',
+}
+const btnPromote = {
+  display: 'inline-flex', alignItems: 'center', gap: 5,
+  padding: '6px 12px', borderRadius: 5,
+  background: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.4)',
+  color: '#10b981',
+  fontSize: 11, fontWeight: 600, cursor: 'pointer',
+}
+const textareaStyle = {
+  width: '100%', boxSizing: 'border-box',
+  padding: '8px 10px', borderRadius: 5,
+  background: 'var(--bg-elevated)', border: '1px solid var(--border)',
+  color: 'var(--text)', fontSize: 12, outline: 'none',
+  resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.5,
 }
 
 function Section({ label, children }) {
@@ -212,7 +394,7 @@ function SkillCard({ skill, onClick }) {
 // ─── Main ─────────────────────────────────────────────────────────────────
 export default function SkillsPage() {
   const navigate = useNavigate()
-  const { items, loading, counts } = useSkills()
+  const { items, loading, counts, refresh } = useSkills()
   const [search, setSearch] = useState('')
   const [activeCat, setActiveCat] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')
@@ -242,7 +424,7 @@ export default function SkillsPage() {
 
   return (
     <div style={{ maxWidth: 1400, margin: '0 auto', padding: '4px 0 40px' }}>
-      {selectedSkill && <SkillDetailModal skill={selectedSkill} onClose={() => setSelectedSkill(null)} />}
+      {selectedSkill && <SkillDetailModal skill={selectedSkill} onClose={() => setSelectedSkill(null)} onUpdate={refresh} />}
 
       {/* Header com action buttons topo direito */}
       <div style={{
