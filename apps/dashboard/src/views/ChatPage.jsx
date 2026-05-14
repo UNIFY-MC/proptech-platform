@@ -20,40 +20,50 @@ import {
 } from 'lucide-react'
 import { useEmployee } from '../hooks/useEmployee.js'
 import { useApps } from '../hooks/useApps.js'
-import { useNotificationsStore } from '../store'
+import { useNotificationsStore, useVerticalStore } from '../store'
 import { useAgentChat } from '../hooks/useAgentChat.js'
 import { useChatThreads } from '../hooks/useChatThreads.js'
+import { useTasks } from '../hooks/useTasks.js'
+import { useCalendarEvents } from '../hooks/useCalendarEvents.js'
 
-// Quick-action cards — alinhadas com o que a Bia já sabe fazer + atalhos futuros
+// Quick-action cards — 3 em 1 linha, com cor distinta tipo CookAI
 const QUICK_ACTIONS = [
   {
     id: 'triagem',
     icon: Wrench,
-    label: 'Triar um pedido',
-    sub: 'Bia classifica urgência + match prestador',
-    action: { type: 'navigate', to: '/employees/bia' },
-  },
-  {
-    id: 'outreach',
-    icon: MailPlus,
-    label: 'Compor outreach owner',
-    sub: 'WhatsApp R2 personalizado',
+    color: '#f59e0b',   // amber — operations
+    label: 'Triar pedido',
+    sub: 'Classifica urgência + escolhe prestador',
     action: { type: 'navigate', to: '/employees/bia' },
   },
   {
     id: 'roundup',
     icon: Calendar,
-    label: 'Daily roundup agora',
+    color: '#3b82f6',   // blue — daily
+    label: 'Daily roundup',
     sub: 'Resumo operacional → /inbox',
     action: { type: 'invoke', task: 'daily_roundup' },
   },
   {
     id: 'context',
     icon: FileSearch,
+    color: '#8b5cf6',   // purple — knowledge
     label: 'Procurar nos docs',
     sub: 'Legislação, SOPs, procedures',
     action: { type: 'navigate', to: '/files' },
   },
+]
+
+// Dept heads (responsáveis) — espelha a lista em TasksPage
+const DEPT_HEADS = [
+  { id: 'auto',                label: 'Auto · sistema escolhe',  verticals: '*',          color: '#a855f7' },
+  { id: 'bia',                 label: 'Bia · operations V5',     verticals: ['V5'],       color: '#f59e0b' },
+  { id: 'orquestrador-condo',  label: 'Orquestrador · V2 ops',   verticals: ['V2'],       color: '#3b82f6' },
+  { id: 'diretor-marketing',   label: 'Diretor Marketing',       verticals: ['V2','V4','V5'], color: '#ec4899' },
+  { id: 'gestor-leads',        label: 'Gestor Leads · sales',    verticals: ['V2','V4','V5'], color: '#10b981' },
+  { id: 'financeiro-condo',    label: 'Financeiro · V2',         verticals: ['V2'],       color: '#06b6d4' },
+  { id: 'atendimento-condo',   label: 'Atendimento · V2',        verticals: ['V2'],       color: '#84cc16' },
+  { id: 'compliance-condo',    label: 'Compliance · V2 legal',   verticals: ['V2'],       color: '#ef4444' },
 ]
 
 // Modes (cookai usa "Website Mode" — aqui o equivalente é vertical / scope)
@@ -68,14 +78,75 @@ export default function ChatPage() {
   const navigate = useNavigate()
   const [prompt, setPrompt] = useState('')
   const [mode, setMode] = useState('global')
-  const [employeeId, setEmployeeId] = useState('bia')
+  const [employeeId, setEmployeeId] = useState('auto')
   const [showModeMenu, setShowModeMenu] = useState(false)
   const inputRef = useRef(null)
   const addToast = useNotificationsStore(s => s.addToast)
   const { apps } = useApps()
-  const { running, lastResult, runTask } = useEmployee(employeeId)
+  const { running, lastResult, runTask } = useEmployee(employeeId === 'auto' ? 'bia' : employeeId)
+  // useAgentChat usa employeeId real para threading; em 'auto' usa pseudo-id 'auto'
   const { messages, send, pending, clear, threadId, newThread, loadThread } = useAgentChat(employeeId)
   const [historyOpen, setHistoryOpen] = useState(false)
+  const { activeVertical } = useVerticalStore()
+  const { createTask } = useTasks({})
+  const { createEvent } = useCalendarEvents({})
+
+  // Pega primeiros 60 chars como título; resto vai para description
+  function shortTitleFrom(text) {
+    const s = (text || '').replace(/\n+/g, ' ').trim()
+    return s.length > 60 ? s.slice(0, 57) + '…' : s
+  }
+
+  async function handleCreateTask(message) {
+    const userMsg = messages.find(m => m.role === 'user' && m.ts < message.ts)
+    const lastUserMsg = [...messages].reverse().find(m => m.role === 'user' && m.ts <= message.ts) || userMsg
+    const title = shortTitleFrom(lastUserMsg?.content || message.content)
+    const taskId = await createTask({
+      title,
+      description_md: `**Do chat ${message.agent_id || 'agent'} (${new Date(message.ts).toLocaleString('pt-PT')}):**\n\n${message.content}`,
+      kind: 'task',
+      priority: 'normal',
+      vertical: activeVertical && activeVertical !== 'all' ? activeVertical.toLowerCase() : null,
+      owner_agent_id: message.agent_id || null,
+      source_kind: 'chat',
+    })
+    addToast(taskId ? { type: 'success', message: `Task criada · #${String(taskId).slice(0, 8)}` } : { type: 'error', message: 'Erro ao criar task' })
+  }
+
+  async function handleAddToCalendar(message) {
+    const lastUserMsg = [...messages].reverse().find(m => m.role === 'user' && m.ts <= message.ts)
+    const title = shortTitleFrom(lastUserMsg?.content || message.content)
+    // Default: amanhã às 09:00 — utilizador pode ajustar em /calendar
+    const tomorrow = new Date()
+    tomorrow.setDate(tomorrow.getDate() + 1)
+    tomorrow.setHours(9, 0, 0, 0)
+    const eventId = await createEvent({
+      title,
+      description: message.content.slice(0, 1000),
+      starts_at: tomorrow.toISOString(),
+      all_day: false,
+      kind: 'manual',
+      owner_agent_id: message.agent_id || null,
+      vertical: activeVertical && activeVertical !== 'all' ? activeVertical.toLowerCase() : null,
+      color: '#8b5cf6',
+    })
+    addToast(eventId ? { type: 'success', message: `Adicionado ao calendário · ${tomorrow.toLocaleDateString('pt-PT')}` } : { type: 'error', message: 'Erro ao criar evento' })
+  }
+
+  // Filtra heads pela vertical activa (V2/V5/etc). 'all' mostra todos.
+  const availableHeads = DEPT_HEADS.filter(h => {
+    if (h.id === 'auto') return true
+    if (h.verticals === '*') return true
+    if (!activeVertical || activeVertical === 'all') return true
+    return h.verticals.includes(activeVertical)
+  })
+
+  // Se employeeId actual não está disponível na vertical, reset para 'auto'
+  useEffect(() => {
+    if (!availableHeads.find(h => h.id === employeeId)) {
+      setEmployeeId('auto')
+    }
+  }, [activeVertical]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     inputRef.current?.focus()
@@ -169,7 +240,7 @@ export default function ChatPage() {
           paddingBottom: 16,
         }}>
           {messages.map((m, i) => (
-            <ChatBubble key={i} message={m} />
+            <ChatBubble key={i} message={m} onCreateTask={handleCreateTask} onAddToCalendar={handleAddToCalendar} />
           ))}
         </div>
       )}
@@ -198,11 +269,11 @@ export default function ChatPage() {
           </>
         )}
 
-        {/* Quick-action cards (só quando não há conversa) */}
+        {/* Quick-action cards (só quando não há conversa) — 3 em 1 linha, com cores */}
         {!hasConversation && (
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+          gridTemplateColumns: 'repeat(3, 1fr)',
           gap: 12, width: '100%', maxWidth: 720,
         }}>
           {QUICK_ACTIONS.map(qa => (
@@ -219,16 +290,22 @@ export default function ChatPage() {
                 textAlign: 'left',
                 display: 'flex', flexDirection: 'column', gap: 8,
                 color: 'inherit', font: 'inherit',
-                transition: 'transform 0.12s, background 0.12s',
+                transition: 'transform 0.12s, background 0.12s, border-color 0.12s',
               }}
-              onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-elevated)' }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'var(--bg-card)' }}>
+              onMouseEnter={e => {
+                e.currentTarget.style.background = 'var(--bg-elevated)'
+                e.currentTarget.style.borderColor = qa.color
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.background = 'var(--bg-card)'
+                e.currentTarget.style.borderColor = 'var(--border)'
+              }}>
               <div style={{
                 width: 32, height: 32, borderRadius: 8,
-                background: 'var(--bg-elevated)',
+                background: qa.color + '22',  // tint 13% opacity
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}>
-                <qa.icon size={16} color="var(--primary)" />
+                <qa.icon size={16} color={qa.color} />
               </div>
               <div>
                 <div style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--text)' }}>{qa.label}</div>
@@ -327,7 +404,7 @@ export default function ChatPage() {
               )}
             </div>
 
-            {/* Employee picker */}
+            {/* Employee picker — heads filtrados por vertical activa */}
             <select
               value={employeeId}
               onChange={e => setEmployeeId(e.target.value)}
@@ -337,9 +414,9 @@ export default function ChatPage() {
                 fontSize: '0.72rem', color: 'var(--text)',
                 cursor: 'pointer', outline: 'none',
               }}>
-              <option value="bia">Bia · V5 Manutenção</option>
-              <option value="orquestrador" disabled>Orquestrador · V2 Condo (Sprint 2)</option>
-              <option value="diretor-marketing" disabled>Diretor · Marketing (Sprint 2)</option>
+              {availableHeads.map(h => (
+                <option key={h.id} value={h.id}>{h.label}</option>
+              ))}
             </select>
 
             <button type="button" style={iconBtn} title="Adicionar contexto (Sprint 2)">
@@ -400,8 +477,9 @@ const iconBtn = {
 }
 
 // ─── ChatBubble — render mensagem do histórico ──────────────
-function ChatBubble({ message }) {
+function ChatBubble({ message, onCreateTask, onAddToCalendar }) {
   const isUser = message.role === 'user'
+  const isAssistant = message.role === 'assistant' && !message.error
   return (
     <div style={{
       display: 'flex',
@@ -433,6 +511,17 @@ function ChatBubble({ message }) {
         lineHeight: 1.5,
         whiteSpace: 'pre-wrap',
       }}>
+        {/* Auto-routed badge — mostra quem respondeu quando o sistema decidiu */}
+        {message.agent_id && (
+          <div style={{
+            fontSize: '0.58rem', fontWeight: 700,
+            color: 'var(--text-dim)',
+            textTransform: 'uppercase', letterSpacing: '0.1em',
+            marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6,
+          }}>
+            {message.auto_routed ? '⤳ Auto-routed →' : '↳'} {message.agent_id}
+          </div>
+        )}
         {message.content}
         {message.tool_calls && message.tool_calls.length > 0 && (
           <div style={{
@@ -459,6 +548,39 @@ function ChatBubble({ message }) {
                       : null}
               </div>
             ))}
+          </div>
+        )}
+
+        {/* Action buttons — só em assistant replies não-erro */}
+        {isAssistant && (onCreateTask || onAddToCalendar) && (
+          <div style={{
+            marginTop: 10, display: 'flex', gap: 6, flexWrap: 'wrap',
+            paddingTop: 8, borderTop: '1px solid var(--border)',
+          }}>
+            {onCreateTask && (
+              <button
+                onClick={() => onCreateTask(message)}
+                style={{
+                  background: 'var(--bg-elevated)', border: '1px solid var(--border)',
+                  borderRadius: 5, padding: '4px 10px',
+                  fontSize: '0.65rem', color: 'var(--text-dim)', cursor: 'pointer',
+                  display: 'inline-flex', alignItems: 'center', gap: 5,
+                }}
+                title="Criar task a partir desta resposta"
+              >📝 Criar task</button>
+            )}
+            {onAddToCalendar && (
+              <button
+                onClick={() => onAddToCalendar(message)}
+                style={{
+                  background: 'var(--bg-elevated)', border: '1px solid var(--border)',
+                  borderRadius: 5, padding: '4px 10px',
+                  fontSize: '0.65rem', color: 'var(--text-dim)', cursor: 'pointer',
+                  display: 'inline-flex', alignItems: 'center', gap: 5,
+                }}
+                title="Adicionar ao calendário"
+              >📅 Calendário</button>
+            )}
           </div>
         )}
       </div>

@@ -95,6 +95,8 @@ export function useAgentChat(employeeId) {
         role: 'assistant',
         content: data.reply || '(sem resposta)',
         tool_calls: data.tool_calls || [],
+        agent_id: data.agent_id,
+        auto_routed: data.auto_routed,
         ts: Date.now(),
       }])
     } catch (e) {

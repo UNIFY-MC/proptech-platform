@@ -204,6 +204,53 @@ async function loadAgentContext(
   }
 }
 
+// Sprint Q1.6 — auto-routing: classifica intent e escolhe o head certo
+const ROUTING_HEADS = [
+  { id: "bia",                description: "operations V5 manutenção, prestadores, avarias, escalada urgência" },
+  { id: "orquestrador-condo", description: "operações V2 condomínio, assembleias, gestão geral cross-dept" },
+  { id: "diretor-marketing",  description: "marketing, conteúdo, campanhas, outreach, leads pipeline" },
+  { id: "gestor-leads",       description: "sales, leads qualification, follow-up, pipeline conversion" },
+  { id: "financeiro-condo",   description: "finance V2, quotas, faturas, mora, recebimentos, juros" },
+  { id: "atendimento-condo",  description: "support V2, dúvidas condóminos, comunicação, triagem" },
+  { id: "compliance-condo",   description: "legal V2, RGPD, Código Civil PT, DL 268/94, prazos legais, regime jurídico" },
+]
+
+async function routeIntent(userMessage: string): Promise<string> {
+  // Classifica via Haiku — barato e rápido. Devolve agent_id.
+  const sysPrompt = `És um router de intents. Dado o pedido do user, escolhes o agent mais adequado para responder.
+
+AGENTS DISPONÍVEIS:
+${ROUTING_HEADS.map(h => `- ${h.id}: ${h.description}`).join("\n")}
+
+Responde APENAS com o agent_id (uma palavra, sem aspas, sem markdown). Ex: bia
+Se o pedido for genérico/cumprimento, escolhe: orquestrador-condo
+Se for sobre lei/jurídico/artigo/prazo legal: compliance-condo`
+
+  try {
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "x-api-key": ANTHROPIC_KEY,
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        model: MODEL,
+        max_tokens: 30,
+        system: sysPrompt,
+        messages: [{ role: "user", content: userMessage }],
+      }),
+    })
+    if (!res.ok) return "orquestrador-condo"
+    const data = await res.json()
+    const text = (data.content?.[0]?.text || "").trim().toLowerCase().replace(/[^a-z0-9-]/g, "")
+    const match = ROUTING_HEADS.find(h => h.id === text)
+    return match?.id || "orquestrador-condo"
+  } catch {
+    return "orquestrador-condo"
+  }
+}
+
 function buildSystemPrompt(agentContext: string): string {
   // Data actual injectada — Claude tem cutoff de Jan 2026 e tende a usar 2024/2025
   // como defaults se não souber. Bug Q1: due_at '16/5' interpretado como 2025-05-16.
@@ -242,7 +289,15 @@ Deno.serve(async (req) => {
     const sb = createClient(SUPABASE_URL, SERVICE_KEY)
 
     // Sprint Q1 — auto-load contexto do agent activo (se houver)
-    const activeAgentId: string = body?.context?.active_employee_id || ""
+    let activeAgentId: string = body?.context?.active_employee_id || ""
+    let autoRouted = false
+
+    // Sprint Q1.6 — auto-routing: se 'auto' ou vazio, classifica intent
+    if (!activeAgentId || activeAgentId === "auto") {
+      activeAgentId = await routeIntent(userMessage)
+      autoRouted = true
+    }
+
     const agentContext = await loadAgentContext(sb, activeAgentId, 6000)
     const systemPrompt = buildSystemPrompt(agentContext)
 
@@ -321,6 +376,8 @@ Deno.serve(async (req) => {
       reply: finalText.trim() || "(sem resposta)",
       tool_calls: toolCallsLog,
       thread_id: threadId,
+      agent_id: activeAgentId,
+      auto_routed: autoRouted,
     }), { headers: { ...cors, "Content-Type": "application/json" } })
 
   } catch (e) {
