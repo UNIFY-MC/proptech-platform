@@ -12,7 +12,7 @@ export function useAgentChat() {
   const [pending, setPending]   = useState(false)
   const [error, setError]       = useState(null)
 
-  const send = useCallback(async (text) => {
+  const send = useCallback(async (text, context = null) => {
     if (!text?.trim() || pending) return
     setError(null)
     const userMsg = { role: 'user', content: text.trim(), ts: Date.now() }
@@ -29,6 +29,7 @@ export function useAgentChat() {
         body: JSON.stringify({
           message: text,
           history: messages.map(m => ({ role: m.role, content: m.content })),
+          context: context || undefined,
         }),
       })
       if (!res.ok) {

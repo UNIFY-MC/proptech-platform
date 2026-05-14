@@ -92,7 +92,8 @@ export default function ChatPage() {
     if (!prompt.trim() || pending) return
     const text = prompt
     setPrompt('')
-    await send(text)
+    // Passa active_employee_id para agent-chat carregar SOPs/legal/never-rules
+    await send(text, { active_employee_id: employeeId })
   }
 
   const hasConversation = messages.length > 0
