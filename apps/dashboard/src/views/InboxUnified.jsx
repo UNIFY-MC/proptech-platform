@@ -79,8 +79,9 @@ export default function InboxUnified() {
   )
 
   const { activeVertical } = useVerticalStore()
-  // No Inbox vemos tudo (cross-vertical) — filtro por vertical fica na app de cada vertical
-  const inboxFilter = activeVertical === 'all' ? null : null
+  // Multi-tenant: cada vertical é tratada como tenant isolado. 'all' = cross-vertical
+  // (founder view); caso contrário, apenas items dessa vertical.
+  const inboxFilter = activeVertical === 'all' ? null : activeVertical
   const { items: inboxItems } = useInboxItems(inboxFilter)
   const { approvals } = useApprovals(inboxFilter)
   const { readSet, markAsRead } = useInboxReads()

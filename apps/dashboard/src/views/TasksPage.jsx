@@ -14,6 +14,7 @@ import {
 import { useTasks } from '../hooks/useTasks.js'
 import { useData } from '../hooks/useData.js'
 import { supabase } from '../lib/supabase.js'
+import { useVerticalStore } from '../store/index.js'
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL
 const ANON_KEY     = import.meta.env.VITE_SUPABASE_ANON_KEY
@@ -64,7 +65,10 @@ export default function TasksPage() {
   const navigate = useNavigate()
   const { data } = useData()
   const employees = data?.employees || []
-  const { tasks, createTask, updateStatus, assign, refresh } = useTasks({})
+  // Multi-tenant: filtra por vertical activa do dropdown topo. 'all' = global.
+  const { activeVertical } = useVerticalStore()
+  const verticalFilter = activeVertical && activeVertical !== 'all' ? activeVertical : null
+  const { tasks, createTask, updateStatus, assign, refresh } = useTasks({ vertical: verticalFilter })
 
   const [view, setView] = useState('board')
   const [assigneeFilter, setAssigneeFilter] = useState('all')

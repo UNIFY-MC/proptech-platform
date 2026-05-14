@@ -14,7 +14,7 @@ export function useTasks({ vertical = null, status = null, ownerAgent = null } =
     if (!supabase) { setLoading(false); return }
     setLoading(true)
     let q = supabase.from('system_tasks').select('*').order('created_at', { ascending: false })
-    if (vertical) q = q.eq('vertical', vertical)
+    if (vertical) q = q.ilike('vertical', vertical)  // case-insensitive: V2 == v2
     if (status)   q = q.eq('status', status)
     if (ownerAgent) q = q.eq('owner_agent_id', ownerAgent)
     const { data, error } = await q

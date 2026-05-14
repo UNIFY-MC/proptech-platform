@@ -9,6 +9,7 @@ import * as Lucide from 'lucide-react'
 import { ExternalLink, Search, Check, Loader2 } from 'lucide-react'
 import { useIntegrations } from '../hooks/useIntegrations.js'
 import { useVerticalStore } from '../store/index.js'
+import { getIntegrationLogo, NEEDS_DARK_INVERT } from '../lib/integration-logos.js'
 
 const VERTICAL_LABEL = {
   all: 'todas verticais', v1: 'V1 Core', v2: 'V2 Condomínios', v3: 'V3 Seguros',
@@ -23,19 +24,44 @@ const STATUS_META = {
   disabled:      { label: 'Disabled',   color: 'var(--text-dim)', bg: 'transparent',     border: 'var(--border)' },
 }
 
-function IconBubble({ icon, brandColor }) {
-  // Tenta resolver ícone Lucide pelo nome, fallback para Plug
-  const Comp = (icon && Lucide[icon]) || Lucide.Plug
+function BrandLogo({ integ }) {
+  const logoUrl = getIntegrationLogo(integ)
+  const needsInvert = NEEDS_DARK_INVERT.has(integ.slug)
+  const Fallback = (integ.icon && Lucide[integ.icon]) || Lucide.Plug
+  const isDark = typeof document !== 'undefined' && document.body?.getAttribute('data-theme') === 'dark'
+
   return (
     <div style={{
-      width: 48, height: 48, borderRadius: 10,
+      width: 54, height: 54, borderRadius: 12,
       display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-      background: brandColor ? `${brandColor}22` : 'var(--bg-elevated)',
-      border: brandColor ? `1px solid ${brandColor}44` : '1px solid var(--border)',
-      color: brandColor || 'var(--text)',
+      background: 'transparent',
       marginBottom: 14,
+      overflow: 'hidden',
     }}>
-      <Comp size={24} strokeWidth={2} />
+      {logoUrl ? (
+        <img
+          src={logoUrl}
+          alt={integ.name}
+          style={{
+            width: 40, height: 40, objectFit: 'contain',
+            filter: needsInvert && isDark ? 'invert(1) brightness(1.5)' : 'none',
+          }}
+          onError={(e) => {
+            // Falha de carga → esconde img, mostra fallback Lucide
+            e.currentTarget.style.display = 'none'
+            const fallback = e.currentTarget.nextElementSibling
+            if (fallback) fallback.style.display = 'inline-flex'
+          }}
+        />
+      ) : null}
+      <span style={{
+        display: logoUrl ? 'none' : 'inline-flex',
+        alignItems: 'center', justifyContent: 'center',
+        width: 40, height: 40,
+        color: integ.brand_color || 'var(--text)',
+      }}>
+        <Fallback size={26} strokeWidth={2} />
+      </span>
     </div>
   )
 }
@@ -63,7 +89,7 @@ function IntegrationCard({ integ, onToggle, busy }) {
     onMouseEnter={(e) => { if (!isComing) e.currentTarget.style.borderColor = 'var(--primary)' }}
     onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border)' }}
     >
-      <IconBubble icon={integ.icon} brandColor={integ.brand_color} />
+      <BrandLogo integ={integ} />
       <div style={{
         fontSize: '0.95rem', fontWeight: 600, color: 'var(--text)',
         marginBottom: 6,
