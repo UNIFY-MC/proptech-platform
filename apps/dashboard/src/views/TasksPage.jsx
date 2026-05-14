@@ -287,7 +287,7 @@ function FilterPill({ icon, label, value, options, onChange }) {
   )
 }
 
-// ─── TaskCard kanban com steps inline ───────────────────
+// ─── TaskCard kanban com steps inline + click expand PROMPT/OUTPUT ─────────
 function TaskCard({ task, employees, onExecute, executing, onOpenDetail, onEdit, onChangeStatus }) {
   const priority = PRIORITY_META[task.priority]
   const owner = task.owner_agent_id ? employees.find(e => e.id === task.owner_agent_id) : null
@@ -296,6 +296,8 @@ function TaskCard({ task, employees, onExecute, executing, onOpenDetail, onEdit,
   const stepsTotal = steps.length
   const isExecuting = executing
   const exec = task.payload?.execution
+  const [openSteps, setOpenSteps] = useState({})  // { idx: 'prompt'|'output'|null }
+  const toggle = (i, pane) => setOpenSteps(o => ({ ...o, [i]: o[i] === pane ? null : pane }))
 
   return (
     <div style={{
@@ -358,25 +360,80 @@ function TaskCard({ task, employees, onExecute, executing, onOpenDetail, onEdit,
         </div>
       )}
 
-      {/* Steps list (top 4) */}
+      {/* Steps list (top 4) — clicáveis com expand inline para PROMPT/OUTPUT */}
       {steps.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          {steps.slice(0, 4).map((s, i) => (
-            <div key={i} style={{
-              display: 'flex', alignItems: 'flex-start', gap: 6,
-              fontSize: '0.7rem',
-              color: s.status === 'done' ? 'var(--text-dim)' : 'var(--text)',
-              lineHeight: 1.4,
-            }}>
-              <span style={{ flexShrink: 0, marginTop: 2 }}>{STEP_ICON[s.status] || STEP_ICON.pending}</span>
-              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical' }}>
-                {s.name}
-              </span>
-            </div>
-          ))}
+          {steps.slice(0, 4).map((s, i) => {
+            const hasPrompt = !!s.prompt
+            const hasOutput = !!s.output
+            const pane = openSteps[i]
+            return (
+              <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <div style={{
+                  display: 'flex', alignItems: 'flex-start', gap: 6,
+                  fontSize: '0.7rem',
+                  color: s.status === 'done' ? 'var(--text-dim)' : 'var(--text)',
+                  lineHeight: 1.4,
+                }}>
+                  <span style={{ flexShrink: 0, marginTop: 2 }}>{STEP_ICON[s.status] || STEP_ICON.pending}</span>
+                  <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '0.6rem', color: 'var(--text-dim)', minWidth: 14 }}>
+                    {i + 1}.
+                  </span>
+                  <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical' }}>
+                    {s.name}
+                  </span>
+                  {(hasPrompt || hasOutput) && (
+                    <button
+                      onClick={() => toggle(i, hasOutput ? 'output' : 'prompt')}
+                      style={{
+                        background: 'none', border: 'none', cursor: 'pointer',
+                        padding: 0, color: 'var(--primary)', fontSize: '0.6rem',
+                        textDecoration: 'underline', flexShrink: 0,
+                      }}
+                    >
+                      {pane ? 'hide' : hasOutput ? 'view output' : 'details'}
+                    </button>
+                  )}
+                </div>
+                {pane === 'prompt' && hasPrompt && (
+                  <div style={{
+                    marginLeft: 26, marginTop: 2, padding: '8px 10px',
+                    background: 'var(--bg-elevated)', border: '1px solid var(--border)',
+                    borderRadius: 4, fontSize: '0.65rem', color: 'var(--text)',
+                    fontFamily: 'JetBrains Mono, monospace', whiteSpace: 'pre-wrap',
+                    lineHeight: 1.5, maxHeight: 200, overflow: 'auto',
+                  }}>
+                    <div style={{ fontSize: '0.55rem', color: 'var(--text-dim)', letterSpacing: '0.08em', marginBottom: 4 }}>PROMPT</div>
+                    {s.prompt}
+                  </div>
+                )}
+                {pane === 'output' && hasOutput && (
+                  <div style={{
+                    marginLeft: 26, marginTop: 2, padding: '8px 10px',
+                    background: 'var(--bg-elevated)', border: '1px solid var(--border)',
+                    borderRadius: 4, fontSize: '0.65rem', color: 'var(--text)',
+                    fontFamily: 'JetBrains Mono, monospace', whiteSpace: 'pre-wrap',
+                    lineHeight: 1.5, maxHeight: 200, overflow: 'auto',
+                  }}>
+                    <div style={{ fontSize: '0.55rem', color: 'var(--text-dim)', letterSpacing: '0.08em', marginBottom: 4 }}>OUTPUT</div>
+                    {s.output}
+                  </div>
+                )}
+                {s.status === 'done' && (
+                  <div style={{
+                    marginLeft: 26, fontSize: '0.55rem', color: '#10b981',
+                    fontFamily: 'JetBrains Mono, monospace',
+                  }}>↳ STATUS: done</div>
+                )}
+              </div>
+            )
+          })}
           {steps.length > 4 && (
-            <div style={{ fontSize: '0.6rem', color: 'var(--text-dim)', paddingLeft: 17 }}>
-              +{steps.length - 4} steps
+            <div style={{ fontSize: '0.6rem', color: 'var(--text-dim)', paddingLeft: 26 }}>
+              +{steps.length - 4} steps · <button
+                onClick={onOpenDetail}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--primary)', fontSize: '0.6rem', textDecoration: 'underline', padding: 0 }}
+              >ver todos</button>
             </div>
           )}
         </div>
