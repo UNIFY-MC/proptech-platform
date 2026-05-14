@@ -173,7 +173,7 @@ function RecipeDetailModal({ recipe, onClose, onRun }) {
           <p style={{ fontSize: 13, color: 'var(--text-dim)', lineHeight: 1.5, marginTop: 0 }}>{recipe.description}</p>
         )}
 
-        {/* Steps — invoca skills */}
+        {/* Steps — invoca skills (com type Agent/Human + retry + input) */}
         {steps.length > 0 && (
           <div style={{ marginTop: 16 }}>
             <div style={{
@@ -182,28 +182,65 @@ function RecipeDetailModal({ recipe, onClose, onRun }) {
               fontFamily: 'JetBrains Mono, monospace',
             }}>Steps</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {steps.map((s, i) => (
+              {steps.map((s, i) => {
+                const stepType = s.type || 'agent'
+                const isHuman = stepType === 'human'
+                const stepSkills = Array.isArray(s.skills) ? s.skills : (s.skill_tag ? [s.skill_tag] : [])
+                return (
                 <div key={i} style={{
-                  background: 'var(--bg-elevated)', border: '1px solid var(--border)',
+                  background: 'var(--bg-elevated)',
+                  border: `1px solid ${isHuman ? 'rgba(245,158,11,0.4)' : 'var(--border)'}`,
+                  borderLeft: `3px solid ${isHuman ? '#f59e0b' : '#10b981'}`,
                   borderRadius: 6, padding: '10px 12px',
-                  display: 'flex', alignItems: 'center', gap: 10,
+                  display: 'flex', flexDirection: 'column', gap: 6,
                 }}>
-                  <span style={{
-                    fontSize: 11, fontWeight: 700, color: 'var(--primary)',
-                    fontFamily: 'JetBrains Mono, monospace',
-                    minWidth: 18, textAlign: 'center',
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span style={{
+                      fontSize: 11, fontWeight: 700, color: 'var(--primary)',
+                      fontFamily: 'JetBrains Mono, monospace',
+                      minWidth: 18, textAlign: 'center',
                   }}>{i + 1}.</span>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 12, color: 'var(--text)' }}>{s.name}</div>
-                    {s.skill_tag && (
-                      <div style={{ fontSize: 10, color: 'var(--text-dim)', marginTop: 2 }}>
-                        <span style={{ color: 'var(--primary)' }}>↪ skill</span>{' '}
-                        <code style={{ fontFamily: 'JetBrains Mono, monospace' }}>{s.skill_tag}</code>
-                      </div>
-                    )}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ fontSize: 12, color: 'var(--text)', fontWeight: 500 }}>{s.name}</span>
+                      <span style={{
+                        fontSize: 9, padding: '1px 6px', borderRadius: 3,
+                        background: isHuman ? 'rgba(245,158,11,0.18)' : 'rgba(16,185,129,0.18)',
+                        color: isHuman ? '#f59e0b' : '#10b981',
+                        fontFamily: 'JetBrains Mono, monospace', fontWeight: 700,
+                        textTransform: 'uppercase', letterSpacing: '0.06em',
+                      }}>{isHuman ? 'HUMAN' : 'AGENT'}</span>
+                      {(s.retry_max ?? 2) > 0 && !isHuman && (
+                        <span style={{
+                          fontSize: 9, color: 'var(--text-dim)',
+                          fontFamily: 'JetBrains Mono, monospace',
+                        }}>retry: {s.retry_max ?? 2}</span>
+                      )}
+                    </div>
                   </div>
+                  </div>
+                  {s.input && (
+                    <div style={{
+                      fontSize: 10, color: 'var(--text-dim)',
+                      lineHeight: 1.4, padding: '4px 8px',
+                      background: 'var(--bg)', borderRadius: 4,
+                      fontFamily: 'JetBrains Mono, monospace',
+                      marginLeft: 28,
+                    }}>{s.input}</div>
+                  )}
+                  {stepSkills.length > 0 && (
+                    <div style={{ display: 'flex', gap: 4, marginLeft: 28, flexWrap: 'wrap' }}>
+                      {stepSkills.map((tag) => (
+                        <span key={tag} style={{
+                          fontSize: 9, padding: '2px 6px', borderRadius: 3,
+                          background: 'rgba(107,79,160,0.15)', color: 'var(--primary)',
+                          fontFamily: 'JetBrains Mono, monospace',
+                        }}>↪ {tag}</span>
+                      ))}
+                    </div>
+                  )}
                 </div>
-              ))}
+              )})}
             </div>
           </div>
         )}
@@ -255,13 +292,27 @@ function CreateRecipeModal({ onClose, onSubmit }) {
     name: '', description: '', category: 'general',
     verticals: ['*'], trigger: 'manual', steps: [],
   })
-  const [stepInput, setStepInput] = useState({ name: '', skill_tag: '' })
+  const [stepInput, setStepInput] = useState({
+    name: '', type: 'agent', input: '', skills: '', retry_max: 2,
+  })
   const [busy, setBusy] = useState(false)
 
   const addStep = () => {
     if (!stepInput.name) return
-    setForm({ ...form, steps: [...form.steps, stepInput] })
-    setStepInput({ name: '', skill_tag: '' })
+    // 1º step tem de ser agent (CookAI rule)
+    const enforcedType = form.steps.length === 0 ? 'agent' : stepInput.type
+    setForm({
+      ...form,
+      steps: [...form.steps, {
+        name: stepInput.name,
+        type: enforcedType,
+        input: stepInput.input,
+        skills: stepInput.skills.split(',').map(s => s.trim()).filter(Boolean),
+        retry_max: Number(stepInput.retry_max) || 0,
+        jump_back_to: 'stop',
+      }],
+    })
+    setStepInput({ name: '', type: 'agent', input: '', skills: '', retry_max: 2 })
   }
   const removeStep = (idx) => {
     setForm({ ...form, steps: form.steps.filter((_, i) => i !== idx) })
@@ -319,43 +370,105 @@ function CreateRecipeModal({ onClose, onSubmit }) {
             <input value={form.verticals.join(',')} onChange={(e) => setForm({ ...form, verticals: e.target.value.split(',').map(s => s.trim()).filter(Boolean) })} placeholder="* ou v2,v5" style={input} />
           </Field>
 
-          {/* Steps composer */}
-          <Field label="Steps (compõe skills)">
+          {/* Steps composer com type + input + skills[] + retry */}
+          <Field label="Steps (compõe skills · 1º step tem de ser agent)">
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              {form.steps.map((s, i) => (
-                <div key={i} style={{
-                  display: 'flex', alignItems: 'center', gap: 8,
-                  padding: '6px 10px', background: 'var(--bg-elevated)',
-                  borderRadius: 5, fontSize: 12,
-                }}>
-                  <span style={{ color: 'var(--primary)', fontFamily: 'JetBrains Mono, monospace' }}>{i + 1}.</span>
-                  <span style={{ flex: 1, color: 'var(--text)' }}>{s.name}</span>
-                  <code style={{ fontSize: 10, color: 'var(--text-dim)', fontFamily: 'JetBrains Mono, monospace' }}>
-                    {s.skill_tag || '(sem skill)'}
-                  </code>
-                  <button type="button" onClick={() => removeStep(i)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-dim)' }}>
-                    <X size={12} />
-                  </button>
+              {form.steps.map((s, i) => {
+                const isHuman = s.type === 'human'
+                return (
+                  <div key={i} style={{
+                    padding: '8px 10px',
+                    background: 'var(--bg-elevated)',
+                    border: `1px solid ${isHuman ? 'rgba(245,158,11,0.4)' : 'var(--border)'}`,
+                    borderLeft: `3px solid ${isHuman ? '#f59e0b' : '#10b981'}`,
+                    borderRadius: 5,
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                      <span style={{ color: 'var(--primary)', fontFamily: 'JetBrains Mono, monospace', fontSize: 11 }}>{i + 1}.</span>
+                      <span style={{ flex: 1, color: 'var(--text)', fontSize: 12, fontWeight: 500 }}>{s.name}</span>
+                      <span style={{
+                        fontSize: 9, padding: '1px 6px', borderRadius: 3,
+                        background: isHuman ? 'rgba(245,158,11,0.18)' : 'rgba(16,185,129,0.18)',
+                        color: isHuman ? '#f59e0b' : '#10b981',
+                        fontFamily: 'JetBrains Mono, monospace', fontWeight: 700,
+                      }}>{isHuman ? 'HUMAN' : 'AGENT'}</span>
+                      <button type="button" onClick={() => removeStep(i)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-dim)' }}>
+                        <X size={11} />
+                      </button>
+                    </div>
+                    {s.input && (
+                      <div style={{
+                        fontSize: 10, color: 'var(--text-dim)', marginLeft: 18,
+                        fontFamily: 'JetBrains Mono, monospace', lineHeight: 1.4,
+                      }}>{s.input}</div>
+                    )}
+                    {s.skills?.length > 0 && (
+                      <div style={{ display: 'flex', gap: 4, marginLeft: 18, marginTop: 4, flexWrap: 'wrap' }}>
+                        {s.skills.map((tag) => (
+                          <span key={tag} style={{
+                            fontSize: 9, padding: '1px 5px', borderRadius: 3,
+                            background: 'rgba(107,79,160,0.15)', color: 'var(--primary)',
+                            fontFamily: 'JetBrains Mono, monospace',
+                          }}>{tag}</span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+
+              {/* New step inputs */}
+              <div style={{
+                background: 'var(--bg-elevated)', border: '1px dashed var(--border)',
+                borderRadius: 5, padding: 10, display: 'flex', flexDirection: 'column', gap: 6,
+              }}>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <input
+                    value={stepInput.name}
+                    onChange={(e) => setStepInput({ ...stepInput, name: e.target.value })}
+                    placeholder="Step name (ex: Generate copy)"
+                    style={{ ...input, flex: 2 }}
+                  />
+                  <select
+                    value={stepInput.type}
+                    onChange={(e) => setStepInput({ ...stepInput, type: e.target.value })}
+                    disabled={form.steps.length === 0}
+                    style={{ ...input, flex: 1 }}
+                    title={form.steps.length === 0 ? 'First step has to be agent' : ''}
+                  >
+                    <option value="agent">Agent</option>
+                    <option value="human">Human</option>
+                  </select>
+                  <input
+                    type="number" min={0} max={5}
+                    value={stepInput.retry_max}
+                    onChange={(e) => setStepInput({ ...stepInput, retry_max: e.target.value })}
+                    placeholder="retry"
+                    style={{ ...input, width: 60 }}
+                  />
                 </div>
-              ))}
-              <div style={{ display: 'flex', gap: 6 }}>
-                <input
-                  value={stepInput.name}
-                  onChange={(e) => setStepInput({ ...stepInput, name: e.target.value })}
-                  placeholder="Step name"
-                  style={{ ...input, flex: 2 }}
+                <textarea
+                  value={stepInput.input}
+                  onChange={(e) => setStepInput({ ...stepInput, input: e.target.value })}
+                  placeholder="Input com {{vars}} — ex: Gera copy para {{audience}} em {{tone}}"
+                  rows={2}
+                  style={{ ...input, fontFamily: 'JetBrains Mono, monospace', fontSize: 11, resize: 'vertical' }}
                 />
-                <input
-                  value={stepInput.skill_tag}
-                  onChange={(e) => setStepInput({ ...stepInput, skill_tag: e.target.value })}
-                  placeholder="skill_tag"
-                  style={{ ...input, flex: 1, fontFamily: 'JetBrains Mono, monospace' }}
-                />
-                <button type="button" onClick={addStep} style={{
-                  padding: '6px 12px', borderRadius: 5,
-                  background: 'var(--bg-elevated)', border: '1px solid var(--border)',
-                  color: 'var(--text)', fontSize: 12, cursor: 'pointer',
-                }}>+ Add</button>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <input
+                    value={stepInput.skills}
+                    onChange={(e) => setStepInput({ ...stepInput, skills: e.target.value })}
+                    placeholder="Skills (vírgula): writer,gmail-sender"
+                    style={{ ...input, flex: 1, fontFamily: 'JetBrains Mono, monospace', fontSize: 11 }}
+                  />
+                  <button type="button" onClick={addStep} disabled={!stepInput.name} style={{
+                    padding: '6px 14px', borderRadius: 5,
+                    background: stepInput.name ? 'var(--primary)' : 'var(--bg-elevated)',
+                    border: '1px solid var(--border)',
+                    color: stepInput.name ? '#fff' : 'var(--text-dim)',
+                    fontSize: 12, cursor: stepInput.name ? 'pointer' : 'not-allowed',
+                  }}>+ Add step</button>
+                </div>
               </div>
             </div>
           </Field>
