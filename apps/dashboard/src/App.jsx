@@ -48,6 +48,7 @@ import ClientsEmailPage from './views/ClientsEmailPage.jsx'
 import ClientsReportingPage from './views/ClientsReportingPage.jsx'
 import ConnectionsPage from './views/ConnectionsPage.jsx'
 import CalendarPage from './views/CalendarPage.jsx'
+import CalendarSettingsPage from './views/CalendarSettingsPage.jsx'
 import SkillReviewPage from './views/SkillReviewPage.jsx'
 import InfluencersPage from './views/InfluencersPage.jsx'
 import ApifyActorsPage from './views/ApifyActorsPage.jsx'
@@ -148,7 +149,8 @@ export default function App() {
               <Route path="/clients/email"     element={<ClientsEmailPage />} />
               <Route path="/clients/reporting" element={<ClientsReportingPage />} />
               <Route path="/connections"  element={<ConnectionsPage />} />
-              <Route path="/calendar"     element={<CalendarPage />} />
+              <Route path="/calendar"          element={<CalendarPage />} />
+              <Route path="/calendar/settings" element={<CalendarSettingsPage />} />
               <Route path="/skills/review" element={<SkillReviewPage />} />
               <Route path="/influencers"   element={<InfluencersPage />} />
               <Route path="/apify-actors"  element={<ApifyActorsPage />} />

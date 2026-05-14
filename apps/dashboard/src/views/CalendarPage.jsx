@@ -4,7 +4,8 @@
 // Click numa data → cria evento. Click num evento → drawer/delete.
 
 import { useState, useMemo } from 'react'
-import { ChevronLeft, ChevronRight, Plus, X, Trash2 } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus, X, Trash2, Settings } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { useCalendarEvents } from '../hooks/useCalendarEvents.js'
 import { useData } from '../hooks/useData.js'
 import { useVerticalStore } from '../store'
@@ -267,6 +268,12 @@ export default function CalendarPage() {
           color: 'var(--text)', fontSize: '0.7rem',
         }}>Hoje</button>
         <button onClick={() => setCursor(c => addMonths(c, 1))} style={iconBtn}><ChevronRight size={14} /></button>
+        <Link to="/calendar/settings" style={{
+          ...iconBtn, textDecoration: 'none',
+          display: 'inline-flex', alignItems: 'center', gap: 4,
+        }} title="Settings · Google Calendar sync">
+          <Settings size={13} />
+        </Link>
         <button onClick={() => setSelectedDate(new Date())} style={{
           background: 'var(--primary)', color: '#fff', border: 'none',
           padding: '6px 12px', borderRadius: 5, cursor: 'pointer',
