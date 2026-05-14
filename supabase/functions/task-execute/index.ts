@@ -166,6 +166,13 @@ Se uma skill requer connector que NÃO tens disponível ou requer aprovação hu
 
   const sysPrompt = `${baseSysPrompt}\n\n${skillsBlock}${agentContextBlock}${contextBlock}`
 
+  // Sprint Q1.7 — revision pass: se há revision_request no payload, é uma 2ª passagem
+  // O agent recebe o output anterior + a crítica/instrução do humano e produz nova versão.
+  const payload = (task.payload || {}) as Record<string, any>
+  const revisionRequest: string = payload.revision_request || ""
+  const previousOutput: string = payload.execution?.output_md || ""
+  const isRevision = !!revisionRequest && !!previousOutput
+
   const taskBrief = `
 TASK PARA EXECUTAR:
 Título: ${task.title}
@@ -179,18 +186,37 @@ Contexto do payload:
 ${JSON.stringify(task.payload || {}, null, 2).slice(0, 800)}
 `.trim()
 
-  const prompt = `${taskBrief}
+  const revisionBlock = isRevision ? `
 
-Produz um plano de execução em PT-PT. Identifica:
-1. Que sub-passos farias para resolver esta task (4-6 passos)
-2. Output concreto que entregarias
-3. Se precisas de aprovação humana antes de executar algo (ex: enviar email externo, gastar dinheiro, mudança irreversível)
+═══════════════════════════════════════
+PEDIDO DE REVISÃO (humano não aprovou a primeira tentativa)
+═══════════════════════════════════════
+
+OUTPUT ANTERIOR QUE PRODUZISTE:
+\`\`\`
+${previousOutput.slice(0, 4000)}
+\`\`\`
+
+INSTRUÇÃO DE REVISÃO DO MÁRIO:
+${revisionRequest}
+
+REGRA: produz uma NOVA versão do output_md que aplica esta instrução à risca.
+NÃO repitas a versão anterior. Tens de mudar o que o Mário pediu.
+Se a instrução pede consultar documentação adicional, faz isso explicitamente no output.
+` : ""
+
+  const prompt = `${taskBrief}
+${revisionBlock}
+
+${isRevision
+  ? "Esta é a REVISÃO. Produz nova versão aplicando a instrução acima."
+  : "Produz um plano de execução em PT-PT. Identifica:\n1. Que sub-passos farias para resolver esta task (4-6 passos)\n2. Output concreto que entregarias\n3. Se precisas de aprovação humana antes de executar algo (ex: enviar email externo, gastar dinheiro, mudança irreversível)"}
 
 Responde APENAS JSON válido (sem markdown):
 {
-  "summary": "1 frase do que vais entregar (max 200ch)",
-  "steps_completed": ["Passo 1 (que fiz/faria)", "Passo 2", ...],
-  "output_md": "Output detalhado em markdown PT-PT — o entregável real (ex: rascunho email, lista de prestadores, análise de gap, etc.)",
+  "summary": "1 frase do que vais entregar (max 200ch)${isRevision ? " — começa com 'Revisão:' a indicar a mudança" : ""}",
+  "steps_completed": ["Passo 1${isRevision ? " (revisão aplicada)" : ""}", "Passo 2", ...],
+  "output_md": "Output detalhado em markdown PT-PT — o entregável real${isRevision ? " (NOVA versão, NÃO igual à anterior)" : " (ex: rascunho email, lista de prestadores, análise de gap, etc.)"}",
   "needs_human": false,
   "needs_human_reason": "Se needs_human=true, explica porquê (max 200ch)",
   "delegated_to": "Se quiseres passar a outro agent (por skill faltar connector), agent_id. Senão null."
@@ -373,11 +399,29 @@ Deno.serve(async (req) => {
           : [{ name: "Concluído", status: "done" }]),
     ]
 
+    // Limpa revision_request consumido (não fica a disparar em runs futuras).
+    // Mantém revision_history para audit trail.
+    const previousPayload = { ...(task.payload || {}) } as Record<string, any>
+    const wasRevision = !!previousPayload.revision_request && !!previousPayload.execution?.output_md
+    const consumedRevisionRequest: string = previousPayload.revision_request || ""
+    const consumedPreviousOutput: string = previousPayload.execution?.output_md || ""
+    if (wasRevision) {
+      const history = Array.isArray(previousPayload.revision_history) ? previousPayload.revision_history : []
+      history.push({
+        request: consumedRevisionRequest,
+        previous_output: consumedPreviousOutput.slice(0, 1000),
+        revised_at: new Date().toISOString(),
+        revision_number: history.length + 1,
+      })
+      previousPayload.revision_history = history
+      delete previousPayload.revision_request
+    }
+
     const updatePayload: Record<string, unknown> = {
       status: result.status,
       steps: finalSteps,
       payload: {
-        ...(task.payload || {}),
+        ...previousPayload,
         execution: {
           summary: result.summary,
           output_md: result.output_md,
@@ -388,6 +432,8 @@ Deno.serve(async (req) => {
           agent_context_chars: agentContextChars,
           agent: task.owner_agent_id,
           model: MODEL,
+          is_revision: wasRevision,
+          revision_number: wasRevision ? ((previousPayload.revision_history || []).length) : 0,
           at: new Date().toISOString(),
         },
       },
