@@ -205,8 +205,17 @@ async function loadAgentContext(
 }
 
 function buildSystemPrompt(agentContext: string): string {
-  if (!agentContext) return BASE_SYSTEM_PROMPT
-  return `${BASE_SYSTEM_PROMPT}\n\nCONTEXTO DO AGENT ACTIVO (SOPs / ICPs / Legal / Never-rules — segue à risca):\n${agentContext}`
+  // Data actual injectada — Claude tem cutoff de Jan 2026 e tende a usar 2024/2025
+  // como defaults se não souber. Bug Q1: due_at '16/5' interpretado como 2025-05-16.
+  const today = new Date()
+  const yyyy = today.getUTCFullYear()
+  const mm = String(today.getUTCMonth() + 1).padStart(2, "0")
+  const dd = String(today.getUTCDate()).padStart(2, "0")
+  const dateHeader = `\nDATA ACTUAL: ${yyyy}-${mm}-${dd} (UTC). Quando o user diz uma data sem ano (ex: "16/5"), assume ${yyyy} a menos que o user diga explicitamente outro ano. Datas no formato dia/mês PT-PT são dia-primeiro (16/5 = 16 Maio, NÃO 5 Junho).\n`
+
+  const base = BASE_SYSTEM_PROMPT + dateHeader
+  if (!agentContext) return base
+  return `${base}\nCONTEXTO DO AGENT ACTIVO (SOPs / ICPs / Legal / Never-rules — segue à risca):\n${agentContext}`
 }
 
 // ─── Handler ──────────────────────────────────────────────────
@@ -236,6 +245,27 @@ Deno.serve(async (req) => {
     const activeAgentId: string = body?.context?.active_employee_id || ""
     const agentContext = await loadAgentContext(sb, activeAgentId, 6000)
     const systemPrompt = buildSystemPrompt(agentContext)
+
+    // Sprint Q1.5 — persistência de chat threads
+    let threadId: string | null = body?.thread_id || null
+    if (!threadId && activeAgentId) {
+      const { data: tid } = await sb.rpc("chat_thread_open", {
+        p_employee_id: activeAgentId,
+        p_force_new: false,
+      })
+      threadId = (tid as string) || null
+    }
+
+    // Guarda mensagem do user
+    if (threadId) {
+      await sb.rpc("chat_message_add", {
+        p_thread_id: threadId,
+        p_role: "user",
+        p_content: userMessage,
+        p_tool_calls: null,
+        p_metadata: {},
+      })
+    }
 
     // Build messages — converter para formato Anthropic
     const messages: unknown[] = [
@@ -276,9 +306,21 @@ Deno.serve(async (req) => {
       messages.push({ role: "user", content: toolResults })
     }
 
+    // Persiste resposta do assistant
+    if (threadId) {
+      await sb.rpc("chat_message_add", {
+        p_thread_id: threadId,
+        p_role: "assistant",
+        p_content: finalText.trim() || "(sem resposta)",
+        p_tool_calls: toolCallsLog.length > 0 ? toolCallsLog : null,
+        p_metadata: { agent: activeAgentId, context_chars: agentContext.length },
+      })
+    }
+
     return new Response(JSON.stringify({
       reply: finalText.trim() || "(sem resposta)",
       tool_calls: toolCallsLog,
+      thread_id: threadId,
     }), { headers: { ...cors, "Content-Type": "application/json" } })
 
   } catch (e) {
