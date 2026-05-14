@@ -6,8 +6,7 @@ import {
   LayoutDashboard, Map, Eye, Swords, Layers,
   Bot, PanelLeftClose, PanelLeft,
   TrendingUp, UserPlus, Target, Zap,
-  Plug2, Settings as SettingsIcon, Briefcase,
-  Megaphone, DollarSign, MessageCircle, Scale, Code, Settings,
+  Plug2, Settings as SettingsIcon,
   Monitor, Calendar, AtSign,
 } from 'lucide-react'
 import { useVerticalStore, useAppShellStore } from '../store'
@@ -15,11 +14,7 @@ import { useInboxItems } from '../hooks/useSupabase'
 import { useInboxReads } from '../hooks/useInboxReads'
 import { useData } from '../hooks/useData.js'
 import SidebarGroup from './SidebarGroup.jsx'
-import { DEPARTMENTS, countByDept } from '../lib/departments.js'
-
-const DEPT_ICON_MAP = {
-  Megaphone, TrendingUp, Settings, DollarSign, MessageCircle, Scale, Code, Users,
-}
+import { countByDept } from '../lib/departments.js'
 
 const IC = ({ icon: Icon }) => (
   <Icon size={15} style={{ color: 'var(--text-dim)', flexShrink: 0, marginRight: 8 }} />
@@ -60,8 +55,7 @@ export default function Sidebar() {
 
   const unreadCount = items.filter(i => !readSet.has(i.id)).length
   const employees = data?.employees || []
-  const deptCounts = countByDept(employees, activeVertical)
-  const totalAgents = Object.values(deptCounts).reduce((a, b) => a + b, 0)
+  const totalAgents = Object.values(countByDept(employees, activeVertical)).reduce((a, b) => a + b, 0)
 
   return (
     <aside className={'app-sidebar' + (sidebarCollapsed ? ' collapsed' : '')}>
@@ -97,20 +91,6 @@ export default function Sidebar() {
           <NavItem to="/files"       label="Files"       icon={Folder} />
         </SidebarGroup>
 
-        <SidebarGroup id="departments" label="Departments" badge={totalAgents}>
-          <NavItem to="/departments" label="Visão geral" icon={Briefcase} end />
-          {DEPARTMENTS.map(d => (
-            <NavItem
-              key={d.id}
-              to={`/departments/${d.id}`}
-              label={d.label}
-              icon={DEPT_ICON_MAP[d.icon]}
-              badge={deptCounts[d.id]}
-              accent={d.color}
-            />
-          ))}
-        </SidebarGroup>
-
         <SidebarGroup id="growth" label="Growth">
           <NavItem to="/growth/funnel"        label="Funil"          icon={TrendingUp} />
           <NavItem to="/growth/leads"         label="Leads"          icon={UserPlus} />
@@ -119,7 +99,7 @@ export default function Sidebar() {
         </SidebarGroup>
 
         <SidebarGroup id="manage" label="Manage">
-          <NavItem to="/employees" label="Employees" icon={Users} />
+          <NavItem to="/employees" label="Employees" icon={Users} badge={totalAgents} />
           <NavItem to="/clients"   label="Clients"   icon={Building2} />
           <NavItem to="/projects"  label="Projects"  icon={FolderKanban} />
           <NavItem to="/tasks"     label="Tasks"     icon={CheckSquare} />

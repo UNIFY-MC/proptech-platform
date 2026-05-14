@@ -1,5 +1,11 @@
 import { useState, useEffect } from 'react'
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { Routes, Route, Navigate, useParams } from 'react-router-dom'
+
+// Redirect /departments/:slug → /employees?tab=departments&dept=<slug>
+function DepartmentRedirect() {
+  const { slug } = useParams()
+  return <Navigate to={`/employees?tab=departments&dept=${slug}`} replace />
+}
 import { useData } from './hooks/useData.js'
 import { DrawerProvider } from './context/DrawerContext.jsx'
 import Topbar from './components/Topbar.jsx'
@@ -30,7 +36,6 @@ import GrowthFunnel from './views/GrowthFunnel.jsx'
 import GrowthLeads from './views/GrowthLeads.jsx'
 import GrowthOportunidades from './views/GrowthOportunidades.jsx'
 import GrowthRules from './views/GrowthRules.jsx'
-import DepartmentPage from './views/DepartmentPage.jsx'
 import MultiView from './views/MultiView.jsx'
 import TasksPage from './views/TasksPage.jsx'
 import MissionDetail from './views/MissionDetail.jsx'
@@ -125,8 +130,9 @@ export default function App() {
               <Route path="/growth/leads"        element={<GrowthLeads />} />
               <Route path="/growth/oportunidades" element={<GrowthOportunidades />} />
               <Route path="/growth/rules"        element={<GrowthRules />} />
-              <Route path="/departments"         element={<DepartmentPage />} />
-              <Route path="/departments/:slug"   element={<DepartmentPage />} />
+              {/* Legacy /departments → redireccionar para o hub unificado em /employees */}
+              <Route path="/departments"         element={<Navigate to="/employees?tab=departments" replace />} />
+              <Route path="/departments/:slug"   element={<DepartmentRedirect />} />
               <Route path="/multiview"           element={<MultiView />} />
               <Route path="/clients"      element={<StubView title="Clients" />} />
               <Route path="/connections"  element={<ConnectionsPage />} />
