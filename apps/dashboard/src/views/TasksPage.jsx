@@ -746,17 +746,50 @@ function Meta({ label, value }) {
   )
 }
 
+// Dept heads (responsáveis) — só estes recebem tasks; eles delegam internamente.
+// Sub-agents (assembleia-condo, manutencao-condo, etc) são corridos pelos heads.
+const DEPT_HEADS = new Set([
+  'bia',                  // V5 operations
+  'orquestrador-condo',   // V2 operations + engineering
+  'diretor-marketing',    // marketing transversal
+  'gestor-leads',         // sales transversal
+  'financeiro-condo',     // V2 finance
+  'atendimento-condo',    // V2 support
+  'compliance-condo',     // V2 legal
+])
+
 // ─── Task edit/create modal ───────────────────────────
 function TaskEditModal({ task, onClose, onSubmit, employees }) {
+  const { activeVertical } = useVerticalStore()
+  const defaultVertical = task?.vertical
+    || (activeVertical && activeVertical !== 'all' ? activeVertical.toLowerCase() : '')
+
   const [title, setTitle] = useState(task?.title || '')
   const [desc, setDesc] = useState(task?.description_md || '')
   const [kind, setKind] = useState(task?.kind || 'task')
   const [priority, setPriority] = useState(task?.priority || 'normal')
-  const [vertical, setVertical] = useState(task?.vertical || '')
+  const [vertical, setVertical] = useState(defaultVertical)
   const [ownerAgent, setOwnerAgent] = useState(task?.owner_agent_id || '')
   const [dueAt, setDueAt] = useState(task?.due_at ? task.due_at.slice(0, 16) : '')
   const [goal, setGoal] = useState(task?.goal || '')
   const [project, setProject] = useState(task?.project || '')
+  const [showAllAgents, setShowAllAgents] = useState(false)
+
+  // Filtra agents: heads-only por defeito + match vertical seleccionada
+  const verticalUpper = vertical ? vertical.toUpperCase() : ''
+  const availableEmployees = employees.filter(e => {
+    if (!showAllAgents && !DEPT_HEADS.has(e.id)) return false
+    if (!verticalUpper) return true
+    const verts = e.verticals || []
+    return verts.includes(verticalUpper)
+  })
+
+  // Se owner deixar de ser válido para a vertical seleccionada, limpa
+  useEffect(() => {
+    if (ownerAgent && !availableEmployees.find(e => e.id === ownerAgent)) {
+      setOwnerAgent('')
+    }
+  }, [vertical, showAllAgents]) // eslint-disable-line react-hooks/exhaustive-deps
 
   function submit(e) {
     e?.preventDefault?.()
@@ -807,9 +840,19 @@ function TaskEditModal({ task, onClose, onSubmit, employees }) {
             <option value="v8">V8 Rentals</option><option value="v10">V10 Owners</option>
           </select>
           <select value={ownerAgent} onChange={e => setOwnerAgent(e.target.value)} style={inputStyle}>
-            <option value="">— sem owner —</option>
-            {employees.map(e => <option key={e.id} value={e.id}>{e.name} · {e.department}</option>)}
+            <option value="">— sem responsável —</option>
+            {availableEmployees.map(e => (
+              <option key={e.id} value={e.id}>
+                {e.name} · {e.department}{e.verticals?.length ? ` · ${e.verticals.join('/')}` : ''}
+              </option>
+            ))}
           </select>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.68rem', color: 'var(--text-dim)' }}>
+          <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+            <input type="checkbox" checked={showAllAgents} onChange={e => setShowAllAgents(e.target.checked)} />
+            Mostrar sub-agents (defeito: só responsáveis de departamento)
+          </label>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
           <input value={goal} onChange={e => setGoal(e.target.value)} placeholder="Goal (opcional)" style={inputStyle} />
