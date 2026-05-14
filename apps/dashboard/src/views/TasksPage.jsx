@@ -6,6 +6,7 @@
 // "Open mission detail" para abrir modal full.
 
 import { useState, useMemo, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   Plus, ChevronDown, X, Search, LayoutGrid, List, Play, Hand,
   CheckCircle2, AlertCircle, ExternalLink, Loader2, Edit2, Eye,
@@ -60,6 +61,7 @@ async function executeTask(taskId) {
 }
 
 export default function TasksPage() {
+  const navigate = useNavigate()
   const { data } = useData()
   const employees = data?.employees || []
   const { tasks, createTask, updateStatus, assign, refresh } = useTasks({})
@@ -186,7 +188,7 @@ export default function TasksPage() {
                   <TaskCard key={t.id} task={t} employees={employees}
                     onExecute={() => handleExecute(t.id)}
                     executing={executing === t.id}
-                    onOpenDetail={() => setOpenDetail(t)}
+                    onOpenDetail={() => navigate(`/tasks/${t.id}`)}
                     onEdit={() => setEditingTask(t)}
                     onChangeStatus={(s) => updateStatus(t.id, s)} />
                 ))}
@@ -202,7 +204,7 @@ export default function TasksPage() {
       ) : (
         <ListView tasks={filtered} employees={employees}
           onExecute={handleExecute} executing={executing}
-          onOpenDetail={setOpenDetail} onEdit={setEditingTask}
+          onOpenDetail={(t) => navigate(`/tasks/${t.id}`)} onEdit={setEditingTask}
           onChangeStatus={(id, s) => updateStatus(id, s)} />
       )}
 
@@ -386,6 +388,41 @@ function TaskCard({ task, employees, onExecute, executing, onOpenDetail, onEdit,
           {task.description_md.slice(0, 140)}{task.description_md.length > 140 && '…'}
         </div>
       )}
+
+      {/* Skills row */}
+      {Array.isArray(task.skills) && task.skills.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, paddingTop: 4, borderTop: '1px solid var(--border)' }}>
+          <span style={{ fontSize: '0.55rem', fontWeight: 600, letterSpacing: '0.08em', color: 'var(--text-dim)', fontFamily: 'JetBrains Mono, monospace' }}>
+            SKILLS
+          </span>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+            {task.skills.map((sk) => (
+              <span key={sk} style={{
+                display: 'inline-flex', alignItems: 'center', gap: 4,
+                padding: '2px 6px', background: 'var(--bg-elevated)',
+                border: '1px solid var(--border)', borderRadius: 3,
+                fontSize: '0.62rem', color: 'var(--text)',
+                fontFamily: 'JetBrains Mono, monospace',
+              }}>
+                <span style={{ color: '#6b4fa0' }}>◉</span> {sk}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Open mission detail link */}
+      <button
+        onClick={onOpenDetail}
+        style={{
+          display: 'inline-flex', alignItems: 'center', gap: 4,
+          background: 'none', border: 'none', cursor: 'pointer',
+          padding: 0, color: 'var(--primary)', fontSize: '0.7rem',
+          alignSelf: 'flex-start',
+        }}
+      >
+        <ExternalLink size={11} /> Open mission detail
+      </button>
 
       {/* Actions row */}
       <div style={{ display: 'flex', gap: 6, marginTop: 4, alignItems: 'center' }}>
