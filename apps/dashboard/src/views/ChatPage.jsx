@@ -88,26 +88,42 @@ export default function ChatPage() {
   }
 
   const [actionPending, setActionPending] = useState(null)  // 'task' | 'calendar' | null
+  const [taskModal, setTaskModal] = useState(null)          // { message, title }
+  const [calendarModal, setCalendarModal] = useState(null)  // { message, title, datetime }
 
-  async function handleCreateTask(message) {
-    if (actionPending) return
+  function openTaskModal(message) {
+    const lastUserMsg = [...messages].reverse().find(m => m.role === 'user' && m.ts <= message.ts)
+    const title = shortTitleFrom(lastUserMsg?.content || message.content)
+    setTaskModal({ message, title })
+  }
+
+  function openCalendarModal(message) {
+    const lastUserMsg = [...messages].reverse().find(m => m.role === 'user' && m.ts <= message.ts)
+    const title = shortTitleFrom(lastUserMsg?.content || message.content)
+    const tomorrow = new Date()
+    tomorrow.setDate(tomorrow.getDate() + 1)
+    tomorrow.setHours(9, 0, 0, 0)
+    const datetime = tomorrow.toISOString().slice(0, 16)  // YYYY-MM-DDTHH:MM
+    setCalendarModal({ message, title, datetime })
+  }
+
+  async function submitTask({ message, title, priority, dueAt }) {
     setActionPending('task')
     try {
-      const userMsg = messages.find(m => m.role === 'user' && m.ts < message.ts)
-      const lastUserMsg = [...messages].reverse().find(m => m.role === 'user' && m.ts <= message.ts) || userMsg
-      const title = shortTitleFrom(lastUserMsg?.content || message.content)
       const taskId = await createTask({
-        title,
+        title: title.trim() || shortTitleFrom(message.content),
         description_md: `**Do chat ${message.agent_id || 'agent'} (${new Date(message.ts).toLocaleString('pt-PT')}):**\n\n${message.content}`,
         kind: 'task',
-        priority: 'normal',
+        priority: priority || 'normal',
         vertical: activeVertical && activeVertical !== 'all' ? activeVertical.toLowerCase() : null,
         owner_agent_id: message.agent_id || null,
+        due_at: dueAt || null,
         source_kind: 'chat',
       })
       if (taskId) {
-        addToast({ type: 'success', message: `Task criada · a abrir Mission Detail…` })
-        setTimeout(() => navigate(`/tasks/${taskId}`), 700)
+        addToast({ type: 'success', message: `✓ Task criada · #${String(taskId).slice(0, 8)}` })
+        setTaskModal(null)
+        // user fica no chat (não navega para /tasks)
       } else {
         addToast({ type: 'error', message: 'Erro ao criar task — vê consola' })
       }
@@ -116,42 +132,24 @@ export default function ChatPage() {
     }
   }
 
-  async function handleAddToCalendar(message) {
-    if (actionPending) return
-    // Pede data ao user (default: amanhã 09:00)
-    const tomorrow = new Date()
-    tomorrow.setDate(tomorrow.getDate() + 1)
-    const defaultDate = tomorrow.toISOString().slice(0, 10)  // YYYY-MM-DD
-    const dateStr = window.prompt(
-      'Data e hora para o evento (formato YYYY-MM-DD HH:MM):',
-      `${defaultDate} 09:00`
-    )
-    if (!dateStr) return  // user cancelled
-
-    const isoMatch = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})/)
-    if (!isoMatch) {
-      addToast({ type: 'error', message: 'Formato inválido — usa YYYY-MM-DD HH:MM' })
-      return
-    }
-    const when = new Date(`${isoMatch[1]}-${isoMatch[2]}-${isoMatch[3]}T${isoMatch[4]}:${isoMatch[5]}:00`)
-
+  async function submitCalendar({ message, title, datetime, allDay }) {
     setActionPending('calendar')
     try {
-      const lastUserMsg = [...messages].reverse().find(m => m.role === 'user' && m.ts <= message.ts)
-      const title = shortTitleFrom(lastUserMsg?.content || message.content)
+      const when = new Date(datetime)
       const eventId = await createEvent({
-        title,
+        title: title.trim() || shortTitleFrom(message.content),
         description: message.content.slice(0, 1000),
         starts_at: when.toISOString(),
-        all_day: false,
+        all_day: !!allDay,
         kind: 'manual',
         owner_agent_id: message.agent_id || null,
         vertical: activeVertical && activeVertical !== 'all' ? activeVertical.toLowerCase() : null,
         color: '#8b5cf6',
       })
       if (eventId) {
-        addToast({ type: 'success', message: `Evento criado · ${when.toLocaleString('pt-PT')} · a abrir /calendar…` })
-        setTimeout(() => navigate(`/calendar?date=${when.toISOString().slice(0, 10)}`), 700)
+        addToast({ type: 'success', message: `✓ Evento · ${when.toLocaleString('pt-PT', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}` })
+        setCalendarModal(null)
+        // user fica no chat
       } else {
         addToast({ type: 'error', message: 'Erro ao criar evento — vê consola' })
       }
@@ -251,6 +249,26 @@ export default function ChatPage() {
         />
       )}
 
+      {taskModal && (
+        <TaskModal
+          state={taskModal}
+          onChange={setTaskModal}
+          onCancel={() => setTaskModal(null)}
+          onSubmit={(data) => submitTask({ ...data, message: taskModal.message })}
+          pending={actionPending === 'task'}
+        />
+      )}
+
+      {calendarModal && (
+        <CalendarModal
+          state={calendarModal}
+          onChange={setCalendarModal}
+          onCancel={() => setCalendarModal(null)}
+          onSubmit={(data) => submitCalendar({ ...data, message: calendarModal.message })}
+          pending={actionPending === 'calendar'}
+        />
+      )}
+
       {/* Conversation thread (quando há mensagens) */}
       {hasConversation && (
         <div style={{
@@ -264,7 +282,7 @@ export default function ChatPage() {
           paddingBottom: 16,
         }}>
           {messages.map((m, i) => (
-            <ChatBubble key={i} message={m} onCreateTask={handleCreateTask} onAddToCalendar={handleAddToCalendar} />
+            <ChatBubble key={i} message={m} onCreateTask={openTaskModal} onAddToCalendar={openCalendarModal} />
           ))}
         </div>
       )}
@@ -660,6 +678,126 @@ function ChatHistoryDrawer({ employeeId, activeThreadId, onPick, onClose }) {
           ))}
         </div>
       </aside>
+    </div>
+  )
+}
+
+// ─── TaskModal — pede título + prioridade + due (opcional) ────────
+const modalOverlay = {
+  position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)',
+  display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100,
+  padding: 20,
+}
+const modalCard = {
+  background: 'var(--bg-card)', border: '1px solid var(--border)',
+  borderRadius: 12, padding: 22, width: 460, maxWidth: '92vw',
+  display: 'flex', flexDirection: 'column', gap: 10,
+}
+const modalInput = {
+  background: 'var(--bg-elevated)', border: '1px solid var(--border)',
+  color: 'var(--text)', padding: '8px 11px', borderRadius: 5,
+  fontSize: '0.82rem', outline: 'none', fontFamily: 'inherit',
+}
+
+function TaskModal({ state, onChange, onCancel, onSubmit, pending }) {
+  const [title, setTitle] = useState(state.title || '')
+  const [priority, setPriority] = useState('normal')
+  const [dueAt, setDueAt] = useState('')
+
+  function submit(e) {
+    e.preventDefault()
+    if (!title.trim() || pending) return
+    onSubmit({ title, priority, dueAt: dueAt ? new Date(dueAt).toISOString() : null })
+  }
+
+  return (
+    <div onClick={onCancel} style={modalOverlay}>
+      <form onClick={(e) => e.stopPropagation()} onSubmit={submit} style={modalCard}>
+        <h3 style={{ margin: 0, fontSize: '1rem' }}>📝 Criar task a partir do chat</h3>
+        <label style={{ fontSize: '0.65rem', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.1em', marginTop: 4 }}>Título</label>
+        <input value={title} onChange={e => setTitle(e.target.value)} autoFocus required style={modalInput} />
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 4 }}>
+          <div>
+            <label style={{ fontSize: '0.65rem', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Prioridade</label>
+            <select value={priority} onChange={e => setPriority(e.target.value)} style={{ ...modalInput, width: '100%', marginTop: 4 }}>
+              <option value="low">Low</option>
+              <option value="normal">Normal</option>
+              <option value="high">High</option>
+              <option value="urgent">Urgent</option>
+            </select>
+          </div>
+          <div>
+            <label style={{ fontSize: '0.65rem', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Due (opcional)</label>
+            <input type="datetime-local" value={dueAt} onChange={e => setDueAt(e.target.value)} style={{ ...modalInput, width: '100%', marginTop: 4 }} />
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 14 }}>
+          <button type="button" onClick={onCancel} style={{
+            background: 'transparent', border: '1px solid var(--border)',
+            padding: '7px 14px', borderRadius: 5, cursor: 'pointer',
+            color: 'var(--text-dim)', fontSize: '0.78rem',
+          }}>Cancelar</button>
+          <button type="submit" disabled={pending || !title.trim()} style={{
+            background: 'var(--text)', color: 'var(--bg)', border: 'none',
+            padding: '7px 16px', borderRadius: 5, cursor: pending ? 'wait' : 'pointer',
+            fontSize: '0.8rem', fontWeight: 700,
+            opacity: (pending || !title.trim()) ? 0.5 : 1,
+          }}>{pending ? 'A criar…' : 'Criar task'}</button>
+        </div>
+      </form>
+    </div>
+  )
+}
+
+// ─── CalendarModal — date+time picker real ────────
+function CalendarModal({ state, onCancel, onSubmit, pending }) {
+  const [title, setTitle] = useState(state.title || '')
+  const [datetime, setDatetime] = useState(state.datetime)
+  const [allDay, setAllDay] = useState(false)
+
+  function submit(e) {
+    e.preventDefault()
+    if (!title.trim() || !datetime || pending) return
+    onSubmit({ title, datetime, allDay })
+  }
+
+  return (
+    <div onClick={onCancel} style={modalOverlay}>
+      <form onClick={(e) => e.stopPropagation()} onSubmit={submit} style={modalCard}>
+        <h3 style={{ margin: 0, fontSize: '1rem' }}>📅 Adicionar ao calendário</h3>
+        <label style={{ fontSize: '0.65rem', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.1em', marginTop: 4 }}>Título</label>
+        <input value={title} onChange={e => setTitle(e.target.value)} autoFocus required style={modalInput} />
+
+        <label style={{ fontSize: '0.65rem', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.1em', marginTop: 4 }}>Data e hora</label>
+        <input
+          type="datetime-local"
+          value={datetime}
+          onChange={e => setDatetime(e.target.value)}
+          required
+          style={modalInput}
+        />
+
+        <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: '0.72rem', color: 'var(--text-dim)', marginTop: 4 }}>
+          <input type="checkbox" checked={allDay} onChange={e => setAllDay(e.target.checked)} />
+          Dia inteiro
+        </label>
+
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 14 }}>
+          <button type="button" onClick={onCancel} style={{
+            background: 'transparent', border: '1px solid var(--border)',
+            padding: '7px 14px', borderRadius: 5, cursor: 'pointer',
+            color: 'var(--text-dim)', fontSize: '0.78rem',
+          }}>Cancelar</button>
+          <button type="submit" disabled={pending || !title.trim() || !datetime} style={{
+            background: 'var(--text)', color: 'var(--bg)', border: 'none',
+            padding: '7px 16px', borderRadius: 5, cursor: pending ? 'wait' : 'pointer',
+            fontSize: '0.8rem', fontWeight: 700,
+            opacity: (pending || !title.trim() || !datetime) ? 0.5 : 1,
+          }}>{pending ? 'A criar…' : 'Adicionar'}</button>
+        </div>
+      </form>
     </div>
   )
 }
