@@ -15,8 +15,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  Sparkles, Wrench, MailPlus, Calendar, FileSearch,
-  ChevronDown, Plus, ArrowUp, Globe, Database, Building2, Zap, Send,
+  Sparkles, Wrench, Calendar, FileSearch,
+  Plus, ArrowUp,
 } from 'lucide-react'
 import { useEmployee } from '../hooks/useEmployee.js'
 import { useApps } from '../hooks/useApps.js'
@@ -66,20 +66,10 @@ const DEPT_HEADS = [
   { id: 'compliance-condo',    label: 'Compliance · V2 legal',   verticals: ['V2'],       color: '#ef4444' },
 ]
 
-// Modes (cookai usa "Website Mode" — aqui o equivalente é vertical / scope)
-const MODES = [
-  { id: 'global',    label: 'Global',         icon: Globe },
-  { id: 'v2',        label: 'V2 Condomínios', icon: Building2 },
-  { id: 'v4',        label: 'V4 Energia',     icon: Zap },
-  { id: 'v5',        label: 'V5 Manutenção',  icon: Wrench },
-]
-
 export default function ChatPage() {
   const navigate = useNavigate()
   const [prompt, setPrompt] = useState('')
-  const [mode, setMode] = useState('global')
   const [employeeId, setEmployeeId] = useState('auto')
-  const [showModeMenu, setShowModeMenu] = useState(false)
   const inputRef = useRef(null)
   const addToast = useNotificationsStore(s => s.addToast)
   const { apps } = useApps()
@@ -209,9 +199,6 @@ export default function ChatPage() {
 
   const hasConversation = messages.length > 0
   const isBusy = pending || running
-
-  const activeMode = MODES.find(m => m.id === mode) || MODES[0]
-  const ModeIcon = activeMode.icon
 
   return (
     <div style={{
@@ -353,94 +340,38 @@ export default function ChatPage() {
         </div>
         )}
 
-        {/* Scope/Mode pill bar */}
-        <div style={{
-          background: 'var(--bg-card)',
-          border: '1px solid var(--border)',
-          borderRadius: 8,
-          padding: '8px 14px',
-          width: '100%', maxWidth: 720,
-          display: 'flex', alignItems: 'center', gap: 10,
-          fontSize: '0.74rem', color: 'var(--text-dim)',
-        }}>
-          <ModeIcon size={14} />
-          <span>Scope: <strong style={{ color: 'var(--text)' }}>{activeMode.label}</strong></span>
-          <span style={{ marginLeft: 'auto', fontSize: '0.65rem' }}>
-            Os agents vão usar este filtro como context default
-          </span>
-        </div>
-
-        {/* Input bar — sticky no fundo da viewport via flex */}
+        {/* Input bar — CookAI-style: textarea alto, fundo morno (tinted) */}
         <form onSubmit={handleSubmit} style={{
           width: '100%', maxWidth: 720,
-          background: 'var(--bg-card)',
-          border: '1px solid var(--border)',
-          borderRadius: 14,
-          padding: 12,
-          display: 'flex', flexDirection: 'column', gap: 10,
+          background: 'linear-gradient(180deg, #2a2218 0%, #211a13 100%)',  // warm dark
+          border: '1px solid rgba(245,158,11,0.18)',
+          borderRadius: 16,
+          padding: 14,
+          display: 'flex', flexDirection: 'column', gap: 12,
+          boxShadow: '0 4px 18px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.04)',
         }}>
-          <input
+          <textarea
             ref={inputRef}
             value={prompt}
             onChange={e => setPrompt(e.target.value)}
-            placeholder={`Pergunta ao ${employeeId === 'bia' ? 'Bia' : employeeId}…`}
+            onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSubmit(e) } }}
+            placeholder={`Pergunta ao ${employeeId === 'auto' ? 'sistema (auto-routing)' : employeeId === 'bia' ? 'Bia' : employeeId}… (Shift+Enter = nova linha)`}
             disabled={isBusy}
-            maxLength={1000}
+            maxLength={2000}
+            rows={3}
             style={{
               border: 'none', outline: 'none',
               background: 'transparent',
               fontSize: '0.92rem', color: 'var(--text)',
-              padding: '4px 4px',
+              padding: '4px 6px',
               width: '100%', boxSizing: 'border-box',
+              resize: 'none',
+              minHeight: 64,
+              fontFamily: 'inherit',
+              lineHeight: 1.5,
             }} />
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            {/* Mode picker */}
-            <div style={{ position: 'relative' }}>
-              <button type="button"
-                onClick={() => setShowModeMenu(s => !s)}
-                style={{
-                  background: 'var(--bg-elevated)', border: '1px solid var(--border)',
-                  borderRadius: 99, padding: '5px 12px',
-                  display: 'flex', alignItems: 'center', gap: 6,
-                  cursor: 'pointer', font: 'inherit',
-                  fontSize: '0.72rem', color: 'var(--text)',
-                }}>
-                <ModeIcon size={13} />
-                <span>{activeMode.label}</span>
-                <ChevronDown size={12} style={{ color: 'var(--text-dim)' }} />
-              </button>
-              {showModeMenu && (
-                <div style={{
-                  position: 'absolute', bottom: '110%', left: 0,
-                  background: 'var(--bg)', border: '1px solid var(--border)',
-                  borderRadius: 8, padding: 4, minWidth: 180,
-                  boxShadow: '0 -4px 12px rgba(0,0,0,0.2)',
-                  zIndex: 10,
-                }}>
-                  {MODES.map(m => {
-                    const MIc = m.icon
-                    return (
-                      <button key={m.id} type="button"
-                        onClick={() => { setMode(m.id); setShowModeMenu(false) }}
-                        style={{
-                          display: 'flex', alignItems: 'center', gap: 8,
-                          width: '100%', textAlign: 'left',
-                          background: m.id === mode ? 'var(--bg-elevated)' : 'transparent',
-                          border: 'none', borderRadius: 5,
-                          padding: '7px 10px', cursor: 'pointer',
-                          font: 'inherit', color: 'var(--text)',
-                          fontSize: '0.74rem',
-                        }}>
-                        <MIc size={13} />
-                        {m.label}
-                      </button>
-                    )
-                  })}
-                </div>
-              )}
-            </div>
-
             {/* Employee picker — heads filtrados por vertical activa */}
             <select
               value={employeeId}
