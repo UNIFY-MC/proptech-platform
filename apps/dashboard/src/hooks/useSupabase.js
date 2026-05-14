@@ -35,8 +35,11 @@ export function useInboxItems(vertical = null) {
 
     fetchItems()
 
+    // Channel name único por mount (StrictMode + múltiplos consumers do mesmo hook
+    // causam "cannot add callbacks after subscribe" se reutilizarmos o mesmo nome).
+    const channelName = `inbox_items_changes_${Math.random().toString(36).slice(2, 9)}`
     const channel = supabase
-      .channel('inbox_items_changes')
+      .channel(channelName)
       .on('postgres_changes', {
         event: '*',
         schema: 'system',
@@ -44,7 +47,9 @@ export function useInboxItems(vertical = null) {
       }, () => fetchItems())
       .subscribe()
 
-    return () => supabase.removeChannel(channel)
+    return () => {
+      try { supabase.removeChannel(channel) } catch (_) { /* noop */ }
+    }
   }, [vertical])
 
   return { items, loading, error }
@@ -80,8 +85,9 @@ export function useApprovals(vertical = null) {
 
     fetchApprovals()
 
+    const channelName = `approvals_changes_${Math.random().toString(36).slice(2, 9)}`
     const channel = supabase
-      .channel('approvals_changes')
+      .channel(channelName)
       .on('postgres_changes', {
         event: '*',
         schema: 'system',
@@ -89,7 +95,9 @@ export function useApprovals(vertical = null) {
       }, () => fetchApprovals())
       .subscribe()
 
-    return () => supabase.removeChannel(channel)
+    return () => {
+      try { supabase.removeChannel(channel) } catch (_) { /* noop */ }
+    }
   }, [vertical])
 
   return { approvals, loading, error }

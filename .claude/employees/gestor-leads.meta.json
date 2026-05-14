@@ -3,35 +3,123 @@
   "name": "Leo",
   "role": "Gestor de Leads",
   "vertical": "core",
-  "department": "Marketing",
+  "department": "sales",
   "model": "claude-sonnet-4-6",
   "version": "1.0",
   "status": "active",
   "color": "emerald",
   "avatarInitial": "GL",
   "integrations": [
-    { "id": "supabase_core_leads", "name": "core.leads", "desc": "SELECT/INSERT — base de dados de todos os leads", "icon": "SB", "color": "emerald", "enabled": true },
-    { "id": "meta_leads_mcp", "name": "Meta Leads MCP", "desc": "leads de Meta Lead Form Ads em real-time", "icon": "FB", "color": "blue", "enabled": true },
-    { "id": "supabase_core_campanhas", "name": "core.campanhas", "desc": "cruzar leads com campanhas para calcular CPL", "icon": "SB", "color": "emerald", "enabled": true },
-    { "id": "resend", "name": "Resend", "desc": "envio de emails de nurturing (D+0, D+3, D+7)", "icon": "RS", "color": "cyan", "enabled": true },
-    { "id": "system_inbox_items", "name": "system.inbox_items", "desc": "leads quentes + relatórios semanais", "icon": "SB", "color": "blue", "enabled": true },
-    { "id": "system_approvals_queue", "name": "system.approvals_queue", "desc": "contactar lead quente — aprovação antes de qualquer contacto", "icon": "SB", "color": "amber", "enabled": true }
+    {
+      "id": "supabase_core_leads",
+      "name": "core.leads",
+      "desc": "SELECT/INSERT — base de dados de todos os leads",
+      "icon": "SB",
+      "color": "emerald",
+      "enabled": true
+    },
+    {
+      "id": "meta_leads_mcp",
+      "name": "Meta Leads MCP",
+      "desc": "leads de Meta Lead Form Ads em real-time",
+      "icon": "FB",
+      "color": "blue",
+      "enabled": true
+    },
+    {
+      "id": "supabase_core_campanhas",
+      "name": "core.campanhas",
+      "desc": "cruzar leads com campanhas para calcular CPL",
+      "icon": "SB",
+      "color": "emerald",
+      "enabled": true
+    },
+    {
+      "id": "resend",
+      "name": "Resend",
+      "desc": "envio de emails de nurturing (D+0, D+3, D+7)",
+      "icon": "RS",
+      "color": "cyan",
+      "enabled": true
+    },
+    {
+      "id": "system_inbox_items",
+      "name": "system.inbox_items",
+      "desc": "leads quentes + relatórios semanais",
+      "icon": "SB",
+      "color": "blue",
+      "enabled": true
+    },
+    {
+      "id": "system_approvals_queue",
+      "name": "system.approvals_queue",
+      "desc": "contactar lead quente — aprovação antes de qualquer contacto",
+      "icon": "SB",
+      "color": "amber",
+      "enabled": true
+    }
   ],
   "skills": [
-    { "id": "captura-multicanal", "desc": "Meta Lead Forms, Google, formulário website, input manual — com dedup por email" },
-    { "id": "scoring-automatico", "desc": "0-100: vertical +20, email válido +15, telefone +10, cargo B2B +15, empresa >10 frac +20, intenção +20, email gratuito B2B -10, sem tel -5" },
-    { "id": "routing-inteligente", "desc": "≥70 → employee operacional da vertical; 40-69 → nurturing; <40 → qualificar manualmente" },
-    { "id": "nurturing-sequence", "desc": "3 emails em 7 dias por vertical (D+0, D+3, D+7) com conteúdo específico. RGPD obrigatório." },
-    { "id": "relatorio-cpl", "desc": "CPL real por canal e vertical, cruzando gasto gestor-ads com leads gerados" }
+    {
+      "id": "captura-multicanal",
+      "desc": "Meta Lead Forms, Google, formulário website, input manual — com dedup por email"
+    },
+    {
+      "id": "scoring-automatico",
+      "desc": "0-100: vertical +20, email válido +15, telefone +10, cargo B2B +15, empresa >10 frac +20, intenção +20, email gratuito B2B -10, sem tel -5"
+    },
+    {
+      "id": "routing-inteligente",
+      "desc": "≥70 → employee operacional da vertical; 40-69 → nurturing; <40 → qualificar manualmente"
+    },
+    {
+      "id": "nurturing-sequence",
+      "desc": "3 emails em 7 dias por vertical (D+0, D+3, D+7) com conteúdo específico. RGPD obrigatório."
+    },
+    {
+      "id": "relatorio-cpl",
+      "desc": "CPL real por canal e vertical, cruzando gasto gestor-ads com leads gerados"
+    }
   ],
   "recipes": [
-    { "id": "daily-lead-processing", "trigger": "schedule", "trigger_label": "0 8 30 * * *", "desc": "08h30: processar leads das últimas 24h → score → routing" },
-    { "id": "weekly-cpl-report", "trigger": "schedule", "trigger_label": "0 17 * * 5", "desc": "Sexta: volume por vertical/canal, CPL real, taxa de conversão, score médio por canal" },
-    { "id": "nurturing-trigger", "trigger": "manual", "trigger_label": "on_score_40_69", "desc": "Lead score 40-69 → iniciar sequência D+0 via Resend após verificar gdpr_consent" }
+    {
+      "id": "daily-lead-processing",
+      "trigger": "schedule",
+      "trigger_label": "0 8 30 * * *",
+      "desc": "08h30: processar leads das últimas 24h → score → routing"
+    },
+    {
+      "id": "weekly-cpl-report",
+      "trigger": "schedule",
+      "trigger_label": "0 17 * * 5",
+      "desc": "Sexta: volume por vertical/canal, CPL real, taxa de conversão, score médio por canal"
+    },
+    {
+      "id": "nurturing-trigger",
+      "trigger": "manual",
+      "trigger_label": "on_score_40_69",
+      "desc": "Lead score 40-69 → iniciar sequência D+0 via Resend após verificar gdpr_consent"
+    }
   ],
   "peerReads": [
-    { "stage": "current", "value": "gestor-ads (campanhas activas) + publisher-social (orgânico activo)" },
-    { "stage": "sprint_next", "value": "financeiro-condo (Fina, leads V2) + diretor-marketing (CPL report)" }
+    {
+      "stage": "current",
+      "value": "gestor-ads (campanhas activas) + publisher-social (orgânico activo)"
+    },
+    {
+      "stage": "sprint_next",
+      "value": "financeiro-condo (Fina, leads V2) + diretor-marketing (CPL report)"
+    }
   ],
-  "cost": { "current": 8, "currency": "USD", "period": "30d", "notes": "Sonnet — scoring diário + nurturing sequences + relatório semanal" }
+  "cost": {
+    "current": 8,
+    "currency": "USD",
+    "period": "30d",
+    "notes": "Sonnet — scoring diário + nurturing sequences + relatório semanal"
+  },
+  "verticals": [
+    "V2",
+    "V4",
+    "V5"
+  ]
 }

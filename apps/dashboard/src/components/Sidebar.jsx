@@ -2,156 +2,160 @@ import { NavLink } from 'react-router-dom'
 import {
   Inbox, MessageSquare, Folder,
   Users, Building2, FolderKanban, CheckSquare,
-  ChefHat, Sparkles, Plug,
+  ChefHat, Sparkles, Plug, Library,
   LayoutDashboard, Map, Eye, Swords, Layers,
-  Bot,
+  Bot, PanelLeftClose, PanelLeft,
+  TrendingUp, UserPlus, Target, Zap,
+  Plug2, Settings as SettingsIcon,
+  Monitor, Calendar, AtSign,
 } from 'lucide-react'
-import { useVerticalStore } from '../store'
-import { useInboxItems, useApprovals } from '../hooks/useSupabase'
+import { useVerticalStore, useAppShellStore } from '../store'
+import { useInboxItems } from '../hooks/useSupabase'
 import { useInboxReads } from '../hooks/useInboxReads'
-
-const DEPT_COLORS = {
-  'Manutenção':  '#534AB7',
-  'Condomínios': '#10b981',
-  'Marketing':   '#3b82f6',
-}
-
-function matchVertical(emp, activeV) {
-  if (activeV === 'all') return true
-  const v = activeV.toUpperCase()
-  if ((emp.vertical || '').toUpperCase().startsWith(v)) return true
-  return (emp.secondary_verticals || []).some(sv => sv.toUpperCase().startsWith(v))
-}
+import { useData } from '../hooks/useData.js'
+import SidebarGroup from './SidebarGroup.jsx'
+import ActiveAgentsWidget from './ActiveAgentsWidget.jsx'
+import { countByDept } from '../lib/departments.js'
 
 const IC = ({ icon: Icon }) => (
-  <Icon size={16} style={{ color: 'var(--text-dim)', flexShrink: 0, marginRight: 8 }} />
+  <Icon size={15} style={{ color: 'var(--text-dim)', flexShrink: 0, marginRight: 8 }} />
 )
 
-function NavItem({ to, label, icon, badge, end }) {
+function NavItem({ to, label, icon, badge, end, accent }) {
+  const style = accent ? { '--dept-accent': accent } : undefined
   return (
     <NavLink
       to={to}
       end={end}
+      style={style}
       className={({ isActive }) => 'sidebar-link' + (isActive ? ' active' : '')}
     >
       <span style={{ display: 'flex', alignItems: 'center', flex: 1, minWidth: 0 }}>
+        {accent && <span className="sidebar-dot" style={{ background: accent }} />}
         {icon && <IC icon={icon} />}
         <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label}</span>
       </span>
       {badge > 0 && <span className="sidebar-badge">{badge}</span>}
+      {badge === 0 && (
+        <span className="sidebar-badge sidebar-badge-dim">{badge}</span>
+      )}
     </NavLink>
   )
 }
 
-export default function Sidebar({ theme, setTheme, data, lastSync, loading, refresh }) {
+export default function Sidebar() {
   const { activeVertical, setVertical } = useVerticalStore()
+  const { activeAppSlug, sidebarCollapsed, toggleSidebar } = useAppShellStore()
+  const isDashboardMode = activeAppSlug === 'dashboard'
   const { items } = useInboxItems(activeVertical)
-  const { approvals } = useApprovals(activeVertical)
   const { readSet } = useInboxReads()
+  const { data } = useData()
+
+  // Em app embedded, esconde sidebar do dashboard
+  if (!isDashboardMode) return null
 
   const unreadCount = items.filter(i => !readSet.has(i.id)).length
-  const employees = (data?.employees || []).filter(e => matchVertical(e, activeVertical))
+  const employees = data?.employees || []
+  const totalAgents = Object.values(countByDept(employees, activeVertical)).reduce((a, b) => a + b, 0)
 
   return (
-    <aside className="app-sidebar">
-      {/* Brand */}
-      <div className="sidebar-brand">
-        <div className="sidebar-brand-title">Agentic Ops</div>
-        {data?.meta?.branch && (
-          <div className="sidebar-brand-sub">{data.meta.branch}</div>
-        )}
+    <aside className={'app-sidebar' + (sidebarCollapsed ? ' collapsed' : '')}>
+      <div className="sidebar-header" style={{
+        padding: '6px 12px',
+        borderBottom: '1px solid var(--border)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'flex-end',
+        flexShrink: 0,
+        height: 32,
+      }}>
+        <button
+          onClick={toggleSidebar}
+          title={sidebarCollapsed ? 'Expandir' : 'Colapsar'}
+          style={{
+            background: 'none', border: 'none', cursor: 'pointer',
+            color: 'var(--text-dim)', padding: 4,
+            display: 'flex', alignItems: 'center',
+          }}
+        >
+          {sidebarCollapsed ? <PanelLeft size={14} /> : <PanelLeftClose size={14} />}
+        </button>
       </div>
 
-      {/* Vertical filter */}
+      {/* Filtro vertical — sempre visível no topo (Q1 UX feedback) */}
       <div className="sidebar-vertical">
         <select
-          className="sidebar-select"
+          className="sidebar-vertical-select"
           value={activeVertical}
           onChange={(e) => setVertical(e.target.value)}
+          title="Filtrar por vertical"
         >
-          <option value="all">Todas as verticais</option>
-          <option value="v1">V1 Core</option>
-          <option value="v2">V2 Condomínios</option>
-          <option value="v4">V4 Energia</option>
-          <option value="v5">V5 Manutenção</option>
+          <option value="all">Todas verticais</option>
+          <option value="V1">V1 Core</option>
+          <option value="V2">V2 Condomínios</option>
+          <option value="V3">V3 Seguros</option>
+          <option value="V4">V4 Energia</option>
+          <option value="V5">V5 Manutenção</option>
+          <option value="V10">V10 Owners</option>
         </select>
       </div>
 
-      {/* Nav sections */}
       <div className="sidebar-nav">
-        <div className="sidebar-section-label">Daily</div>
-        <NavItem to="/inbox"  label="Inbox"  icon={Inbox}        badge={unreadCount} />
-        <NavItem to="/chat"   label="Chat"   icon={MessageSquare} />
-        <NavItem to="/files"  label="Files"  icon={Folder} />
+        <SidebarGroup id="daily" label="Daily" badge={unreadCount > 0 ? unreadCount : null}>
+          <NavItem to="/inbox"       label="Inbox"       icon={Inbox} badge={unreadCount} />
+          <NavItem to="/chat"        label="Chat"        icon={MessageSquare} />
+          <NavItem to="/calendar"    label="Calendário"  icon={Calendar} />
+          <NavItem to="/tasks"       label="Tasks"       icon={CheckSquare} />
+          <NavItem to="/influencers" label="Influencers" icon={AtSign} />
+          <NavItem to="/files"       label="Files"       icon={Folder} />
+        </SidebarGroup>
 
-        <div className="sidebar-section-label">Manage</div>
-        <NavItem to="/employees" label="Employees" icon={Users} />
-        <NavItem to="/clients"   label="Clients"   icon={Building2} />
-        <NavItem to="/projects"  label="Projects"  icon={FolderKanban} />
-        <NavItem to="/tasks"     label="Tasks"     icon={CheckSquare} />
+        <SidebarGroup id="growth" label="Growth">
+          <NavItem to="/growth/funnel"        label="Funil"          icon={TrendingUp} />
+          <NavItem to="/growth/leads"         label="Leads"          icon={UserPlus} />
+          <NavItem to="/growth/oportunidades" label="Oportunidades"  icon={Target} />
+          <NavItem to="/growth/rules"         label="Regras"         icon={Zap} />
+        </SidebarGroup>
 
-        <div className="sidebar-section-label">Build</div>
-        <NavItem to="/recipes"      label="Recipes"      icon={ChefHat} />
-        <NavItem to="/skills"       label="Skills"       icon={Sparkles} />
-        <NavItem to="/integrations" label="Integrations" icon={Plug} />
+        <SidebarGroup id="manage" label="Manage">
+          <NavItem to="/employees" label="Employees" icon={Users} badge={totalAgents} />
+          <NavItem to="/clients"   label="Clients"   icon={Building2} />
+          <NavItem to="/projects"  label="Projects"  icon={FolderKanban} />
+          <NavItem to="/tasks"     label="Tasks"     icon={CheckSquare} />
+        </SidebarGroup>
 
-        <div className="sidebar-section-label">Strategy</div>
-        <NavItem to="/"           label="Overview"    icon={LayoutDashboard} end />
-        <NavItem to="/roadmap"    label="Roadmap"     icon={Map} />
-        <NavItem to="/watchers"   label="Watchers"    icon={Eye} />
-        <NavItem to="/competitors" label="Competitors" icon={Swords} />
-        <NavItem to="/verticais"  label="Verticais"   icon={Layers} />
+        <SidebarGroup id="build" label="Build">
+          <NavItem to="/context"      label="Context"      icon={Library} />
+          <NavItem to="/recipes"      label="Recipes"      icon={ChefHat} />
+          <NavItem to="/skills"       label="Skills"       icon={Sparkles} />
+          <NavItem to="/schedules"    label="Schedules"    icon={Calendar} />
+          <NavItem to="/triggers"     label="Triggers"     icon={Zap} />
+          <NavItem to="/integrations" label="Integrations" icon={Plug} />
+          <NavItem to="/useful-tools" label="Useful Tools" icon={Sparkles} />
+        </SidebarGroup>
 
-        <div className="sidebar-section-label">Dev</div>
-        <NavItem to="/agentes" label="Agentes" icon={Bot} />
+        <SidebarGroup id="strategy" label="Strategy">
+          <NavItem to="/"            label="Overview"        icon={LayoutDashboard} end />
+          <NavItem to="/multiview"   label="Multi-Surface"   icon={Monitor} />
+          <NavItem to="/roadmap"     label="Roadmap"         icon={Map} />
+          <NavItem to="/watchers"    label="Watchers"        icon={Eye} />
+          <NavItem to="/competitors" label="Competitors"     icon={Swords} />
+          <NavItem to="/verticais"   label="Verticais"       icon={Layers} />
+        </SidebarGroup>
+
+        <SidebarGroup id="settings" label="Settings">
+          <NavItem to="/connections"   label="Connections"   icon={Plug2} />
+          <NavItem to="/apify-actors"  label="Apify actors"  icon={Sparkles} />
+          <NavItem to="/company"       label="Company"       icon={SettingsIcon} />
+        </SidebarGroup>
+
+        <SidebarGroup id="dev" label="Dev">
+          <NavItem to="/agentes" label="Agentes" icon={Bot} />
+        </SidebarGroup>
       </div>
 
-      {/* TASKS · CHATS — employees scrollable */}
-      {employees.length > 0 && (
-        <div className="sidebar-tasks">
-          <div className="sidebar-section-label">Tasks · Chats</div>
-          {employees.map(emp => (
-            <NavLink
-              key={emp.id}
-              to={`/employees/${emp.id}`}
-              className={({ isActive }) => 'sidebar-task-item' + (isActive ? ' active' : '')}
-            >
-              <div
-                className="sidebar-avatar"
-                style={{ borderColor: DEPT_COLORS[emp.department] || 'var(--border)' }}
-              >
-                {emp.avatarInitial || emp.name?.[0]?.toUpperCase() || '?'}
-              </div>
-              <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {emp.name}
-              </span>
-              {emp.status === 'active' && (
-                <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#10b981', flexShrink: 0 }} />
-              )}
-            </NavLink>
-          ))}
-        </div>
-      )}
-
-      {/* Footer */}
-      <div className="sidebar-footer">
-        <button
-          className="btn-theme"
-          onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-          title={theme === 'dark' ? 'Mudar para tema claro' : 'Mudar para tema escuro'}
-        >
-          {theme === 'dark' ? '☀️' : '🌙'}
-        </button>
-        <button
-          className="btn-refresh"
-          onClick={refresh}
-          disabled={loading}
-          style={{ padding: '4px 8px', fontSize: '0.65rem' }}
-        >
-          {loading ? '⏳' : '🔄'}
-        </button>
-        {lastSync && <div className="sidebar-sync">{lastSync}</div>}
-      </div>
+      {/* Active Agents Widget (CookAI-style TASKS · CHATS dropdown) */}
+      <ActiveAgentsWidget />
     </aside>
   )
 }

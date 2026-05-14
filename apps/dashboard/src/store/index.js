@@ -21,4 +21,20 @@ const useNotificationsStore = create((set) => ({
     set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),
 }))
 
-export { useVerticalStore, useNotificationsStore }
+// App Shell — qual app está activa no sidebar (Sprint App Shell)
+// Persiste para o user voltar à mesma app após reload
+const useAppShellStore = create(
+  persist(
+    (set) => ({
+      activeAppSlug: 'dashboard',     // 'dashboard' | 'v2' | 'v4' | 'v5'
+      activePath:    '/',             // path interno da app embebida
+      sidebarCollapsed: false,        // colapsar sidebar primário para dar mais espaço
+      setActiveApp:  (slug) => set({ activeAppSlug: slug, activePath: '/' }),
+      setActivePath: (path) => set({ activePath: path }),
+      toggleSidebar: () => set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
+    }),
+    { name: 'cc:app-shell' }
+  )
+)
+
+export { useVerticalStore, useNotificationsStore, useAppShellStore }

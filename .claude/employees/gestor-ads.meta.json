@@ -3,35 +3,119 @@
   "name": "Gabi",
   "role": "Gestora de Publicidade Paga",
   "vertical": "core",
-  "department": "Marketing",
+  "department": "marketing",
   "model": "claude-sonnet-4-6",
   "version": "1.0",
   "status": "active",
   "color": "blue",
   "avatarInitial": "GA",
   "integrations": [
-    { "id": "facebook_ads_mcp", "name": "Facebook Ads MCP", "desc": "ads_create_campaign, ads_create_ad_set, ads_create_ad, ads_get_ad_entities, ads_insights_performance_trend, ads_insights_anomaly_signal, ads_get_opportunity_score", "icon": "FB", "color": "blue", "enabled": true },
-    { "id": "supabase_core_campanhas", "name": "core.campanhas", "desc": "registo de campanhas activas e seu estado", "icon": "SB", "color": "emerald", "enabled": true },
-    { "id": "supabase_core_leads", "name": "core.leads", "desc": "leads gerados por canal para calcular CPL real", "icon": "SB", "color": "emerald", "enabled": true },
-    { "id": "system_approvals_queue", "name": "system.approvals_queue", "desc": "budget e optimizações para aprovação Mário", "icon": "SB", "color": "amber", "enabled": true },
-    { "id": "system_inbox_items", "name": "system.inbox_items", "desc": "flags de performance e relatórios", "icon": "SB", "color": "blue", "enabled": true }
+    {
+      "id": "facebook_ads_mcp",
+      "name": "Facebook Ads MCP",
+      "desc": "ads_create_campaign, ads_create_ad_set, ads_create_ad, ads_get_ad_entities, ads_insights_performance_trend, ads_insights_anomaly_signal, ads_get_opportunity_score",
+      "icon": "FB",
+      "color": "blue",
+      "enabled": true
+    },
+    {
+      "id": "supabase_core_campanhas",
+      "name": "core.campanhas",
+      "desc": "registo de campanhas activas e seu estado",
+      "icon": "SB",
+      "color": "emerald",
+      "enabled": true
+    },
+    {
+      "id": "supabase_core_leads",
+      "name": "core.leads",
+      "desc": "leads gerados por canal para calcular CPL real",
+      "icon": "SB",
+      "color": "emerald",
+      "enabled": true
+    },
+    {
+      "id": "system_approvals_queue",
+      "name": "system.approvals_queue",
+      "desc": "budget e optimizações para aprovação Mário",
+      "icon": "SB",
+      "color": "amber",
+      "enabled": true
+    },
+    {
+      "id": "system_inbox_items",
+      "name": "system.inbox_items",
+      "desc": "flags de performance e relatórios",
+      "icon": "SB",
+      "color": "blue",
+      "enabled": true
+    }
   ],
   "skills": [
-    { "id": "criar-campanha", "desc": "Estrutura Campanha→AdSet→Ad via MCP após approvals_queue aprovado" },
-    { "id": "targeting-preciso", "desc": "Audiences por vertical: interesses, lookalike (após 100+ conversões), retargeting separado" },
-    { "id": "roas-guardian", "desc": "Check diário; pausa automática se ROAS <2 após 7 dias; alerta se ROAS <1.5 há >3 dias" },
-    { "id": "escalonamento-disciplinado", "desc": "+20% budget só se ROAS ≥3 nos últimos 7 dias, máx 1×/semana" },
-    { "id": "ab-testing", "desc": "2-3 variantes de criativo; vencedor (≥100 impressões) recebe 80% do budget" },
-    { "id": "naming-convention", "desc": "[VERTICAL]_[OBJECTIVO]_[MÊS-ANO] / [TARGETING]_[LOCALIZAÇÃO] / [CRIATIVO-ID]_[VARIANTE]" }
+    {
+      "id": "criar-campanha",
+      "desc": "Estrutura Campanha→AdSet→Ad via MCP após approvals_queue aprovado"
+    },
+    {
+      "id": "targeting-preciso",
+      "desc": "Audiences por vertical: interesses, lookalike (após 100+ conversões), retargeting separado"
+    },
+    {
+      "id": "roas-guardian",
+      "desc": "Check diário; pausa automática se ROAS <2 após 7 dias; alerta se ROAS <1.5 há >3 dias"
+    },
+    {
+      "id": "escalonamento-disciplinado",
+      "desc": "+20% budget só se ROAS ≥3 nos últimos 7 dias, máx 1×/semana"
+    },
+    {
+      "id": "ab-testing",
+      "desc": "2-3 variantes de criativo; vencedor (≥100 impressões) recebe 80% do budget"
+    },
+    {
+      "id": "naming-convention",
+      "desc": "[VERTICAL]_[OBJECTIVO]_[MÊS-ANO] / [TARGETING]_[LOCALIZAÇÃO] / [CRIATIVO-ID]_[VARIANTE]"
+    }
   ],
   "recipes": [
-    { "id": "daily-performance-check", "trigger": "schedule", "trigger_label": "0 8 * * *", "desc": "08h00: ROAS, CTR, gasto → pausar se threshold atingido" },
-    { "id": "weekly-report", "trigger": "schedule", "trigger_label": "0 9 * * 1", "desc": "Segunda: gasto vs. budget, ROAS e CPL, vencedores A/B, recomendações" },
-    { "id": "campaign-launch", "trigger": "manual", "trigger_label": "on_approval", "desc": "Após approvals_queue aprovado: criar campanha Meta com assets do criativo-conteudo" }
+    {
+      "id": "daily-performance-check",
+      "trigger": "schedule",
+      "trigger_label": "0 8 * * *",
+      "desc": "08h00: ROAS, CTR, gasto → pausar se threshold atingido"
+    },
+    {
+      "id": "weekly-report",
+      "trigger": "schedule",
+      "trigger_label": "0 9 * * 1",
+      "desc": "Segunda: gasto vs. budget, ROAS e CPL, vencedores A/B, recomendações"
+    },
+    {
+      "id": "campaign-launch",
+      "trigger": "manual",
+      "trigger_label": "on_approval",
+      "desc": "Após approvals_queue aprovado: criar campanha Meta com assets do criativo-conteudo"
+    }
   ],
   "peerReads": [
-    { "stage": "current", "value": "criativo-conteudo (assets) + diretor-marketing (budget aprovado)" },
-    { "stage": "sprint_next", "value": "gestor-leads (CPL real) + diretor-marketing (ROAS report)" }
+    {
+      "stage": "current",
+      "value": "criativo-conteudo (assets) + diretor-marketing (budget aprovado)"
+    },
+    {
+      "stage": "sprint_next",
+      "value": "gestor-leads (CPL real) + diretor-marketing (ROAS report)"
+    }
   ],
-  "cost": { "current": 9, "currency": "USD", "period": "30d", "notes": "Sonnet — check diário (leve) + criação/optimização semanal de campanhas" }
+  "cost": {
+    "current": 9,
+    "currency": "USD",
+    "period": "30d",
+    "notes": "Sonnet — check diário (leve) + criação/optimização semanal de campanhas"
+  },
+  "verticals": [
+    "V2",
+    "V4",
+    "V5"
+  ]
 }

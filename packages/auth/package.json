@@ -2,7 +2,12 @@
   "name": "@proptech/auth",
   "version": "0.1.0",
   "private": true,
-  "main": "src/AuthContext.jsx",
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./AuthContext": "./src/AuthContext.jsx",
+    "./usePermission": "./src/usePermission.js"
+  },
   "peerDependencies": {
     "react": "^19.0.0"
   }

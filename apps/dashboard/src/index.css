@@ -478,14 +478,251 @@ body {
   .col-hide-sm { display: none; }
 }
 
-/* ── Cook.ai sidebar layout ─────────────────────────── */
+/* ── Cook.ai 2D shell: top panel + sidebar + main ─────────── */
 
 .app-layout {
-  display: flex;
+  display: grid;
+  grid-template-rows: 48px 1fr;
+  grid-template-columns: auto 1fr;
+  grid-template-areas:
+    "topbar topbar"
+    "sidebar main";
   min-height: 100vh;
 }
 
+/* Topbar — navegação global */
+.app-topbar {
+  grid-area: topbar;
+  height: 48px;
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  gap: 10px;
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+
+.topbar-brand {
+  display: flex;
+  align-items: center;
+  width: 220px;
+  flex-shrink: 0;
+  padding-left: 6px;
+}
+.app-sidebar.collapsed ~ .app-topbar .topbar-brand,
+.app-topbar.brand-collapsed .topbar-brand {
+  width: 48px;
+}
+
+.topbar-brand-title {
+  font-size: 0.9rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  background: linear-gradient(135deg, #534AB7, #8b5cf6);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.topbar-divider {
+  width: 1px;
+  height: 22px;
+  background: var(--border);
+  margin: 0 4px;
+}
+
+.topbar-tabs {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 100%;
+}
+
+.topbar-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px;
+  height: 100%;
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  font-size: 0.75rem;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: color 0.12s, border-color 0.12s;
+}
+.topbar-tab:hover { color: var(--text); }
+.topbar-tab.active {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+  font-weight: 600;
+}
+.topbar-tab-caret {
+  padding: 0 4px !important;
+  border-left: 1px solid transparent;
+}
+.topbar-tab-caret:hover { background: var(--bg-elevated); }
+.topbar-tab-caret.open {
+  background: var(--bg-elevated);
+  color: var(--text);
+}
+
+.topbar-dropdown {
+  position: absolute;
+  top: calc(100% + 2px);
+  left: 0;
+  min-width: 280px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: 0 6px 24px rgba(0,0,0,0.25);
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  padding: 4px 0;
+  overflow: hidden;
+}
+.topbar-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text);
+  font-size: 0.75rem;
+  text-align: left;
+  transition: background 0.1s;
+}
+.topbar-dropdown-item:hover { background: var(--bg-elevated); }
+.topbar-dropdown-item.active {
+  background: rgba(83, 74, 183, 0.1);
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.topbar-vertical-select,
+.sidebar-vertical-select {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 0.72rem;
+  padding: 4px 8px;
+  border-radius: 5px;
+  cursor: pointer;
+  outline: none;
+}
+
+/* Vertical select alojado no topo da sidebar */
+.sidebar-vertical {
+  padding: 8px 12px 10px;
+  border-bottom: 1px solid var(--border);
+}
+.sidebar-vertical-select {
+  width: 100%;
+}
+.app-sidebar.collapsed .sidebar-vertical { display: none; }
+
+/* User menu — dropdown a partir do avatar */
+.topbar-user-wrap {
+  position: relative;
+}
+.topbar-user-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 220px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 10px 32px rgba(0,0,0,0.25);
+  z-index: 50;
+  padding: 4px 0;
+  display: flex;
+  flex-direction: column;
+}
+.topbar-user-header {
+  padding: 10px 12px 8px;
+  border-bottom: 1px solid var(--border);
+}
+.topbar-user-name {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text);
+}
+.topbar-user-email {
+  font-size: 0.62rem;
+  color: var(--text-dim);
+  font-family: 'JetBrains Mono', monospace;
+  margin-top: 1px;
+}
+.topbar-user-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text);
+  font-size: 0.72rem;
+  text-align: left;
+  text-decoration: none;
+}
+.topbar-user-item:hover { background: var(--bg-elevated); }
+.topbar-user-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 3px 0;
+}
+
+.topbar-icon-btn {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 5px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  font-size: 0.85rem;
+  transition: background 0.12s, color 0.12s;
+}
+.topbar-icon-btn:hover { background: var(--bg-elevated); color: var(--text); }
+.topbar-icon-btn:disabled { opacity: 0.4; cursor: default; }
+
+.topbar-badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  min-width: 14px;
+  height: 14px;
+  padding: 0 3px;
+  border-radius: 7px;
+  background: var(--danger);
+  color: white;
+  font-size: 0.55rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.topbar-sync {
+  font-size: 0.62rem;
+  color: var(--text-dim);
+  font-family: 'JetBrains Mono', monospace;
+}
+
 .app-sidebar {
+  grid-area: sidebar;
   width: 220px;
   flex-shrink: 0;
   background: var(--bg-card);
@@ -493,16 +730,48 @@ body {
   display: flex;
   flex-direction: column;
   position: sticky;
-  top: 0;
-  height: 100vh;
+  top: 48px;
+  height: calc(100vh - 48px);
   overflow: hidden;
+  transition: width 0.18s ease;
+}
+
+/* Estado colapsado — só ícones */
+.app-sidebar.collapsed {
+  width: 48px;
+}
+.app-sidebar.collapsed .sidebar-brand-title,
+.app-sidebar.collapsed .sidebar-brand-sub,
+.app-sidebar.collapsed .sidebar-vertical,
+.app-sidebar.collapsed .sidebar-section-label,
+.app-sidebar.collapsed .sidebar-link span,
+.app-sidebar.collapsed .sidebar-link code,
+.app-sidebar.collapsed .sidebar-tasks,
+.app-sidebar.collapsed .sidebar-footer .btn-refresh,
+.app-sidebar.collapsed .sidebar-sync {
+  display: none !important;
+}
+.app-sidebar.collapsed .sidebar-link {
+  padding: 8px 0 !important;
+  justify-content: center !important;
+}
+.app-sidebar.collapsed .sidebar-brand {
+  justify-content: center !important;
+  padding: 12px 8px !important;
 }
 
 .app-main {
-  flex: 1;
+  grid-area: main;
   min-width: 0;
   padding: 20px;
   overflow-y: auto;
+  height: calc(100vh - 48px);
+}
+
+/* Quando há app embebida, main area é o iframe a full bleed (sem padding) */
+.app-main.embed-mode {
+  padding: 0;
+  overflow: hidden;
 }
 
 /* Brand */
@@ -563,6 +832,147 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.1em;
   padding: 10px 14px 3px;
+}
+
+/* Sidebar colapsable groups */
+.sidebar-group {
+  margin-bottom: 10px;
+}
+.sidebar-group + .sidebar-group {
+  margin-top: 4px;
+}
+.sidebar-group-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 12px 14px 4px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  transition: color 0.12s;
+  opacity: 0.6;
+}
+.sidebar-group-header:hover { color: var(--text); opacity: 1; }
+.sidebar-group-chevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 12px;
+  flex-shrink: 0;
+}
+.sidebar-group-label {
+  flex: 1;
+  text-align: left;
+}
+.sidebar-group-badge {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.55rem;
+  font-weight: 600;
+  color: var(--text-dim);
+  background: var(--bg-elevated);
+  border-radius: 8px;
+  padding: 1px 6px;
+  min-width: 18px;
+  text-align: center;
+}
+.sidebar-group-body {
+  display: flex;
+  flex-direction: column;
+  margin-left: 8px;
+  padding-left: 8px;
+  border-left: 1px solid var(--border);
+}
+.sidebar-group-body .sidebar-link {
+  padding-left: 10px;
+}
+.app-sidebar.collapsed .sidebar-group-body {
+  margin-left: 0;
+  padding-left: 0;
+  border-left: none;
+}
+
+/* Bullet colorido para items de departamento */
+.sidebar-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  margin-right: 6px;
+  flex-shrink: 0;
+}
+
+/* Badge dim para counts a zero (HR planned, etc) */
+.sidebar-badge-dim {
+  background: var(--bg-elevated) !important;
+  color: var(--text-dim) !important;
+  font-weight: 500 !important;
+}
+
+/* SurfaceCard — slot do MultiView */
+.surface-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+.surface-card-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: var(--bg-elevated);
+  border-bottom: 1px solid var(--border);
+  font-size: 0.7rem;
+  min-height: 32px;
+}
+.surface-card-title {
+  font-weight: 600;
+  color: var(--text);
+  font-size: 0.72rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.surface-card-viewport {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 0.6rem;
+  padding: 3px 5px;
+  border-radius: 3px;
+  cursor: pointer;
+  outline: none;
+  max-width: 130px;
+}
+.surface-card-btn {
+  background: none;
+  border: 1px solid transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 3px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  transition: background 0.1s, color 0.1s;
+}
+.surface-card-btn:hover { background: var(--bg-card); color: var(--text); }
+.surface-card-btn.active { background: rgba(83,74,183,0.15); color: var(--primary); }
+.surface-card-body {
+  padding: 14px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  background: var(--bg);
 }
 
 .sidebar-link {

@@ -56,3 +56,7 @@ __MACOSX/
 *.mp4
 *.mov
 *.avi
+
+# Dados reais de produção V2 (excels exportados, nunca commitar)
+apps/v2-condominios/docs/
+*.xlsx

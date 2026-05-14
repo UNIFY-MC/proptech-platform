@@ -3,34 +3,110 @@
   "name": "Fina",
   "role": "Gestora Financeira",
   "vertical": "V2 Condomínios",
-  "department": "Condomínios",
+  "department": "finance",
   "model": "claude-sonnet-4-6",
   "version": "1.0",
   "status": "active",
   "color": "green",
   "avatarInitial": "F",
   "integrations": [
-    { "id": "supabase_v2_financeiro", "name": "v2_condominios — financeiro", "desc": "recebimentos, extrato, faturas", "icon": "SB", "color": "emerald", "enabled": true },
-    { "id": "supabase_core", "name": "core — imoveis + pessoas", "desc": "edifícios e proprietários", "icon": "SB", "color": "emerald", "enabled": true },
-    { "id": "toconline", "name": "Toconline", "desc": "contabilidade AT-compliant (Mário TOC)", "icon": "TC", "color": "blue", "enabled": false, "planned": true },
-    { "id": "resend", "name": "Resend (via Cami)", "desc": "avisos mora após aprovação", "icon": "RS", "color": "cyan", "enabled": true }
+    {
+      "id": "supabase_v2_financeiro",
+      "name": "v2_condominios — financeiro",
+      "desc": "recebimentos, extrato, faturas",
+      "icon": "SB",
+      "color": "emerald",
+      "enabled": true
+    },
+    {
+      "id": "supabase_core",
+      "name": "core — imoveis + pessoas",
+      "desc": "edifícios e proprietários",
+      "icon": "SB",
+      "color": "emerald",
+      "enabled": true
+    },
+    {
+      "id": "toconline",
+      "name": "Toconline",
+      "desc": "contabilidade AT-compliant (Mário TOC)",
+      "icon": "TC",
+      "color": "blue",
+      "enabled": false,
+      "planned": true
+    },
+    {
+      "id": "resend",
+      "name": "Resend (via Cami)",
+      "desc": "avisos mora após aprovação",
+      "icon": "RS",
+      "color": "cyan",
+      "enabled": true
+    }
   ],
   "skills": [
-    { "id": "gerar-quotas", "desc": "Calcula quota_individual = quota_base × (permilagem/1000) e insere em recebimentos" },
-    { "id": "verificar-mora", "desc": "Identifica pendentes >7 dias, classifica 1º/2º aviso/grave, gera drafts" },
-    { "id": "reconciliar-bancario", "desc": "Cruza movimentos extrato_bancario com recebimentos — identifica não reconciliados" },
-    { "id": "relatorio-mensal", "desc": "Agrega cobrança, pendentes com aging, pagamentos fornecedores por edifício" },
-    { "id": "calcular-juros-mora", "desc": "Calcula juros legais (Euribor 6M + 1pp) desde data de vencimento" },
-    { "id": "draft-aviso-mora", "desc": "Gera carta de aviso proporcional ao tempo em mora (cordial/formal/grave)" }
+    {
+      "id": "gerar-quotas",
+      "desc": "Calcula quota_individual = quota_base × (permilagem/1000) e insere em recebimentos"
+    },
+    {
+      "id": "verificar-mora",
+      "desc": "Identifica pendentes >7 dias, classifica 1º/2º aviso/grave, gera drafts"
+    },
+    {
+      "id": "reconciliar-bancario",
+      "desc": "Cruza movimentos extrato_bancario com recebimentos — identifica não reconciliados"
+    },
+    {
+      "id": "relatorio-mensal",
+      "desc": "Agrega cobrança, pendentes com aging, pagamentos fornecedores por edifício"
+    },
+    {
+      "id": "calcular-juros-mora",
+      "desc": "Calcula juros legais (Euribor 6M + 1pp) desde data de vencimento"
+    },
+    {
+      "id": "draft-aviso-mora",
+      "desc": "Gera carta de aviso proporcional ao tempo em mora (cordial/formal/grave)"
+    }
   ],
   "recipes": [
-    { "id": "quota-run", "trigger": "schedule", "trigger_label": "0 6 1 * *", "desc": "Dia 1: gera quotas de todos os edifícios activos" },
-    { "id": "mora-run", "trigger": "schedule", "trigger_label": "0 9 15 * *", "desc": "Dia 15: verifica mora e submete avisos à approvals_queue" },
-    { "id": "reconciliacao-run", "trigger": "schedule", "trigger_label": "0 7 1 * *", "desc": "Dia 1: reconcilia extracto do mês anterior" }
+    {
+      "id": "quota-run",
+      "trigger": "schedule",
+      "trigger_label": "0 6 1 * *",
+      "desc": "Dia 1: gera quotas de todos os edifícios activos"
+    },
+    {
+      "id": "mora-run",
+      "trigger": "schedule",
+      "trigger_label": "0 9 15 * *",
+      "desc": "Dia 15: verifica mora e submete avisos à approvals_queue"
+    },
+    {
+      "id": "reconciliacao-run",
+      "trigger": "schedule",
+      "trigger_label": "0 7 1 * *",
+      "desc": "Dia 1: reconcilia extracto do mês anterior"
+    }
   ],
   "peerReads": [
-    { "stage": "current", "value": "compliance-condo (mora >60d)" },
-    { "stage": "sprint_next", "value": "auditor-agent + compliance-condo" }
+    {
+      "stage": "current",
+      "value": "compliance-condo (mora >60d)"
+    },
+    {
+      "stage": "sprint_next",
+      "value": "auditor-agent + compliance-condo"
+    }
   ],
-  "cost": { "current": 8, "currency": "USD", "period": "30d", "notes": "Sonnet — 3 runs mensais principais + ad-hoc" }
+  "cost": {
+    "current": 8,
+    "currency": "USD",
+    "period": "30d",
+    "notes": "Sonnet — 3 runs mensais principais + ad-hoc"
+  },
+  "verticals": [
+    "V2"
+  ]
 }
