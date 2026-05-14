@@ -9,7 +9,7 @@
 //   - Bottom: AskAnythingBar (já existe)
 
 import { useState, useMemo } from 'react'
-import { Sparkles, Lightbulb, Sliders, X, ChevronDown } from 'lucide-react'
+import { Sparkles, Lightbulb, Sliders, X, ChevronDown, History } from 'lucide-react'
 import { useInboxItems, useApprovals } from '../hooks/useSupabase'
 import { useInboxReads } from '../hooks/useInboxReads'
 import { useVerticalStore } from '../store'
@@ -72,6 +72,7 @@ export default function InboxUnified() {
   const [filter, setFilter] = useState('all')
   const [showFilterMenu, setShowFilterMenu] = useState(false)
   const [showConfigureFeed, setShowConfigureFeed] = useState(false)
+  const [showHistory, setShowHistory] = useState(false)
   const [dismissedRoundupIds, setDismissedRoundupIds] = useState(() =>
     new Set(JSON.parse(localStorage.getItem('cc:dismissed-roundups') ?? '[]'))
   )
@@ -258,6 +259,10 @@ export default function InboxUnified() {
               </div>
             )}
           </div>
+          <button onClick={() => setShowHistory(true)} style={pillBtn} title="Roundups anteriores">
+            <History size={12} />
+            <span>Histórico</span>
+          </button>
           <button onClick={() => setShowConfigureFeed(s => !s)} style={pillBtnDark}>
             <Sliders size={12} />
             <span>Configure Feed</span>
@@ -323,32 +328,175 @@ export default function InboxUnified() {
       {showConfigureFeed && (
         <ConfigureFeedDrawer onClose={() => setShowConfigureFeed(false)} />
       )}
+
+      {/* Histórico de roundups */}
+      {showHistory && (
+        <RoundupHistoryDrawer
+          roundups={inboxItems.filter(i => i.kind === 'roundup' || i.item_type === 'daily_roundup')}
+          onClose={() => setShowHistory(false)}
+        />
+      )}
     </div>
+  )
+}
+
+// ─── Roundup History Drawer ──────────────────────────────────────────────────
+function RoundupHistoryDrawer({ roundups, onClose }) {
+  const sorted = useMemo(
+    () => [...roundups].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)),
+    [roundups]
+  )
+  const [selected, setSelected] = useState(sorted[0]?.id || null)
+  const sel = sorted.find(r => r.id === selected) || sorted[0]
+
+  return (
+    <div onClick={onClose} style={{
+      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 1000,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+    }}>
+      <div onClick={e => e.stopPropagation()} style={{
+        background: 'var(--bg-card)', border: '1px solid var(--border)',
+        borderRadius: 12, padding: 0,
+        width: 'min(960px, 96vw)',
+        height: 'min(640px, 88vh)',
+        display: 'flex',
+        overflow: 'hidden',
+      }}>
+        {/* Lista lateral */}
+        <div style={{
+          width: 260, borderRight: '1px solid var(--border)',
+          display: 'flex', flexDirection: 'column',
+        }}>
+          <div style={{
+            padding: '14px 16px', borderBottom: '1px solid var(--border)',
+            display: 'flex', alignItems: 'center', gap: 8,
+            fontSize: '0.85rem', fontWeight: 700,
+          }}>
+            <History size={14} /> Roundups anteriores
+            <span style={{
+              marginLeft: 'auto', fontSize: '0.6rem', fontWeight: 600,
+              color: 'var(--text-dim)', fontFamily: 'JetBrains Mono, monospace',
+            }}>{sorted.length}</span>
+          </div>
+          <div style={{ flex: 1, overflowY: 'auto' }}>
+            {sorted.map(r => {
+              const date = new Date(r.created_at)
+              const label = date.toLocaleDateString('pt-PT', { day: '2-digit', month: 'short', year: '2-digit' })
+              const isActive = r.id === sel?.id
+              return (
+                <button key={r.id} onClick={() => setSelected(r.id)} style={{
+                  display: 'flex', flexDirection: 'column', gap: 2,
+                  padding: '10px 14px', width: '100%',
+                  background: isActive ? 'rgba(83,74,183,0.1)' : 'transparent',
+                  border: 'none', borderBottom: '1px solid var(--border-soft, rgba(255,255,255,0.04))',
+                  cursor: 'pointer', textAlign: 'left',
+                  color: isActive ? 'var(--primary)' : 'var(--text)',
+                }}>
+                  <div style={{ fontSize: '0.78rem', fontWeight: 600 }}>{label}</div>
+                  <div style={{ fontSize: '0.62rem', color: 'var(--text-dim)' }}>
+                    {r.vertical ? r.vertical.toUpperCase() : 'Global'}
+                  </div>
+                </button>
+              )
+            })}
+            {sorted.length === 0 && (
+              <div style={{ padding: 20, color: 'var(--text-dim)', fontSize: '0.75rem', textAlign: 'center' }}>
+                Sem roundups arquivados ainda. Voltar amanhã.
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Detalhe */}
+        <div style={{ flex: 1, padding: 24, overflowY: 'auto', position: 'relative' }}>
+          <button onClick={onClose} style={{
+            position: 'absolute', top: 12, right: 12,
+            background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-dim)',
+          }}><X size={16} /></button>
+          {sel ? <DailyRoundupCard item={sel} onDismiss={() => {}} /> : (
+            <div style={{ color: 'var(--text-dim)', fontSize: '0.85rem', padding: 20 }}>
+              Sem roundup seleccionado.
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Roundup action item (checkbox persistido em localStorage) ──────────────
+function RoundupAction({ itemId, idx, label }) {
+  const storageKey = `roundup-check:${itemId}:${idx}`
+  const initial = (() => { try { return localStorage.getItem(storageKey) === '1' } catch { return false } })()
+  const [checked, setChecked] = useState(initial)
+  function toggle() {
+    const next = !checked
+    setChecked(next)
+    try { localStorage.setItem(storageKey, next ? '1' : '0') } catch {}
+  }
+  return (
+    <label onClick={toggle} style={{
+      display: 'flex', gap: 10, alignItems: 'flex-start',
+      padding: '8px 10px', borderRadius: 6, cursor: 'pointer',
+      fontSize: '0.85rem',
+      color: checked ? 'var(--text-dim)' : 'var(--text)',
+      textDecoration: checked ? 'line-through' : 'none',
+      lineHeight: 1.5, transition: 'background 0.1s',
+    }}
+    onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-elevated)'}
+    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+      <span style={{
+        width: 16, height: 16, borderRadius: 4,
+        border: '1.5px solid ' + (checked ? '#10b981' : 'var(--text-dim)'),
+        background: checked ? '#10b981' : 'transparent',
+        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+        flexShrink: 0, marginTop: 2, transition: 'all 0.15s',
+      }}>{checked && <span style={{ color: '#fff', fontSize: 11, fontWeight: 700 }}>✓</span>}</span>
+      <span>{label}</span>
+    </label>
   )
 }
 
 // ─── Daily Roundup card ──────────────────────────────────────────────────────
 function DailyRoundupCard({ item, onDismiss }) {
-  // Tenta extrair bullets do body markdown (linhas começadas por "-" ou "*")
-  const bullets = useMemo(() => {
-    const lines = (item.body ?? '').split('\n')
+  // Payload novo (daily-roundup v2): executive_summary + top_actions[] + stats
+  // Fallback: parse markdown legacy se payload incompleto
+  const payload = item.payload || {}
+  const execSummary = payload.executive_summary
+  const topActions  = Array.isArray(payload.top_actions) ? payload.top_actions : []
+  const summaryMd   = payload.summary_md || ''
+  const generatedAt = payload.generated_at || item.created_at
+
+  // Bullets legacy (markdown - [ ] ou - )
+  const legacyBullets = useMemo(() => {
+    if (topActions.length > 0) return []
+    const lines = (item.body ?? summaryMd ?? '').split('\n')
     return lines
       .map(l => l.trim())
-      .filter(l => l.startsWith('-') || l.startsWith('*'))
-      .map(l => l.replace(/^[-*]\s*/, ''))
+      .filter(l => l.match(/^[-*]\s+\[[ x]\]\s+/) || l.startsWith('- ') || l.startsWith('* '))
+      .map(l => l.replace(/^[-*]\s+\[[ x]\]\s+/, '').replace(/^[-*]\s*/, ''))
       .slice(0, 5)
-  }, [item.body])
+  }, [item.body, summaryMd, topActions.length])
 
-  const bodyText = (item.body ?? '').split('\n').filter(l => {
-    const t = l.trim()
-    return t && !t.startsWith('-') && !t.startsWith('*') && !t.startsWith('#')
-  }).join(' ').slice(0, 600)
+  const bodyText = execSummary
+    || ((item.body ?? '').split('\n').filter(l => {
+        const t = l.trim()
+        return t && !t.startsWith('-') && !t.startsWith('*') && !t.startsWith('#') && !t.startsWith('_')
+      }).join(' '))
+
+  const actions = topActions.length > 0 ? topActions : legacyBullets
+  const stats = payload.stats || {}
+  const itemId = item.id
+
+  const dateLabel = new Date(generatedAt).toLocaleDateString('pt-PT', {
+    weekday: 'long', day: '2-digit', month: 'long', year: 'numeric',
+  })
 
   return (
     <div style={{
       background: 'rgba(83, 74, 183, 0.05)',
       border: '1px solid rgba(83, 74, 183, 0.25)',
-      borderRadius: 12, padding: 20,
+      borderRadius: 12, padding: '20px 24px',
       position: 'relative',
     }}>
       <button onClick={onDismiss} style={{
@@ -360,35 +508,67 @@ function DailyRoundupCard({ item, onDismiss }) {
         <X size={14} />
       </button>
 
+      {/* Header com data */}
       <div style={{
-        fontSize: '0.95rem', fontWeight: 600, color: 'var(--text)', marginBottom: 12,
         display: 'flex', alignItems: 'center', gap: 8,
+        marginBottom: 4,
       }}>
         <Sparkles size={16} color="var(--primary)" />
-        Daily Roundup
+        <span style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text)' }}>
+          Daily Roundup
+        </span>
       </div>
+      <div style={{
+        fontSize: '0.7rem', color: 'var(--text-dim)',
+        marginBottom: 14, paddingLeft: 24,
+        textTransform: 'capitalize',
+      }}>{dateLabel}</div>
 
+      {/* Executive summary — texto completo, line-height generoso */}
       {bodyText && (
         <p style={{
-          fontSize: '0.82rem', color: 'var(--text)', lineHeight: 1.6,
-          margin: '0 0 16px',
+          fontSize: '0.92rem', color: 'var(--text)', lineHeight: 1.65,
+          margin: '0 0 18px',
         }}>{bodyText}</p>
       )}
 
-      {bullets.length > 0 && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {bullets.map((b, i) => (
-            <label key={i} style={{
-              display: 'flex', alignItems: 'flex-start', gap: 10,
-              fontSize: '0.78rem', color: 'var(--text)', lineHeight: 1.5,
-              cursor: 'pointer',
-            }}>
-              <input type="checkbox" style={{
-                marginTop: 3, accentColor: 'var(--primary)', cursor: 'pointer',
-              }} />
-              <span>{b}</span>
-            </label>
-          ))}
+      {/* Stats inline */}
+      {Object.keys(stats).length > 0 && (
+        <div style={{
+          display: 'flex', flexWrap: 'wrap', gap: 8,
+          marginBottom: 18,
+        }}>
+          {Object.entries(stats)
+            .filter(([, v]) => Number(v) > 0)
+            .slice(0, 6)
+            .map(([k, v]) => (
+              <span key={k} style={{
+                fontSize: '0.65rem',
+                fontFamily: 'JetBrains Mono, monospace',
+                padding: '3px 8px',
+                background: 'var(--bg-elevated)',
+                color: 'var(--text)',
+                borderRadius: 4,
+                fontWeight: 600,
+              }}>
+                <span style={{ opacity: 0.6 }}>{k.replace(/_/g, ' ')}</span>{' '}
+                <span style={{ color: 'var(--primary)' }}>{typeof v === 'number' ? v : String(v)}</span>
+              </span>
+            ))}
+        </div>
+      )}
+
+      {/* Top actions / checklist */}
+      {actions.length > 0 && (
+        <div>
+          <div style={{
+            fontSize: '0.6rem', fontWeight: 700,
+            color: 'var(--text-dim)', textTransform: 'uppercase',
+            letterSpacing: '0.1em', marginBottom: 10,
+          }}>Top acções</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            {actions.map((b, i) => <RoundupAction key={i} itemId={itemId} idx={i} label={b} />)}
+          </div>
         </div>
       )}
     </div>

@@ -7,30 +7,35 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase.js'
 
+// Default fallback para single-operator deployments (override via localStorage 'cc:user-name')
+const DEFAULT_NAME = (() => {
+  try { return localStorage.getItem('cc:user-name') || 'Mário' } catch { return 'Mário' }
+})()
+
 export function useUserContext() {
-  const [primeiroNome, setPrimeiroNome] = useState(null)
+  const [primeiroNome, setPrimeiroNome] = useState(DEFAULT_NAME)
   const [stats, setStats] = useState({ unread: 0, missionsComplete: 0, loading: true })
 
-  // 1. Fetch primeiro_nome do user logado
+  // 1. Fetch primeiro_nome do user logado (sobrepõe DEFAULT_NAME se houver)
   useEffect(() => {
     if (!supabase) return
     let cancelled = false
     async function load() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
-        // Anon — usa email default ou nada
-        if (!cancelled) setPrimeiroNome(null)
-        return
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) return  // Anon — mantém DEFAULT_NAME
+        const { data: pessoaId } = await supabase.rpc('current_pessoa_id')
+        if (!pessoaId) {
+          const fromEmail = user.email?.split('@')[0]?.split('+')[0]
+          if (!cancelled && fromEmail) setPrimeiroNome(fromEmail)
+          return
+        }
+        const { data } = await supabase.schema('core').from('pessoas')
+          .select('primeiro_nome').eq('id', pessoaId).maybeSingle()
+        if (!cancelled && data?.primeiro_nome) setPrimeiroNome(data.primeiro_nome)
+      } catch (e) {
+        console.warn('[useUserContext] load failed', e)
       }
-      // current_pessoa_id RPC → core.pessoas
-      const { data: pessoaId } = await supabase.rpc('current_pessoa_id')
-      if (!pessoaId) {
-        if (!cancelled) setPrimeiroNome(user.email?.split('@')[0]?.split('+')[0] ?? null)
-        return
-      }
-      const { data } = await supabase.schema('core').from('pessoas')
-        .select('primeiro_nome').eq('id', pessoaId).maybeSingle()
-      if (!cancelled) setPrimeiroNome(data?.primeiro_nome ?? user.email?.split('@')[0] ?? null)
     }
     load()
     return () => { cancelled = true }
