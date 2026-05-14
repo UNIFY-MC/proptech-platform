@@ -7,12 +7,73 @@
 
 import { useState, useRef, useEffect } from 'react'
 import * as Icons from 'lucide-react'
-import { Bell, Search, Sun, Moon, User, ChevronDown, LayoutDashboard, Clock } from 'lucide-react'
+import { Bell, Search, Sun, Moon, User, ChevronDown, LayoutDashboard, Clock, Settings, LogOut } from 'lucide-react'
 import { useApps, VERTICALS, appsByVertical, defaultSurfaceOf } from '../hooks/useApps.js'
 import { useInboxItems } from '../hooks/useSupabase.js'
 import { useInboxReads } from '../hooks/useInboxReads.js'
-import { useVerticalStore, useAppShellStore } from '../store'
+import { useAppShellStore, useVerticalStore } from '../store'
 import { roleFor, surfaceFor } from '../lib/surfaces.js'
+
+// Profile placeholder — virá do Supabase Auth quando wired
+const PROFILE = {
+  name: 'Mário Carvalho',
+  email: 'mariocarvalho.biz@gmail.com',
+  role: 'Owner · Property007',
+}
+
+function UserMenu({ theme, setTheme }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef(null)
+
+  useEffect(() => {
+    function onClickOutside(e) {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false)
+    }
+    if (open) document.addEventListener('mousedown', onClickOutside)
+    return () => document.removeEventListener('mousedown', onClickOutside)
+  }, [open])
+
+  return (
+    <div ref={ref} className="topbar-user-wrap">
+      <button
+        className="topbar-icon-btn"
+        title={PROFILE.name}
+        onClick={() => setOpen(o => !o)}
+      >
+        <User size={15} />
+      </button>
+      {open && (
+        <div className="topbar-user-menu">
+          <div className="topbar-user-header">
+            <div className="topbar-user-name">{PROFILE.name}</div>
+            <div className="topbar-user-email">{PROFILE.email}</div>
+            <div className="topbar-user-email" style={{ marginTop: 4 }}>{PROFILE.role}</div>
+          </div>
+          <button
+            className="topbar-user-item"
+            onClick={() => { setTheme(theme === 'dark' ? 'light' : 'dark'); setOpen(false) }}
+          >
+            {theme === 'dark' ? <Sun size={13} /> : <Moon size={13} />}
+            <span>{theme === 'dark' ? 'Tema claro' : 'Tema escuro'}</span>
+          </button>
+          <a href="/settings" className="topbar-user-item" onClick={() => setOpen(false)}>
+            <Settings size={13} />
+            <span>Definições</span>
+          </a>
+          <div className="topbar-user-divider" />
+          <button
+            className="topbar-user-item"
+            onClick={() => { setOpen(false); alert('Sign out — wire ao Supabase Auth quando IAM v1 estiver pronto.') }}
+            style={{ color: 'var(--text-dim)' }}
+          >
+            <LogOut size={13} />
+            <span>Sign out</span>
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
 
 const FALLBACK_ICON = Icons.Square
 function AppIcon({ name, size = 14, color }) {
@@ -128,7 +189,7 @@ function VerticalTab({ vertical, apps, activeSlug, onPickSlug }) {
 export default function Topbar({ theme, setTheme, lastSync, loading, refresh }) {
   const { apps } = useApps()
   const { activeAppSlug, setActiveApp } = useAppShellStore()
-  const { activeVertical, setVertical } = useVerticalStore()
+  const { activeVertical } = useVerticalStore()
   const { items } = useInboxItems(activeVertical)
   const { readSet } = useInboxReads()
   const unread = items.filter(i => !readSet.has(i.id)).length
@@ -162,20 +223,6 @@ export default function Topbar({ theme, setTheme, lastSync, loading, refresh }) 
 
       {isDashboard && (
         <>
-          <select
-            className="topbar-vertical-select"
-            value={activeVertical}
-            onChange={(e) => setVertical(e.target.value)}
-            title="Filtrar por vertical"
-          >
-            <option value="all">Todas verticais</option>
-            <option value="V1">V1 Core</option>
-            <option value="V2">V2 Condomínios</option>
-            <option value="V3">V3 Seguros</option>
-            <option value="V4">V4 Energia</option>
-            <option value="V5">V5 Manutenção</option>
-          </select>
-
           <button className="topbar-icon-btn" title="Pesquisar (em breve)">
             <Search size={15} />
           </button>
@@ -184,14 +231,6 @@ export default function Topbar({ theme, setTheme, lastSync, loading, refresh }) 
             <Bell size={15} />
             {unread > 0 && <span className="topbar-badge">{unread}</span>}
           </a>
-
-          <button
-            className="topbar-icon-btn"
-            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-            title={theme === 'dark' ? 'Tema claro' : 'Tema escuro'}
-          >
-            {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
-          </button>
 
           <button
             className="topbar-icon-btn"
@@ -208,9 +247,7 @@ export default function Topbar({ theme, setTheme, lastSync, loading, refresh }) 
             </span>
           )}
 
-          <button className="topbar-icon-btn" title="Perfil (em breve)">
-            <User size={15} />
-          </button>
+          <UserMenu theme={theme} setTheme={setTheme} />
         </>
       )}
     </header>

@@ -44,7 +44,7 @@ function NavItem({ to, label, icon, badge, end, accent }) {
 }
 
 export default function Sidebar() {
-  const { activeVertical } = useVerticalStore()
+  const { activeVertical, setVertical } = useVerticalStore()
   const { activeAppSlug, sidebarCollapsed, toggleSidebar } = useAppShellStore()
   const isDashboardMode = activeAppSlug === 'dashboard'
   const { items } = useInboxItems(activeVertical)
@@ -80,6 +80,24 @@ export default function Sidebar() {
         >
           {sidebarCollapsed ? <PanelLeft size={14} /> : <PanelLeftClose size={14} />}
         </button>
+      </div>
+
+      {/* Filtro vertical — sempre visível no topo (Q1 UX feedback) */}
+      <div className="sidebar-vertical">
+        <select
+          className="sidebar-vertical-select"
+          value={activeVertical}
+          onChange={(e) => setVertical(e.target.value)}
+          title="Filtrar por vertical"
+        >
+          <option value="all">Todas verticais</option>
+          <option value="V1">V1 Core</option>
+          <option value="V2">V2 Condomínios</option>
+          <option value="V3">V3 Seguros</option>
+          <option value="V4">V4 Energia</option>
+          <option value="V5">V5 Manutenção</option>
+          <option value="V10">V10 Owners</option>
+        </select>
       </div>
 
       <div className="sidebar-nav">
