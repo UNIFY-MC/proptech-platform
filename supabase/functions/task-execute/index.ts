@@ -85,6 +85,22 @@ async function readContextFiles(sb: any, paths: string[]): Promise<string> {
   return chunks.join("\n\n")
 }
 
+// Sprint Q1 — auto-load SOPs/ICPs/never-rules/legal/procedure do agent
+// via RPC system.get_agent_context (vê migration 20260515_context_docs_wired).
+async function loadAgentContext(sb: any, agentId: string, maxChars = 8000): Promise<string> {
+  if (!agentId) return ""
+  try {
+    const { data, error } = await sb.rpc("get_agent_context", {
+      p_agent_id: agentId,
+      p_max_chars: maxChars,
+    })
+    if (error) return ""
+    return (data as string) || ""
+  } catch {
+    return ""
+  }
+}
+
 // Garante que cada skill da task existe em system.skills + tem receipt completo.
 // Dispara skill-create lazy se faltam receipts.
 async function resolveSkills(sb: any, skillTags: string[]): Promise<SkillRow[]> {
@@ -119,7 +135,13 @@ async function resolveSkills(sb: any, skillTags: string[]): Promise<SkillRow[]> 
   return resolved
 }
 
-async function runAgent(agentId: string, task: Record<string, unknown>, skills: SkillRow[], contextFilesText: string): Promise<TaskExecuteResult> {
+async function runAgent(
+  agentId: string,
+  task: Record<string, unknown>,
+  skills: SkillRow[],
+  contextFilesText: string,
+  agentContextText: string,
+): Promise<TaskExecuteResult> {
   const baseSysPrompt = AGENT_SYSTEM_PROMPTS[agentId] || AGENT_SYSTEM_PROMPTS.default
 
   const skillsBlock = skills.length === 0 ? "" : `
@@ -136,9 +158,13 @@ ${(s.receipt_md || "").split("\n").map(l => `   ${l}`).join("\n")}
 Se uma skill requer connector que NÃO tens disponível ou requer aprovação humana, marca needs_human=true e indica delegated_to=<fallback_agent>.
 `.trim()
 
+  const agentContextBlock = agentContextText
+    ? `\nCONTEXTO GLOBAL DO AGENT (SOPs / ICPs / Legal / Never-rules — segue à risca):\n${agentContextText}\n`
+    : ""
+
   const contextBlock = contextFilesText ? `\nCONTEXTO DE FICHEIROS (lido do Storage):\n${contextFilesText}\n` : ""
 
-  const sysPrompt = `${baseSysPrompt}\n\n${skillsBlock}${contextBlock}`
+  const sysPrompt = `${baseSysPrompt}\n\n${skillsBlock}${agentContextBlock}${contextBlock}`
 
   const taskBrief = `
 TASK PARA EXECUTAR:
@@ -296,18 +322,23 @@ Deno.serve(async (req) => {
     ]
     const contextText = await readContextFiles(sb, allContextPaths)
 
+    // Sprint Q1 — auto-load SOPs/ICPs/legal/never-rules para o agent (e globais)
+    const agentContextText = await loadAgentContext(sb, task.owner_agent_id as string, 8000)
+    const agentContextChars = agentContextText.length
+
     await sb.schema("system").from("tasks").update({
       steps: [
         { name: "Recebida pelo agent",   status: "done" },
         { name: "Resolver skills",       status: "done", skills: resolvedSkills.map((s: any) => s.tag) },
         { name: "Ler contexto (files)",  status: "done", files_read: allContextPaths.length },
+        { name: "Ler contexto global",   status: "done", context_chars: agentContextChars },
         { name: "Análise do pedido",     status: "running" },
       ],
     }).eq("id", task_id)
 
     let result: TaskExecuteResult
     try {
-      result = await runAgent(task.owner_agent_id, task, resolvedSkills, contextText)
+      result = await runAgent(task.owner_agent_id, task, resolvedSkills, contextText, agentContextText)
     } catch (e) {
       // Falhou — marca failed
       await sb.schema("system").from("tasks").update({
@@ -332,6 +363,7 @@ Deno.serve(async (req) => {
       { name: "Recebida pelo agent",   status: "done" },
       { name: "Resolver skills",       status: "done", skills: resolvedSkills.map((s: any) => s.tag) },
       { name: "Ler contexto (files)",  status: "done", files_read: allContextPaths.length },
+      { name: "Ler contexto global",   status: "done", context_chars: agentContextChars },
       { name: "Análise do pedido",     status: "done" },
       ...result.steps_completed.map((s) => ({ name: s, status: "done" })),
       ...(result.status === "needs_human"
@@ -353,6 +385,7 @@ Deno.serve(async (req) => {
           delegated_to: result.delegated_to,
           skills_used: resolvedSkills.map((s: any) => ({ tag: s.tag, name: s.name, connectors: s.connectors })),
           context_files_read: allContextPaths.length,
+          agent_context_chars: agentContextChars,
           agent: task.owner_agent_id,
           model: MODEL,
           at: new Date().toISOString(),

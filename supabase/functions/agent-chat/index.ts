@@ -163,7 +163,7 @@ async function callAnthropic(messages: unknown[], system: string) {
   return await res.json()
 }
 
-const SYSTEM_PROMPT = `És o orquestrador do dashboard agentic-ops do Mário Carvalho (Property007).
+const BASE_SYSTEM_PROMPT = `És o orquestrador do dashboard agentic-ops do Mário Carvalho (Property007).
 Responde sempre em Português de Portugal (PT-PT), conciso.
 
 Tens tools para gerir tasks (system.tasks) e listar items da inbox.
@@ -184,6 +184,30 @@ IDs de agentes disponíveis (usa estes em owner_agent_id):
 Verticais: v2, v3, v4, v5, v10.
 
 Após executar tool, devolve resposta humana resumindo o que fizeste.`
+
+// Sprint Q1 — auto-load contexto (SOPs/ICPs/legal/never-rules) do agent activo
+async function loadAgentContext(
+  sb: ReturnType<typeof createClient>,
+  agentId: string,
+  maxChars = 6000,
+): Promise<string> {
+  if (!agentId) return ""
+  try {
+    const { data, error } = await sb.rpc("get_agent_context", {
+      p_agent_id: agentId,
+      p_max_chars: maxChars,
+    })
+    if (error) return ""
+    return (data as string) || ""
+  } catch {
+    return ""
+  }
+}
+
+function buildSystemPrompt(agentContext: string): string {
+  if (!agentContext) return BASE_SYSTEM_PROMPT
+  return `${BASE_SYSTEM_PROMPT}\n\nCONTEXTO DO AGENT ACTIVO (SOPs / ICPs / Legal / Never-rules — segue à risca):\n${agentContext}`
+}
 
 // ─── Handler ──────────────────────────────────────────────────
 Deno.serve(async (req) => {
@@ -208,6 +232,11 @@ Deno.serve(async (req) => {
 
     const sb = createClient(SUPABASE_URL, SERVICE_KEY)
 
+    // Sprint Q1 — auto-load contexto do agent activo (se houver)
+    const activeAgentId: string = body?.context?.active_employee_id || ""
+    const agentContext = await loadAgentContext(sb, activeAgentId, 6000)
+    const systemPrompt = buildSystemPrompt(agentContext)
+
     // Build messages — converter para formato Anthropic
     const messages: unknown[] = [
       ...history.map(h => ({ role: h.role === "assistant" ? "assistant" : "user", content: h.content })),
@@ -219,7 +248,7 @@ Deno.serve(async (req) => {
     let finalText = ""
 
     for (let turn = 0; turn < 5; turn++) {
-      const resp = await callAnthropic(messages, SYSTEM_PROMPT)
+      const resp = await callAnthropic(messages, systemPrompt)
       const content = resp.content || []
       const stopReason = resp.stop_reason
 
