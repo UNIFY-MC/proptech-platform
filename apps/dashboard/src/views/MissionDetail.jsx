@@ -91,6 +91,11 @@ export default function MissionDetail() {
   const [posting, setPosting] = useState(false)
   const [revisionPrompt, setRevisionPrompt] = useState('')
   const [reviewing, setReviewing] = useState(false)
+  // Email draft state (Sprint M) — when kind='email_reply'
+  const [editingDraft, setEditingDraft] = useState(false)
+  const [draftSubject, setDraftSubject] = useState('')
+  const [draftBody, setDraftBody] = useState('')
+  const [sendingEmail, setSendingEmail] = useState(false)
   const [showProgress, setShowProgress] = useState(true)
   const [showFiles, setShowFiles] = useState(true)
   const [showDescription, setShowDescription] = useState(true)
@@ -187,6 +192,31 @@ export default function MissionDetail() {
     refresh()
   }
 
+  async function handleSendEmail() {
+    if (sendingEmail) return
+    setSendingEmail(true)
+    const res = await callFn('gmail-send', {
+      task_id: id,
+      edited_subject: editingDraft ? draftSubject : null,
+      edited_body:    editingDraft ? draftBody    : null,
+    })
+    if (res?.mailto) {
+      // Modo "draft" — abre client de email
+      window.open(res.mailto, '_blank')
+    }
+    setSendingEmail(false)
+    setEditingDraft(false)
+    refresh()
+  }
+
+  // Sync draft state when task changes
+  useEffect(() => {
+    if (task?.kind === 'email_reply' && task.payload?.email_draft) {
+      setDraftSubject(task.payload.email_draft.subject || '')
+      setDraftBody(task.payload.email_draft.body_text || '')
+    }
+  }, [task])
+
   if (loading) {
     return (
       <div style={{ padding: 40, color: 'var(--text-dim)' }}>
@@ -221,6 +251,111 @@ export default function MissionDetail() {
       <div style={S.body}>
         {/* MAIN COL — Comment stream */}
         <div style={S.main}>
+          {/* Email Draft (Sprint M) — apenas se kind='email_reply' */}
+          {task.kind === 'email_reply' && task.payload?.email_draft && (
+            <div style={{
+              background: 'rgba(59,130,246,0.08)',
+              border: '1px solid rgba(59,130,246,0.35)',
+              borderRadius: 8, padding: 16, marginBottom: 8,
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                <Send size={16} color="#60a5fa" />
+                <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: '#60a5fa' }}>
+                  Email Draft — Reply to {task.payload.from_email}
+                </h3>
+                <span style={{
+                  fontSize: 9, padding: '2px 7px', borderRadius: 3,
+                  background: 'rgba(245,158,11,0.18)', color: '#f59e0b',
+                  fontFamily: 'JetBrains Mono, monospace', fontWeight: 700,
+                  marginLeft: 'auto',
+                }}>{(task.payload.intent || '').toUpperCase()}</span>
+              </div>
+
+              {/* Subject */}
+              <div style={{ marginBottom: 8 }}>
+                <div style={{ fontSize: 10, color: 'var(--text-dim)', marginBottom: 4, textTransform: 'uppercase', fontFamily: 'JetBrains Mono, monospace' }}>Subject</div>
+                {editingDraft ? (
+                  <input
+                    value={draftSubject}
+                    onChange={(e) => setDraftSubject(e.target.value)}
+                    style={{
+                      width: '100%', padding: '8px 10px', borderRadius: 5,
+                      background: 'var(--bg-elevated)', border: '1px solid var(--border)',
+                      color: 'var(--text)', fontSize: 13, outline: 'none', boxSizing: 'border-box',
+                    }}
+                  />
+                ) : (
+                  <div style={{ fontSize: 13, color: 'var(--text)' }}>{draftSubject || task.payload.email_draft.subject}</div>
+                )}
+              </div>
+
+              {/* Body */}
+              <div style={{ marginBottom: 10 }}>
+                <div style={{ fontSize: 10, color: 'var(--text-dim)', marginBottom: 4, textTransform: 'uppercase', fontFamily: 'JetBrains Mono, monospace' }}>Body</div>
+                {editingDraft ? (
+                  <textarea
+                    value={draftBody}
+                    onChange={(e) => setDraftBody(e.target.value)}
+                    rows={10}
+                    style={{
+                      width: '100%', padding: '8px 10px', borderRadius: 5,
+                      background: 'var(--bg-elevated)', border: '1px solid var(--border)',
+                      color: 'var(--text)', fontSize: 12, outline: 'none',
+                      fontFamily: 'inherit', lineHeight: 1.5, resize: 'vertical', boxSizing: 'border-box',
+                    }}
+                  />
+                ) : (
+                  <pre style={{
+                    margin: 0, padding: 12, background: 'var(--bg-elevated)', borderRadius: 5,
+                    fontSize: 12, color: 'var(--text)', whiteSpace: 'pre-wrap',
+                    fontFamily: 'inherit', lineHeight: 1.55, maxHeight: 320, overflow: 'auto',
+                  }}>{draftBody || task.payload.email_draft.body_text}</pre>
+                )}
+              </div>
+
+              {/* Actions */}
+              <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end', alignItems: 'center' }}>
+                {!editingDraft ? (
+                  <button
+                    onClick={() => setEditingDraft(true)}
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 5,
+                      padding: '7px 12px', borderRadius: 5,
+                      background: 'var(--bg-elevated)', border: '1px solid var(--border)',
+                      color: 'var(--text)', fontSize: 12, cursor: 'pointer',
+                    }}
+                  >✎ Edit</button>
+                ) : (
+                  <button
+                    onClick={() => {
+                      setEditingDraft(false)
+                      setDraftSubject(task.payload.email_draft.subject || '')
+                      setDraftBody(task.payload.email_draft.body_text || '')
+                    }}
+                    style={{
+                      padding: '7px 12px', borderRadius: 5,
+                      background: 'transparent', border: '1px solid var(--border)',
+                      color: 'var(--text-dim)', fontSize: 12, cursor: 'pointer',
+                    }}
+                  >Cancel</button>
+                )}
+                <button
+                  onClick={handleSendEmail}
+                  disabled={sendingEmail}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 5,
+                    padding: '7px 16px', borderRadius: 5,
+                    background: '#10b981', color: '#fff', border: 'none',
+                    fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                  }}
+                >
+                  {sendingEmail ? <Loader2 size={11} className="spin" /> : <Send size={11} />}
+                  {editingDraft ? 'Save & Send' : 'Approve & Send'}
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Review output (apenas se há step needs_human) */}
           {needsHumanStep && (
             <div style={S.reviewBlock}>
