@@ -1,16 +1,66 @@
 // useAgentChat — cliente HTTP para edge function agent-chat
-// Mantém histórico in-session (não persistido entre reloads — usar localStorage opcional)
+// Sprint Q1.5: persistência via system.chat_threads + system.chat_messages.
+// API: useAgentChat(employeeId) → { messages, send, pending, error,
+//                                    clear, threadId, openThread, newThread }
 
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
+import { supabase } from '../lib/supabase.js'
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL
 const ANON_KEY     = import.meta.env.VITE_SUPABASE_ANON_KEY
 const ENDPOINT     = `${SUPABASE_URL}/functions/v1/agent-chat`
 
-export function useAgentChat() {
+export function useAgentChat(employeeId) {
   const [messages, setMessages] = useState([])
   const [pending, setPending]   = useState(false)
   const [error, setError]       = useState(null)
+  const [threadId, setThreadId] = useState(null)
+
+  // Carrega mensagens de uma thread específica
+  const loadThread = useCallback(async (tid) => {
+    if (!supabase || !tid) return
+    setThreadId(tid)
+    const { data, error: e } = await supabase
+      .from('system_chat_messages')
+      .select('*')
+      .eq('thread_id', tid)
+      .order('created_at', { ascending: true })
+    if (e) { setError(e.message); return }
+    setMessages((data || []).map(m => ({
+      role: m.role,
+      content: m.content,
+      tool_calls: m.tool_calls || [],
+      ts: new Date(m.created_at).getTime(),
+    })))
+  }, [])
+
+  // Abre thread "current" do agent (ou nova se a última >6h)
+  const openThread = useCallback(async () => {
+    if (!supabase || !employeeId) return
+    const { data: tid, error: e } = await supabase.schema('system').rpc('chat_thread_open', {
+      p_employee_id: employeeId,
+      p_force_new: false,
+    })
+    if (e) { setError(e.message); return }
+    if (tid) await loadThread(tid)
+  }, [employeeId, loadThread])
+
+  // Força criação de nova thread
+  const newThread = useCallback(async () => {
+    if (!supabase || !employeeId) return
+    const { data: tid, error: e } = await supabase.schema('system').rpc('chat_thread_open', {
+      p_employee_id: employeeId,
+      p_force_new: true,
+    })
+    if (e) { setError(e.message); return }
+    setThreadId(tid)
+    setMessages([])
+  }, [employeeId])
+
+  // Auto-abre thread quando employeeId muda
+  useEffect(() => {
+    if (employeeId) openThread()
+  }, [employeeId, openThread])
 
   const send = useCallback(async (text, context = null) => {
     if (!text?.trim() || pending) return
@@ -29,7 +79,8 @@ export function useAgentChat() {
         body: JSON.stringify({
           message: text,
           history: messages.map(m => ({ role: m.role, content: m.content })),
-          context: context || undefined,
+          context: context || (employeeId ? { active_employee_id: employeeId } : undefined),
+          thread_id: threadId,
         }),
       })
       if (!res.ok) {
@@ -38,6 +89,8 @@ export function useAgentChat() {
       }
       const data = await res.json()
       if (data.error) throw new Error(data.error)
+      // Edge fn devolve thread_id (pode ter criado uma nova)
+      if (data.thread_id && data.thread_id !== threadId) setThreadId(data.thread_id)
       setMessages(m => [...m, {
         role: 'assistant',
         content: data.reply || '(sem resposta)',
@@ -55,9 +108,9 @@ export function useAgentChat() {
     } finally {
       setPending(false)
     }
-  }, [messages, pending])
+  }, [messages, pending, threadId, employeeId])
 
   const clear = useCallback(() => { setMessages([]); setError(null) }, [])
 
-  return { messages, send, pending, error, clear }
+  return { messages, send, pending, error, clear, threadId, openThread, newThread, loadThread }
 }

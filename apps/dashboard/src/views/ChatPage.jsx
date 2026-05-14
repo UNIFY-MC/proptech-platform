@@ -22,6 +22,7 @@ import { useEmployee } from '../hooks/useEmployee.js'
 import { useApps } from '../hooks/useApps.js'
 import { useNotificationsStore } from '../store'
 import { useAgentChat } from '../hooks/useAgentChat.js'
+import { useChatThreads } from '../hooks/useChatThreads.js'
 
 // Quick-action cards — alinhadas com o que a Bia já sabe fazer + atalhos futuros
 const QUICK_ACTIONS = [
@@ -73,7 +74,8 @@ export default function ChatPage() {
   const addToast = useNotificationsStore(s => s.addToast)
   const { apps } = useApps()
   const { running, lastResult, runTask } = useEmployee(employeeId)
-  const { messages, send, pending, clear } = useAgentChat()
+  const { messages, send, pending, clear, threadId, newThread, loadThread } = useAgentChat(employeeId)
+  const [historyOpen, setHistoryOpen] = useState(false)
 
   useEffect(() => {
     inputRef.current?.focus()
@@ -93,7 +95,8 @@ export default function ChatPage() {
     const text = prompt
     setPrompt('')
     // Passa active_employee_id para agent-chat carregar SOPs/legal/never-rules
-    await send(text, { active_employee_id: employeeId })
+    // O hook já tem o employeeId em scope, mas mantemos explicit para clareza
+    await send(text)
   }
 
   const hasConversation = messages.length > 0
@@ -109,25 +112,49 @@ export default function ChatPage() {
       maxWidth: 760, margin: '0 auto',
       padding: '0 20px',
     }}>
-      {/* Top bar — New Chat dropdown stub */}
+      {/* Top bar — New Chat + History */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '14px 0', marginBottom: hasConversation ? 14 : 40,
       }}>
         <button
-          onClick={clear}
+          onClick={() => newThread()}
           style={{
             background: 'none', border: 'none', cursor: 'pointer',
             color: 'var(--text)', fontSize: '0.92rem', fontWeight: 600,
             display: 'flex', alignItems: 'center', gap: 6,
-          }}>
-          {hasConversation ? '↺ New Chat' : 'New Chat'}
-          <ChevronDown size={14} style={{ color: 'var(--text-dim)' }} />
+          }}
+          title="Começar nova conversa"
+        >
+          {hasConversation ? '↺ Nova conversa' : 'New Chat'}
         </button>
-        <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)' }}>
-          {isBusy ? '⏳ A pensar…' : ''}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)' }}>
+            {isBusy ? '⏳ A pensar…' : ''}
+          </div>
+          <button
+            onClick={() => setHistoryOpen(true)}
+            style={{
+              background: 'var(--bg-elevated)', border: '1px solid var(--border)',
+              borderRadius: 5, padding: '4px 10px', cursor: 'pointer',
+              color: 'var(--text-dim)', fontSize: '0.7rem',
+              display: 'inline-flex', alignItems: 'center', gap: 5,
+            }}
+            title="Ver conversas anteriores"
+          >
+            ⏱ Histórico
+          </button>
         </div>
       </div>
+
+      {historyOpen && (
+        <ChatHistoryDrawer
+          employeeId={employeeId}
+          activeThreadId={threadId}
+          onPick={async (tid) => { await loadThread(tid); setHistoryOpen(false) }}
+          onClose={() => setHistoryOpen(false)}
+        />
+      )}
 
       {/* Conversation thread (quando há mensagens) */}
       {hasConversation && (
@@ -435,6 +462,114 @@ function ChatBubble({ message }) {
           </div>
         )}
       </div>
+    </div>
+  )
+}
+
+// ─── ChatHistoryDrawer — sidebar com threads do agent ────────
+const BUCKET_LABELS = {
+  today: 'Hoje',
+  yesterday: 'Ontem',
+  this_week: 'Esta semana',
+  this_month: 'Este mês',
+  older: 'Mais antigas',
+}
+
+function ChatHistoryDrawer({ employeeId, activeThreadId, onPick, onClose }) {
+  const [showArchived, setShowArchived] = useState(false)
+  const { grouped, loading, archive } = useChatThreads(employeeId, { includeArchived: showArchived })
+
+  const buckets = ['today', 'yesterday', 'this_week', 'this_month', 'older']
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)',
+        zIndex: 1100, display: 'flex', justifyContent: 'flex-end',
+      }}
+    >
+      <aside
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          width: 340, maxWidth: '94vw', height: '100vh',
+          background: 'var(--bg-card)', borderLeft: '1px solid var(--border)',
+          display: 'flex', flexDirection: 'column',
+        }}
+      >
+        <div style={{
+          padding: '14px 16px', borderBottom: '1px solid var(--border)',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        }}>
+          <strong style={{ fontSize: '0.88rem' }}>Histórico · {employeeId}</strong>
+          <button onClick={onClose} style={{
+            background: 'none', border: 'none', cursor: 'pointer',
+            color: 'var(--text-dim)', fontSize: '1.1rem', lineHeight: 1,
+          }}>×</button>
+        </div>
+
+        <div style={{ padding: '8px 16px', borderBottom: '1px solid var(--border)' }}>
+          <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: '0.7rem', color: 'var(--text-dim)', cursor: 'pointer' }}>
+            <input type="checkbox" checked={showArchived} onChange={(e) => setShowArchived(e.target.checked)} />
+            Mostrar arquivadas
+          </label>
+        </div>
+
+        <div style={{ flex: 1, overflowY: 'auto', padding: '8px 0' }}>
+          {loading && <div style={{ padding: 16, color: 'var(--text-dim)', fontSize: '0.78rem' }}>A carregar…</div>}
+          {!loading && Object.keys(grouped).length === 0 && (
+            <div style={{ padding: 16, color: 'var(--text-dim)', fontSize: '0.78rem' }}>
+              Sem conversas anteriores com {employeeId}.
+            </div>
+          )}
+          {buckets.map(b => grouped[b] && grouped[b].length > 0 && (
+            <div key={b}>
+              <div style={{
+                padding: '10px 16px 4px',
+                fontSize: '0.58rem', fontWeight: 700,
+                color: 'var(--text-dim)',
+                textTransform: 'uppercase', letterSpacing: '0.1em',
+              }}>{BUCKET_LABELS[b]}</div>
+              {grouped[b].map(t => (
+                <div key={t.id}
+                  className={'sidebar-link' + (t.id === activeThreadId ? ' active' : '')}
+                  style={{ padding: '8px 16px', cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: 2 }}
+                  onClick={() => onPick(t.id)}
+                  title={t.archived_at ? 'Arquivada' : 'Activa'}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
+                    <span style={{ fontSize: '0.78rem', fontWeight: 500, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+                      {t.title || `(sem título · ${t.message_count} msg)`}
+                    </span>
+                    {!t.archived_at && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); archive(t.id) }}
+                        title="Arquivar"
+                        style={{
+                          background: 'none', border: 'none', cursor: 'pointer',
+                          color: 'var(--text-dim)', fontSize: '0.65rem', padding: '2px 6px',
+                        }}
+                      >📦</button>
+                    )}
+                  </div>
+                  <div style={{ fontSize: '0.62rem', color: 'var(--text-dim)', fontFamily: 'JetBrains Mono, monospace' }}>
+                    {new Date(t.last_message_at).toLocaleString('pt-PT', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                    {' · '}{t.message_count} msg
+                  </div>
+                  {t.last_preview && (
+                    <div style={{
+                      fontSize: '0.66rem', color: 'var(--text-dim)',
+                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                    }}>
+                      {t.last_preview}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+      </aside>
     </div>
   )
 }
