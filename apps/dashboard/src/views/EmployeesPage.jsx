@@ -7,9 +7,10 @@
 import { useState, useMemo } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import * as Lucide from 'lucide-react'
-import { Users, Briefcase, Network, UserPlus, ArrowLeft } from 'lucide-react'
+import { Users, Briefcase, Network, UserPlus, ArrowLeft, MoreHorizontal, Check, X, Edit2, Hand } from 'lucide-react'
 import { useVerticalStore } from '../store'
 import { useData } from '../hooks/useData.js'
+import { useTasks } from '../hooks/useTasks.js'
 import { DEPARTMENTS, deptFor, employeesOfDept, countByDept, normalizeDept } from '../lib/departments.js'
 
 const FALLBACK_ICON = Lucide.Briefcase
@@ -113,41 +114,332 @@ const pillStyle = {
   background: 'var(--bg-elevated)', color: 'var(--text-dim)',
 }
 
-function OverviewTab({ employees, navigate }) {
-  const grouped = {}
-  for (const emp of employees) {
-    const dept = normalizeDept(emp.department) || 'outros'
-    if (!grouped[dept]) grouped[dept] = []
-    grouped[dept].push(emp)
-  }
-  const orderedDepts = DEPARTMENTS.filter(d => grouped[d.id]).concat(
-    grouped['outros'] ? [{ id: 'outros', label: 'Outros', color: '#6b7280', icon: 'Briefcase' }] : []
-  )
+// ─── Compact member card (CookAI-style: avatar + nome + role/owner) ────────
+function MemberCard({ emp, onClick }) {
+  const role = emp.role_label || emp.role || ''
+  const ownerType = emp.role_owner || (/owner|founder|ceo/i.test(role) ? 'OWNER'
+                                       : /admin|director/i.test(role) ? 'ADMIN'
+                                       : 'MEMBER')
+  const dept = normalizeDept(emp.department)
+  const deptColor = DEPARTMENTS.find(d => d.id === dept)?.color || 'var(--primary)'
   return (
-    <div>
-      {orderedDepts.map(dept => {
-        const list = grouped[dept.id]
+    <button
+      onClick={onClick}
+      style={{
+        textAlign: 'left',
+        background: 'var(--bg-card)', border: '1px solid var(--border)',
+        borderRadius: 8, padding: '12px 14px', cursor: 'pointer',
+        display: 'flex', alignItems: 'center', gap: 10,
+        transition: 'background 0.12s, border-color 0.12s',
+      }}
+      onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-elevated)'; e.currentTarget.style.borderColor = deptColor }}
+      onMouseLeave={e => { e.currentTarget.style.background = 'var(--bg-card)'; e.currentTarget.style.borderColor = 'var(--border)' }}
+    >
+      <Avatar emp={emp} size={34} />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{
+          fontSize: 13, fontWeight: 600, color: 'var(--text)',
+          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+        }}>
+          {emp.name}
+          <span style={{
+            fontSize: 9, marginLeft: 8, fontFamily: 'JetBrains Mono, monospace',
+            color: 'var(--text-dim)', letterSpacing: '0.08em',
+          }}>{ownerType}</span>
+        </div>
+        {role && (
+          <div style={{
+            fontSize: 11, color: 'var(--text-dim)',
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          }}>{role}</div>
+        )}
+      </div>
+      <button
+        onClick={(e) => { e.stopPropagation(); /* future kebab menu */ }}
+        style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-dim)', padding: 4 }}
+        title="Mais opções"
+      ><MoreHorizontal size={14} /></button>
+    </button>
+  )
+}
+
+// ─── Recent Activity: tabela das últimas tasks ─────────────────────────────
+function timeAgoShort(iso) {
+  if (!iso) return ''
+  const diff = Date.now() - new Date(iso).getTime()
+  const s = Math.floor(diff / 1000)
+  if (s < 60) return `${s}s`
+  const m = Math.floor(s / 60)
+  if (m < 60) return `${m}m`
+  const h = Math.floor(m / 60)
+  if (h < 24) return `${h}h`
+  const d = Math.floor(h / 24)
+  return `${d}d`
+}
+
+const STATUS_BADGE = {
+  open:         { label: 'OPEN',         color: '#9ca3af', bg: 'rgba(156,163,175,0.15)' },
+  in_progress:  { label: 'IN PROGRESS',  color: '#3b82f6', bg: 'rgba(59,130,246,0.15)' },
+  blocked:      { label: 'BLOCKED',      color: '#f59e0b', bg: 'rgba(245,158,11,0.15)' },
+  needs_human:  { label: 'NEEDS YOU',    color: '#f59e0b', bg: 'rgba(245,158,11,0.18)' },
+  failed:       { label: 'FAILED',       color: '#ef4444', bg: 'rgba(239,68,68,0.15)' },
+  cancelled:    { label: 'CANCELLED',    color: '#9ca3af', bg: 'rgba(156,163,175,0.15)' },
+  done:         { label: 'COMPLETED',    color: '#10b981', bg: 'rgba(16,185,129,0.15)' },
+}
+
+function RecentActivityTable({ tasks, employees, navigate }) {
+  if (tasks.length === 0) {
+    return (
+      <div style={{
+        padding: 24, textAlign: 'center',
+        background: 'var(--bg-card)', border: '1px dashed var(--border)',
+        borderRadius: 8, color: 'var(--text-dim)', fontSize: 12,
+      }}>Sem atividade recente.</div>
+    )
+  }
+  return (
+    <div style={{
+      background: 'var(--bg-card)', border: '1px solid var(--border)',
+      borderRadius: 8, overflow: 'hidden',
+    }}>
+      {/* Header */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: '2fr 1.2fr 1fr 60px',
+        gap: 12, padding: '10px 16px',
+        borderBottom: '1px solid var(--border)',
+        fontSize: 9, fontWeight: 700, color: 'var(--text-dim)',
+        textTransform: 'uppercase', letterSpacing: '0.08em',
+        fontFamily: 'JetBrains Mono, monospace',
+      }}>
+        <span>Name</span><span>Detail</span><span>Status</span><span style={{ textAlign: 'right' }}>Age</span>
+      </div>
+      {tasks.map((t) => {
+        const owner = employees.find(e => e.id === t.owner_agent_id)
+        const steps = Array.isArray(t.steps) ? t.steps : []
+        const stepsDone = steps.filter(s => s.status === 'done').length
+        const stepsTotal = steps.length || 1
+        const meta = STATUS_BADGE[t.status] || STATUS_BADGE.open
         return (
-          <div key={dept.id} style={{ marginBottom: 24 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-              <div style={{ width: 3, height: 16, borderRadius: 2, background: dept.color }} />
-              <DeptIcon name={dept.icon} size={14} color={dept.color} />
-              <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                {dept.label}
-              </span>
-              <span style={{ fontSize: '0.65rem', color: 'var(--text-dim)' }}>· {list.length}</span>
+          <button
+            key={t.id}
+            onClick={() => navigate(`/tasks/${t.id}`)}
+            style={{
+              width: '100%', textAlign: 'left',
+              display: 'grid', gridTemplateColumns: '2fr 1.2fr 1fr 60px',
+              gap: 12, padding: '10px 16px',
+              borderTop: '1px solid var(--border-soft, transparent)',
+              background: 'transparent', border: 'none',
+              cursor: 'pointer', alignItems: 'center',
+              transition: 'background 0.12s',
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-elevated)'}
+            onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+              {owner ? <Avatar emp={owner} size={22} /> : <div style={{ width: 22 }} />}
+              <div style={{ minWidth: 0 }}>
+                <div style={{
+                  fontSize: 12, fontWeight: 600, color: 'var(--text)',
+                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                }}>{t.title}</div>
+                <div style={{ fontSize: 10, color: 'var(--text-dim)' }}>
+                  by {owner?.name || t.owner_agent_id || 'system'}
+                </div>
+              </div>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 10 }}>
-              {list.map(emp => (
-                <EmployeeCard
-                  key={emp.id} emp={emp} accentColor={dept.color}
-                  onClick={() => navigate(`/employees/${emp.id}`)}
-                />
-              ))}
+            <div style={{ fontSize: 11, color: 'var(--text-dim)' }}>
+              {stepsDone}/{stepsTotal} objectives
+            </div>
+            <div>
+              <span style={{
+                fontSize: 9, padding: '2px 8px', borderRadius: 3,
+                background: meta.bg, color: meta.color,
+                fontFamily: 'JetBrains Mono, monospace', fontWeight: 700,
+                letterSpacing: '0.06em',
+              }}>{meta.label}</span>
+            </div>
+            <div style={{
+              fontSize: 10, color: 'var(--text-dim)',
+              fontFamily: 'JetBrains Mono, monospace', textAlign: 'right',
+            }}>{timeAgoShort(t.updated_at || t.created_at)}</div>
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+// ─── Pending Approvals: cards de tasks needs_human ─────────────────────────
+function PendingApprovalsGrid({ tasks, employees, navigate, onApprove, onDismiss }) {
+  if (tasks.length === 0) {
+    return (
+      <div style={{
+        padding: 24, textAlign: 'center',
+        background: 'var(--bg-card)', border: '1px dashed var(--border)',
+        borderRadius: 8, color: 'var(--text-dim)', fontSize: 12,
+      }}>Sem aprovações pendentes. Tudo OK.</div>
+    )
+  }
+  return (
+    <div style={{
+      display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 10,
+    }}>
+      {tasks.map((t) => {
+        const owner = employees.find(e => e.id === t.owner_agent_id)
+        const exec = t.payload?.execution
+        const preview = exec?.summary || t.description_md || '(sem preview)'
+        return (
+          <div
+            key={t.id}
+            style={{
+              background: 'var(--bg-card)', border: '1px solid rgba(245,158,11,0.35)',
+              borderRadius: 8, padding: 12,
+              display: 'flex', flexDirection: 'column', gap: 8,
+            }}
+          >
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              {owner && <Avatar emp={owner} size={22} />}
+              <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)', flex: 1 }}>
+                {owner?.name || t.owner_agent_id || 'system'}
+              </span>
+              <span style={{
+                fontSize: 9, color: 'var(--text-dim)',
+                fontFamily: 'JetBrains Mono, monospace',
+              }}>{timeAgoShort(t.updated_at || t.created_at)}</span>
+            </div>
+
+            {/* Title */}
+            <div style={{ fontSize: 12, fontWeight: 600, color: '#fcd34d', lineHeight: 1.3 }}>
+              {t.title}
+            </div>
+
+            {/* Preview */}
+            <div style={{
+              fontSize: 11, color: 'var(--text-dim)', lineHeight: 1.4,
+              display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical',
+              overflow: 'hidden',
+            }}>{preview}</div>
+
+            {/* Actions */}
+            <div style={{ display: 'flex', gap: 6, marginTop: 'auto' }}>
+              <button
+                onClick={() => onApprove(t)}
+                style={{
+                  flex: 1, padding: '6px 10px', borderRadius: 5,
+                  background: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.4)',
+                  color: '#10b981', fontSize: 11, fontWeight: 600, cursor: 'pointer',
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 4,
+                }}
+              ><Check size={11} /> Approve</button>
+              <button
+                onClick={() => onDismiss(t)}
+                style={{
+                  flex: 1, padding: '6px 10px', borderRadius: 5,
+                  background: 'transparent', border: '1px solid var(--border)',
+                  color: 'var(--text-dim)', fontSize: 11, cursor: 'pointer',
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 4,
+                }}
+              ><X size={11} /> Dismiss</button>
+              <button
+                onClick={() => navigate(`/tasks/${t.id}`)}
+                title="Detalhe"
+                style={{
+                  padding: '6px 8px', borderRadius: 5,
+                  background: 'transparent', border: '1px solid var(--border)',
+                  color: 'var(--text-dim)', cursor: 'pointer',
+                  display: 'inline-flex', alignItems: 'center',
+                }}
+              ><Edit2 size={10} /></button>
             </div>
           </div>
         )
       })}
+    </div>
+  )
+}
+
+function OverviewTab({ employees, tasks, navigate, onApprove, onDismiss }) {
+  // Recent tasks: top 10 ordenadas por updated_at DESC, excluindo needs_human
+  const recentTasks = useMemo(() => {
+    return [...(tasks || [])]
+      .filter(t => t.status !== 'needs_human')
+      .sort((a, b) => new Date(b.updated_at || b.created_at) - new Date(a.updated_at || a.created_at))
+      .slice(0, 10)
+  }, [tasks])
+
+  // Pending approvals: tasks com status=needs_human
+  const pendingTasks = useMemo(() => {
+    return (tasks || []).filter(t => t.status === 'needs_human')
+      .sort((a, b) => new Date(b.updated_at || b.created_at) - new Date(a.updated_at || a.created_at))
+  }, [tasks])
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
+      {/* TEAM MEMBERS GRID — 4-col flat (não agrupado por dept) */}
+      <div>
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
+          gap: 10,
+        }}>
+          {employees.map(emp => (
+            <MemberCard
+              key={emp.id} emp={emp}
+              onClick={() => navigate(`/employees/${emp.id}`)}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* PENDING APPROVALS — só aparece se há */}
+      {pendingTasks.length > 0 && (
+        <div>
+          <SectionHeader
+            icon={<Hand size={12} color="#f59e0b" />}
+            label="Pending Approvals"
+            badge={pendingTasks.length}
+            badgeColor="#f59e0b"
+          />
+          <PendingApprovalsGrid
+            tasks={pendingTasks}
+            employees={employees}
+            navigate={navigate}
+            onApprove={onApprove}
+            onDismiss={onDismiss}
+          />
+        </div>
+      )}
+
+      {/* RECENT ACTIVITY */}
+      <div>
+        <SectionHeader label="Recent Activity" />
+        <RecentActivityTable tasks={recentTasks} employees={employees} navigate={navigate} />
+      </div>
+    </div>
+  )
+}
+
+function SectionHeader({ icon, label, badge, badgeColor = 'var(--text-dim)' }) {
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: 8,
+      marginBottom: 10, padding: '0 2px',
+    }}>
+      {icon}
+      <span style={{
+        fontSize: 10, fontWeight: 700, color: 'var(--text-dim)',
+        textTransform: 'uppercase', letterSpacing: '0.1em',
+        fontFamily: 'JetBrains Mono, monospace',
+      }}>{label}</span>
+      {badge != null && (
+        <span style={{
+          fontSize: 9, padding: '1px 6px', borderRadius: 3,
+          background: `${badgeColor}22`, color: badgeColor,
+          fontWeight: 700, fontFamily: 'JetBrains Mono, monospace',
+        }}>{badge}</span>
+      )}
     </div>
   )
 }
@@ -440,6 +732,10 @@ export default function EmployeesPage({ data: dataProp }) {
   const tab = searchParams.get('tab') || 'overview'
   const drillDept = searchParams.get('dept') || null
 
+  // Tasks: filtra pela vertical activa (multi-tenant)
+  const verticalFilter = activeVertical && activeVertical !== 'all' ? activeVertical : null
+  const { tasks, updateStatus } = useTasks({ vertical: verticalFilter })
+
   const setTab = (t) => {
     setSearchParams({ tab: t })
   }
@@ -458,6 +754,16 @@ export default function EmployeesPage({ data: dataProp }) {
   const totalCost = employees.reduce((s, e) => s + (e.cost?.current || 0), 0)
   const counts = countByDept(employees, activeVertical)
   const deptsActiveCount = Object.values(counts).filter(c => c > 0).length
+
+  // Approval handlers — marca done (approve) ou cancelled (dismiss)
+  const handleApprove = async (task) => {
+    await updateStatus(task.id, 'done')
+  }
+  const handleDismiss = async (task) => {
+    if (confirm(`Dispensar "${task.title}"? Será marcada como cancelled.`)) {
+      await updateStatus(task.id, 'cancelled')
+    }
+  }
 
   return (
     <div style={{ maxWidth: 1400, margin: '0 auto', padding: '4px 0 40px' }}>
@@ -511,7 +817,7 @@ export default function EmployeesPage({ data: dataProp }) {
         </div>
       ) : (
         <>
-          {tab === 'overview'    && <OverviewTab employees={employees} navigate={navigate} />}
+          {tab === 'overview'    && <OverviewTab employees={employees} tasks={tasks} navigate={navigate} onApprove={handleApprove} onDismiss={handleDismiss} />}
           {tab === 'departments' && <DepartmentsTab employees={employees} activeVertical={activeVertical} setDept={setDept} drillDept={drillDept} navigate={navigate} />}
           {tab === 'org-chart'   && <OrgChartTab employees={employees} activeVertical={activeVertical} navigate={navigate} />}
         </>
