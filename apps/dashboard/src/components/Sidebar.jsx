@@ -109,6 +109,7 @@ export default function Sidebar() {
           <NavItem to="/context"      label="Context"      icon={Library} />
           <NavItem to="/recipes"      label="Recipes"      icon={ChefHat} />
           <NavItem to="/skills"       label="Skills"       icon={Sparkles} />
+          <NavItem to="/schedules"    label="Schedules"    icon={Calendar} />
           <NavItem to="/integrations" label="Integrations" icon={Plug} />
           <NavItem to="/useful-tools" label="Useful Tools" icon={Sparkles} />
         </SidebarGroup>

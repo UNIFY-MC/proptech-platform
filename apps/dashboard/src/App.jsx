@@ -39,6 +39,7 @@ import GrowthRules from './views/GrowthRules.jsx'
 import MultiView from './views/MultiView.jsx'
 import TasksPage from './views/TasksPage.jsx'
 import MissionDetail from './views/MissionDetail.jsx'
+import SchedulesPage from './views/SchedulesPage.jsx'
 import ConnectionsPage from './views/ConnectionsPage.jsx'
 import CalendarPage from './views/CalendarPage.jsx'
 import SkillReviewPage from './views/SkillReviewPage.jsx'
@@ -122,6 +123,7 @@ export default function App() {
               <Route path="/recipes"      element={<RecipesPage data={data} />} />
               <Route path="/integrations" element={<IntegrationsPage data={data} />} />
               <Route path="/useful-tools" element={<UsefulToolsPage />} />
+              <Route path="/schedules"   element={<SchedulesPage />} />
               <Route path="/context"      element={<ContextPage />} />
               <Route path="/chat"         element={<ChatPage />} />
               <Route path="/files"        element={<FilesPage />} />
