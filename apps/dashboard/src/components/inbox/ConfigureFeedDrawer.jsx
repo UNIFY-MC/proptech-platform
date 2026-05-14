@@ -92,7 +92,7 @@ export default function ConfigureFeedDrawer({ onClose }) {
   const [addOpen, setAddOpen] = useState(false)
   const [editingSource, setEditingSource] = useState(null)
   const [runResult, setRunResult] = useState(null)
-  const { suggestions, follow } = useSuggestedInfluencers()
+  const { suggestions, follow, unfollow } = useSuggestedInfluencers()
   const { sources, toggle, remove, create, refresh } = useWatcherSources()
 
   const counts = useMemo(() => {
@@ -288,7 +288,9 @@ export default function ConfigureFeedDrawer({ onClose }) {
                   onRemove={() => { if (confirm(`Apagar "${src.label}"?`)) remove(src.id) }} />
               ))
             : visible.map(s => (
-                <SuggestionCard key={s.id} sugg={s} onFollow={() => follow(s).then(refresh)} />
+                <SuggestionCard key={s.id} sugg={s}
+                  onFollow={() => follow(s).then(refresh)}
+                  onUnfollow={() => unfollow(s).then(refresh)} />
               ))
           }
           {visible.length === 0 && (
@@ -312,7 +314,7 @@ export default function ConfigureFeedDrawer({ onClose }) {
   )
 }
 
-function SuggestionCard({ sugg, onFollow }) {
+function SuggestionCard({ sugg, onFollow, onUnfollow }) {
   const isFollowing = sugg.already_following
   const displayLabel = sugg.display_name || sugg.handle
   const platformMeta = PLATFORM_META[sugg.platform] || PLATFORM_META.web
@@ -371,17 +373,34 @@ function SuggestionCard({ sugg, onFollow }) {
           {platformMeta.label} · {handleLabel}{sugg.vertical ? ` · ${sugg.vertical}` : ''}
         </div>
       </div>
-      <button onClick={onFollow} disabled={isFollowing}
-        title={isFollowing ? 'A seguir' : 'Seguir'}
+      <button onClick={isFollowing ? onUnfollow : onFollow}
+        title={isFollowing ? 'A seguir — click para desseguir' : 'Seguir'}
         style={{
           width: 26, height: 26, borderRadius: '50%',
           background: isFollowing ? 'rgba(16,185,129,0.18)' : 'var(--bg-card)',
           border: '1px solid ' + (isFollowing ? '#10b981' : 'var(--border)'),
           color: isFollowing ? '#10b981' : 'var(--text-dim)',
-          cursor: isFollowing ? 'default' : 'pointer',
+          cursor: 'pointer',
           display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
           flexShrink: 0,
-        }}>{isFollowing ? <Check size={13} /> : <Plus size={13} />}</button>
+          transition: 'all 0.15s',
+        }}
+        onMouseEnter={e => {
+          if (isFollowing) {
+            e.currentTarget.style.background = 'rgba(239,68,68,0.18)'
+            e.currentTarget.style.borderColor = '#ef4444'
+            e.currentTarget.style.color = '#ef4444'
+          }
+        }}
+        onMouseLeave={e => {
+          if (isFollowing) {
+            e.currentTarget.style.background = 'rgba(16,185,129,0.18)'
+            e.currentTarget.style.borderColor = '#10b981'
+            e.currentTarget.style.color = '#10b981'
+          }
+        }}>
+        {isFollowing ? <Check size={13} className="check-icon" /> : <Plus size={13} />}
+      </button>
     </div>
   )
 }

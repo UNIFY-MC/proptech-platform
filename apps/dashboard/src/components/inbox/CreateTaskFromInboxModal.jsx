@@ -163,7 +163,10 @@ export default function CreateTaskFromInboxModal({ item, suggestion, kind: defau
         <div>
           <Label>Descrição (markdown ok)</Label>
           <textarea value={description} onChange={e => setDescription(e.target.value)}
-            rows={4} style={{ ...inputStyle, resize: 'vertical', fontFamily: 'inherit' }} />
+            rows={8} style={{
+              ...inputStyle, resize: 'vertical', fontFamily: 'inherit',
+              minHeight: 160, lineHeight: 1.5,
+            }} />
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>

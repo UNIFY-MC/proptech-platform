@@ -74,5 +74,23 @@ export function useSuggestedInfluencers() {
     return data
   }, [fetch])
 
-  return { suggestions, loading, follow, refresh: fetch }
+  // Unfollow: desactiva (não apaga) source associada à suggestion
+  const unfollow = useCallback(async (sugg) => {
+    if (!supabase) return
+    // Match estrito: suggested_id OR handle OR url
+    const filters = [`config->>suggested_id.eq.${sugg.id}`]
+    if (sugg.handle) filters.push(`config->>handle.eq.${sugg.handle}`)
+    if (sugg.url)    filters.push(`config->>url.eq.${sugg.url}`)
+    const { data: matched } = await supabase.schema('system').from('watcher_sources')
+      .select('id, active').or(filters.join(','))
+      .eq('active', true)
+    if (matched && matched.length > 0) {
+      const ids = matched.map(r => r.id)
+      await supabase.schema('system').from('watcher_sources')
+        .update({ active: false }).in('id', ids)
+    }
+    await fetch()
+  }, [fetch])
+
+  return { suggestions, loading, follow, unfollow, refresh: fetch }
 }
