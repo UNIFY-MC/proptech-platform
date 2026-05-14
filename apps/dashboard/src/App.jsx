@@ -37,6 +37,7 @@ import CalendarPage from './views/CalendarPage.jsx'
 import SkillReviewPage from './views/SkillReviewPage.jsx'
 import InfluencersPage from './views/InfluencersPage.jsx'
 import ApifyActorsPage from './views/ApifyActorsPage.jsx'
+import CompetitorsPage from './views/CompetitorsPage.jsx'
 import StubView from './views/StubView.jsx'
 import { useAppShellStore } from './store'
 
@@ -107,7 +108,8 @@ export default function App() {
               <Route path="/agentes"      element={<Agents data={data} />} />
               <Route path="/roadmap"      element={<Roadmap data={data} />} />
               <Route path="/watchers"     element={<Watchers data={data} />} />
-              <Route path="/competitors"  element={<Competitors data={data} />} />
+              <Route path="/competitors"        element={<CompetitorsPage />} />
+              <Route path="/competitors/legacy" element={<Competitors data={data} />} />
               <Route path="/verticais"    element={<Verticais data={data} />} />
               <Route path="/skills"       element={<SkillsPage data={data} />} />
               <Route path="/recipes"      element={<RecipesPage data={data} />} />
