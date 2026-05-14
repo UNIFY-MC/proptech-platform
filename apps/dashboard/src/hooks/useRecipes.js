@@ -47,6 +47,8 @@ export function useRecipes() {
       verticals:   input.verticals || ['*'],
       steps:       input.steps || [],
       trigger:     input.trigger || 'manual',
+      connectors:  input.connectors || [],
+      permissions: input.permissions || { writes_allowed: true, requires_approval: false, external_email: false },
       status:      'active',
       active:      true,
     }).select('*').single()

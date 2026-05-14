@@ -265,6 +265,43 @@ function RecipeDetailModal({ recipe, onClose, onRun }) {
           </div>
         )}
 
+        {/* Connectors (Sprint D) */}
+        {recipe.connectors?.length > 0 && (
+          <div style={{ marginTop: 16 }}>
+            <div style={{
+              fontSize: 9, fontWeight: 700, color: 'var(--text-dim)',
+              textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 6,
+              fontFamily: 'JetBrains Mono, monospace',
+            }}>Connectors ({recipe.connectors.length})</div>
+            <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+              {recipe.connectors.map((c) => (
+                <span key={c} style={{
+                  fontSize: 10, padding: '3px 8px', borderRadius: 4,
+                  background: 'rgba(16,185,129,0.15)', color: '#10b981',
+                  fontFamily: 'JetBrains Mono, monospace',
+                  display: 'inline-flex', alignItems: 'center', gap: 4,
+                }}><Lucide.Check size={9} />{c}</span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Permissions (Sprint D) */}
+        {recipe.permissions && (
+          <div style={{ marginTop: 16 }}>
+            <div style={{
+              fontSize: 9, fontWeight: 700, color: 'var(--text-dim)',
+              textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 6,
+              fontFamily: 'JetBrains Mono, monospace',
+            }}>Permissions</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <PermLine label="Writes allowed"          value={recipe.permissions.writes_allowed} />
+              <PermLine label="Requires human approval" value={recipe.permissions.requires_approval} />
+              <PermLine label="Can send external email" value={recipe.permissions.external_email} />
+            </div>
+          </div>
+        )}
+
         {/* Actions */}
         <div style={{ marginTop: 24, display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
           <button
@@ -287,11 +324,22 @@ function RecipeDetailModal({ recipe, onClose, onRun }) {
 }
 
 // ─── CreateRecipeModal ─────────────────────────────────────────────────────
-function CreateRecipeModal({ onClose, onSubmit }) {
+function CreateRecipeModal({ onClose, onSubmit, integrations = [] }) {
   const [form, setForm] = useState({
     name: '', description: '', category: 'general',
     verticals: ['*'], trigger: 'manual', steps: [],
+    connectors: [],
+    permissions: { writes_allowed: true, requires_approval: false, external_email: false },
   })
+  const [activeTab, setActiveTab] = useState('main')
+  const toggleConnector = (slug) => {
+    setForm(f => ({
+      ...f,
+      connectors: f.connectors.includes(slug)
+        ? f.connectors.filter(s => s !== slug)
+        : [...f.connectors, slug],
+    }))
+  }
   const [stepInput, setStepInput] = useState({
     name: '', type: 'agent', input: '', skills: '', retry_max: 2,
   })
@@ -473,6 +521,98 @@ function CreateRecipeModal({ onClose, onSubmit }) {
             </div>
           </Field>
 
+          {/* Tabs Connectors + Permissions */}
+          <div style={{ borderTop: '1px solid var(--border)', marginTop: 8, paddingTop: 12 }}>
+            <div style={{ display: 'flex', gap: 16, marginBottom: 12, borderBottom: '1px solid var(--border)' }}>
+              {['main', 'connectors', 'permissions'].map(t => (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => setActiveTab(t)}
+                  style={{
+                    background: 'none', border: 'none', cursor: 'pointer',
+                    padding: '6px 0', borderBottom: `2px solid ${activeTab === t ? 'var(--primary)' : 'transparent'}`,
+                    color: activeTab === t ? 'var(--text)' : 'var(--text-dim)',
+                    fontSize: 12, fontWeight: 600, marginBottom: -1,
+                    display: 'inline-flex', alignItems: 'center', gap: 6,
+                  }}
+                >
+                  {t === 'main' ? 'Main' : t === 'connectors' ? `Connectors` : 'Permissions'}
+                  {t === 'connectors' && (
+                    <span style={{
+                      fontSize: 10, padding: '1px 6px', borderRadius: 3,
+                      background: 'var(--bg-elevated)', color: 'var(--text-dim)',
+                    }}>{form.connectors.length}</span>
+                  )}
+                </button>
+              ))}
+            </div>
+
+            {activeTab === 'connectors' && (
+              <div>
+                <p style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 0, marginBottom: 10 }}>
+                  Todas as integrações ligadas são incluídas por defeito. Remove as que não precisas para esta task.
+                </p>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {integrations.length === 0 && (
+                    <span style={{ fontSize: 11, color: 'var(--text-dim)', fontStyle: 'italic' }}>
+                      Sem integrações connected.
+                    </span>
+                  )}
+                  {integrations.map(int => {
+                    const selected = form.connectors.length === 0 || form.connectors.includes(int.slug)
+                    return (
+                      <button
+                        key={int.slug}
+                        type="button"
+                        onClick={() => toggleConnector(int.slug)}
+                        style={{
+                          display: 'inline-flex', alignItems: 'center', gap: 5,
+                          padding: '4px 10px', borderRadius: 4,
+                          background: selected ? 'rgba(16,185,129,0.15)' : 'var(--bg-elevated)',
+                          border: `1px solid ${selected ? 'rgba(16,185,129,0.4)' : 'var(--border)'}`,
+                          color: selected ? '#10b981' : 'var(--text-dim)',
+                          fontSize: 11, cursor: 'pointer',
+                        }}
+                      >
+                        {selected ? <Lucide.Check size={10} /> : <X size={10} />}
+                        {int.name}
+                      </button>
+                    )
+                  })}
+                </div>
+                <div style={{
+                  marginTop: 12, padding: 10, borderRadius: 6,
+                  background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.3)',
+                  fontSize: 11, color: 'var(--text-dim)', lineHeight: 1.5,
+                }}>
+                  ⚠ Cook pode usar todas as tools destes connectors — incluindo writes — sem pedir
+                  permissão durante runs. Remove os que não queres que o agent aceda.
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'permissions' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <PermToggle
+                  label="Permitir writes (criar/editar/apagar)"
+                  checked={form.permissions.writes_allowed}
+                  onChange={(v) => setForm({ ...form, permissions: { ...form.permissions, writes_allowed: v } })}
+                />
+                <PermToggle
+                  label="Requer aprovação humana antes de cada step"
+                  checked={form.permissions.requires_approval}
+                  onChange={(v) => setForm({ ...form, permissions: { ...form.permissions, requires_approval: v } })}
+                />
+                <PermToggle
+                  label="Pode enviar email externo (Gmail/Resend)"
+                  checked={form.permissions.external_email}
+                  onChange={(v) => setForm({ ...form, permissions: { ...form.permissions, external_email: v } })}
+                />
+              </div>
+            )}
+          </div>
+
           <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 8 }}>
             <button type="button" onClick={onClose} style={{
               padding: '8px 14px', borderRadius: 6, background: 'transparent',
@@ -501,6 +641,43 @@ function Field({ label, children }) {
   )
 }
 
+function PermLine({ label, value }) {
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      fontSize: 11, padding: '4px 8px',
+      background: 'var(--bg-elevated)', borderRadius: 4,
+    }}>
+      <span style={{ color: 'var(--text-dim)' }}>{label}</span>
+      <span style={{
+        fontSize: 9, padding: '1px 6px', borderRadius: 3,
+        background: value ? 'rgba(16,185,129,0.15)' : 'rgba(156,163,175,0.15)',
+        color: value ? '#10b981' : 'var(--text-dim)',
+        fontFamily: 'JetBrains Mono, monospace', fontWeight: 700,
+      }}>{value ? 'ALLOWED' : 'DENIED'}</span>
+    </div>
+  )
+}
+
+function PermToggle({ label, checked, onChange }) {
+  return (
+    <label style={{
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      padding: '8px 10px', background: 'var(--bg-elevated)',
+      border: '1px solid var(--border)', borderRadius: 5,
+      cursor: 'pointer',
+    }}>
+      <span style={{ fontSize: 12, color: 'var(--text)' }}>{label}</span>
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        style={{ cursor: 'pointer' }}
+      />
+    </label>
+  )
+}
+
 const input = {
   padding: '7px 10px',
   background: 'var(--bg-elevated)',
@@ -514,9 +691,16 @@ const input = {
 }
 
 // ─── Main ─────────────────────────────────────────────────────────────────
+import { useIntegrations } from '../hooks/useIntegrations.js'
+
 export default function RecipesPage() {
   const { activeVertical } = useVerticalStore()
   const { items, loading, create, update, remove } = useRecipes()
+  const { items: integrations } = useIntegrations()
+  const connectedIntegrations = useMemo(
+    () => integrations.filter(i => i.status === 'connected'),
+    [integrations]
+  )
   const [search, setSearch] = useState('')
   const [activeCat, setActiveCat] = useState('all')
   const [scope, setScope] = useState(activeVertical || 'all')
@@ -562,6 +746,7 @@ export default function RecipesPage() {
         <CreateRecipeModal
           onClose={() => setCreateOpen(false)}
           onSubmit={create}
+          integrations={connectedIntegrations}
         />
       )}
 
