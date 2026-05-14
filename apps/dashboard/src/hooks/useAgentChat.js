@@ -30,6 +30,8 @@ export function useAgentChat(employeeId) {
       role: m.role,
       content: m.content,
       tool_calls: m.tool_calls || [],
+      agent_id: m.metadata?.agent,
+      auto_routed: m.metadata?.auto_routed,
       ts: new Date(m.created_at).getTime(),
     })))
   }, [])

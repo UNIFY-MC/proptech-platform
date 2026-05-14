@@ -97,40 +97,77 @@ export default function ChatPage() {
     return s.length > 60 ? s.slice(0, 57) + '…' : s
   }
 
+  const [actionPending, setActionPending] = useState(null)  // 'task' | 'calendar' | null
+
   async function handleCreateTask(message) {
-    const userMsg = messages.find(m => m.role === 'user' && m.ts < message.ts)
-    const lastUserMsg = [...messages].reverse().find(m => m.role === 'user' && m.ts <= message.ts) || userMsg
-    const title = shortTitleFrom(lastUserMsg?.content || message.content)
-    const taskId = await createTask({
-      title,
-      description_md: `**Do chat ${message.agent_id || 'agent'} (${new Date(message.ts).toLocaleString('pt-PT')}):**\n\n${message.content}`,
-      kind: 'task',
-      priority: 'normal',
-      vertical: activeVertical && activeVertical !== 'all' ? activeVertical.toLowerCase() : null,
-      owner_agent_id: message.agent_id || null,
-      source_kind: 'chat',
-    })
-    addToast(taskId ? { type: 'success', message: `Task criada · #${String(taskId).slice(0, 8)}` } : { type: 'error', message: 'Erro ao criar task' })
+    if (actionPending) return
+    setActionPending('task')
+    try {
+      const userMsg = messages.find(m => m.role === 'user' && m.ts < message.ts)
+      const lastUserMsg = [...messages].reverse().find(m => m.role === 'user' && m.ts <= message.ts) || userMsg
+      const title = shortTitleFrom(lastUserMsg?.content || message.content)
+      const taskId = await createTask({
+        title,
+        description_md: `**Do chat ${message.agent_id || 'agent'} (${new Date(message.ts).toLocaleString('pt-PT')}):**\n\n${message.content}`,
+        kind: 'task',
+        priority: 'normal',
+        vertical: activeVertical && activeVertical !== 'all' ? activeVertical.toLowerCase() : null,
+        owner_agent_id: message.agent_id || null,
+        source_kind: 'chat',
+      })
+      if (taskId) {
+        addToast({ type: 'success', message: `Task criada · a abrir Mission Detail…` })
+        setTimeout(() => navigate(`/tasks/${taskId}`), 700)
+      } else {
+        addToast({ type: 'error', message: 'Erro ao criar task — vê consola' })
+      }
+    } finally {
+      setActionPending(null)
+    }
   }
 
   async function handleAddToCalendar(message) {
-    const lastUserMsg = [...messages].reverse().find(m => m.role === 'user' && m.ts <= message.ts)
-    const title = shortTitleFrom(lastUserMsg?.content || message.content)
-    // Default: amanhã às 09:00 — utilizador pode ajustar em /calendar
+    if (actionPending) return
+    // Pede data ao user (default: amanhã 09:00)
     const tomorrow = new Date()
     tomorrow.setDate(tomorrow.getDate() + 1)
-    tomorrow.setHours(9, 0, 0, 0)
-    const eventId = await createEvent({
-      title,
-      description: message.content.slice(0, 1000),
-      starts_at: tomorrow.toISOString(),
-      all_day: false,
-      kind: 'manual',
-      owner_agent_id: message.agent_id || null,
-      vertical: activeVertical && activeVertical !== 'all' ? activeVertical.toLowerCase() : null,
-      color: '#8b5cf6',
-    })
-    addToast(eventId ? { type: 'success', message: `Adicionado ao calendário · ${tomorrow.toLocaleDateString('pt-PT')}` } : { type: 'error', message: 'Erro ao criar evento' })
+    const defaultDate = tomorrow.toISOString().slice(0, 10)  // YYYY-MM-DD
+    const dateStr = window.prompt(
+      'Data e hora para o evento (formato YYYY-MM-DD HH:MM):',
+      `${defaultDate} 09:00`
+    )
+    if (!dateStr) return  // user cancelled
+
+    const isoMatch = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})/)
+    if (!isoMatch) {
+      addToast({ type: 'error', message: 'Formato inválido — usa YYYY-MM-DD HH:MM' })
+      return
+    }
+    const when = new Date(`${isoMatch[1]}-${isoMatch[2]}-${isoMatch[3]}T${isoMatch[4]}:${isoMatch[5]}:00`)
+
+    setActionPending('calendar')
+    try {
+      const lastUserMsg = [...messages].reverse().find(m => m.role === 'user' && m.ts <= message.ts)
+      const title = shortTitleFrom(lastUserMsg?.content || message.content)
+      const eventId = await createEvent({
+        title,
+        description: message.content.slice(0, 1000),
+        starts_at: when.toISOString(),
+        all_day: false,
+        kind: 'manual',
+        owner_agent_id: message.agent_id || null,
+        vertical: activeVertical && activeVertical !== 'all' ? activeVertical.toLowerCase() : null,
+        color: '#8b5cf6',
+      })
+      if (eventId) {
+        addToast({ type: 'success', message: `Evento criado · ${when.toLocaleString('pt-PT')} · a abrir /calendar…` })
+        setTimeout(() => navigate(`/calendar?date=${when.toISOString().slice(0, 10)}`), 700)
+      } else {
+        addToast({ type: 'error', message: 'Erro ao criar evento — vê consola' })
+      }
+    } finally {
+      setActionPending(null)
+    }
   }
 
   // Filtra heads pela vertical activa (V2/V5/etc). 'all' mostra todos.

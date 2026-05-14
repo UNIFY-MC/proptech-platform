@@ -289,23 +289,28 @@ Deno.serve(async (req) => {
     const sb = createClient(SUPABASE_URL, SERVICE_KEY)
 
     // Sprint Q1 — auto-load contexto do agent activo (se houver)
-    let activeAgentId: string = body?.context?.active_employee_id || ""
+    const userPickedAgentId: string = body?.context?.active_employee_id || ""
+    let resolvedAgentId = userPickedAgentId
     let autoRouted = false
 
     // Sprint Q1.6 — auto-routing: se 'auto' ou vazio, classifica intent
-    if (!activeAgentId || activeAgentId === "auto") {
-      activeAgentId = await routeIntent(userMessage)
+    if (!resolvedAgentId || resolvedAgentId === "auto") {
+      resolvedAgentId = await routeIntent(userMessage)
       autoRouted = true
     }
 
-    const agentContext = await loadAgentContext(sb, activeAgentId, 6000)
+    const agentContext = await loadAgentContext(sb, resolvedAgentId, 6000)
     const systemPrompt = buildSystemPrompt(agentContext)
 
-    // Sprint Q1.5 — persistência de chat threads
+    // Sprint Q1.5 + Q1.6 fix — thread guardada sob picker value (não agent resolvido)
+    // Isto preserva a conversa quando o user navega para fora e volta com 'auto'.
+    // O context loading usa o resolved (compliance-condo, bia, ...) mas o thread_id
+    // fica sob 'auto' (ou o valor manual que o user escolheu).
+    const threadEmployeeId = userPickedAgentId || resolvedAgentId
     let threadId: string | null = body?.thread_id || null
-    if (!threadId && activeAgentId) {
+    if (!threadId && threadEmployeeId) {
       const { data: tid } = await sb.rpc("chat_thread_open", {
-        p_employee_id: activeAgentId,
+        p_employee_id: threadEmployeeId,
         p_force_new: false,
       })
       threadId = (tid as string) || null
@@ -361,14 +366,14 @@ Deno.serve(async (req) => {
       messages.push({ role: "user", content: toolResults })
     }
 
-    // Persiste resposta do assistant
+    // Persiste resposta do assistant — guarda o resolved agent no metadata
     if (threadId) {
       await sb.rpc("chat_message_add", {
         p_thread_id: threadId,
         p_role: "assistant",
         p_content: finalText.trim() || "(sem resposta)",
         p_tool_calls: toolCallsLog.length > 0 ? toolCallsLog : null,
-        p_metadata: { agent: activeAgentId, context_chars: agentContext.length },
+        p_metadata: { agent: resolvedAgentId, auto_routed: autoRouted, context_chars: agentContext.length },
       })
     }
 
@@ -376,7 +381,7 @@ Deno.serve(async (req) => {
       reply: finalText.trim() || "(sem resposta)",
       tool_calls: toolCallsLog,
       thread_id: threadId,
-      agent_id: activeAgentId,
+      agent_id: resolvedAgentId,
       auto_routed: autoRouted,
     }), { headers: { ...cors, "Content-Type": "application/json" } })
 
