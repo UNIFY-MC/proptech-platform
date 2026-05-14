@@ -1,0 +1,61 @@
+-- 20260514_useful_tools_kopkai.sql
+-- Substitui o seed curado anterior pelos 40 tools reais da formação
+-- "KopkAI Claude Code Build Day" + Vapi (voice agents) pedido pelo Mário.
+-- 8 categorias reais: ia-modelos, backend-deploy, comunicacao,
+-- automacao-scraping, speech-transcricao, produtividade-mcp,
+-- ide-editores, pagamentos (+ voice-agents para Vapi).
+
+-- 1. Limpa seed genérico anterior
+DELETE FROM system.useful_tools;
+
+-- 2. Seed real KopkAI (40 tools) + Vapi
+INSERT INTO system.useful_tools (slug, name, description, category, url, domain, brand_color, verticals, status, source, display_order) VALUES
+-- IA e Modelos (8)
+('claude-ai',          'Claude.ai',         'Interface web do Claude. Chat no browser para conversas, análise de documentos e exploração de ideias.', 'ia-modelos', 'https://claude.ai',                  'claude.ai',          '#D97757', '{*}', 'integrated',  'KopkAI Build Day', 10),
+('claude-code-cli',    'Claude Code',       'Agente de IA no terminal. Lê ficheiros, escreve código, executa comandos e constrói autonomamente.',  'ia-modelos', 'https://claude.ai/code',             'claude.com',         '#D97757', '{*}', 'integrated',  'KopkAI Build Day', 11),
+('claude-api',         'Claude API',        'Integra o Claude nas tuas aplicações via chamadas HTTP. Controlo total sobre contexto, modelo e output.','ia-modelos','https://www.anthropic.com/api',      'anthropic.com',      '#D97757', '{*}', 'integrated',  'KopkAI Build Day', 12),
+('openai-embeddings',  'OpenAI Embeddings', 'Converte texto em vetores para memória semântica. Combina com Pinecone para pesquisa por significado.','ia-modelos','https://platform.openai.com/docs/guides/embeddings', 'openai.com', '#10A37F', '{*}', 'discover',   'KopkAI Build Day', 13),
+('perplexity',         'Perplexity',        'Deep search com síntese de múltiplas fontes em tempo real. Ideal para análises de mercado.',         'ia-modelos', 'https://perplexity.ai',              'perplexity.ai',      '#22B5BF', '{*}', 'discover',    'KopkAI Build Day', 14),
+('elevenlabs',         'ElevenLabs',        'Geração e clonagem de voz realista via API. Para podcasts automáticos e conteúdo de áudio.',         'ia-modelos', 'https://elevenlabs.io',              'elevenlabs.io',      '#000000', '{*}', 'discover',    'KopkAI Build Day', 15),
+('kie-ai',             'Kie.ai',            'Acesso unificado a Midjourney, Veo 3, Runway e Suno numa única chave de API a preço acessível.',     'ia-modelos', 'https://kie.ai',                     'kie.ai',             '#3B82F6', '{*}', 'discover',    'KopkAI Build Day', 16),
+('whisper',            'Whisper',           'Modelo de transcrição da OpenAI instalado localmente. Sem custo por chamada — perfeito para vídeos.', 'ia-modelos', 'https://github.com/openai/whisper',  'openai.com',         '#10A37F', '{*}', 'discover',    'KopkAI Build Day', 17),
+-- Backend, Base de Dados e Deploy (6)
+('supabase-tool',      'Supabase',          'PostgreSQL + autenticação + Edge Functions + Storage. O backend completo numa única plataforma.',     'backend-deploy', 'https://supabase.com',           'supabase.com',       '#3ECF8E', '{*}', 'integrated',  'KopkAI Build Day', 20),
+('vercel-tool',        'Vercel',            'Deploy automático a cada commit no GitHub. Zero configuração de servidores para projectos Next.js.', 'backend-deploy', 'https://vercel.com',             'vercel.com',         '#000000', '{*}', 'integrated',  'KopkAI Build Day', 21),
+('github-tool',        'GitHub',            'Controlo de versões e repositórios. Ligado ao Vercel para deploy automático a cada push.',           'backend-deploy', 'https://github.com',             'github.com',         '#181717', '{*}', 'integrated',  'KopkAI Build Day', 22),
+('hostinger',          'Hostinger',         'VPS e domínios. Servidores para serviços que precisam de estar 24/7 online como n8n ou Evolution API.','backend-deploy','https://hostinger.com',          'hostinger.com',      '#673DE6', '{*}', 'discover',    'KopkAI Build Day', 23),
+('pinecone',           'Pinecone',          'Base de dados vetorial para memória de longo prazo em agentes de IA. Pesquisa semântica rápida.',     'backend-deploy', 'https://pinecone.io',            'pinecone.io',        '#000000', '{*}', 'discover',    'KopkAI Build Day', 24),
+('posthog-tool',       'PostHog',           'Analytics de produto open-source. Percebe o que os utilizadores fazem na tua aplicação.',             'backend-deploy', 'https://posthog.com',            'posthog.com',        '#F9BD2B', '{*}', 'discover',    'KopkAI Build Day', 25),
+-- Comunicação e Messaging (6 + Vapi)
+('evolution-api',      'Evolution API',     'Cria um agente de WhatsApp com o teu próprio número. Funciona 24/7 num VPS.',                       'comunicacao', 'https://evolution-api.com',          'evolution-api.com',  '#10B981', '{*}', 'evaluating',  'KopkAI Build Day', 30),
+('unipile',            'Unipile',           'WhatsApp, LinkedIn, Facebook, Instagram e email — tudo numa única API unificada.',                  'comunicacao', 'https://unipile.com',                'unipile.com',        '#0EA5E9', '{*}', 'discover',    'KopkAI Build Day', 31),
+('twilio-tool',        'Twilio',            'Notificações SMS e chamadas automáticas. Quando algo acontece, o teu sistema avisa por telefone.',  'comunicacao', 'https://twilio.com',                 'twilio.com',         '#F22F46', '{*}', 'discover',    'KopkAI Build Day', 32),
+('resend-tool',        'ReSend',            'Emails transacionais de confirmação, follow-up e onboarding. API simples e moderna.',                'comunicacao', 'https://resend.com',                 'resend.com',         '#000000', '{*}', 'integrated',  'KopkAI Build Day', 33),
+('blotato',            'Blotato',           'O Claude gera o conteúdo, o Blotato publica automaticamente em todas as redes sociais.',             'comunicacao', 'https://blotato.com',                'blotato.com',        '#8B5CF6', '{*}', 'discover',    'KopkAI Build Day', 34),
+('buffer',             'Buffer',            'Agenda posts gerados pelo Claude Code com preview antes de publicar nas redes sociais.',             'comunicacao', 'https://buffer.com',                 'buffer.com',         '#168EEA', '{*}', 'discover',    'KopkAI Build Day', 35),
+('vapi',               'Vapi',              'Agentes de voz que conversam em tempo real via telefone. Voice AI infrastructure pronta para produção.','comunicacao','https://vapi.ai',                'vapi.ai',            '#5DFC8B', '{v2,v5,v10}', 'shortlisted', 'Mário', 36),
+-- Automação, Scraping e Browser (5)
+('n8n-tool',           'n8n',               'Automação visual que liga qualquer serviço com qualquer outro. Self-hosted, open-source. O mais poderoso.','automacao-scraping','https://n8n.io',          'n8n.io',             '#EA4B71', '{*}', 'evaluating',  'KopkAI Build Day', 40),
+('apify-tool',         'Apify',             'Scrapers prontos para LinkedIn, Instagram, Google Maps e mais. Scraping como serviço.',              'automacao-scraping', 'https://apify.com',          'apify.com',          '#FF6B35', '{*}', 'integrated',  'KopkAI Build Day', 41),
+('playwright',         'Playwright',        'O Claude Code controla um browser real. Clica, preenche formulários, navega e testa interfaces.',      'automacao-scraping', 'https://playwright.dev',     'playwright.dev',     '#2EAD33', '{*}', 'evaluating',  'KopkAI Build Day', 42),
+('tally-forms',        'Tally',             'Formulários bonitos que disparam automações via webhook quando submetidos. Zero código.',            'automacao-scraping', 'https://tally.so',           'tally.so',           '#000000', '{*}', 'discover',    'KopkAI Build Day', 43),
+('tavily',             'Tavily',            'Motor de pesquisa desenhado para LLMs. Resultados limpos e estruturados, prontos para agentes.',       'automacao-scraping', 'https://tavily.com',         'tavily.com',         '#3B82F6', '{*}', 'discover',    'KopkAI Build Day', 44),
+-- Speech, Transcrição e Reuniões (4)
+('wispr-flow',         'Wispr Flow',        'Ditas em voz alta e o texto aparece em qualquer campo do computador. Perfeito para prompts longos.', 'speech-transcricao', 'https://wisprflow.ai',      'wisprflow.ai',       '#A78BFA', '{*}', 'discover',    'KopkAI Build Day', 50),
+('gemini-notes',       'Gemini Notes',      'Transcreve e resume reuniões do Google Meet automaticamente. Integrado no ecossistema Google.',     'speech-transcricao', 'https://workspace.google.com/products/meet/', 'google.com', '#4285F4', '{*}', 'discover', 'KopkAI Build Day', 51),
+('fireflies',          'Fireflies',         'Transcrição, resumo e action items automáticos de qualquer reunião. Integrável com calendários.',    'speech-transcricao', 'https://fireflies.ai',      'fireflies.ai',       '#E91E63', '{*}', 'discover',    'KopkAI Build Day', 52),
+('fathom',             'Fathom',            'Transcrição e resumo de reuniões com IA. Grátis para uso individual, excelente para equipas.',       'speech-transcricao', 'https://fathom.video',      'fathom.video',       '#3B82F6', '{*}', 'discover',    'KopkAI Build Day', 53),
+-- Produtividade e Conectores MCP (7)
+('notion-tool',        'Notion',            'Gestão de projectos, tarefas e documentação. Ligado ao Claude Code via MCP para ler e escrever páginas.','produtividade-mcp','https://notion.so',         'notion.so',          '#000000', '{*}', 'integrated',  'KopkAI Build Day', 60),
+('google-drive-tool',  'Google Drive',      'Documentos e folhas de cálculo. O Claude Code acede directamente via MCP configurado no claude.ai.',  'produtividade-mcp', 'https://drive.google.com',  'drive.google.com',   '#4285F4', '{*}', 'discover',    'KopkAI Build Day', 61),
+('gmail-tool',         'Gmail',             'Lê emails, redige respostas e organiza a caixa de entrada. Ligado via conector MCP.',                'produtividade-mcp', 'https://gmail.com',         'gmail.com',          '#EA4335', '{*}', 'discover',    'KopkAI Build Day', 62),
+('google-calendar-tool','Google Calendar',  'Vê disponibilidade, cria eventos e gere o calendário. Ligado via conector MCP.',                     'produtividade-mcp', 'https://calendar.google.com','calendar.google.com','#4285F4', '{*}', 'discover',    'KopkAI Build Day', 63),
+('slack',              'Slack',             'Envia mensagens, lê canais e cria drafts automaticamente. Ligado via conector MCP.',                  'produtividade-mcp', 'https://slack.com',         'slack.com',          '#4A154B', '{*}', 'discover',    'KopkAI Build Day', 64),
+('miro',               'Miro',              'Quadros colaborativos para brainstorming, fluxogramas e diagramas visuais.',                          'produtividade-mcp', 'https://miro.com',          'miro.com',           '#FFD02F', '{*}', 'discover',    'KopkAI Build Day', 65),
+('canva-tool',         'Canva',             'Gera e edita designs. Ligado via conector MCP para criar conteúdo visual automaticamente.',          'produtividade-mcp', 'https://canva.com',         'canva.com',          '#00C4CC', '{*}', 'integrated',  'KopkAI Build Day', 66),
+-- IDE e Editores (3)
+('vscode',             'VS Code',           'Editor de código com extensão oficial do Claude Code. Painel lateral com diffs inline em tempo real.','ide-editores','https://code.visualstudio.com', 'visualstudio.com',   '#007ACC', '{*}', 'integrated',  'KopkAI Build Day', 70),
+('cursor-tool',        'Cursor',            'Editor de código com suporte nativo para IA. O melhor de dois mundos: completions + agente Claude Code.','ide-editores','https://cursor.com',          'cursor.com',         '#000000', '{*}', 'integrated',  'KopkAI Build Day', 71),
+('warp',               'Warp',              'Terminal moderno reinventado com blocos de output, IA integrada e interface visual.',               'ide-editores',     'https://warp.dev',           'warp.dev',           '#01A4FF', '{*}', 'discover',    'KopkAI Build Day', 72),
+-- Pagamentos (1)
+('stripe-tool',        'Stripe',            'Processamento de pagamentos online. Webhooks automáticos quando um pagamento é confirmado.',          'pagamentos',      'https://stripe.com',         'stripe.com',         '#635BFF', '{v8,v9,v10}', 'discover', 'KopkAI Build Day', 80);

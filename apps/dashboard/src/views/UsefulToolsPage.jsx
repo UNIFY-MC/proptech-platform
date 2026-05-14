@@ -18,16 +18,16 @@ const VERTICAL_LABEL = {
 }
 
 const CATEGORIES = [
-  { id: 'ai-coding',  label: 'AI Coding',   color: '#6b4fa0' },
-  { id: 'ai-content', label: 'AI Content',  color: '#10b981' },
-  { id: 'ai-media',   label: 'AI Media',    color: '#ec4899' },
-  { id: 'design',     label: 'Design',      color: '#3b82f6' },
-  { id: 'data',       label: 'Data',        color: '#f59e0b' },
-  { id: 'dev-infra',  label: 'Dev Infra',   color: '#64748b' },
-  { id: 'workflow',   label: 'Workflow',    color: '#8b5cf6' },
-  { id: 'marketing',  label: 'Marketing',   color: '#ef4444' },
-  { id: 'proptech',   label: 'PropTech PT', color: '#0ea5e9' },
-  { id: 'general',    label: 'Outros',      color: '#9ca3af' },
+  { id: 'ia-modelos',         label: 'IA e Modelos',         color: '#D97757' },
+  { id: 'backend-deploy',     label: 'Backend & Deploy',     color: '#3ECF8E' },
+  { id: 'comunicacao',        label: 'Comunicação',          color: '#3B82F6' },
+  { id: 'automacao-scraping', label: 'Automação & Scraping', color: '#EA4B71' },
+  { id: 'speech-transcricao', label: 'Speech & Reuniões',    color: '#A78BFA' },
+  { id: 'produtividade-mcp',  label: 'Produtividade & MCP',  color: '#F59E0B' },
+  { id: 'ide-editores',       label: 'IDE & Editores',       color: '#007ACC' },
+  { id: 'pagamentos',         label: 'Pagamentos',           color: '#635BFF' },
+  { id: 'voice-agents',       label: 'Voice Agents',         color: '#5DFC8B' },
+  { id: 'general',            label: 'Outros',               color: '#9ca3af' },
 ]
 
 const STATUS_META = {
