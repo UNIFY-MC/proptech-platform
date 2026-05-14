@@ -41,6 +41,11 @@ import TasksPage from './views/TasksPage.jsx'
 import MissionDetail from './views/MissionDetail.jsx'
 import SchedulesPage from './views/SchedulesPage.jsx'
 import TriggersPage from './views/TriggersPage.jsx'
+import ProjectsPage from './views/ProjectsPage.jsx'
+import ClientsPage from './views/ClientsPage.jsx'
+import ClientsSetupPage from './views/ClientsSetupPage.jsx'
+import ClientsEmailPage from './views/ClientsEmailPage.jsx'
+import ClientsReportingPage from './views/ClientsReportingPage.jsx'
 import ConnectionsPage from './views/ConnectionsPage.jsx'
 import CalendarPage from './views/CalendarPage.jsx'
 import SkillReviewPage from './views/SkillReviewPage.jsx'
@@ -138,13 +143,16 @@ export default function App() {
               <Route path="/departments"         element={<Navigate to="/employees?tab=departments" replace />} />
               <Route path="/departments/:slug"   element={<DepartmentRedirect />} />
               <Route path="/multiview"           element={<MultiView />} />
-              <Route path="/clients"      element={<StubView title="Clients" />} />
+              <Route path="/clients"           element={<ClientsPage />} />
+              <Route path="/clients/setup"     element={<ClientsSetupPage />} />
+              <Route path="/clients/email"     element={<ClientsEmailPage />} />
+              <Route path="/clients/reporting" element={<ClientsReportingPage />} />
               <Route path="/connections"  element={<ConnectionsPage />} />
               <Route path="/calendar"     element={<CalendarPage />} />
               <Route path="/skills/review" element={<SkillReviewPage />} />
               <Route path="/influencers"   element={<InfluencersPage />} />
               <Route path="/apify-actors"  element={<ApifyActorsPage />} />
-              <Route path="/projects"     element={<StubView title="Projects" />} />
+              <Route path="/projects"     element={<ProjectsPage />} />
               <Route path="/tasks"        element={<TasksPage />} />
               <Route path="/tasks/:id"    element={<MissionDetail />} />
               {/* Legacy live views */}
