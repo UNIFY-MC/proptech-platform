@@ -3,7 +3,7 @@
 
 import { useState, useMemo } from 'react'
 import {
-  X, Plus, Check, Sparkles, Eye, Edit2, Trash2, Play, Settings,
+  X, Plus, Check, Sparkles, Eye, EyeOff, Edit2, Trash2, Play, Settings,
   Instagram, Linkedin, Twitter, Globe, Rss, Youtube, Music, MessageSquare,
 } from 'lucide-react'
 import { useSuggestedInfluencers } from '../../hooks/useSuggestedInfluencers.js'
@@ -78,6 +78,15 @@ async function runApifySource(sourceId) {
   return await res.json()
 }
 
+async function synthesize(sinceHours = 24, vertical = null) {
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/feed-synthesize`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${ANON_KEY}`, 'apikey': ANON_KEY },
+    body: JSON.stringify({ since_hours: sinceHours, vertical }),
+  })
+  return await res.json()
+}
+
 export default function ConfigureFeedDrawer({ onClose }) {
   const [tab, setTab] = useState('all')
   const [addOpen, setAddOpen] = useState(false)
@@ -87,18 +96,24 @@ export default function ConfigureFeedDrawer({ onClose }) {
   const { sources, toggle, remove, create, refresh } = useWatcherSources()
 
   const counts = useMemo(() => {
-    const c = { all: suggestions.length, following: sources.filter(s => s.active).length }
+    // Following = TODAS as sources (active OU não), para podermos ver/gerir
+    const c = { all: suggestions.length, following: sources.length }
     for (const s of suggestions) c[s.sector] = (c[s.sector] || 0) + 1
     return c
   }, [suggestions, sources])
 
   const visible = useMemo(() => {
-    if (tab === 'following') return sources
+    if (tab === 'following') return sources  // todas (active+inactive)
     if (tab === 'all') return suggestions
     return suggestions.filter(s => s.sector === tab)
   }, [tab, suggestions, sources])
 
-  const totalActive = counts.following
+  const totalActive = sources.filter(s => s.active).length
+  const totalFollowing = sources.length
+
+  // Determina se Watch All ou Unwatch All deve aparecer (todos da tab actual já seguidos?)
+  const tabSuggestions = tab === 'all' || tab === 'following' ? suggestions : suggestions.filter(s => s.sector === tab)
+  const allFollowed = tabSuggestions.length > 0 && tabSuggestions.every(s => s.already_following)
 
   async function handleRun(sourceId) {
     setRunResult({ source_id: sourceId, loading: true })
@@ -115,6 +130,27 @@ export default function ConfigureFeedDrawer({ onClose }) {
     const toFollow = suggestions.filter(s => !s.already_following && (tab === 'all' || s.sector === tab))
     for (const s of toFollow) await follow(s)
     await refresh()
+  }
+
+  async function handleUnwatchAll() {
+    if (!confirm(`Desactivar TODAS as ${totalActive} sources activas?\nNão apaga — só pausa. Podes reactivar a qualquer altura.`)) return
+    if (!supabase) return
+    // Desactiva todas as sources active
+    for (const s of sources.filter(x => x.active)) {
+      // eslint-disable-next-line no-await-in-loop
+      await toggle(s.id, false)
+    }
+    await refresh()
+  }
+
+  async function handleSynthesize() {
+    setRunResult({ source_id: 'synthesize', loading: true })
+    try {
+      const res = await synthesize(24, tab !== 'all' && tab !== 'following' ? tab : null)
+      setRunResult({ source_id: 'synthesize', result: res })
+    } catch (e) {
+      setRunResult({ source_id: 'synthesize', error: String(e) })
+    }
   }
 
   return (
@@ -146,12 +182,12 @@ export default function ConfigureFeedDrawer({ onClose }) {
           }}>
             <Plus size={12} /> Add custom
           </button>
-          <button style={{
+          <button onClick={handleSynthesize} style={{
             background: 'var(--bg-elevated)', border: '1px solid var(--border)',
             padding: '6px 14px', borderRadius: 99, cursor: 'pointer',
             fontSize: '0.72rem', fontWeight: 600,
             display: 'inline-flex', alignItems: 'center', gap: 5, color: 'var(--text)',
-          }} onClick={() => alert('Synthesize: meta-resumo cross-source (sprint próximo)')}>
+          }} title="Meta-resumo IA das últimas 24h">
             <Sparkles size={12} /> Synthesize
           </button>
           <div style={{ flex: 1 }} />
@@ -181,14 +217,25 @@ export default function ConfigureFeedDrawer({ onClose }) {
             )
           })}
           <div style={{ flex: 1 }} />
-          {tab !== 'following' && (
+          {tab !== 'following' && !allFollowed && (
             <button onClick={handleFollowAll} style={{
               background: 'var(--primary)', color: '#fff', border: 'none',
               padding: '6px 14px', borderRadius: 99, cursor: 'pointer',
               fontSize: '0.72rem', fontWeight: 600,
               display: 'inline-flex', alignItems: 'center', gap: 5,
             }}>
-              <Eye size={12} /> Watch All
+              <Eye size={12} /> Watch All ({tabSuggestions.filter(s => !s.already_following).length})
+            </button>
+          )}
+          {(tab === 'following' || allFollowed) && totalActive > 0 && (
+            <button onClick={handleUnwatchAll} style={{
+              background: 'transparent', color: 'var(--danger)',
+              border: '1px solid var(--danger)',
+              padding: '6px 14px', borderRadius: 99, cursor: 'pointer',
+              fontSize: '0.72rem', fontWeight: 600,
+              display: 'inline-flex', alignItems: 'center', gap: 5,
+            }}>
+              <EyeOff size={12} /> Unwatch All ({totalActive})
             </button>
           )}
         </div>
@@ -472,6 +519,27 @@ function AddCustomModal({ onClose, onSubmit }) {
               fontSize: '0.72rem', fontWeight: mode === m.id ? 600 : 500,
             }}>{m.label}</button>
           ))}
+        </div>
+
+        <div style={{
+          fontSize: '0.65rem', color: 'var(--text-dim)',
+          background: 'var(--bg-elevated)',
+          padding: '8px 12px', borderRadius: 6,
+          lineHeight: 1.5,
+        }}>
+          {mode === 'apify' ? (
+            <>
+              <strong style={{ color: 'var(--text)' }}>Apify recomendado para IG / X / LinkedIn / TikTok.</strong>{' '}
+              Para seguir um Instagram específico: escolhe <code>apify/instagram-scraper</code>, no JSON input põe{' '}
+              <code>{`{"username": ["handle_do_alvo"], "resultsLimit": 5}`}</code> (sem @, só o handle).
+            </>
+          ) : (
+            <>
+              <strong style={{ color: 'var(--text)' }}>Simple = sem Apify.</strong>{' '}
+              Web/RSS funciona sem custo. Instagram via Graph API só funciona com a tua própria página
+              (precisa <code>IG_GRAPH_TOKEN</code>). Para concorrentes, usa Apify (modo acima).
+            </>
+          )}
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>

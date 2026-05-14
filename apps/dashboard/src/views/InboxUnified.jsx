@@ -21,6 +21,7 @@ import InboxItemDrawer from '../components/inbox/InboxItemDrawer'
 import AskAnythingBar from '../components/inbox/AskAnythingBar.jsx'
 import ExpandableInboxRow from '../components/inbox/ExpandableInboxRow.jsx'
 import ConfigureFeedDrawerInner from '../components/inbox/ConfigureFeedDrawer.jsx'
+import CreateTaskFromInboxModal from '../components/inbox/CreateTaskFromInboxModal.jsx'
 import { useTasks } from '../hooks/useTasks.js'
 import { useNavigate } from 'react-router-dom'
 
@@ -87,42 +88,11 @@ export default function InboxUnified() {
   const { openDrawer, closeDrawer } = useDrawer()
   const { primeiroNome, stats } = useUserContext()
   const { bySlug: watcherBySlug } = useWatcherProfiles()
-  const { createTask } = useTasks()
   const navigate = useNavigate()
+  const [taskModalState, setTaskModalState] = useState(null)  // { kind, item, suggestion }
 
-  async function handleCreateTask({ kind, item, suggestion }) {
-    const isEmployee = kind === 'employee'
-    const defaultTitle = suggestion || item.title
-    const titlePrompt = isEmployee
-      ? `Task para empregado (a partir de "${item.title}")\nTítulo:`
-      : `Nova ideia (a partir de "${item.title}")\nTítulo:`
-    const title = window.prompt(titlePrompt, defaultTitle)
-    if (!title) return
-    const verticalGuess = item.vertical || null
-    const taskId = await createTask({
-      title,
-      description_md: item.raw?.payload?.why_it_matters
-                   || item.raw?.payload?.summary_md
-                   || item.raw?.payload?.caption
-                   || item.raw?.payload?.title
-                   || item.body
-                   || null,
-      kind: isEmployee ? 'task' : 'idea',
-      vertical: verticalGuess,
-      source_kind: 'inbox_item',
-      source_id: item.raw?.id || null,
-      tags: ['from-inbox', item.raw?.kind].filter(Boolean),
-      payload: {
-        source_url: item.raw?.source_url,
-        source_name: item.raw?.source_name,
-        suggestion,
-      },
-    })
-    if (taskId) {
-      if (window.confirm('Task criada. Ir para /tasks?')) navigate('/tasks')
-    } else {
-      alert('Erro a criar task — verifica consola')
-    }
+  function handleCreateTask({ kind, item, suggestion }) {
+    setTaskModalState({ kind, item, suggestion })
   }
 
   // Daily Roundup mais recente (não dismissed)
@@ -334,6 +304,21 @@ export default function InboxUnified() {
         <RoundupHistoryDrawer
           roundups={inboxItems.filter(i => i.kind === 'roundup' || i.item_type === 'daily_roundup')}
           onClose={() => setShowHistory(false)}
+        />
+      )}
+
+      {/* Modal criar task — substitui window.prompt antigo */}
+      {taskModalState && (
+        <CreateTaskFromInboxModal
+          item={taskModalState.item}
+          suggestion={taskModalState.suggestion}
+          kind={taskModalState.kind}
+          onClose={() => setTaskModalState(null)}
+          onCreated={(taskId) => {
+            setTaskModalState(null)
+            // Toast: task criada com link para /tasks
+            if (window.confirm('Task criada. Ir para /tasks?')) navigate('/tasks')
+          }}
         />
       )}
     </div>
