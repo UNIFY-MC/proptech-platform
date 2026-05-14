@@ -52,10 +52,93 @@ interface TaskExecuteResult {
   steps_completed: string[]
   output_md: string
   needs_human_reason?: string
+  delegated_to?: string  // se a skill não tem connector e o agent escolheu delegar
 }
 
-async function runAgent(agentId: string, task: Record<string, unknown>): Promise<TaskExecuteResult> {
-  const sysPrompt = AGENT_SYSTEM_PROMPTS[agentId] || AGENT_SYSTEM_PROMPTS.default
+interface SkillRow {
+  tag: string
+  name: string
+  description?: string
+  connectors?: string[]
+  receipt_md?: string
+  prompt_template?: string
+  fallback_agent?: string
+  status: string
+}
+
+// Lê context_files do Supabase Storage e devolve concatenação para injecção
+async function readContextFiles(sb: any, paths: string[]): Promise<string> {
+  if (!paths || paths.length === 0) return ""
+  const chunks: string[] = []
+  for (const p of paths.slice(0, 5)) {  // max 5 ficheiros
+    try {
+      // Path esperado "bucket/path/to/file.md"
+      const [bucket, ...rest] = p.split("/")
+      const filePath = rest.join("/")
+      if (!bucket || !filePath) continue
+      const { data, error } = await sb.storage.from(bucket).download(filePath)
+      if (error || !data) continue
+      const text = await data.text()
+      chunks.push(`### ${p}\n${text.slice(0, 4000)}`)
+    } catch { /* skip */ }
+  }
+  return chunks.join("\n\n")
+}
+
+// Garante que cada skill da task existe em system.skills + tem receipt completo.
+// Dispara skill-create lazy se faltam receipts.
+async function resolveSkills(sb: any, skillTags: string[]): Promise<SkillRow[]> {
+  if (!skillTags || skillTags.length === 0) return []
+  const resolved: SkillRow[] = []
+  for (const tag of skillTags) {
+    // ensure (cria stub se não existe)
+    await sb.schema("system").rpc("skill_ensure", { p_tag: tag })
+
+    // lookup
+    let { data: skill } = await sb.schema("system").from("skills")
+      .select("tag,name,description,connectors,receipt_md,prompt_template,fallback_agent,status")
+      .eq("tag", tag.toLowerCase()).maybeSingle()
+
+    // Se ainda pending_receipt, dispara skill-create (fire-and-wait)
+    if (skill && skill.status === "pending_receipt") {
+      try {
+        await fetch(`${SUPABASE_URL}/functions/v1/skill-create`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${SERVICE_KEY}` },
+          body: JSON.stringify({ skill_tag: tag }),
+        })
+        // re-fetch após geração
+        const { data: refreshed } = await sb.schema("system").from("skills")
+          .select("tag,name,description,connectors,receipt_md,prompt_template,fallback_agent,status")
+          .eq("tag", tag.toLowerCase()).maybeSingle()
+        if (refreshed) skill = refreshed
+      } catch { /* falha de geração — continua com stub */ }
+    }
+    if (skill) resolved.push(skill)
+  }
+  return resolved
+}
+
+async function runAgent(agentId: string, task: Record<string, unknown>, skills: SkillRow[], contextFilesText: string): Promise<TaskExecuteResult> {
+  const baseSysPrompt = AGENT_SYSTEM_PROMPTS[agentId] || AGENT_SYSTEM_PROMPTS.default
+
+  const skillsBlock = skills.length === 0 ? "" : `
+SKILLS DISPONÍVEIS PARA ESTA TASK:
+${skills.map(s => `
+🛠 ${s.name} (tag: ${s.tag})
+   Connectors: ${(s.connectors || []).join(", ") || "—"}
+   Fallback agent: ${s.fallback_agent || "—"}
+   Receita:
+${(s.receipt_md || "").split("\n").map(l => `   ${l}`).join("\n")}
+   Template: ${s.prompt_template || "—"}
+`).join("\n")}
+
+Se uma skill requer connector que NÃO tens disponível ou requer aprovação humana, marca needs_human=true e indica delegated_to=<fallback_agent>.
+`.trim()
+
+  const contextBlock = contextFilesText ? `\nCONTEXTO DE FICHEIROS (lido do Storage):\n${contextFilesText}\n` : ""
+
+  const sysPrompt = `${baseSysPrompt}\n\n${skillsBlock}${contextBlock}`
 
   const taskBrief = `
 TASK PARA EXECUTAR:
@@ -64,6 +147,7 @@ Descrição: ${task.description_md || "(sem descrição)"}
 Kind: ${task.kind}
 Vertical: ${task.vertical || "global"}
 Priority: ${task.priority}
+Skills: ${(task.skills as string[] || []).join(", ") || "—"}
 
 Contexto do payload:
 ${JSON.stringify(task.payload || {}, null, 2).slice(0, 800)}
@@ -82,7 +166,8 @@ Responde APENAS JSON válido (sem markdown):
   "steps_completed": ["Passo 1 (que fiz/faria)", "Passo 2", ...],
   "output_md": "Output detalhado em markdown PT-PT — o entregável real (ex: rascunho email, lista de prestadores, análise de gap, etc.)",
   "needs_human": false,
-  "needs_human_reason": "Se needs_human=true, explica porquê (max 200ch)"
+  "needs_human_reason": "Se needs_human=true, explica porquê (max 200ch)",
+  "delegated_to": "Se quiseres passar a outro agent (por skill faltar connector), agent_id. Senão null."
 }`
 
   const res = await fetch("https://api.anthropic.com/v1/messages", {
@@ -107,15 +192,51 @@ Responde APENAS JSON válido (sem markdown):
 
   const data = await res.json()
   const text = (data.content?.[0]?.text || "").trim()
+
+  // Parsing tolerante: tenta JSON puro → fenced → fallback regex-extract
+  function tryParseJSON(s: string): any | null {
+    try { return JSON.parse(s) } catch { return null }
+  }
+
+  let parsed: any = null
   const clean = text.replace(/^```(?:json)?\s*/, "").replace(/```\s*$/, "")
-  const parsed = JSON.parse(clean) as { summary: string, steps_completed: string[], output_md: string, needs_human?: boolean, needs_human_reason?: string }
+  parsed = tryParseJSON(clean)
+
+  if (!parsed) {
+    // Tenta extrair o primeiro { ... } balanceado
+    const start = clean.indexOf("{")
+    if (start >= 0) {
+      let depth = 0, end = -1
+      for (let i = start; i < clean.length; i++) {
+        if (clean[i] === "{") depth++
+        else if (clean[i] === "}") { depth--; if (depth === 0) { end = i; break } }
+      }
+      if (end > start) parsed = tryParseJSON(clean.slice(start, end + 1))
+    }
+  }
+
+  if (!parsed) {
+    // Fallback final: extracção manual via regex (tolera quotes irregulares no output_md)
+    const sumMatch  = clean.match(/"summary"\s*:\s*"((?:[^"\\]|\\.)*)"/)
+    const stepsMatch = clean.match(/"steps_completed"\s*:\s*\[([\s\S]*?)\]/)
+    const nhMatch   = clean.match(/"needs_human"\s*:\s*(true|false)/)
+    const reasonMatch = clean.match(/"needs_human_reason"\s*:\s*"((?:[^"\\]|\\.)*)"/)
+    parsed = {
+      summary: sumMatch?.[1]?.replace(/\\"/g, '"') || "Output produzido mas JSON parse falhou.",
+      steps_completed: stepsMatch ? Array.from(stepsMatch[1].matchAll(/"((?:[^"\\]|\\.)*)"/g)).map(m => m[1].replace(/\\"/g, '"')) : [],
+      output_md: clean.slice(0, 4000),  // preserva o output completo como markdown
+      needs_human: nhMatch?.[1] === "true",
+      needs_human_reason: reasonMatch?.[1]?.replace(/\\"/g, '"'),
+    }
+  }
 
   return {
     status: parsed.needs_human ? "needs_human" : "done",
-    summary: parsed.summary,
+    summary: parsed.summary || "",
     steps_completed: parsed.steps_completed || [],
     output_md: parsed.output_md || "",
     needs_human_reason: parsed.needs_human_reason,
+    delegated_to: parsed.delegated_to,
   }
 }
 
@@ -157,14 +278,36 @@ Deno.serve(async (req) => {
     await sb.schema("system").from("tasks").update({
       status: "in_progress",
       steps: [
-        { name: "Recebida pelo agent", status: "done", at: new Date().toISOString() },
-        { name: "Análise do pedido",   status: "running" },
+        { name: "Recebida pelo agent",   status: "done", at: new Date().toISOString() },
+        { name: "Resolver skills",       status: "running" },
+        { name: "Ler contexto (files)",  status: "pending" },
+        { name: "Análise do pedido",     status: "pending" },
+      ],
+    }).eq("id", task_id)
+
+    // Resolve skills (ensure + receipt-fill)
+    const skillTags: string[] = Array.isArray(task.skills) ? task.skills : []
+    const resolvedSkills = await resolveSkills(sb, skillTags)
+
+    // Ler context_files (de cada skill + da task)
+    const allContextPaths = [
+      ...resolvedSkills.flatMap((s: any) => (s.context_files || []) as string[]),
+      ...((task.files || []) as any[]).map((f: any) => f.url).filter(Boolean),
+    ]
+    const contextText = await readContextFiles(sb, allContextPaths)
+
+    await sb.schema("system").from("tasks").update({
+      steps: [
+        { name: "Recebida pelo agent",   status: "done" },
+        { name: "Resolver skills",       status: "done", skills: resolvedSkills.map((s: any) => s.tag) },
+        { name: "Ler contexto (files)",  status: "done", files_read: allContextPaths.length },
+        { name: "Análise do pedido",     status: "running" },
       ],
     }).eq("id", task_id)
 
     let result: TaskExecuteResult
     try {
-      result = await runAgent(task.owner_agent_id, task)
+      result = await runAgent(task.owner_agent_id, task, resolvedSkills, contextText)
     } catch (e) {
       // Falhou — marca failed
       await sb.schema("system").from("tasks").update({
@@ -184,14 +327,18 @@ Deno.serve(async (req) => {
       })
     }
 
-    // Sucesso — marca done ou needs_human + steps
+    // Sucesso — marca done ou needs_human + steps preservando histórico
     const finalSteps = [
-      { name: "Recebida pelo agent", status: "done" },
-      { name: "Análise do pedido",   status: "done" },
+      { name: "Recebida pelo agent",   status: "done" },
+      { name: "Resolver skills",       status: "done", skills: resolvedSkills.map((s: any) => s.tag) },
+      { name: "Ler contexto (files)",  status: "done", files_read: allContextPaths.length },
+      { name: "Análise do pedido",     status: "done" },
       ...result.steps_completed.map((s) => ({ name: s, status: "done" })),
       ...(result.status === "needs_human"
         ? [{ name: "⚠ Requer aprovação humana", status: "needs_human", reason: result.needs_human_reason }]
-        : [{ name: "Concluído", status: "done" }]),
+        : result.delegated_to
+          ? [{ name: `↪ Delegado a ${result.delegated_to}`, status: "done" }, { name: "Concluído", status: "done" }]
+          : [{ name: "Concluído", status: "done" }]),
     ]
 
     const updatePayload: Record<string, unknown> = {
@@ -203,6 +350,9 @@ Deno.serve(async (req) => {
           summary: result.summary,
           output_md: result.output_md,
           needs_human_reason: result.needs_human_reason,
+          delegated_to: result.delegated_to,
+          skills_used: resolvedSkills.map((s: any) => ({ tag: s.tag, name: s.name, connectors: s.connectors })),
+          context_files_read: allContextPaths.length,
           agent: task.owner_agent_id,
           model: MODEL,
           at: new Date().toISOString(),
@@ -210,6 +360,19 @@ Deno.serve(async (req) => {
       },
     }
     if (result.status === "done") updatePayload.done_at = new Date().toISOString()
+
+    // Auto-comment com sumário no comment stream
+    await sb.schema("system").from("task_comments").insert({
+      task_id,
+      author_kind: "agent",
+      author_name: task.owner_agent_id || "agent",
+      body_md: result.summary || "Execução concluída.",
+      kind: result.status === "needs_human" ? "status_update" : "mission_completed",
+      metadata: {
+        skills_used: resolvedSkills.map((s: any) => s.tag),
+        delegated_to: result.delegated_to,
+      },
+    })
 
     await sb.schema("system").from("tasks").update(updatePayload).eq("id", task_id)
 
