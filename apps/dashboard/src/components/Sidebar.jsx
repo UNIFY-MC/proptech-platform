@@ -14,6 +14,7 @@ import { useInboxItems } from '../hooks/useSupabase'
 import { useInboxReads } from '../hooks/useInboxReads'
 import { useData } from '../hooks/useData.js'
 import SidebarGroup from './SidebarGroup.jsx'
+import ActiveAgentsWidget from './ActiveAgentsWidget.jsx'
 import { countByDept } from '../lib/departments.js'
 
 const IC = ({ icon: Icon }) => (
@@ -134,6 +135,9 @@ export default function Sidebar() {
           <NavItem to="/agentes" label="Agentes" icon={Bot} />
         </SidebarGroup>
       </div>
+
+      {/* Active Agents Widget (CookAI-style TASKS · CHATS dropdown) */}
+      <ActiveAgentsWidget />
     </aside>
   )
 }

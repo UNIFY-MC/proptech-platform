@@ -46,6 +46,7 @@ import ClientsPage from './views/ClientsPage.jsx'
 import ClientsSetupPage from './views/ClientsSetupPage.jsx'
 import ClientsEmailPage from './views/ClientsEmailPage.jsx'
 import ClientsReportingPage from './views/ClientsReportingPage.jsx'
+import ClientPortalPreviewPage from './views/ClientPortalPreviewPage.jsx'
 import ConnectionsPage from './views/ConnectionsPage.jsx'
 import CalendarPage from './views/CalendarPage.jsx'
 import CalendarSettingsPage from './views/CalendarSettingsPage.jsx'
@@ -148,6 +149,7 @@ export default function App() {
               <Route path="/clients/setup"     element={<ClientsSetupPage />} />
               <Route path="/clients/email"     element={<ClientsEmailPage />} />
               <Route path="/clients/reporting" element={<ClientsReportingPage />} />
+              <Route path="/clients/:slug/portal" element={<ClientPortalPreviewPage />} />
               <Route path="/connections"  element={<ConnectionsPage />} />
               <Route path="/calendar"          element={<CalendarPage />} />
               <Route path="/calendar/settings" element={<CalendarSettingsPage />} />

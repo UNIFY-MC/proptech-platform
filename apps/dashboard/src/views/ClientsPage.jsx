@@ -6,8 +6,8 @@
 // - Buttons: Open Portal · Bulk Invite · Invite Client
 // - Sub-routes: /clients/setup · /clients/email · /clients/reporting
 
-import { useState, useMemo } from 'react'
-import { Link, useLocation, Outlet } from 'react-router-dom'
+import { useState, useMemo, useEffect } from 'react'
+import { Link, useLocation, Outlet, useSearchParams, useNavigate } from 'react-router-dom'
 import { ExternalLink, Users, Plus, Upload, X, Loader2 } from 'lucide-react'
 import { useClients } from '../hooks/useClients.js'
 
@@ -211,8 +211,18 @@ function ClientsTabs() {
 
 // ─── Main ────────────────────────────────────────────────────────────────
 export default function ClientsPage() {
+  const navigate = useNavigate()
   const { items, loading, create } = useClients()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [inviteOpen, setInviteOpen] = useState(false)
+
+  // Read ?invite=true from URL (Sprint P: wire from EmployeesPage)
+  useEffect(() => {
+    if (searchParams.get('invite') === 'true') {
+      setInviteOpen(true)
+      setSearchParams({})  // limpa query param
+    }
+  }, [searchParams, setSearchParams])
 
   const stats = useMemo(() => ({
     total:   items.length,
@@ -294,7 +304,7 @@ export default function ClientsPage() {
           gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
           gap: 12, padding: '0 8px',
         }}>
-          {items.map(c => <ClientCard key={c.id} client={c} onClick={() => alert(`Drill-in cliente "${c.company_name}" — TODO portal navigation`)} />)}
+          {items.map(c => <ClientCard key={c.id} client={c} onClick={() => navigate(`/clients/${c.slug}/portal`)} />)}
         </div>
       )}
     </div>

@@ -391,6 +391,145 @@ function SkillCard({ skill, onClick }) {
   )
 }
 
+// ─── LearnSkillModal — pede skill_tag + context, chama skill-create edge fn ───
+function LearnSkillModal({ onClose, onCreated }) {
+  const [form, setForm] = useState({ skill_tag: '', context: '' })
+  const [busy, setBusy] = useState(false)
+  const [result, setResult] = useState(null)
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    if (!form.skill_tag) return
+    setBusy(true)
+    try {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/skill-create`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${ANON_KEY}`, 'apikey': ANON_KEY },
+        body: JSON.stringify({ skill_tag: form.skill_tag, context: form.context }),
+      })
+      const data = await res.json()
+      setResult(data)
+      if (onCreated) onCreated()
+    } catch (err) {
+      setResult({ error: String(err) })
+    }
+    setBusy(false)
+  }
+
+  return (
+    <div onClick={onClose} style={{
+      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 20,
+    }}>
+      <div onClick={(e) => e.stopPropagation()} style={{
+        background: 'var(--bg-card)', border: '1px solid var(--border)',
+        borderRadius: 10, padding: 24, width: 540, maxWidth: '100%', maxHeight: '85vh', overflowY: 'auto',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 }}>
+          <Sparkles size={20} color="#10b981" />
+          <h2 style={{ margin: 0, fontSize: 16 }}>Learn new skill</h2>
+          <button onClick={onClose} style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-dim)' }}>
+            <X size={16} />
+          </button>
+        </div>
+
+        <p style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 0, marginBottom: 18, lineHeight: 1.5 }}>
+          Claude Haiku gera receita + connectors + prompt template automaticamente.
+          Skill criada com <code style={{ background: 'var(--bg-elevated)', padding: '1px 4px', borderRadius: 3 }}>status=active</code> e fica disponível para usar em recipes.
+        </p>
+
+        {result ? (
+          <div>
+            <div style={{
+              padding: 12, borderRadius: 6,
+              background: result.error ? 'rgba(239,68,68,0.12)' : 'rgba(16,185,129,0.12)',
+              border: `1px solid ${result.error ? '#ef4444' : '#10b981'}`,
+              marginBottom: 12,
+            }}>
+              {result.error ? (
+                <>
+                  <strong style={{ color: '#ef4444', fontSize: 13 }}>Erro</strong>
+                  <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 4 }}>{String(result.error)}</div>
+                </>
+              ) : (
+                <>
+                  <strong style={{ color: '#10b981', fontSize: 13 }}>✓ Skill criada: {result.name}</strong>
+                  <div style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 6 }}>
+                    <strong>Connectors:</strong> {(result.connectors || []).join(', ') || '—'}<br />
+                    <strong>Fallback agent:</strong> {result.fallback_agent || '—'}<br />
+                    <strong>Receipt preview:</strong>
+                  </div>
+                  <pre style={{
+                    fontSize: 11, color: 'var(--text)', whiteSpace: 'pre-wrap',
+                    fontFamily: 'JetBrains Mono, monospace', marginTop: 6,
+                    background: 'var(--bg-elevated)', padding: 8, borderRadius: 4,
+                    maxHeight: 200, overflow: 'auto',
+                  }}>{result.receipt_preview || '(empty)'}</pre>
+                </>
+              )}
+            </div>
+            <button onClick={onClose} style={{
+              padding: '8px 14px', borderRadius: 6, background: 'var(--primary)', border: 'none',
+              color: '#fff', cursor: 'pointer', fontSize: 13,
+            }}>Fechar</button>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <span style={{ fontSize: 10, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Skill tag *
+              </span>
+              <input
+                required
+                value={form.skill_tag}
+                onChange={(e) => setForm({ ...form, skill_tag: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-') })}
+                placeholder="linkedin-outreach"
+                style={{
+                  padding: '8px 10px', background: 'var(--bg-elevated)', border: '1px solid var(--border)',
+                  borderRadius: 5, color: 'var(--text)', fontSize: 13, outline: 'none',
+                  fontFamily: 'JetBrains Mono, monospace',
+                }}
+              />
+              <span style={{ fontSize: 10, color: 'var(--text-dim)' }}>kebab-case · ex: gmail-sender · whatsapp-condomino</span>
+            </label>
+
+            <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <span style={{ fontSize: 10, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Context (opcional — ajuda Claude a gerar melhor)
+              </span>
+              <textarea
+                rows={4}
+                value={form.context}
+                onChange={(e) => setForm({ ...form, context: e.target.value })}
+                placeholder="Ex: Para outreach LinkedIn em massa a leads HVAC — escreve mensagens 3-etapas (cold/follow-up 1/follow-up 2). Connectors: linkedin, anthropic."
+                style={{
+                  padding: '8px 10px', background: 'var(--bg-elevated)', border: '1px solid var(--border)',
+                  borderRadius: 5, color: 'var(--text)', fontSize: 13, outline: 'none',
+                  fontFamily: 'inherit', resize: 'vertical',
+                }}
+              />
+            </label>
+
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 4 }}>
+              <button type="button" onClick={onClose} style={{
+                padding: '8px 14px', borderRadius: 6, background: 'transparent',
+                border: '1px solid var(--border)', color: 'var(--text-dim)', cursor: 'pointer', fontSize: 13,
+              }}>Cancelar</button>
+              <button type="submit" disabled={busy || !form.skill_tag} style={{
+                padding: '8px 14px', borderRadius: 6, background: '#10b981', border: 'none',
+                color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 600,
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+              }}>
+                {busy && <Loader2 size={12} className="spin" />} Generate skill
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // ─── Main ─────────────────────────────────────────────────────────────────
 export default function SkillsPage() {
   const navigate = useNavigate()
@@ -399,6 +538,7 @@ export default function SkillsPage() {
   const [activeCat, setActiveCat] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')
   const [selectedSkill, setSelectedSkill] = useState(null)
+  const [learnOpen, setLearnOpen] = useState(false)
 
   // Counts per macro-category
   const macroCounts = useMemo(() => {
@@ -425,6 +565,7 @@ export default function SkillsPage() {
   return (
     <div style={{ maxWidth: 1400, margin: '0 auto', padding: '4px 0 40px' }}>
       {selectedSkill && <SkillDetailModal skill={selectedSkill} onClose={() => setSelectedSkill(null)} onUpdate={refresh} />}
+      {learnOpen && <LearnSkillModal onClose={() => setLearnOpen(false)} onCreated={refresh} />}
 
       {/* Header com action buttons topo direito */}
       <div style={{
@@ -454,7 +595,7 @@ export default function SkillsPage() {
             <ClipboardCheck size={13} /> Skills Review
           </Link>
           <button
-            onClick={() => alert('Learn Skills flow — adicionar nova skill manualmente ou via skill-create edge fn.')}
+            onClick={() => setLearnOpen(true)}
             style={{
               display: 'inline-flex', alignItems: 'center', gap: 6,
               padding: '7px 14px', borderRadius: 6,

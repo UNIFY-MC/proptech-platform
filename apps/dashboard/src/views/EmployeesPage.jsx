@@ -792,7 +792,7 @@ export default function EmployeesPage({ data: dataProp }) {
 
           {/* Invite (primary) */}
           <button
-            onClick={() => alert('Invite flow ainda não implementado — adicionar via .meta.json + skill files.')}
+            onClick={() => navigate('/clients?invite=true')}
             style={{
               display: 'inline-flex', alignItems: 'center', gap: 6,
               padding: '7px 14px', borderRadius: 6,
