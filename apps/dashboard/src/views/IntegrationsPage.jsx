@@ -32,13 +32,13 @@ function BrandLogo({ integ }) {
   if (kind === 'internal') {
     return (
       <div style={{
-        width: 54, height: 54, borderRadius: 12,
+        width: 38, height: 38, borderRadius: 8,
         display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
         background: 'rgba(107,79,160,0.10)',
         border: '1px dashed rgba(107,79,160,0.30)',
-        color: '#a78bfa', marginBottom: 14,
+        color: '#a78bfa', marginBottom: 10,
       }}>
-        <Lucide.Database size={26} strokeWidth={2} />
+        <Lucide.Database size={20} strokeWidth={2} />
       </div>
     )
   }
@@ -47,18 +47,18 @@ function BrandLogo({ integ }) {
   if (kind === 'mcp') {
     return (
       <div style={{
-        width: 54, height: 54, borderRadius: 12, position: 'relative',
+        width: 38, height: 38, borderRadius: 8, position: 'relative',
         display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
         background: 'rgba(59,130,246,0.10)',
         border: '1px solid rgba(59,130,246,0.30)',
-        color: '#60a5fa', marginBottom: 14,
+        color: '#60a5fa', marginBottom: 10,
       }}>
-        <Lucide.Cpu size={26} strokeWidth={2} />
+        <Lucide.Cpu size={20} strokeWidth={2} />
         <span style={{
-          position: 'absolute', bottom: -6, right: -6,
+          position: 'absolute', bottom: -5, right: -5,
           background: '#60a5fa', color: '#0d1117',
-          padding: '1px 5px', borderRadius: 3,
-          fontSize: 8, fontWeight: 700,
+          padding: '0px 4px', borderRadius: 3,
+          fontSize: 7, fontWeight: 700,
           fontFamily: 'JetBrains Mono, monospace', letterSpacing: '0.06em',
         }}>MCP</span>
       </div>
@@ -74,10 +74,10 @@ function BrandLogo({ integ }) {
 
   return (
     <div style={{
-      width: 54, height: 54, borderRadius: 12,
+      width: 44, height: 44, borderRadius: 10,
       display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
       background: 'transparent',
-      marginBottom: 14,
+      marginBottom: 10,
       overflow: 'hidden',
     }}>
       {primaryUrl ? (
@@ -85,7 +85,7 @@ function BrandLogo({ integ }) {
           src={primaryUrl}
           alt={integ.name}
           style={{
-            width: 44, height: 44, objectFit: 'contain',
+            width: 34, height: 34, objectFit: 'contain',
             filter: needsInvert && isDark ? 'invert(1) brightness(1.5)' : 'none',
           }}
           data-fallback={fallbackUrl || ''}
@@ -107,10 +107,10 @@ function BrandLogo({ integ }) {
       <span style={{
         display: primaryUrl ? 'none' : 'inline-flex',
         alignItems: 'center', justifyContent: 'center',
-        width: 40, height: 40,
+        width: 34, height: 34,
         color: integ.brand_color || 'var(--text)',
       }}>
-        <Fallback size={26} strokeWidth={2} />
+        <Fallback size={22} strokeWidth={2} />
       </span>
     </div>
   )
@@ -126,13 +126,13 @@ function IntegrationCard({ integ, onToggle, busy }) {
     <div style={{
       background: 'var(--bg-card)',
       border: '1px solid var(--border)',
-      borderRadius: 10,
-      padding: '18px 16px',
+      borderRadius: 8,
+      padding: '14px 12px 10px',
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
       textAlign: 'center',
-      minHeight: 200,
+      minHeight: 160,
       opacity: isComing ? 0.65 : 1,
       transition: 'border-color 0.15s, transform 0.1s',
     }}
@@ -141,20 +141,21 @@ function IntegrationCard({ integ, onToggle, busy }) {
     >
       <BrandLogo integ={integ} />
       <div style={{
-        fontSize: '0.95rem', fontWeight: 600, color: 'var(--text)',
-        marginBottom: 6,
+        fontSize: '0.82rem', fontWeight: 600, color: 'var(--text)',
+        marginBottom: 4, lineHeight: 1.2,
+        maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
       }}>{integ.name}</div>
       <div style={{
-        fontSize: '0.7rem', color: 'var(--text-dim)',
-        lineHeight: 1.4, marginBottom: 14, flex: 1,
+        fontSize: '0.65rem', color: 'var(--text-dim)',
+        lineHeight: 1.35, marginBottom: 10, flex: 1,
         display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
-        overflow: 'hidden',
+        overflow: 'hidden', minHeight: '1.7em',
       }}>{integ.description || '—'}</div>
 
       {isComing && (
         <div style={{
-          fontSize: '0.7rem', color: 'var(--text-dim)',
-          fontStyle: 'italic', padding: '6px 0',
+          fontSize: '0.6rem', color: 'var(--text-dim)',
+          fontStyle: 'italic', padding: '4px 0',
         }}>Coming Soon</div>
       )}
 
@@ -163,18 +164,18 @@ function IntegrationCard({ integ, onToggle, busy }) {
           onClick={() => onToggle && onToggle(integ, 'not_connected')}
           disabled={busy}
           style={{
-            display: 'inline-flex', alignItems: 'center', gap: 6,
-            padding: '5px 12px', borderRadius: 4,
+            display: 'inline-flex', alignItems: 'center', gap: 4,
+            padding: '3px 8px', borderRadius: 3,
             background: meta.bg,
             border: `1px solid ${meta.border}`,
             color: meta.color,
-            fontSize: '0.65rem', fontWeight: 700,
+            fontSize: '0.55rem', fontWeight: 700,
             fontFamily: 'JetBrains Mono, monospace', letterSpacing: '0.08em',
             cursor: 'pointer',
           }}
           title="Click para desconectar"
         >
-          <Check size={11} /> {meta.label}
+          <Check size={9} /> {meta.label}
         </button>
       )}
 
@@ -183,16 +184,16 @@ function IntegrationCard({ integ, onToggle, busy }) {
           onClick={() => onToggle && onToggle(integ, 'connected')}
           disabled={busy}
           style={{
-            display: 'inline-flex', alignItems: 'center', gap: 6,
-            padding: '7px 16px', borderRadius: 6,
+            display: 'inline-flex', alignItems: 'center', gap: 5,
+            padding: '5px 12px', borderRadius: 5,
             background: 'var(--bg-elevated)',
             border: '1px solid var(--border)',
             color: 'var(--text)',
-            fontSize: '0.75rem',
+            fontSize: '0.65rem',
             cursor: busy ? 'wait' : 'pointer',
           }}
         >
-          {busy ? <Loader2 size={12} className="spin" /> : <ExternalLink size={12} />}
+          {busy ? <Loader2 size={10} className="spin" /> : <ExternalLink size={10} />}
           Connect
         </button>
       )}
@@ -373,7 +374,7 @@ export default function IntegrationsPage() {
       {!loading && filtered.length > 0 && (
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
           gap: 14,
           padding: '0 8px',
         }}>

@@ -38,33 +38,92 @@ const STATUS_META = {
   rejected:    { label: 'Rejeitado',     color: '#ef4444', bg: 'rgba(239,68,68,0.12)' },
 }
 
+// Domain → simpleicons slug fallback. Necessário quando Clearbit não tem a marca.
+const SIMPLEICONS_FALLBACK = {
+  'claude.ai':              'anthropic',
+  'claude.com':             'anthropic',
+  'anthropic.com':          'anthropic',
+  'kie.ai':                 'openai', // sem logo dedicado, usa similar
+  'wisprflow.ai':           null,
+  'fathom.video':           null,
+  'fireflies.ai':           null,
+  'evolution-api.com':      null,
+  'unipile.com':            null,
+  'tally.so':               null,
+  'tavily.com':             null,
+  'blotato.com':            null,
+  'vapi.ai':                null,
+  'kie.ai':                 null,
+  'workspace.google.com':   'google',
+  'visualstudio.com':       'visualstudiocode',
+  'gmail.com':              'gmail',
+  'drive.google.com':       'googledrive',
+  'calendar.google.com':    'googlecalendar',
+  'github.com':             'github',
+  'vercel.com':             'vercel',
+  'supabase.com':           'supabase',
+  'notion.so':              'notion',
+  'cursor.com':             'cursor',
+  'warp.dev':               'warp',
+  'stripe.com':             'stripe',
+  'slack.com':              'slack',
+  'miro.com':               'miro',
+  'canva.com':              'canva',
+  'apify.com':              'apify',
+  'twilio.com':             'twilio',
+  'resend.com':             'resend',
+  'buffer.com':             'buffer',
+  'n8n.io':                 'n8n',
+  'playwright.dev':         'playwright',
+  'perplexity.ai':          'perplexity',
+  'elevenlabs.io':          'elevenlabs',
+  'openai.com':             'openai',
+  'hostinger.com':          'hostinger',
+  'pinecone.io':            'pinecone',
+  'posthog.com':            'posthog',
+}
+
 function ToolLogo({ tool }) {
-  const url = tool.domain ? `https://logo.clearbit.com/${tool.domain}` : null
+  const domain = tool.domain
+  const primaryUrl = domain ? `https://logo.clearbit.com/${domain}` : null
+  const siSlug = SIMPLEICONS_FALLBACK[domain]
+  const color = (tool.brand_color || '').replace('#', '')
+  const fallbackUrl = siSlug
+    ? (color ? `https://cdn.simpleicons.org/${siSlug}/${color}` : `https://cdn.simpleicons.org/${siSlug}`)
+    : null
+
   return (
     <div style={{
-      width: 48, height: 48, borderRadius: 10,
+      width: 40, height: 40, borderRadius: 8,
       display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
       background: 'transparent', overflow: 'hidden', flexShrink: 0,
     }}>
-      {url ? (
+      {primaryUrl ? (
         <img
-          src={url}
+          src={primaryUrl}
           alt={tool.name}
-          style={{ width: 40, height: 40, objectFit: 'contain' }}
+          style={{ width: 34, height: 34, objectFit: 'contain' }}
+          data-fallback={fallbackUrl || ''}
           onError={(e) => {
-            e.currentTarget.style.display = 'none'
-            const fb = e.currentTarget.nextElementSibling
-            if (fb) fb.style.display = 'inline-flex'
+            const fb = e.currentTarget.dataset.fallback
+            if (fb && e.currentTarget.src !== fb) {
+              e.currentTarget.src = fb
+              e.currentTarget.dataset.fallback = ''
+            } else {
+              e.currentTarget.style.display = 'none'
+              const lucide = e.currentTarget.nextElementSibling
+              if (lucide) lucide.style.display = 'inline-flex'
+            }
           }}
         />
       ) : null}
       <span style={{
-        display: url ? 'none' : 'inline-flex',
+        display: primaryUrl ? 'none' : 'inline-flex',
         alignItems: 'center', justifyContent: 'center',
-        width: 40, height: 40,
+        width: 34, height: 34,
         color: tool.brand_color || 'var(--text)',
       }}>
-        <Lucide.Sparkles size={22} strokeWidth={2} />
+        <Lucide.Sparkles size={20} strokeWidth={2} />
       </span>
     </div>
   )
@@ -73,93 +132,105 @@ function ToolLogo({ tool }) {
 function ToolCard({ tool, onEdit, onRemove, onStatusChange }) {
   const status = STATUS_META[tool.status] || STATUS_META.discover
   const catColor = CATEGORIES.find((c) => c.id === tool.category)?.color || '#9ca3af'
+  const [hover, setHover] = useState(false)
 
   return (
     <div
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
       style={{
         background: 'var(--bg-card)',
         border: '1px solid var(--border)',
-        borderLeft: `3px solid ${catColor}`,
-        borderRadius: 10,
-        padding: '14px 16px',
+        borderTop: `3px solid ${catColor}`,
+        borderRadius: 8,
+        padding: '12px 12px 10px',
         display: 'flex',
         flexDirection: 'column',
-        gap: 10,
-        minHeight: 180,
-        transition: 'border-color 0.15s',
+        gap: 8,
+        minHeight: 150,
+        position: 'relative',
+        transition: 'border-color 0.15s, transform 0.1s',
       }}
-      onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--primary)' }}
-      onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border)' }}
     >
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+      {/* Status badge top right */}
+      <span style={{
+        position: 'absolute', top: 8, right: 8,
+        fontSize: 8, padding: '2px 5px', borderRadius: 3,
+        background: status.bg, color: status.color,
+        fontFamily: 'JetBrains Mono, monospace', fontWeight: 700,
+        textTransform: 'uppercase', letterSpacing: '0.05em',
+      }}>{status.label}</span>
+
+      {/* Logo + name */}
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 8, marginTop: 4 }}>
         <ToolLogo tool={tool} />
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>
-            {tool.name}
-          </div>
+        <div style={{ minWidth: 0, width: '100%' }}>
           <div style={{
-            fontSize: 10, color: catColor, marginTop: 3,
-            fontFamily: 'JetBrains Mono, monospace', textTransform: 'uppercase',
-            letterSpacing: '0.06em',
-          }}>{tool.category}</div>
+            fontSize: 13, fontWeight: 600, color: 'var(--text)',
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          }}>{tool.name}</div>
         </div>
-        <span style={{
-          fontSize: 9, padding: '2px 6px', borderRadius: 3,
-          background: status.bg, color: status.color,
-          fontFamily: 'JetBrains Mono, monospace', fontWeight: 700,
-          textTransform: 'uppercase', letterSpacing: '0.05em',
-        }}>{status.label}</span>
       </div>
 
+      {/* Description compacta */}
       <div style={{
-        fontSize: 12, color: 'var(--text-dim)',
-        lineHeight: 1.45, flex: 1,
-        display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical',
+        fontSize: 11, color: 'var(--text-dim)',
+        lineHeight: 1.4, flex: 1,
+        display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
         overflow: 'hidden',
       }}>{tool.description}</div>
 
-      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+      {/* Footer actions — visíveis on-hover ou status select sempre visível */}
+      <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
         <a
           href={tool.url}
           target="_blank"
           rel="noreferrer"
           style={{
-            display: 'inline-flex', alignItems: 'center', gap: 5,
-            padding: '5px 10px', borderRadius: 5,
+            display: 'inline-flex', alignItems: 'center', gap: 3,
+            padding: '4px 8px', borderRadius: 4,
             background: 'var(--bg-elevated)',
             border: '1px solid var(--border)',
-            color: 'var(--text)', fontSize: 11,
+            color: 'var(--text)', fontSize: 10,
             textDecoration: 'none', cursor: 'pointer',
+            flex: 1, justifyContent: 'center',
           }}
         >
-          <ExternalLink size={10} /> Abrir
+          <ExternalLink size={9} /> Abrir
         </a>
-        <select
-          value={tool.status}
-          onChange={(e) => onStatusChange(tool.id, e.target.value)}
-          style={{
-            background: 'var(--bg-elevated)', border: '1px solid var(--border)',
-            color: 'var(--text-dim)', padding: '3px 6px', borderRadius: 4,
-            fontSize: 10, cursor: 'pointer', outline: 'none',
-            fontFamily: 'JetBrains Mono, monospace',
-          }}
-        >
-          {Object.entries(STATUS_META).map(([s, m]) => (
-            <option key={s} value={s}>{m.label}</option>
-          ))}
-        </select>
-        <div style={{ flex: 1 }} />
-        <button
-          onClick={() => onEdit(tool)}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-dim)', padding: 4 }}
-          title="Editar"
-        ><Edit2 size={12} /></button>
-        <button
-          onClick={() => onRemove(tool)}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-dim)', padding: 4 }}
-          title="Eliminar"
-        ><Trash2 size={12} /></button>
+        {hover && (
+          <>
+            <button
+              onClick={() => onEdit(tool)}
+              style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', cursor: 'pointer', color: 'var(--text-dim)', padding: '4px 6px', borderRadius: 4 }}
+              title="Editar"
+            ><Edit2 size={10} /></button>
+            <button
+              onClick={() => onRemove(tool)}
+              style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', cursor: 'pointer', color: 'var(--text-dim)', padding: '4px 6px', borderRadius: 4 }}
+              title="Eliminar"
+            ><Trash2 size={10} /></button>
+          </>
+        )}
       </div>
+
+      {/* Status select pequenino bottom */}
+      <select
+        value={tool.status}
+        onChange={(e) => onStatusChange(tool.id, e.target.value)}
+        style={{
+          background: 'transparent', border: 'none',
+          color: 'var(--text-dim)', padding: '2px 0', borderRadius: 0,
+          fontSize: 9, cursor: 'pointer', outline: 'none',
+          fontFamily: 'JetBrains Mono, monospace',
+          textAlign: 'center', appearance: 'none',
+          textTransform: 'uppercase', letterSpacing: '0.06em',
+        }}
+      >
+        {Object.entries(STATUS_META).map(([s, m]) => (
+          <option key={s} value={s}>{m.label}</option>
+        ))}
+      </select>
     </div>
   )
 }
@@ -432,12 +503,12 @@ export default function UsefulToolsPage() {
         </div>
       )}
 
-      {/* Grid */}
+      {/* Grid 6-col (auto-fit + 200px min para responsive: 6 em desktop, menos em mobile) */}
       {!loading && filtered.length > 0 && (
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-          gap: 12,
+          gridTemplateColumns: 'repeat(auto-fill, minmax(195px, 1fr))',
+          gap: 10,
           padding: '0 8px',
         }}>
           {filtered.map((tool) => (
