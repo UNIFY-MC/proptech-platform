@@ -10,9 +10,10 @@
 
 import { useMemo, useState } from 'react'
 import * as Lucide from 'lucide-react'
-import { Plus, Search, Play, X, Loader2, Sparkles, MoreHorizontal, ChevronDown, Edit2, Trash2 } from 'lucide-react'
+import { Plus, Search, Play, X, Loader2, Sparkles, MoreHorizontal, ChevronDown, Edit2, Trash2, List, Network } from 'lucide-react'
 import { useRecipes } from '../hooks/useRecipes.js'
 import { useVerticalStore } from '../store/index.js'
+import RecipeFlowChart from '../components/RecipeFlowChart.jsx'
 
 const VERTICAL_LABEL = {
   all: 'todas verticais', v1: 'V1 Core', v2: 'V2 Condomínios', v3: 'V3 Seguros',
@@ -132,6 +133,7 @@ function RecipeCard({ recipe, onClick, onMenu }) {
 function RecipeDetailModal({ recipe, onClose, onRun }) {
   const steps = Array.isArray(recipe.steps) ? recipe.steps : []
   const [running, setRunning] = useState(false)
+  const [stepsView, setStepsView] = useState('list') // 'list' | 'chart'
 
   const handleRun = async () => {
     setRunning(true)
@@ -177,10 +179,39 @@ function RecipeDetailModal({ recipe, onClose, onRun }) {
         {steps.length > 0 && (
           <div style={{ marginTop: 16 }}>
             <div style={{
-              fontSize: 9, fontWeight: 700, color: 'var(--text-dim)',
-              textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10,
-              fontFamily: 'JetBrains Mono, monospace',
-            }}>Steps</div>
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              marginBottom: 10,
+            }}>
+              <span style={{
+                fontSize: 9, fontWeight: 700, color: 'var(--text-dim)',
+                textTransform: 'uppercase', letterSpacing: '0.1em',
+                fontFamily: 'JetBrains Mono, monospace',
+              }}>Steps ({steps.length})</span>
+              <div style={{ display: 'inline-flex', gap: 2, padding: 2, background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 5 }}>
+                <button
+                  type="button" onClick={() => setStepsView('list')}
+                  style={{
+                    padding: '4px 8px', borderRadius: 3, border: 'none', cursor: 'pointer',
+                    background: stepsView === 'list' ? 'var(--primary)' : 'transparent',
+                    color: stepsView === 'list' ? '#fff' : 'var(--text-dim)',
+                    display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11,
+                  }}
+                ><List size={11} /> List</button>
+                <button
+                  type="button" onClick={() => setStepsView('chart')}
+                  style={{
+                    padding: '4px 8px', borderRadius: 3, border: 'none', cursor: 'pointer',
+                    background: stepsView === 'chart' ? 'var(--primary)' : 'transparent',
+                    color: stepsView === 'chart' ? '#fff' : 'var(--text-dim)',
+                    display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11,
+                  }}
+                ><Network size={11} /> Chart</button>
+              </div>
+            </div>
+
+            {stepsView === 'chart' ? (
+              <RecipeFlowChart steps={steps} />
+            ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {steps.map((s, i) => {
                 const stepType = s.type || 'agent'
@@ -242,6 +273,7 @@ function RecipeDetailModal({ recipe, onClose, onRun }) {
                 </div>
               )})}
             </div>
+            )}
           </div>
         )}
 
