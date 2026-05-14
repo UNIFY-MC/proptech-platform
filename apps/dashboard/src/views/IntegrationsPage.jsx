@@ -1,128 +1,264 @@
-import { useState, useMemo } from 'react'
+// IntegrationsPage — /integrations · "Connect your tools" CookAI-style
+//
+// Grid de cards 5-col com logo + nome + descrição + botão Connect / badge CONNECTED.
+// Filtra pelo activeVertical do dropdown topo (useVerticalStore).
+// 'all' mostra todas; v2/v3/v4/... mostra globais (*) + específicas dessa vertical.
 
-export default function IntegrationsPage({ data }) {
-  const [toggles, setToggles] = useState({})
+import { useMemo, useState } from 'react'
+import * as Lucide from 'lucide-react'
+import { ExternalLink, Search, Check, Loader2 } from 'lucide-react'
+import { useIntegrations } from '../hooks/useIntegrations.js'
+import { useVerticalStore } from '../store/index.js'
 
-  const allIntegrations = useMemo(() => {
-    const seen = new Map()
-    for (const emp of (data?.employees || [])) {
-      for (const integ of (emp.integrations || [])) {
-        if (!seen.has(integ.id)) {
-          seen.set(integ.id, { ...integ, owners: [emp.name] })
-        } else {
-          seen.get(integ.id).owners.push(emp.name)
-        }
-      }
-    }
-    return Array.from(seen.values()).sort((a, b) => {
-      if (a.enabled && !b.enabled) return -1
-      if (!a.enabled && b.enabled) return 1
-      return a.name.localeCompare(b.name)
-    })
-  }, [data])
+const VERTICAL_LABEL = {
+  all: 'todas verticais', v1: 'V1 Core', v2: 'V2 Condomínios', v3: 'V3 Seguros',
+  v4: 'V4 Energia', v5: 'V5 Manutenção', v6: 'V6 Reabilitação', v7: 'V7 Real Estate',
+  v8: 'V8 Rentals', v9: 'V9 BaaS', v10: 'V10 Owners Club',
+}
 
-  const isOn = (integ) => {
-    if (integ.id in toggles) return toggles[integ.id]
-    return integ.enabled && !integ.planned
-  }
+const STATUS_META = {
+  connected:     { label: 'CONNECTED',  color: '#10b981', bg: 'rgba(16,185,129,0.12)',  border: 'rgba(16,185,129,0.35)' },
+  not_connected: { label: 'Connect',    color: 'var(--text)', bg: 'transparent',         border: 'var(--border)' },
+  coming_soon:   { label: 'Coming Soon', color: 'var(--text-dim)', bg: 'transparent',    border: 'transparent' },
+  disabled:      { label: 'Disabled',   color: 'var(--text-dim)', bg: 'transparent',     border: 'var(--border)' },
+}
 
-  const toggle = (id) => {
-    setToggles(prev => ({ ...prev, [id]: !isOn(allIntegrations.find(i => i.id === id)) }))
-  }
+function IconBubble({ icon, brandColor }) {
+  // Tenta resolver ícone Lucide pelo nome, fallback para Plug
+  const Comp = (icon && Lucide[icon]) || Lucide.Plug
+  return (
+    <div style={{
+      width: 48, height: 48, borderRadius: 10,
+      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+      background: brandColor ? `${brandColor}22` : 'var(--bg-elevated)',
+      border: brandColor ? `1px solid ${brandColor}44` : '1px solid var(--border)',
+      color: brandColor || 'var(--text)',
+      marginBottom: 14,
+    }}>
+      <Comp size={24} strokeWidth={2} />
+    </div>
+  )
+}
 
-  const connected = allIntegrations.filter(i => isOn(i)).length
-  const total = allIntegrations.length
+function IntegrationCard({ integ, onToggle, busy }) {
+  const status = integ.status || 'not_connected'
+  const meta = STATUS_META[status]
+  const isComing = status === 'coming_soon'
+  const isConnected = status === 'connected'
 
   return (
-    <div>
+    <div style={{
+      background: 'var(--bg-card)',
+      border: '1px solid var(--border)',
+      borderRadius: 10,
+      padding: '18px 16px',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      textAlign: 'center',
+      minHeight: 200,
+      opacity: isComing ? 0.65 : 1,
+      transition: 'border-color 0.15s, transform 0.1s',
+    }}
+    onMouseEnter={(e) => { if (!isComing) e.currentTarget.style.borderColor = 'var(--primary)' }}
+    onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border)' }}
+    >
+      <IconBubble icon={integ.icon} brandColor={integ.brand_color} />
       <div style={{
-        display: 'flex', gap: 16, marginBottom: 20,
-        padding: '10px 14px',
-        background: 'var(--bg-card)', border: '1px solid var(--border)',
-        borderRadius: 8, alignItems: 'center',
+        fontSize: '0.95rem', fontWeight: 600, color: 'var(--text)',
+        marginBottom: 6,
+      }}>{integ.name}</div>
+      <div style={{
+        fontSize: '0.7rem', color: 'var(--text-dim)',
+        lineHeight: 1.4, marginBottom: 14, flex: 1,
+        display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
+        overflow: 'hidden',
+      }}>{integ.description || '—'}</div>
+
+      {isComing && (
+        <div style={{
+          fontSize: '0.7rem', color: 'var(--text-dim)',
+          fontStyle: 'italic', padding: '6px 0',
+        }}>Coming Soon</div>
+      )}
+
+      {isConnected && (
+        <button
+          onClick={() => onToggle && onToggle(integ, 'not_connected')}
+          disabled={busy}
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+            padding: '5px 12px', borderRadius: 4,
+            background: meta.bg,
+            border: `1px solid ${meta.border}`,
+            color: meta.color,
+            fontSize: '0.65rem', fontWeight: 700,
+            fontFamily: 'JetBrains Mono, monospace', letterSpacing: '0.08em',
+            cursor: 'pointer',
+          }}
+          title="Click para desconectar"
+        >
+          <Check size={11} /> {meta.label}
+        </button>
+      )}
+
+      {status === 'not_connected' && (
+        <button
+          onClick={() => onToggle && onToggle(integ, 'connected')}
+          disabled={busy}
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+            padding: '7px 16px', borderRadius: 6,
+            background: 'var(--bg-elevated)',
+            border: '1px solid var(--border)',
+            color: 'var(--text)',
+            fontSize: '0.75rem',
+            cursor: busy ? 'wait' : 'pointer',
+          }}
+        >
+          {busy ? <Loader2 size={12} className="spin" /> : <ExternalLink size={12} />}
+          Connect
+        </button>
+      )}
+    </div>
+  )
+}
+
+export default function IntegrationsPage() {
+  const { activeVertical } = useVerticalStore()
+  const { items, loading, updateStatus } = useIntegrations()
+  const [search, setSearch] = useState('')
+  const [categoryFilter, setCategoryFilter] = useState('all')
+  const [busyId, setBusyId] = useState(null)
+
+  const categories = useMemo(() => {
+    const set = new Set()
+    items.forEach((i) => i.category && set.add(i.category))
+    return ['all', ...Array.from(set).sort()]
+  }, [items])
+
+  const filtered = useMemo(() => {
+    let arr = items
+    if (categoryFilter !== 'all') arr = arr.filter((i) => i.category === categoryFilter)
+    if (search) {
+      const q = search.toLowerCase()
+      arr = arr.filter((i) =>
+        i.name?.toLowerCase().includes(q) ||
+        i.description?.toLowerCase().includes(q) ||
+        i.slug?.toLowerCase().includes(q),
+      )
+    }
+    return arr
+  }, [items, categoryFilter, search])
+
+  const handleToggle = async (integ, nextStatus) => {
+    setBusyId(integ.id)
+    await updateStatus(integ.id, nextStatus)
+    setBusyId(null)
+  }
+
+  const connectedCount = items.filter((i) => i.status === 'connected').length
+  const totalCount = items.length
+
+  return (
+    <div style={{ padding: '8px 0 40px', maxWidth: 1400, margin: '0 auto' }}>
+      {/* Header — title + subtitle CookAI-style */}
+      <div style={{ textAlign: 'center', marginBottom: 28, paddingTop: 20 }}>
+        <h1 style={{ fontSize: 28, fontWeight: 700, color: 'var(--text)', margin: '0 0 10px' }}>
+          Connect your tools
+        </h1>
+        <p style={{ fontSize: 14, color: 'var(--text-dim)', margin: 0, lineHeight: 1.5 }}>
+          Liga as apps que a tua equipa já usa. Bots e recipes puxam dados e<br />
+          executam acções automaticamente.
+        </p>
+        <div style={{
+          marginTop: 12, fontSize: 11, color: 'var(--text-dim)',
+          fontFamily: 'JetBrains Mono, monospace',
+        }}>
+          {VERTICAL_LABEL[activeVertical?.toLowerCase()] || activeVertical} ·
+          <span style={{ color: '#10b981', marginLeft: 6 }}>{connectedCount} conectadas</span> /
+          <span style={{ marginLeft: 6 }}>{totalCount} disponíveis</span>
+        </div>
+      </div>
+
+      {/* Toolbar — search + category pills */}
+      <div style={{
+        display: 'flex', gap: 12, alignItems: 'center', marginBottom: 24,
+        flexWrap: 'wrap', padding: '0 8px',
       }}>
-        <div>
-          <div style={{ fontSize: '0.55rem', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Conectadas</div>
-          <div style={{ fontSize: '1.1rem', fontWeight: 700, fontFamily: 'monospace', color: 'var(--success)' }}>{connected}</div>
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 8,
+          background: 'var(--bg-card)', border: '1px solid var(--border)',
+          borderRadius: 6, padding: '6px 10px', flex: 1, minWidth: 260, maxWidth: 360,
+        }}>
+          <Search size={14} color="var(--text-dim)" />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Procurar integrações…"
+            style={{
+              background: 'none', border: 'none', outline: 'none',
+              color: 'var(--text)', fontSize: 13, flex: 1, fontFamily: 'inherit',
+            }}
+          />
         </div>
-        <div>
-          <div style={{ fontSize: '0.55rem', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Total</div>
-          <div style={{ fontSize: '1.1rem', fontWeight: 700, fontFamily: 'monospace', color: 'var(--text)' }}>{total}</div>
-        </div>
-        <div>
-          <div style={{ fontSize: '0.55rem', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Planeadas</div>
-          <div style={{ fontSize: '1.1rem', fontWeight: 700, fontFamily: 'monospace', color: 'var(--warning)' }}>
-            {allIntegrations.filter(i => i.planned).length}
-          </div>
-        </div>
-        <div style={{ marginLeft: 'auto', fontSize: '0.65rem', color: 'var(--text-dim)', fontStyle: 'italic' }}>
-          toggles visuais apenas · sem persistência
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+          {categories.map((c) => (
+            <button
+              key={c}
+              onClick={() => setCategoryFilter(c)}
+              style={{
+                padding: '5px 10px', borderRadius: 4,
+                background: categoryFilter === c ? 'var(--primary)' : 'var(--bg-card)',
+                color: categoryFilter === c ? '#fff' : 'var(--text-dim)',
+                border: `1px solid ${categoryFilter === c ? 'var(--primary)' : 'var(--border)'}`,
+                cursor: 'pointer', fontSize: '0.65rem', fontWeight: 600,
+                textTransform: 'uppercase', letterSpacing: '0.08em',
+                fontFamily: 'JetBrains Mono, monospace',
+              }}
+            >{c === 'all' ? 'Todas' : c}</button>
+          ))}
         </div>
       </div>
 
-      <div className="grid-agents">
-        {allIntegrations.map(integ => {
-          const on = isOn(integ)
-          return (
-            <div key={integ.id} style={{
-              background: 'var(--bg-card)', border: '1px solid var(--border)',
-              borderRadius: 10, padding: 16,
-              borderLeft: `2px solid ${on ? 'var(--success)' : 'var(--border)'}`,
-              opacity: integ.planned ? 0.7 : 1,
-            }}>
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 8 }}>
-                <div style={{
-                  width: 32, height: 32, borderRadius: 8, flexShrink: 0,
-                  background: 'var(--bg-elevated)', border: '1px solid var(--border)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: '0.6rem', fontWeight: 700, fontFamily: 'monospace',
-                  color: 'var(--text-dim)',
-                }}>
-                  {integ.icon || integ.id.slice(0, 2).toUpperCase()}
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 600, fontSize: '0.8rem', color: 'var(--text)' }}>{integ.name}</div>
-                  <div style={{ fontSize: '0.65rem', color: 'var(--text-dim)', lineHeight: 1.4, marginTop: 2 }}>{integ.desc}</div>
-                </div>
-                <button
-                  onClick={() => toggle(integ.id)}
-                  title={on ? 'Desligar' : 'Ligar'}
-                  style={{
-                    width: 32, height: 18, borderRadius: 9, border: 'none', cursor: 'pointer',
-                    background: on ? 'var(--success)' : 'var(--border)',
-                    position: 'relative', flexShrink: 0, transition: 'background 0.15s',
-                  }}
-                >
-                  <div style={{
-                    position: 'absolute', top: 2, width: 14, height: 14, borderRadius: '50%',
-                    background: '#fff', transition: 'left 0.15s',
-                    left: on ? 16 : 2,
-                  }} />
-                </button>
-              </div>
+      {/* Loading */}
+      {loading && (
+        <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-dim)' }}>
+          <Loader2 size={18} className="spin" /> A carregar…
+        </div>
+      )}
 
-              <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', alignItems: 'center' }}>
-                {integ.planned && (
-                  <span style={{
-                    padding: '1px 6px', borderRadius: 20, fontSize: '0.58rem',
-                    background: 'rgba(245,158,11,0.12)', color: 'var(--warning)',
-                  }}>planned</span>
-                )}
-                <span style={{
-                  padding: '1px 6px', borderRadius: 20, fontSize: '0.58rem',
-                  background: on ? 'rgba(16,185,129,0.12)' : 'var(--bg-elevated)',
-                  color: on ? 'var(--success)' : 'var(--text-dim)',
-                }}>{on ? 'connected' : 'disconnected'}</span>
-                {integ.owners?.length > 0 && (
-                  <span style={{ fontSize: '0.58rem', color: 'var(--text-dim)', marginLeft: 'auto', fontStyle: 'italic' }}>
-                    {integ.owners.slice(0, 2).join(', ')}{integ.owners.length > 2 ? ` +${integ.owners.length - 2}` : ''}
-                  </span>
-                )}
-              </div>
-            </div>
-          )
-        })}
-      </div>
+      {/* Grid */}
+      {!loading && filtered.length > 0 && (
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
+          gap: 14,
+          padding: '0 8px',
+        }}>
+          {filtered.map((integ) => (
+            <IntegrationCard
+              key={integ.id}
+              integ={integ}
+              onToggle={handleToggle}
+              busy={busyId === integ.id}
+            />
+          ))}
+        </div>
+      )}
+
+      {!loading && filtered.length === 0 && (
+        <div style={{ textAlign: 'center', padding: 60, color: 'var(--text-dim)' }}>
+          <div style={{ fontSize: 14 }}>Sem integrações para esta vertical / categoria / pesquisa.</div>
+          <button
+            onClick={() => { setSearch(''); setCategoryFilter('all') }}
+            style={{
+              marginTop: 12, background: 'none', border: 'none', cursor: 'pointer',
+              color: 'var(--primary)', fontSize: 12, textDecoration: 'underline',
+            }}
+          >Limpar filtros</button>
+        </div>
+      )}
     </div>
   )
 }
