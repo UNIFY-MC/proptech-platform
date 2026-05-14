@@ -5,11 +5,12 @@
 // 'all' mostra todas; v2/v3/v4/... mostra globais (*) + específicas dessa vertical.
 
 import { useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import * as Lucide from 'lucide-react'
-import { ExternalLink, Search, Check, Loader2 } from 'lucide-react'
+import { ExternalLink, Search, Check, Loader2, Sparkles } from 'lucide-react'
 import { useIntegrations } from '../hooks/useIntegrations.js'
 import { useVerticalStore } from '../store/index.js'
-import { getIntegrationLogo, NEEDS_DARK_INVERT } from '../lib/integration-logos.js'
+import { getIntegrationLogo, getIntegrationLogoFallback, NEEDS_DARK_INVERT } from '../lib/integration-logos.js'
 
 const VERTICAL_LABEL = {
   all: 'todas verticais', v1: 'V1 Core', v2: 'V2 Condomínios', v3: 'V3 Seguros',
@@ -64,8 +65,9 @@ function BrandLogo({ integ }) {
     )
   }
 
-  // External: logo brand real via simpleicons + custom URLs
-  const logoUrl = getIntegrationLogo(integ)
+  // External: cascade Clearbit (multi-color) → Simple Icons → Lucide
+  const primaryUrl = getIntegrationLogo(integ)
+  const fallbackUrl = getIntegrationLogoFallback(integ)
   const needsInvert = NEEDS_DARK_INVERT.has(integ.slug)
   const Fallback = (integ.icon && Lucide[integ.icon]) || Lucide.Plug
   const isDark = typeof document !== 'undefined' && document.body?.getAttribute('data-theme') === 'dark'
@@ -78,23 +80,32 @@ function BrandLogo({ integ }) {
       marginBottom: 14,
       overflow: 'hidden',
     }}>
-      {logoUrl ? (
+      {primaryUrl ? (
         <img
-          src={logoUrl}
+          src={primaryUrl}
           alt={integ.name}
           style={{
-            width: 40, height: 40, objectFit: 'contain',
+            width: 44, height: 44, objectFit: 'contain',
             filter: needsInvert && isDark ? 'invert(1) brightness(1.5)' : 'none',
           }}
+          data-fallback={fallbackUrl || ''}
           onError={(e) => {
-            e.currentTarget.style.display = 'none'
-            const fallback = e.currentTarget.nextElementSibling
-            if (fallback) fallback.style.display = 'inline-flex'
+            const fb = e.currentTarget.dataset.fallback
+            if (fb && e.currentTarget.src !== fb) {
+              // 1ª falha → tenta fallback (Simple Icons colorido)
+              e.currentTarget.src = fb
+              e.currentTarget.dataset.fallback = ''  // evita loop
+            } else {
+              // 2ª falha → mostra ícone Lucide
+              e.currentTarget.style.display = 'none'
+              const lucide = e.currentTarget.nextElementSibling
+              if (lucide) lucide.style.display = 'inline-flex'
+            }
           }}
         />
       ) : null}
       <span style={{
-        display: logoUrl ? 'none' : 'inline-flex',
+        display: primaryUrl ? 'none' : 'inline-flex',
         alignItems: 'center', justifyContent: 'center',
         width: 40, height: 40,
         color: integ.brand_color || 'var(--text)',
@@ -234,7 +245,26 @@ export default function IntegrationsPage() {
   const totalCount = items.length
 
   return (
-    <div style={{ padding: '8px 0 40px', maxWidth: 1400, margin: '0 auto' }}>
+    <div style={{ padding: '8px 0 40px', maxWidth: 1400, margin: '0 auto', position: 'relative' }}>
+      {/* Botão Useful Tools — topo direito */}
+      <div style={{ position: 'absolute', top: 16, right: 16 }}>
+        <Link
+          to="/useful-tools"
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+            padding: '8px 14px', borderRadius: 6,
+            background: 'var(--bg-card)', border: '1px solid var(--border)',
+            color: 'var(--text)', textDecoration: 'none', fontSize: 13,
+            fontWeight: 500, transition: 'all 0.15s',
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--primary)'; e.currentTarget.style.color = 'var(--primary)' }}
+          onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text)' }}
+        >
+          <Sparkles size={14} />
+          Useful Tools
+        </Link>
+      </div>
+
       {/* Header — title + subtitle CookAI-style */}
       <div style={{ textAlign: 'center', marginBottom: 28, paddingTop: 20 }}>
         <h1 style={{ fontSize: 28, fontWeight: 700, color: 'var(--text)', margin: '0 0 10px' }}>

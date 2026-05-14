@@ -20,6 +20,7 @@ import BiaTaskLauncher from './views/BiaTaskLauncher.jsx'
 import SkillsPage from './views/SkillsPage.jsx'
 import RecipesPage from './views/RecipesPage.jsx'
 import IntegrationsPage from './views/IntegrationsPage.jsx'
+import UsefulToolsPage from './views/UsefulToolsPage.jsx'
 import ContextPage from './views/ContextPage.jsx'
 import InboxUnified from './views/InboxUnified.jsx'
 import AppEmbed from './views/AppEmbed.jsx'
@@ -115,6 +116,7 @@ export default function App() {
               <Route path="/skills"       element={<SkillsPage data={data} />} />
               <Route path="/recipes"      element={<RecipesPage data={data} />} />
               <Route path="/integrations" element={<IntegrationsPage data={data} />} />
+              <Route path="/useful-tools" element={<UsefulToolsPage />} />
               <Route path="/context"      element={<ContextPage />} />
               <Route path="/chat"         element={<ChatPage />} />
               <Route path="/files"        element={<FilesPage />} />

@@ -1,11 +1,58 @@
 // integration-logos — resolve URL do logo brand real para cada integração
 //
-// Estratégia:
-//  1. Simple Icons CDN (https://cdn.simpleicons.org/<slug>) — 3000+ marcas SVG oficiais
-//  2. URLs customizadas para marcas que não estão em Simple Icons (PT/PT-EU)
-//  3. Fallback: null → o componente usa lucide-react
+// Estratégia (prioridade descendente):
+//  1. CLEARBIT_DOMAIN_MAP → logo.clearbit.com/<domain> (multi-color real, PNG)
+//  2. CUSTOM_LOGOS → URL directa do site oficial (PT/EU marcas)
+//  3. SIMPLEICONS_MAP → cdn.simpleicons.org/<slug>/<color> (mono SVG)
+//  4. null → fallback Lucide no componente
 
-// Mapping slug interno → simpleicons slug
+// Clearbit Logo API: domínio oficial → logo multi-color
+// (https://logo.clearbit.com/<domain> — PNG transparente com cores reais)
+const CLEARBIT_DOMAIN_MAP = {
+  'github':            'github.com',
+  'vercel':            'vercel.com',
+  'supabase':          'supabase.com',
+  'anthropic':         'anthropic.com',
+  'openai':            'openai.com',
+  'notion':            'notion.so',
+  'google-drive':      'drive.google.com',
+  'gmail':             'gmail.com',
+  'google-calendar':   'calendar.google.com',
+  'google-maps':       'maps.google.com',
+  'resend':            'resend.com',
+  'apify':             'apify.com',
+  'meta-graph':        'meta.com',
+  'linkedin':          'linkedin.com',
+  'x-twitter':         'x.com',
+  'whatsapp-business': 'whatsapp.com',
+  'twilio':            'twilio.com',
+  'stripe':            'stripe.com',
+  'zapier':            'zapier.com',
+  'make':              'make.com',
+  'clickup':           'clickup.com',
+  'asana':             'asana.com',
+  'airbnb':            'airbnb.com',
+  'booking':           'booking.com',
+  'toconline':         'toconline.pt',
+  'moloni':            'moloni.com',
+  'banco-bcp':         'millenniumbcp.pt',
+  'generali':          'generali.pt',
+  'liberty':           'libertyseguros.pt',
+  'spock-es':          'spock.es',
+  'galp':              'galp.com',
+  'repsol-eletric':    'repsol.com',
+  'idealista':         'idealista.pt',
+  'imovirtual':        'imovirtual.com',
+  'swan-baas':         'swan.io',
+  'gohighlevel':       'gohighlevel.com',
+  'vonage-sms':        'vonage.com',
+  'posthog':           'posthog.com',
+  'discord-webhook':   'discord.com',
+  'erse-api':          'erse.pt',
+  'seguradoras-api':   'apsesguradores.pt',
+}
+
+// Mapping slug interno → simpleicons slug (fallback mono)
 const SIMPLEICONS_MAP = {
   'github':            'github',
   'vercel':            'vercel',
@@ -51,6 +98,7 @@ const CUSTOM_LOGOS = {
 
 /**
  * Devolve URL do logo brand para a integração.
+ * Prefere Clearbit (multi-color real) → Custom URLs → Simple Icons (mono) → null.
  * @param {object} integ — { slug, brand_color }
  * @returns {string|null} — URL absoluta ou null se não há logo (usar fallback Lucide)
  */
@@ -58,16 +106,39 @@ export function getIntegrationLogo(integ) {
   if (!integ) return null
   const slug = integ.slug
 
-  // 1. Custom override primeiro (marcas PT/EU)
+  // 1. Clearbit — multi-color, melhor opção visual
+  if (CLEARBIT_DOMAIN_MAP[slug]) {
+    return `https://logo.clearbit.com/${CLEARBIT_DOMAIN_MAP[slug]}`
+  }
+
+  // 2. Custom override (marcas sem Clearbit)
   if (CUSTOM_LOGOS[slug]) return CUSTOM_LOGOS[slug]
 
-  // 2. Simple Icons (com cor brand se disponível)
+  // 3. Simple Icons (mono, com cor brand)
   const siSlug = SIMPLEICONS_MAP[slug]
   if (siSlug) {
     const color = (integ.brand_color || '').replace('#', '')
     return color ? `https://cdn.simpleicons.org/${siSlug}/${color}` : `https://cdn.simpleicons.org/${siSlug}`
   }
 
+  return null
+}
+
+/**
+ * URL de fallback alternativa para usar se o primário falhar (img onError).
+ * @param {object} integ
+ * @returns {string|null}
+ */
+export function getIntegrationLogoFallback(integ) {
+  if (!integ) return null
+  const slug = integ.slug
+  // Se primário foi Clearbit, fallback é Simple Icons colorido
+  if (CLEARBIT_DOMAIN_MAP[slug] && SIMPLEICONS_MAP[slug]) {
+    const color = (integ.brand_color || '').replace('#', '')
+    return color
+      ? `https://cdn.simpleicons.org/${SIMPLEICONS_MAP[slug]}/${color}`
+      : `https://cdn.simpleicons.org/${SIMPLEICONS_MAP[slug]}`
+  }
   return null
 }
 

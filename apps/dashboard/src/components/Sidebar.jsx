@@ -131,6 +131,7 @@ export default function Sidebar() {
           <NavItem to="/skills"       label="Skills"       icon={Sparkles} />
           <NavItem to="/skills/review" label="Skills · review" icon={Sparkles} />
           <NavItem to="/integrations" label="Integrations" icon={Plug} />
+          <NavItem to="/useful-tools" label="Useful Tools" icon={Sparkles} />
         </SidebarGroup>
 
         <SidebarGroup id="strategy" label="Strategy">
