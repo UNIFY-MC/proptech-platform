@@ -25,6 +25,46 @@ const STATUS_META = {
 }
 
 function BrandLogo({ integ }) {
+  const kind = integ.kind || 'external'
+
+  // Internal: ícone Database/Server cinzento sem brand
+  if (kind === 'internal') {
+    return (
+      <div style={{
+        width: 54, height: 54, borderRadius: 12,
+        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+        background: 'rgba(107,79,160,0.10)',
+        border: '1px dashed rgba(107,79,160,0.30)',
+        color: '#a78bfa', marginBottom: 14,
+      }}>
+        <Lucide.Database size={26} strokeWidth={2} />
+      </div>
+    )
+  }
+
+  // MCP: ícone Cpu com label distintiva
+  if (kind === 'mcp') {
+    return (
+      <div style={{
+        width: 54, height: 54, borderRadius: 12, position: 'relative',
+        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+        background: 'rgba(59,130,246,0.10)',
+        border: '1px solid rgba(59,130,246,0.30)',
+        color: '#60a5fa', marginBottom: 14,
+      }}>
+        <Lucide.Cpu size={26} strokeWidth={2} />
+        <span style={{
+          position: 'absolute', bottom: -6, right: -6,
+          background: '#60a5fa', color: '#0d1117',
+          padding: '1px 5px', borderRadius: 3,
+          fontSize: 8, fontWeight: 700,
+          fontFamily: 'JetBrains Mono, monospace', letterSpacing: '0.06em',
+        }}>MCP</span>
+      </div>
+    )
+  }
+
+  // External: logo brand real via simpleicons + custom URLs
   const logoUrl = getIntegrationLogo(integ)
   const needsInvert = NEEDS_DARK_INVERT.has(integ.slug)
   const Fallback = (integ.icon && Lucide[integ.icon]) || Lucide.Plug
@@ -47,7 +87,6 @@ function BrandLogo({ integ }) {
             filter: needsInvert && isDark ? 'invert(1) brightness(1.5)' : 'none',
           }}
           onError={(e) => {
-            // Falha de carga → esconde img, mostra fallback Lucide
             e.currentTarget.style.display = 'none'
             const fallback = e.currentTarget.nextElementSibling
             if (fallback) fallback.style.display = 'inline-flex'
@@ -155,6 +194,7 @@ export default function IntegrationsPage() {
   const { items, loading, updateStatus } = useIntegrations()
   const [search, setSearch] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('all')
+  const [kindFilter, setKindFilter] = useState('all')
   const [busyId, setBusyId] = useState(null)
 
   const categories = useMemo(() => {
@@ -165,6 +205,7 @@ export default function IntegrationsPage() {
 
   const filtered = useMemo(() => {
     let arr = items
+    if (kindFilter !== 'all')     arr = arr.filter((i) => (i.kind || 'external') === kindFilter)
     if (categoryFilter !== 'all') arr = arr.filter((i) => i.category === categoryFilter)
     if (search) {
       const q = search.toLowerCase()
@@ -175,7 +216,13 @@ export default function IntegrationsPage() {
       )
     }
     return arr
-  }, [items, categoryFilter, search])
+  }, [items, kindFilter, categoryFilter, search])
+
+  const kindCounts = useMemo(() => {
+    const c = { external: 0, mcp: 0, internal: 0 }
+    items.forEach((i) => { c[i.kind || 'external'] = (c[i.kind || 'external'] || 0) + 1 })
+    return c
+  }, [items])
 
   const handleToggle = async (integ, nextStatus) => {
     setBusyId(integ.id)
@@ -205,6 +252,44 @@ export default function IntegrationsPage() {
           <span style={{ color: '#10b981', marginLeft: 6 }}>{connectedCount} conectadas</span> /
           <span style={{ marginLeft: 6 }}>{totalCount} disponíveis</span>
         </div>
+      </div>
+
+      {/* Tab por kind */}
+      <div style={{
+        display: 'flex', gap: 4, justifyContent: 'center', marginBottom: 18,
+        padding: '0 8px',
+      }}>
+        {[
+          { id: 'all',      label: 'Todas',    count: items.length },
+          { id: 'external', label: 'Externas', count: kindCounts.external || 0, icon: Lucide.Plug },
+          { id: 'mcp',      label: 'MCP',      count: kindCounts.mcp || 0,      icon: Lucide.Cpu },
+          { id: 'internal', label: 'Internas', count: kindCounts.internal || 0, icon: Lucide.Database },
+        ].map((t) => {
+          const Icon = t.icon
+          const active = kindFilter === t.id
+          return (
+            <button
+              key={t.id}
+              onClick={() => setKindFilter(t.id)}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                padding: '7px 14px', borderRadius: 6,
+                background: active ? 'var(--bg-card)' : 'transparent',
+                border: `1px solid ${active ? 'var(--primary)' : 'var(--border)'}`,
+                color: active ? 'var(--text)' : 'var(--text-dim)',
+                cursor: 'pointer', fontSize: 13, fontWeight: 500,
+              }}
+            >
+              {Icon && <Icon size={13} />}
+              {t.label}
+              <span style={{
+                fontSize: 10, fontFamily: 'JetBrains Mono, monospace',
+                color: 'var(--text-dim)', padding: '1px 5px',
+                background: 'var(--bg-elevated)', borderRadius: 3,
+              }}>{t.count}</span>
+            </button>
+          )
+        })}
       </div>
 
       {/* Toolbar — search + category pills */}
