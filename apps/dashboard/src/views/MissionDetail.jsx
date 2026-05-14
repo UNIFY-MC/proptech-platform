@@ -594,6 +594,27 @@ export default function MissionDetail() {
               </div>
             </div>
           )}
+
+          {/* Context loaded — Sprint Q1 */}
+          {execution && (execution.agent_context_chars > 0 || execution.context_files_read > 0) && (
+            <div style={S.section}>
+              <div style={S.sectionHeader}>
+                <span>Context loaded</span>
+              </div>
+              <div style={S.skillsList}>
+                {execution.agent_context_chars > 0 && (
+                  <span style={S.skillBadge} title="SOPs + ICPs + Legal + Never-rules auto-injectados">
+                    <span style={{ color: '#2d6a4f' }}>◉</span> {Math.round(execution.agent_context_chars / 1000)}k chars · SOPs/Legal
+                  </span>
+                )}
+                {execution.context_files_read > 0 && (
+                  <span style={S.skillBadge} title="Ficheiros do Supabase Storage lidos por skill/task">
+                    <span style={{ color: '#1a5296' }}>◉</span> {execution.context_files_read} file{execution.context_files_read > 1 ? 's' : ''}
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
         </aside>
       </div>
     </div>
