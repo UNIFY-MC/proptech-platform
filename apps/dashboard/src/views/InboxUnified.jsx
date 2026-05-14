@@ -8,7 +8,7 @@
 //   - Feed: "Today {count}" header + items com author avatar + badge type + age
 //   - Bottom: AskAnythingBar (já existe)
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Sparkles, Lightbulb, Sliders, X, ChevronDown, History } from 'lucide-react'
 import { useInboxItems, useApprovals } from '../hooks/useSupabase'
 import { useInboxReads } from '../hooks/useInboxReads'
@@ -90,6 +90,14 @@ export default function InboxUnified() {
   const { bySlug: watcherBySlug } = useWatcherProfiles()
   const navigate = useNavigate()
   const [taskModalState, setTaskModalState] = useState(null)  // { kind, item, suggestion }
+  const [taskToast, setTaskToast] = useState(null)
+
+  // Auto-dismiss toast 5s
+  useEffect(() => {
+    if (!taskToast) return
+    const t = setTimeout(() => setTaskToast(null), 5000)
+    return () => clearTimeout(t)
+  }, [taskToast])
 
   function handleCreateTask({ kind, item, suggestion }) {
     setTaskModalState({ kind, item, suggestion })
@@ -316,10 +324,33 @@ export default function InboxUnified() {
           onClose={() => setTaskModalState(null)}
           onCreated={(taskId) => {
             setTaskModalState(null)
-            // Toast: task criada com link para /tasks
-            if (window.confirm('Task criada. Ir para /tasks?')) navigate('/tasks')
+            setTaskToast({ id: taskId, ts: Date.now() })
           }}
         />
+      )}
+
+      {/* Toast inline — task criada (5s) */}
+      {taskToast && (
+        <div style={{
+          position: 'fixed', bottom: 80, left: '50%', transform: 'translateX(-50%)',
+          background: 'var(--bg-card)', border: '1px solid #10b981',
+          borderLeft: '4px solid #10b981',
+          color: 'var(--text)', padding: '10px 16px', borderRadius: 8,
+          fontSize: '0.82rem', display: 'flex', alignItems: 'center', gap: 12,
+          boxShadow: '0 8px 24px rgba(0,0,0,0.3)', zIndex: 1500,
+        }}>
+          <span style={{ color: '#10b981', fontSize: '1rem' }}>✓</span>
+          <span>Task criada</span>
+          <button onClick={() => { navigate('/tasks'); setTaskToast(null) }} style={{
+            background: 'var(--bg-elevated)', color: 'var(--text)',
+            border: 'none', padding: '4px 12px', borderRadius: 5,
+            cursor: 'pointer', fontSize: '0.72rem', fontWeight: 600,
+          }}>Ver tasks</button>
+          <button onClick={() => setTaskToast(null)} style={{
+            background: 'none', border: 'none', cursor: 'pointer',
+            color: 'var(--text-dim)', padding: 0, display: 'inline-flex',
+          }}>×</button>
+        </div>
       )}
     </div>
   )

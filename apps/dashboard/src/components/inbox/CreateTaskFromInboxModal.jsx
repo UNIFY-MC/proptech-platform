@@ -4,9 +4,21 @@
 // User escolhe: employee (16 agents), priority, due_at opcional, kind (task/idea/followup)
 
 import { useState, useEffect } from 'react'
-import { X, Calendar, User, Briefcase, Target, AlertCircle } from 'lucide-react'
+import { X, Calendar, User, Briefcase, Target, AlertCircle, ChevronDown } from 'lucide-react'
 import { useTasks } from '../../hooks/useTasks.js'
 import { useData } from '../../hooks/useData.js'
+
+// Chefe de cada departamento — recebe a task e re-aloca a sub-employees internamente.
+// Simplifica UX: o user escolhe direcção responsável, não micro-management.
+const DEPT_MANAGERS = {
+  marketing:   'diretor-marketing',
+  sales:       'gestor-leads',
+  operations:  'orquestrador-condo',
+  finance:     'financeiro-condo',
+  support:     'atendimento-condo',
+  legal:       'compliance-condo',
+  engineering: 'orquestrador-condo',
+}
 
 const PRIORITIES = [
   { id: 'low',    label: 'Low',    color: '#6b7280' },
@@ -62,8 +74,16 @@ export default function CreateTaskFromInboxModal({ item, suggestion, kind: defau
   const [dueAt, setDueAt] = useState('')
   const [busy, setBusy] = useState(false)
   const [showEmpList, setShowEmpList] = useState(false)
+  const [showAllAgents, setShowAllAgents] = useState(false)
 
-  // Filtra employees pela vertical activa
+  // Lista de chefes de departamento (1 por dept) — opção default
+  const departmentManagers = Object.entries(DEPT_MANAGERS).map(([dept, mgrId]) => {
+    const emp = employees.find(e => e.id === mgrId)
+    if (!emp) return null
+    return { ...emp, _dept_role: 'manager', _dept: dept }
+  }).filter(Boolean)
+
+  // Lista completa (todos os agents) — quando user expande
   const filteredEmployees = vertical
     ? employees.filter(e => {
         const verticals = e.verticals || [e.vertical].filter(Boolean)
@@ -71,6 +91,7 @@ export default function CreateTaskFromInboxModal({ item, suggestion, kind: defau
       })
     : employees
 
+  const visibleEmployees = showAllAgents ? filteredEmployees : departmentManagers
   const selectedEmp = employees.find(e => e.id === employeeId)
 
   async function submit(e) {
@@ -189,9 +210,17 @@ export default function CreateTaskFromInboxModal({ item, suggestion, kind: defau
           </div>
         </div>
 
-        {/* Employee picker */}
+        {/* Employee picker — só chefes de departamento por defeito */}
         <div>
-          <Label icon={User}>Atribuir a {filteredEmployees.length === 0 && '— sem agents para esta vertical'}</Label>
+          <Label icon={User}>
+            Atribuir a chefe de departamento
+            <span style={{
+              marginLeft: 8, fontSize: '0.55rem', color: 'var(--text-dim)',
+              textTransform: 'none', letterSpacing: 0, fontWeight: 500,
+            }}>
+              (O chefe re-aloca aos seus agents)
+            </span>
+          </Label>
           <div style={{ position: 'relative' }}>
             <button type="button" onClick={() => setShowEmpList(s => !s)} style={{
               ...inputStyle, textAlign: 'left',
@@ -209,29 +238,30 @@ export default function CreateTaskFromInboxModal({ item, suggestion, kind: defau
                   <span style={{ flex: 1 }}>
                     <strong>{selectedEmp.name}</strong>
                     <span style={{ color: 'var(--text-dim)', marginLeft: 6, fontSize: '0.7rem' }}>
-                      · {selectedEmp.department}
+                      · chefe {selectedEmp.department}
                     </span>
                   </span>
                 </>
               ) : (
                 <span style={{ color: 'var(--text-dim)' }}>
-                  {filteredEmployees.length > 0 ? '— sem owner (escolhe employee) —' : '— sem owner —'}
+                  — não atribuir agora —
                 </span>
               )}
+              <ChevronDown size={14} style={{ color: 'var(--text-dim)' }} />
             </button>
             {showEmpList && (
               <div style={{
                 position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0,
                 background: 'var(--bg-card)', border: '1px solid var(--border)',
-                borderRadius: 6, padding: 4, maxHeight: 240, overflowY: 'auto',
+                borderRadius: 6, padding: 4, maxHeight: 280, overflowY: 'auto',
                 boxShadow: '0 8px 24px rgba(0,0,0,0.3)', zIndex: 5,
               }}>
                 <button type="button"
                   onClick={() => { setEmployeeId(''); setShowEmpList(false) }}
                   style={empItem(employeeId === '')}>
-                  — sem owner —
+                  — não atribuir agora —
                 </button>
-                {filteredEmployees.map(e => (
+                {visibleEmployees.map(e => (
                   <button key={e.id} type="button"
                     onClick={() => { setEmployeeId(e.id); setShowEmpList(false) }}
                     style={empItem(employeeId === e.id)}>
@@ -240,22 +270,29 @@ export default function CreateTaskFromInboxModal({ item, suggestion, kind: defau
                       background: 'linear-gradient(135deg, #534AB7, #8b5cf6)',
                       display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                       color: '#fff', fontSize: '0.6rem', fontWeight: 700,
-                      marginRight: 8,
+                      marginRight: 8, flexShrink: 0,
                     }}>{e.avatarInitial}</div>
                     <strong>{e.name}</strong>
-                    <span style={{ color: 'var(--text-dim)', marginLeft: 6, fontSize: '0.7rem' }}>
-                      · {e.department} · {(e.verticals || [e.vertical]).filter(Boolean).join(', ')}
+                    <span style={{ color: 'var(--text-dim)', marginLeft: 6, fontSize: '0.68rem' }}>
+                      · {showAllAgents ? e.department : `chefe ${e._dept || e.department}`}
                     </span>
                   </button>
                 ))}
-                {vertical && filteredEmployees.length === 0 && employees.length > 0 && (
-                  <div style={{ padding: '6px 12px', fontSize: '0.65rem', color: 'var(--text-dim)' }}>
-                    Sem agents activos em {vertical.toUpperCase()}.{' '}
-                    <button type="button" onClick={() => setVertical('')} style={{
-                      background: 'none', border: 'none', color: 'var(--info)', cursor: 'pointer', padding: 0,
-                    }}>Ver todos</button>
-                  </div>
-                )}
+                {/* Toggle "Ver outros agents" */}
+                <div style={{
+                  borderTop: '1px solid var(--border)', marginTop: 4, paddingTop: 4,
+                }}>
+                  <button type="button" onClick={() => setShowAllAgents(s => !s)} style={{
+                    ...empItem(false),
+                    color: 'var(--info)',
+                    fontSize: '0.7rem',
+                    fontWeight: 500,
+                  }}>
+                    {showAllAgents
+                      ? '↑ Mostrar só chefes de departamento'
+                      : `↓ Ver todos os ${filteredEmployees.length} agents${vertical ? ` ${vertical.toUpperCase()}` : ''}`}
+                  </button>
+                </div>
               </div>
             )}
           </div>

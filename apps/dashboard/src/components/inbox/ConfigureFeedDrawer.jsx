@@ -114,6 +114,7 @@ export default function ConfigureFeedDrawer({ onClose }) {
   // Determina se Watch All ou Unwatch All deve aparecer (todos da tab actual já seguidos?)
   const tabSuggestions = tab === 'all' || tab === 'following' ? suggestions : suggestions.filter(s => s.sector === tab)
   const allFollowed = tabSuggestions.length > 0 && tabSuggestions.every(s => s.already_following)
+  const toFollowCount = tabSuggestions.filter(s => !s.already_following).length
 
   async function handleRun(sourceId) {
     setRunResult({ source_id: sourceId, loading: true })
@@ -217,17 +218,19 @@ export default function ConfigureFeedDrawer({ onClose }) {
             )
           })}
           <div style={{ flex: 1 }} />
-          {tab !== 'following' && !allFollowed && (
+          {/* Watch All — sempre visível em tabs de sugestões quando há items por seguir */}
+          {tab !== 'following' && toFollowCount > 0 && (
             <button onClick={handleFollowAll} style={{
               background: 'var(--primary)', color: '#fff', border: 'none',
               padding: '6px 14px', borderRadius: 99, cursor: 'pointer',
               fontSize: '0.72rem', fontWeight: 600,
               display: 'inline-flex', alignItems: 'center', gap: 5,
             }}>
-              <Eye size={12} /> Watch All ({tabSuggestions.filter(s => !s.already_following).length})
+              <Eye size={12} /> Watch All ({toFollowCount})
             </button>
           )}
-          {(tab === 'following' || allFollowed) && totalActive > 0 && (
+          {/* Unwatch All — sempre visível quando há sources active */}
+          {totalActive > 0 && (
             <button onClick={handleUnwatchAll} style={{
               background: 'transparent', color: 'var(--danger)',
               border: '1px solid var(--danger)',
@@ -236,6 +239,20 @@ export default function ConfigureFeedDrawer({ onClose }) {
               display: 'inline-flex', alignItems: 'center', gap: 5,
             }}>
               <EyeOff size={12} /> Unwatch All ({totalActive})
+            </button>
+          )}
+          {/* Reactivate inactive — quando há sources mas todas off */}
+          {totalActive === 0 && totalFollowing > 0 && (
+            <button onClick={async () => {
+              for (const s of sources.filter(x => !x.active)) await toggle(s.id, true)
+              await refresh()
+            }} style={{
+              background: '#10b981', color: '#fff', border: 'none',
+              padding: '6px 14px', borderRadius: 99, cursor: 'pointer',
+              fontSize: '0.72rem', fontWeight: 600,
+              display: 'inline-flex', alignItems: 'center', gap: 5,
+            }}>
+              <Eye size={12} /> Re-activar todas ({totalFollowing})
             </button>
           )}
         </div>
