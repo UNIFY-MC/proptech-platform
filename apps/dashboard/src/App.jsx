@@ -51,6 +51,7 @@ import ConnectionsPage from './views/ConnectionsPage.jsx'
 import DiscordConnectionsPage from './views/DiscordConnectionsPage.jsx'
 import ClientFlowBuilderPage from './views/ClientFlowBuilderPage.jsx'
 import FlowTemplatesPage from './views/FlowTemplatesPage.jsx'
+import SkillsMarketplacePage from './views/SkillsMarketplacePage.jsx'
 import CalendarPage from './views/CalendarPage.jsx'
 import CalendarSettingsPage from './views/CalendarSettingsPage.jsx'
 import SkillReviewPage from './views/SkillReviewPage.jsx'
@@ -131,6 +132,7 @@ export default function App() {
               <Route path="/competitors/legacy" element={<Competitors data={data} />} />
               <Route path="/verticais"    element={<Verticais data={data} />} />
               <Route path="/skills"       element={<SkillsPage data={data} />} />
+              <Route path="/skills/marketplace" element={<SkillsMarketplacePage />} />
               <Route path="/recipes"      element={<RecipesPage data={data} />} />
               <Route path="/integrations" element={<IntegrationsPage data={data} />} />
               <Route path="/useful-tools" element={<UsefulToolsPage />} />
