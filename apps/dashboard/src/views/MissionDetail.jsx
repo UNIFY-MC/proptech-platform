@@ -646,6 +646,88 @@ export default function MissionDetail() {
               </div>
             </div>
           )}
+
+          {/* Research done — Sprint Q1.8 web_browse */}
+          {execution?.research_done && execution.research_done.length > 0 && (
+            <div style={S.section}>
+              <div style={S.sectionHeader}>
+                <span>Pesquisas web ({execution.research_done.length})</span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {execution.research_done.map((r, i) => (
+                  <a key={i} href={r.url} target="_blank" rel="noreferrer" style={{
+                    display: 'flex', flexDirection: 'column', gap: 2,
+                    padding: '5px 8px',
+                    background: 'var(--bg-elevated)',
+                    border: '1px solid var(--border)',
+                    borderRadius: 5,
+                    textDecoration: 'none',
+                    color: 'var(--text)',
+                  }}>
+                    <span style={{ fontSize: 11, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      🌐 {r.query || r.url}
+                    </span>
+                    <span style={{ fontSize: 9, color: 'var(--text-dim)', fontFamily: 'JetBrains Mono, monospace' }}>
+                      {new URL(r.url).hostname} · {r.chars}ch
+                    </span>
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Docs guardados — Sprint Q1.8 save_to_context_docs */}
+          {execution?.saved_docs && execution.saved_docs.length > 0 && (
+            <div style={S.section}>
+              <div style={S.sectionHeader}>
+                <span>Docs guardados ({execution.saved_docs.length})</span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {execution.saved_docs.map((d, i) => (
+                  <div key={i} style={{
+                    display: 'flex', flexDirection: 'column', gap: 2,
+                    padding: '5px 8px',
+                    background: 'rgba(45,106,79,0.08)',
+                    border: '1px solid rgba(45,106,79,0.3)',
+                    borderRadius: 5,
+                  }}>
+                    <span style={{ fontSize: 11, fontWeight: 500, color: '#86efac' }}>
+                      📄 {d.title}
+                    </span>
+                    <div style={{ display: 'flex', gap: 4, alignItems: 'center', fontSize: 9, color: 'var(--text-dim)', fontFamily: 'JetBrains Mono, monospace' }}>
+                      <span style={{ background: 'var(--bg-elevated)', padding: '1px 5px', borderRadius: 3 }}>{d.type}</span>
+                      {d.source_url && <a href={d.source_url} target="_blank" rel="noreferrer" style={{ color: 'var(--text-dim)' }}>fonte</a>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Delegation chain — Sprint Q1.8 */}
+          {task.payload?.delegation_chain && task.payload.delegation_chain.length > 0 && (
+            <div style={S.section}>
+              <div style={S.sectionHeader}>
+                <span>Delegation chain</span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                {task.payload.delegation_chain.map((d, i) => (
+                  <div key={i} style={{
+                    padding: '5px 8px',
+                    background: 'var(--bg-elevated)',
+                    borderLeft: '2px solid #a855f7',
+                    borderRadius: 3,
+                    fontSize: 10,
+                  }}>
+                    <div style={{ fontFamily: 'JetBrains Mono, monospace', color: 'var(--text)' }}>
+                      {d.from} → {d.to}
+                    </div>
+                    <div style={{ color: 'var(--text-dim)', marginTop: 2 }}>{d.reason}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </aside>
       </div>
     </div>
