@@ -40,22 +40,17 @@ export default function DiscordConnectionsPage() {
   useEffect(() => { fetch() }, [fetch])
 
   async function saveChannel(agentId, fields) {
-    const existing = channels.find(c => c.agent_id === agentId)
-    if (existing) {
-      const { error } = await supabase.from('system_agent_channels')
-        .update(fields)
-        .eq('id', existing.id)
-      if (error) {
-        addToast({ type: 'error', message: `Erro: ${error.message}` })
-        return
-      }
-    } else {
-      const { error } = await supabase.from('system_agent_channels')
-        .insert({ agent_id: agentId, channel_type: 'discord', ...fields })
-      if (error) {
-        addToast({ type: 'error', message: `Erro: ${error.message}` })
-        return
-      }
+    // Usa RPC SECURITY DEFINER (bypassa RLS is_staff que requer login Supabase Auth)
+    const { error } = await supabase.rpc('agent_channel_upsert', {
+      p_agent_id: agentId,
+      p_channel_type: 'discord',
+      p_webhook_url: fields.webhook_url ?? null,
+      p_display_name: fields.display_name ?? null,
+      p_active: fields.active ?? true,
+    })
+    if (error) {
+      addToast({ type: 'error', message: `Erro: ${error.message}` })
+      return
     }
     addToast({ type: 'success', message: `✓ ${agentId} actualizado` })
     fetch()
