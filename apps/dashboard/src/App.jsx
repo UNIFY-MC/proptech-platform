@@ -49,6 +49,8 @@ import ClientsReportingPage from './views/ClientsReportingPage.jsx'
 import ClientPortalPreviewPage from './views/ClientPortalPreviewPage.jsx'
 import ConnectionsPage from './views/ConnectionsPage.jsx'
 import DiscordConnectionsPage from './views/DiscordConnectionsPage.jsx'
+import ClientFlowBuilderPage from './views/ClientFlowBuilderPage.jsx'
+import FlowTemplatesPage from './views/FlowTemplatesPage.jsx'
 import CalendarPage from './views/CalendarPage.jsx'
 import CalendarSettingsPage from './views/CalendarSettingsPage.jsx'
 import SkillReviewPage from './views/SkillReviewPage.jsx'
@@ -151,6 +153,8 @@ export default function App() {
               <Route path="/clients/email"     element={<ClientsEmailPage />} />
               <Route path="/clients/reporting" element={<ClientsReportingPage />} />
               <Route path="/clients/:slug/portal" element={<ClientPortalPreviewPage />} />
+              <Route path="/clients/:slug/flow"   element={<ClientFlowBuilderPage />} />
+              <Route path="/flow-templates"       element={<FlowTemplatesPage />} />
               <Route path="/connections"         element={<ConnectionsPage />} />
               <Route path="/connections/discord" element={<DiscordConnectionsPage />} />
               <Route path="/calendar"          element={<CalendarPage />} />
