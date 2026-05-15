@@ -48,6 +48,7 @@ import ClientsEmailPage from './views/ClientsEmailPage.jsx'
 import ClientsReportingPage from './views/ClientsReportingPage.jsx'
 import ClientPortalPreviewPage from './views/ClientPortalPreviewPage.jsx'
 import ConnectionsPage from './views/ConnectionsPage.jsx'
+import DiscordConnectionsPage from './views/DiscordConnectionsPage.jsx'
 import CalendarPage from './views/CalendarPage.jsx'
 import CalendarSettingsPage from './views/CalendarSettingsPage.jsx'
 import SkillReviewPage from './views/SkillReviewPage.jsx'
@@ -150,7 +151,8 @@ export default function App() {
               <Route path="/clients/email"     element={<ClientsEmailPage />} />
               <Route path="/clients/reporting" element={<ClientsReportingPage />} />
               <Route path="/clients/:slug/portal" element={<ClientPortalPreviewPage />} />
-              <Route path="/connections"  element={<ConnectionsPage />} />
+              <Route path="/connections"         element={<ConnectionsPage />} />
+              <Route path="/connections/discord" element={<DiscordConnectionsPage />} />
               <Route path="/calendar"          element={<CalendarPage />} />
               <Route path="/calendar/settings" element={<CalendarSettingsPage />} />
               <Route path="/skills/review" element={<SkillReviewPage />} />
