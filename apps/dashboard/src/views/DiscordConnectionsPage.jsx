@@ -22,6 +22,9 @@ export default function DiscordConnectionsPage() {
   const [channels, setChannels] = useState([])
   const [loading, setLoading] = useState(true)
   const [testing, setTesting] = useState(null)
+  const [applyAllOpen, setApplyAllOpen] = useState(false)
+  const [bulkUrl, setBulkUrl] = useState('')
+  const [applyingBulk, setApplyingBulk] = useState(false)
   const addToast = useNotificationsStore(s => s.addToast)
 
   const fetch = useCallback(async () => {
@@ -59,20 +62,26 @@ export default function DiscordConnectionsPage() {
   }
 
   async function applyUrlToAll() {
-    const url = window.prompt('Cola o webhook URL — vai ser aplicado aos 7 agents (com o nome default de cada um):')
-    if (!url?.trim()) return
-    if (!url.includes('discord.com/api/webhooks')) {
-      addToast({ type: 'error', message: 'URL não parece um Discord webhook' })
+    if (!bulkUrl.trim()) return
+    if (!bulkUrl.includes('discord.com/api/webhooks')) {
+      addToast({ type: 'error', message: 'URL não parece um Discord webhook válido' })
       return
     }
-    for (const h of DEPT_HEADS) {
-      await saveChannel(h.id, {
-        webhook_url: url.trim(),
-        display_name: channels.find(c => c.agent_id === h.id)?.display_name || h.default_name,
-        active: true,
-      })
+    setApplyingBulk(true)
+    try {
+      for (const h of DEPT_HEADS) {
+        await saveChannel(h.id, {
+          webhook_url: bulkUrl.trim(),
+          display_name: channels.find(c => c.agent_id === h.id)?.display_name || h.default_name,
+          active: true,
+        })
+      }
+      addToast({ type: 'success', message: `✓ URL aplicado a ${DEPT_HEADS.length} agents` })
+      setApplyAllOpen(false)
+      setBulkUrl('')
+    } finally {
+      setApplyingBulk(false)
     }
-    addToast({ type: 'success', message: `✓ URL aplicado a ${DEPT_HEADS.length} agents` })
   }
 
   async function testSend(agentId) {
@@ -130,7 +139,7 @@ export default function DiscordConnectionsPage() {
 
       <div style={{ marginTop: 14, display: 'flex', gap: 8 }}>
         <button
-          onClick={applyUrlToAll}
+          onClick={() => setApplyAllOpen(true)}
           style={{
             background: 'var(--primary)', color: '#fff', border: 'none',
             borderRadius: 5, padding: '8px 14px', cursor: 'pointer',
@@ -142,6 +151,72 @@ export default function DiscordConnectionsPage() {
           Cola a URL uma vez · todos vão postar no mesmo canal
         </span>
       </div>
+
+      {applyAllOpen && (
+        <div
+          onClick={() => !applyingBulk && setApplyAllOpen(false)}
+          style={{
+            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100, padding: 20,
+          }}
+        >
+          <form
+            onClick={e => e.stopPropagation()}
+            onSubmit={e => { e.preventDefault(); applyUrlToAll() }}
+            style={{
+              background: 'var(--bg-card)', border: '1px solid var(--border)',
+              borderRadius: 12, padding: 24, width: 540, maxWidth: '92vw',
+              display: 'flex', flexDirection: 'column', gap: 12,
+            }}
+          >
+            <h3 style={{ margin: 0, fontSize: '1.05rem' }}>📋 Aplicar 1 webhook aos 7 agents</h3>
+            <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--text-dim)', lineHeight: 1.5 }}>
+              Cola o webhook URL — vai ser guardado em todos os 7 agents
+              (mantém os nomes que já preencheste).
+              Todos os agents vão postar no mesmo canal Discord.
+            </p>
+            <label style={{ fontSize: '0.65rem', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.1em', marginTop: 4 }}>
+              Webhook URL
+            </label>
+            <input
+              type="text"
+              value={bulkUrl}
+              onChange={e => setBulkUrl(e.target.value)}
+              placeholder="https://discord.com/api/webhooks/123456.../abcXYZ..."
+              autoFocus
+              style={{
+                background: 'var(--bg-elevated)', border: '1px solid var(--border)',
+                color: 'var(--text)', padding: '9px 12px', borderRadius: 5,
+                fontSize: '0.78rem', outline: 'none',
+                fontFamily: 'JetBrains Mono, monospace',
+              }}
+            />
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 8 }}>
+              <button
+                type="button"
+                onClick={() => { setApplyAllOpen(false); setBulkUrl('') }}
+                disabled={applyingBulk}
+                style={{
+                  background: 'transparent', border: '1px solid var(--border)',
+                  borderRadius: 5, padding: '8px 14px', cursor: 'pointer',
+                  color: 'var(--text-dim)', fontSize: '0.78rem',
+                }}
+              >Cancelar</button>
+              <button
+                type="submit"
+                disabled={applyingBulk || !bulkUrl.trim()}
+                style={{
+                  background: 'var(--text)', color: 'var(--bg)', border: 'none',
+                  borderRadius: 5, padding: '8px 16px',
+                  cursor: applyingBulk ? 'wait' : 'pointer',
+                  fontSize: '0.78rem', fontWeight: 700,
+                  opacity: (!bulkUrl.trim() || applyingBulk) ? 0.5 : 1,
+                }}
+              >{applyingBulk ? 'A aplicar…' : 'Aplicar a 7 agents'}</button>
+            </div>
+          </form>
+        </div>
+      )}
 
       <table style={{ width: '100%', marginTop: 14, borderCollapse: 'collapse', fontSize: '0.82rem' }}>
         <thead>
