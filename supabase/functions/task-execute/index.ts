@@ -101,6 +101,73 @@ async function loadAgentContext(sb: any, agentId: string, maxChars = 8000): Prom
   }
 }
 
+// Sprint Q1.8 — web_browse tool: fetch URL + strip HTML
+// Browserbase pode ser integrado depois (env BROWSERBASE_API_KEY).
+const BROWSERBASE_API_KEY = Deno.env.get("BROWSERBASE_API_KEY") || ""
+
+function stripHtml(html: string): string {
+  return html
+    .replace(/<script[\s\S]*?<\/script>/gi, "")
+    .replace(/<style[\s\S]*?<\/style>/gi, "")
+    .replace(/<nav[\s\S]*?<\/nav>/gi, "")
+    .replace(/<footer[\s\S]*?<\/footer>/gi, "")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\s+/g, " ")
+    .trim()
+}
+
+async function webBrowse(url: string, query?: string): Promise<{ ok: boolean; url: string; content: string; error?: string }> {
+  try {
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 15000)
+    const res = await fetch(url, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Property007 Agent) AppleWebKit/537.36",
+        "Accept": "text/html,application/xhtml+xml",
+        "Accept-Language": "pt-PT,pt;q=0.9,en;q=0.8",
+      },
+      signal: controller.signal,
+    })
+    clearTimeout(timeout)
+    if (!res.ok) return { ok: false, url, content: "", error: `HTTP ${res.status}` }
+    const html = await res.text()
+    const text = stripHtml(html)
+    return { ok: true, url, content: text.slice(0, 8000) }
+  } catch (e) {
+    return { ok: false, url, content: "", error: String(e) }
+  }
+}
+
+// Sprint Q1.8 — save_to_context_docs tool: agent guarda fonte legal/SOP
+async function saveContextDoc(sb: any, input: {
+  title: string
+  type: string
+  content: string
+  source_url?: string
+  employee_id?: string
+}): Promise<{ ok: boolean; id?: string; error?: string }> {
+  try {
+    const { data, error } = await sb.schema("system").from("context_docs").insert({
+      title: input.title.slice(0, 200),
+      type: input.type,
+      content: input.content.slice(0, 50000),
+      source_url: input.source_url || null,
+      employee_id: input.employee_id || null,  // NULL = global
+      tags: ["auto-saved", "agent-research"],
+    }).select("id").single()
+    if (error) return { ok: false, error: error.message }
+    return { ok: true, id: data?.id }
+  } catch (e) {
+    return { ok: false, error: String(e) }
+  }
+}
+
 // Garante que cada skill da task existe em system.skills + tem receipt completo.
 // Dispara skill-create lazy se faltam receipts.
 async function resolveSkills(sb: any, skillTags: string[]): Promise<SkillRow[]> {
@@ -135,13 +202,19 @@ async function resolveSkills(sb: any, skillTags: string[]): Promise<SkillRow[]> 
   return resolved
 }
 
+interface RunAgentExtras {
+  research_done: Array<{ url: string; query?: string; chars: number }>
+  saved_docs: Array<{ id: string; title: string; type: string; source_url?: string }>
+}
+
 async function runAgent(
   agentId: string,
   task: Record<string, unknown>,
   skills: SkillRow[],
   contextFilesText: string,
   agentContextText: string,
-): Promise<TaskExecuteResult> {
+  sb: any,
+): Promise<TaskExecuteResult & { extras: RunAgentExtras }> {
   const baseSysPrompt = AGENT_SYSTEM_PROMPTS[agentId] || AGENT_SYSTEM_PROMPTS.default
 
   const skillsBlock = skills.length === 0 ? "" : `
@@ -210,81 +283,206 @@ ${revisionBlock}
 
 ${isRevision
   ? "Esta é a REVISÃO. Produz nova versão aplicando a instrução acima."
-  : "Produz um plano de execução em PT-PT. Identifica:\n1. Que sub-passos farias para resolver esta task (4-6 passos)\n2. Output concreto que entregarias\n3. Se precisas de aprovação humana antes de executar algo (ex: enviar email externo, gastar dinheiro, mudança irreversível)"}
+  : "Produz um plano de execução em PT-PT. Se não tens informação suficiente nos SOPs/legal, USA AS TOOLS antes de submeter — podes pesquisar na web e guardar fontes encontradas."}
 
-Usa a tool 'submit_task_result' para entregares o resultado estruturado.${isRevision ? " summary começa com 'Revisão:'." : ""}`
+FLUXO RECOMENDADO:
+1. Se faltam dados, usa 'web_browse' (1-3 URLs relevantes — sites legais PT como dre.pt, sites profissionais)
+2. Se encontrares legislação/doc útil, usa 'save_to_context_docs' (futuro: outros agents reusam)
+3. Se a task é para outro agent, usa 'delegate_to'
+4. Quando tiveres tudo, usa 'submit_task_result' para entregares.
 
-  // Sprint Q1.7 — usa tool_use para garantir JSON sempre válido (resolve bug
-  // do output_md ficar com escape malformado). Anthropic devolve tool input
-  // como JSON estruturado, sem problemas de unescaped newlines/quotes.
+Usa 'submit_task_result' OU 'delegate_to' como passo final.${isRevision ? " summary começa com 'Revisão:'." : ""}`
+
+  // Sprint Q1.7 + Q1.8 — tool_use multi-turn com 4 tools
   const SUBMIT_TOOL = {
     name: "submit_task_result",
-    description: "Entrega o resultado da execução da task. Output_md em markdown PT-PT bem formatado (headers ##, listas, tabelas).",
+    description: "PASSO FINAL — entrega o resultado da task. Usa só quando completou a investigação.",
     input_schema: {
       type: "object",
       properties: {
         summary: { type: "string", description: "1 frase do que vais entregar (max 200ch)" },
-        steps_completed: { type: "array", items: { type: "string" }, description: "Lista de sub-passos que executaste" },
-        output_md: { type: "string", description: "Entregável em markdown PT-PT (headers, listas, citações de lei com art.NNNº). Pode ser longo." },
-        needs_human: { type: "boolean", description: "true se requer aprovação humana antes de executar uma acção irreversível" },
+        steps_completed: { type: "array", items: { type: "string" }, description: "Lista de sub-passos executados (inclui 'consultou X URL', 'guardou doc Y')" },
+        output_md: { type: "string", description: "Entregável em markdown PT-PT (headers, listas, citações de lei com art.NNNº, links das fontes consultadas)." },
+        needs_human: { type: "boolean", description: "true se requer aprovação humana antes de executar acção irreversível" },
         needs_human_reason: { type: "string", description: "Se needs_human=true, explica porquê (max 200ch)" },
-        delegated_to: { type: ["string","null"], description: "Se quiseres passar a outro agent, agent_id. Senão null." },
       },
       required: ["summary", "steps_completed", "output_md", "needs_human"],
     },
   }
 
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "x-api-key": ANTHROPIC_KEY,
-      "anthropic-version": "2023-06-01",
-      "content-type": "application/json",
+  const WEB_BROWSE_TOOL = {
+    name: "web_browse",
+    description: "Faz fetch de uma URL e devolve o texto extraído (~8000 chars). Usa para consultar legislação (dre.pt), Wikipedia, sites profissionais, jurisprudência. NÃO inventes URLs — usa só URLs que conheces (ex: https://dre.pt/web/guest/legislacao-consolidada/-/lc/...).",
+    input_schema: {
+      type: "object",
+      properties: {
+        url: { type: "string", description: "URL completa (https://...) a consultar" },
+        query: { type: "string", description: "O que estás a procurar (para logging)" },
+      },
+      required: ["url"],
     },
-    body: JSON.stringify({
-      model: MODEL,
-      max_tokens: 4000,
-      system: sysPrompt,
-      tools: [SUBMIT_TOOL],
-      tool_choice: { type: "tool", name: "submit_task_result" },
-      messages: [{ role: "user", content: prompt }],
-    }),
-  })
-
-  if (!res.ok) {
-    const txt = await res.text()
-    throw new Error(`anthropic_${res.status}: ${txt.slice(0, 200)}`)
   }
 
-  const data = await res.json()
-  // Tool use sempre devolve JSON válido no input do tool_use block
-  const toolUseBlock = (data.content || []).find((b: any) => b.type === "tool_use" && b.name === "submit_task_result")
-  let parsed: any = toolUseBlock?.input || null
+  const SAVE_DOC_TOOL = {
+    name: "save_to_context_docs",
+    description: "Guarda uma fonte (legislação, SOP, procedure, never-rule) em system.context_docs. Outros agents (e tu próprio em runs futuras) consultam isto via get_agent_context. Usa quando encontraste documentação importante a preservar.",
+    input_schema: {
+      type: "object",
+      properties: {
+        title: { type: "string", description: "Título curto e específico (ex: 'DL 268/94 art. 1432º — quórum assembleia')" },
+        type: { type: "string", enum: ["sop","icp","call_recap","adr","never_rule","legal","procedure"], description: "Tipo (legal para texto de lei, sop para procedimento, never_rule para regras estritas)" },
+        content: { type: "string", description: "Conteúdo em markdown PT-PT (citações literais + interpretação)" },
+        source_url: { type: "string", description: "URL onde encontraste (se aplicável)" },
+        global: { type: "boolean", description: "true = aplicável a TODOS agents (default), false = só ao agent actual" },
+      },
+      required: ["title", "type", "content"],
+    },
+  }
 
-  // Fallback se por algum motivo o Claude devolveu texto em vez de tool_use
-  if (!parsed) {
-    const text = (data.content?.find((b: any) => b.type === "text")?.text || "").trim()
-    try {
-      const cleaned = text.replace(/^```(?:json)?\s*/, "").replace(/```\s*$/, "")
-      parsed = JSON.parse(cleaned)
-    } catch {
-      parsed = {
-        summary: "Falha ao parsear resultado do agent",
+  const DELEGATE_TOOL = {
+    name: "delegate_to",
+    description: "Passa a task a outro agent (responsável de departamento mais adequado). Usa quando a task realmente exige outro especialista. Agent options: bia, orquestrador-condo, diretor-marketing, gestor-leads, financeiro-condo, atendimento-condo, compliance-condo.",
+    input_schema: {
+      type: "object",
+      properties: {
+        agent_id: { type: "string", description: "Agent destino (um dos heads listados)" },
+        reason: { type: "string", description: "Porque delegas — uma frase clara" },
+        context_to_pass: { type: "string", description: "Resumo do que já investigaste para o próximo agent não recomeçar do zero" },
+      },
+      required: ["agent_id", "reason"],
+    },
+  }
+
+  const TOOLS = [SUBMIT_TOOL, WEB_BROWSE_TOOL, SAVE_DOC_TOOL, DELEGATE_TOOL]
+
+  // Multi-turn loop — agent pode usar tools antes de submit_task_result
+  const messages: any[] = [{ role: "user", content: prompt }]
+  const research_done: RunAgentExtras["research_done"] = []
+  const saved_docs: RunAgentExtras["saved_docs"] = []
+  const MAX_TURNS = 6
+
+  for (let turn = 0; turn < MAX_TURNS; turn++) {
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "x-api-key": ANTHROPIC_KEY,
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        model: MODEL,
+        max_tokens: 4000,
+        system: sysPrompt,
+        tools: TOOLS,
+        messages,
+      }),
+    })
+
+    if (!res.ok) {
+      const txt = await res.text()
+      throw new Error(`anthropic_${res.status}: ${txt.slice(0, 200)}`)
+    }
+
+    const data = await res.json()
+    const content = data.content || []
+    const toolUses = content.filter((b: any) => b.type === "tool_use")
+
+    if (toolUses.length === 0) {
+      // Sem tool_use — provavelmente texto livre. Fallback.
+      const text = content.find((b: any) => b.type === "text")?.text || ""
+      return {
+        status: "needs_human",
+        summary: "Agent não usou submit_task_result",
         steps_completed: [],
         output_md: text.slice(0, 4000),
-        needs_human: true,
-        needs_human_reason: "Parse error — revisão humana necessária",
+        needs_human_reason: "Output sem estrutura — necessita revisão",
+        extras: { research_done, saved_docs },
       }
     }
+
+    messages.push({ role: "assistant", content })
+
+    // Process tool uses
+    const toolResults: any[] = []
+    for (const tu of toolUses) {
+      if (tu.name === "submit_task_result") {
+        // FINAL
+        const p = tu.input
+        return {
+          status: p.needs_human ? "needs_human" : "done",
+          summary: p.summary || "",
+          steps_completed: p.steps_completed || [],
+          output_md: p.output_md || "",
+          needs_human_reason: p.needs_human_reason,
+          delegated_to: undefined,
+          extras: { research_done, saved_docs },
+        }
+      }
+      if (tu.name === "delegate_to") {
+        // FINAL — delegação
+        return {
+          status: "done",
+          summary: `Delegado a ${tu.input.agent_id}: ${tu.input.reason}`,
+          steps_completed: [`Delegou a ${tu.input.agent_id}`, `Razão: ${tu.input.reason}`],
+          output_md: `**Delegação para ${tu.input.agent_id}**\n\n**Razão:** ${tu.input.reason}\n\n**Contexto investigado até agora:**\n\n${tu.input.context_to_pass || "(nenhum)"}\n\n**Research feita:** ${research_done.length} URLs · **Docs guardados:** ${saved_docs.length}`,
+          delegated_to: tu.input.agent_id,
+          extras: { research_done, saved_docs },
+        }
+      }
+      if (tu.name === "web_browse") {
+        const result = await webBrowse(tu.input.url, tu.input.query)
+        research_done.push({ url: tu.input.url, query: tu.input.query, chars: result.content.length })
+        toolResults.push({
+          type: "tool_result",
+          tool_use_id: tu.id,
+          content: result.ok
+            ? `OK · ${result.content.length} chars\n\n${result.content}`
+            : `ERROR · ${result.error}`,
+        })
+        continue
+      }
+      if (tu.name === "save_to_context_docs") {
+        const result = await saveContextDoc(sb, {
+          title: tu.input.title,
+          type: tu.input.type,
+          content: tu.input.content,
+          source_url: tu.input.source_url,
+          employee_id: tu.input.global === false ? agentId : null,
+        })
+        if (result.ok && result.id) {
+          saved_docs.push({
+            id: result.id,
+            title: tu.input.title,
+            type: tu.input.type,
+            source_url: tu.input.source_url,
+          })
+        }
+        toolResults.push({
+          type: "tool_result",
+          tool_use_id: tu.id,
+          content: result.ok ? `OK · doc_id=${result.id}` : `ERROR · ${result.error}`,
+        })
+        continue
+      }
+      // Unknown tool
+      toolResults.push({
+        type: "tool_result",
+        tool_use_id: tu.id,
+        content: `ERROR · tool '${tu.name}' não suportada`,
+      })
+    }
+
+    messages.push({ role: "user", content: toolResults })
   }
 
+  // Max turns sem submit_task_result
   return {
-    status: parsed.needs_human ? "needs_human" : "done",
-    summary: parsed.summary || "",
-    steps_completed: parsed.steps_completed || [],
-    output_md: parsed.output_md || "",
-    needs_human_reason: parsed.needs_human_reason,
-    delegated_to: parsed.delegated_to,
+    status: "needs_human",
+    summary: "Agent excedeu turnos sem entregar resultado",
+    steps_completed: [`Fez ${research_done.length} pesquisas`, `Guardou ${saved_docs.length} docs`],
+    output_md: `**Atingiu max turnos (${MAX_TURNS}) sem chamar submit_task_result.**\n\nResearch: ${research_done.length} URLs\nDocs guardados: ${saved_docs.length}\n\nRevisão humana recomendada.`,
+    needs_human_reason: `Max turnos atingido (${MAX_TURNS})`,
+    extras: { research_done, saved_docs },
   }
 }
 
@@ -358,9 +556,9 @@ Deno.serve(async (req) => {
       ],
     }).eq("id", task_id)
 
-    let result: TaskExecuteResult
+    let result: TaskExecuteResult & { extras?: RunAgentExtras }
     try {
-      result = await runAgent(task.owner_agent_id, task, resolvedSkills, contextText, agentContextText)
+      result = await runAgent(task.owner_agent_id, task, resolvedSkills, contextText, agentContextText, sb)
     } catch (e) {
       // Falhou — marca failed
       await sb.schema("system").from("tasks").update({
@@ -413,6 +611,17 @@ Deno.serve(async (req) => {
       delete previousPayload.revision_request
     }
 
+    // Sprint Q1.8 — delegation chain tracking
+    const delegationChain = Array.isArray(previousPayload.delegation_chain) ? previousPayload.delegation_chain : []
+    if (result.delegated_to) {
+      delegationChain.push({
+        from: task.owner_agent_id,
+        to: result.delegated_to,
+        reason: result.summary,
+        at: new Date().toISOString(),
+      })
+    }
+
     const updatePayload: Record<string, unknown> = {
       status: result.status,
       steps: finalSteps,
@@ -430,11 +639,14 @@ Deno.serve(async (req) => {
           model: MODEL,
           is_revision: wasRevision,
           revision_number: wasRevision ? ((previousPayload.revision_history || []).length) : 0,
+          research_done: result.extras?.research_done || [],
+          saved_docs: result.extras?.saved_docs || [],
           at: new Date().toISOString(),
         },
+        delegation_chain: delegationChain,
       },
     }
-    if (result.status === "done") updatePayload.done_at = new Date().toISOString()
+    if (result.status === "done" && !result.delegated_to) updatePayload.done_at = new Date().toISOString()
 
     // Auto-comment com sumário no comment stream
     await sb.schema("system").from("task_comments").insert({
@@ -446,10 +658,34 @@ Deno.serve(async (req) => {
       metadata: {
         skills_used: resolvedSkills.map((s: any) => s.tag),
         delegated_to: result.delegated_to,
+        research_count: result.extras?.research_done?.length || 0,
+        saved_docs_count: result.extras?.saved_docs?.length || 0,
       },
     })
 
     await sb.schema("system").from("tasks").update(updatePayload).eq("id", task_id)
+
+    // Sprint Q1.8 — auto-cascade delegation
+    // Se o agent delegou para X e não atingimos max hops (3), re-attribui + dispara task-execute
+    const MAX_DELEGATION_HOPS = 3
+    if (result.delegated_to && delegationChain.length <= MAX_DELEGATION_HOPS) {
+      // Detect loop: o destino já apareceu na chain como 'from'?
+      const wouldLoop = delegationChain.some((d: any, i: number) => i < delegationChain.length - 1 && d.from === result.delegated_to)
+      if (!wouldLoop) {
+        // Re-attribui task ao novo agent + status = in_progress
+        await sb.schema("system").from("tasks").update({
+          owner_agent_id: result.delegated_to,
+          status: "in_progress",
+        }).eq("id", task_id)
+
+        // Fire-and-forget para cascade (não bloqueia esta response)
+        fetch(`${SUPABASE_URL}/functions/v1/task-execute`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${SERVICE_KEY}` },
+          body: JSON.stringify({ task_id }),
+        }).catch(() => { /* falha de cascade não bloqueia */ })
+      }
+    }
 
     return new Response(JSON.stringify({
       ok: true,
@@ -458,6 +694,10 @@ Deno.serve(async (req) => {
       summary: result.summary,
       output_preview: result.output_md.slice(0, 300),
       steps_count: finalSteps.length,
+      research_count: result.extras?.research_done?.length || 0,
+      saved_docs_count: result.extras?.saved_docs?.length || 0,
+      delegated_to: result.delegated_to,
+      delegation_depth: delegationChain.length,
     }), { headers: { ...cors, "Content-Type": "application/json" } })
 
   } catch (e) {
