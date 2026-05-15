@@ -5,12 +5,35 @@
 // 'all' mostra todas; v2/v3/v4/... mostra globais (*) + específicas dessa vertical.
 
 import { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import * as Lucide from 'lucide-react'
-import { ExternalLink, Search, Check, Loader2, Sparkles } from 'lucide-react'
+import { ExternalLink, Search, Check, Loader2, Sparkles, Settings } from 'lucide-react'
 import { useIntegrations } from '../hooks/useIntegrations.js'
-import { useVerticalStore } from '../store/index.js'
+import { useVerticalStore, useNotificationsStore } from '../store/index.js'
 import { getIntegrationLogo, getIntegrationLogoFallback, NEEDS_DARK_INVERT } from '../lib/integration-logos.js'
+import IntegrationDetailModal from '../components/IntegrationDetailModal.jsx'
+
+// Mapa de integrações com config UI já implementada → rota da page
+// Ao clicar Connect, em vez de toggle silencioso, navega para a config form.
+const CONFIG_ROUTES = {
+  // Discord (qualquer slug que contenha 'discord')
+  'discord':           '/connections/discord',
+  'discord-webhook':   '/connections/discord',
+  'discord-notif':     '/connections/discord',
+  // Gmail (existe edge fn gmail-inbound/gmail-send) → futura page
+  // 'gmail':              '/connections/gmail',
+}
+
+function getConfigRoute(integ) {
+  if (!integ?.slug) return null
+  const slug = integ.slug.toLowerCase()
+  if (CONFIG_ROUTES[slug]) return CONFIG_ROUTES[slug]
+  // Fallback: match parcial (ex: 'discord-webhook-notif' → discord)
+  for (const key of Object.keys(CONFIG_ROUTES)) {
+    if (slug.includes(key)) return CONFIG_ROUTES[key]
+  }
+  return null
+}
 
 const VERTICAL_LABEL = {
   all: 'todas verticais', v1: 'V1 Core', v2: 'V2 Condomínios', v3: 'V3 Seguros',
@@ -116,14 +139,17 @@ function BrandLogo({ integ }) {
   )
 }
 
-function IntegrationCard({ integ, onToggle, busy }) {
+function IntegrationCard({ integ, onToggle, onConfig, busy }) {
   const status = integ.status || 'not_connected'
   const meta = STATUS_META[status]
   const isComing = status === 'coming_soon'
   const isConnected = status === 'connected'
+  const hasConfigRoute = !!getConfigRoute(integ)
 
   return (
-    <div style={{
+    <div
+      onClick={() => !isComing && onConfig && onConfig(integ)}
+      style={{
       background: 'var(--bg-card)',
       border: '1px solid var(--border)',
       borderRadius: 8,
@@ -134,6 +160,7 @@ function IntegrationCard({ integ, onToggle, busy }) {
       textAlign: 'center',
       minHeight: 160,
       opacity: isComing ? 0.65 : 1,
+      cursor: isComing ? 'default' : 'pointer',
       transition: 'border-color 0.15s, transform 0.1s',
     }}
     onMouseEnter={(e) => { if (!isComing) e.currentTarget.style.borderColor = 'var(--primary)' }}
@@ -160,42 +187,31 @@ function IntegrationCard({ integ, onToggle, busy }) {
       )}
 
       {isConnected && (
-        <button
-          onClick={() => onToggle && onToggle(integ, 'not_connected')}
-          disabled={busy}
-          style={{
-            display: 'inline-flex', alignItems: 'center', gap: 4,
-            padding: '3px 8px', borderRadius: 3,
-            background: meta.bg,
-            border: `1px solid ${meta.border}`,
-            color: meta.color,
-            fontSize: '0.55rem', fontWeight: 700,
-            fontFamily: 'JetBrains Mono, monospace', letterSpacing: '0.08em',
-            cursor: 'pointer',
-          }}
-          title="Click para desconectar"
-        >
+        <span style={{
+          display: 'inline-flex', alignItems: 'center', gap: 4,
+          padding: '3px 8px', borderRadius: 3,
+          background: meta.bg,
+          border: `1px solid ${meta.border}`,
+          color: meta.color,
+          fontSize: '0.55rem', fontWeight: 700,
+          fontFamily: 'JetBrains Mono, monospace', letterSpacing: '0.08em',
+        }}>
           <Check size={9} /> {meta.label}
-        </button>
+        </span>
       )}
 
       {status === 'not_connected' && (
-        <button
-          onClick={() => onToggle && onToggle(integ, 'connected')}
-          disabled={busy}
-          style={{
-            display: 'inline-flex', alignItems: 'center', gap: 5,
-            padding: '5px 12px', borderRadius: 5,
-            background: 'var(--bg-elevated)',
-            border: '1px solid var(--border)',
-            color: 'var(--text)',
-            fontSize: '0.65rem',
-            cursor: busy ? 'wait' : 'pointer',
-          }}
-        >
-          {busy ? <Loader2 size={10} className="spin" /> : <ExternalLink size={10} />}
-          Connect
-        </button>
+        <span style={{
+          display: 'inline-flex', alignItems: 'center', gap: 5,
+          padding: '5px 12px', borderRadius: 5,
+          background: hasConfigRoute ? 'var(--primary)' : 'var(--bg-elevated)',
+          border: `1px solid ${hasConfigRoute ? 'var(--primary)' : 'var(--border)'}`,
+          color: hasConfigRoute ? '#fff' : 'var(--text)',
+          fontSize: '0.65rem', fontWeight: hasConfigRoute ? 600 : 400,
+        }}>
+          {hasConfigRoute ? <Settings size={10} /> : <ExternalLink size={10} />}
+          {hasConfigRoute ? 'Setup' : 'Connect'}
+        </span>
       )}
     </div>
   )
@@ -236,10 +252,20 @@ export default function IntegrationsPage() {
     return c
   }, [items])
 
+  const [detailIntegration, setDetailIntegration] = useState(null)
+
   const handleToggle = async (integ, nextStatus) => {
     setBusyId(integ.id)
     await updateStatus(integ.id, nextStatus)
     setBusyId(null)
+    // Refresh local detail state se aplicável
+    if (detailIntegration?.id === integ.id) {
+      setDetailIntegration({ ...integ, status: nextStatus })
+    }
+  }
+
+  const handleConfig = (integ) => {
+    setDetailIntegration(integ)
   }
 
   const connectedCount = items.filter((i) => i.status === 'connected').length
@@ -383,10 +409,20 @@ export default function IntegrationsPage() {
               key={integ.id}
               integ={integ}
               onToggle={handleToggle}
+              onConfig={handleConfig}
               busy={busyId === integ.id}
             />
           ))}
         </div>
+      )}
+
+      {detailIntegration && (
+        <IntegrationDetailModal
+          integ={detailIntegration}
+          busy={busyId === detailIntegration.id}
+          onToggle={handleToggle}
+          onClose={() => setDetailIntegration(null)}
+        />
       )}
 
       {!loading && filtered.length === 0 && (
