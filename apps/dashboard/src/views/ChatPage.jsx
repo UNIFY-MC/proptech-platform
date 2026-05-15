@@ -76,7 +76,6 @@ export default function ChatPage() {
   const { running, lastResult, runTask } = useEmployee(employeeId === 'auto' ? 'bia' : employeeId)
   // useAgentChat usa employeeId real para threading; em 'auto' usa pseudo-id 'auto'
   const { messages, send, pending, clear, threadId, newThread, loadThread } = useAgentChat(employeeId)
-  const [historyOpen, setHistoryOpen] = useState(false)
   const { activeVertical } = useVerticalStore()
   const { createTask } = useTasks({})
   const { createEvent } = useCalendarEvents({})
@@ -200,54 +199,34 @@ export default function ChatPage() {
 
   return (
     <div style={{
-      display: 'flex', flexDirection: 'column',
+      display: 'flex',
       minHeight: 'calc(100vh - 40px)',
-      maxWidth: 760, margin: '0 auto',
-      padding: '0 20px',
+      gap: 0,
     }}>
-      {/* Top bar — New Chat + History */}
+      {/* Threads sidebar — sempre visível claude.ai-style */}
+      <ChatThreadsSidebar
+        employeeId={employeeId}
+        activeThreadId={threadId}
+        onPick={(tid) => loadThread(tid)}
+        onNew={() => newThread()}
+      />
+
+      {/* Main column */}
       <div style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '14px 0', marginBottom: hasConversation ? 14 : 40,
+        flex: 1, display: 'flex', flexDirection: 'column',
+        maxWidth: 760, margin: '0 auto',
+        padding: '0 20px',
       }}>
-        <button
-          onClick={() => newThread()}
-          style={{
-            background: 'none', border: 'none', cursor: 'pointer',
-            color: 'var(--text)', fontSize: '0.92rem', fontWeight: 600,
-            display: 'flex', alignItems: 'center', gap: 6,
-          }}
-          title="Começar nova conversa"
-        >
-          {hasConversation ? '↺ Nova conversa' : 'New Chat'}
-        </button>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)' }}>
-            {isBusy ? '⏳ A pensar…' : ''}
-          </div>
-          <button
-            onClick={() => setHistoryOpen(true)}
-            style={{
-              background: 'var(--bg-elevated)', border: '1px solid var(--border)',
-              borderRadius: 5, padding: '4px 10px', cursor: 'pointer',
-              color: 'var(--text-dim)', fontSize: '0.7rem',
-              display: 'inline-flex', alignItems: 'center', gap: 5,
-            }}
-            title="Ver conversas anteriores"
-          >
-            ⏱ Histórico
-          </button>
+      {/* Top bar — só status pending agora (New Chat passa para sidebar) */}
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'flex-end',
+        padding: '14px 0', marginBottom: hasConversation ? 14 : 40,
+        minHeight: 36,
+      }}>
+        <div style={{ fontSize: '0.7rem', color: 'var(--text-dim)' }}>
+          {isBusy ? '⏳ A pensar…' : ''}
         </div>
       </div>
-
-      {historyOpen && (
-        <ChatHistoryDrawer
-          employeeId={employeeId}
-          activeThreadId={threadId}
-          onPick={async (tid) => { await loadThread(tid); setHistoryOpen(false) }}
-          onClose={() => setHistoryOpen(false)}
-        />
-      )}
 
       {taskModal && (
         <TaskModal
@@ -450,6 +429,7 @@ export default function ChatPage() {
           Os agentes podem cometer erros. Verifica informação crítica antes de aprovar.
         </div>
       </div>
+      </div>{/* close main column */}
     </div>
   )
 }
@@ -574,7 +554,7 @@ function ChatBubble({ message, onCreateTask, onAddToCalendar }) {
   )
 }
 
-// ─── ChatHistoryDrawer — sidebar com threads do agent ────────
+// ─── ChatThreadsSidebar — sempre visível claude.ai-style ────────
 const BUCKET_LABELS = {
   today: 'Hoje',
   yesterday: 'Ontem',
@@ -583,70 +563,72 @@ const BUCKET_LABELS = {
   older: 'Mais antigas',
 }
 
-function ChatHistoryDrawer({ employeeId, activeThreadId, onPick, onClose }) {
+function ChatThreadsSidebar({ employeeId, activeThreadId, onPick, onNew }) {
   const [showArchived, setShowArchived] = useState(false)
   const { grouped, loading, archive } = useChatThreads(employeeId, { includeArchived: showArchived })
 
   const buckets = ['today', 'yesterday', 'this_week', 'this_month', 'older']
 
   return (
-    <div
-      onClick={onClose}
-      style={{
-        position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)',
-        zIndex: 1100, display: 'flex', justifyContent: 'flex-end',
-      }}
-    >
-      <aside
-        onClick={(e) => e.stopPropagation()}
-        style={{
-          width: 340, maxWidth: '94vw', height: '100vh',
-          background: 'var(--bg-card)', borderLeft: '1px solid var(--border)',
-          display: 'flex', flexDirection: 'column',
-        }}
-      >
-        <div style={{
-          padding: '14px 16px', borderBottom: '1px solid var(--border)',
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        }}>
-          <strong style={{ fontSize: '0.88rem' }}>Histórico · {employeeId}</strong>
-          <button onClick={onClose} style={{
-            background: 'none', border: 'none', cursor: 'pointer',
-            color: 'var(--text-dim)', fontSize: '1.1rem', lineHeight: 1,
-          }}>×</button>
-        </div>
+    <aside style={{
+      width: 260, flexShrink: 0,
+      background: 'var(--bg-card)', borderRight: '1px solid var(--border)',
+      display: 'flex', flexDirection: 'column',
+      height: 'calc(100vh - 48px)', position: 'sticky', top: 0,
+    }}>
+      {/* Top — New Chat */}
+      <div style={{ padding: '10px 12px', borderBottom: '1px solid var(--border)' }}>
+        <button
+          onClick={onNew}
+          style={{
+            width: '100%', background: 'var(--bg-elevated)', border: '1px solid var(--border)',
+            borderRadius: 6, padding: '8px 12px', cursor: 'pointer',
+            color: 'var(--text)', fontSize: '0.78rem', fontWeight: 600,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+          }}
+          title="Nova conversa"
+        >+ Nova conversa</button>
+      </div>
 
-        <div style={{ padding: '8px 16px', borderBottom: '1px solid var(--border)' }}>
-          <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: '0.7rem', color: 'var(--text-dim)', cursor: 'pointer' }}>
-            <input type="checkbox" checked={showArchived} onChange={(e) => setShowArchived(e.target.checked)} />
-            Mostrar arquivadas
-          </label>
-        </div>
+      <div style={{ padding: '6px 12px', borderBottom: '1px solid var(--border)' }}>
+        <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: '0.66rem', color: 'var(--text-dim)', cursor: 'pointer' }}>
+          <input type="checkbox" checked={showArchived} onChange={(e) => setShowArchived(e.target.checked)} />
+          Arquivadas
+        </label>
+      </div>
 
-        <div style={{ flex: 1, overflowY: 'auto', padding: '8px 0' }}>
-          {loading && <div style={{ padding: 16, color: 'var(--text-dim)', fontSize: '0.78rem' }}>A carregar…</div>}
-          {!loading && Object.keys(grouped).length === 0 && (
-            <div style={{ padding: 16, color: 'var(--text-dim)', fontSize: '0.78rem' }}>
-              Sem conversas anteriores com {employeeId}.
-            </div>
-          )}
-          {buckets.map(b => grouped[b] && grouped[b].length > 0 && (
-            <div key={b}>
-              <div style={{
-                padding: '10px 16px 4px',
-                fontSize: '0.58rem', fontWeight: 700,
-                color: 'var(--text-dim)',
-                textTransform: 'uppercase', letterSpacing: '0.1em',
-              }}>{BUCKET_LABELS[b]}</div>
-              {grouped[b].map(t => (
+      <div style={{ flex: 1, overflowY: 'auto', padding: '4px 0' }}>
+        {loading && <div style={{ padding: 12, color: 'var(--text-dim)', fontSize: '0.72rem' }}>A carregar…</div>}
+        {!loading && Object.keys(grouped).length === 0 && (
+          <div style={{ padding: 12, color: 'var(--text-dim)', fontSize: '0.72rem' }}>
+            Sem conversas anteriores.
+          </div>
+        )}
+        {buckets.map(b => grouped[b] && grouped[b].length > 0 && (
+          <div key={b}>
+            <div style={{
+              padding: '8px 12px 3px',
+              fontSize: '0.55rem', fontWeight: 700,
+              color: 'var(--text-dim)',
+              textTransform: 'uppercase', letterSpacing: '0.1em',
+            }}>{BUCKET_LABELS[b]}</div>
+            {grouped[b].map(t => {
+              const active = t.id === activeThreadId
+              return (
                 <div key={t.id}
-                  className={'sidebar-link' + (t.id === activeThreadId ? ' active' : '')}
-                  style={{ padding: '8px 16px', cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: 2 }}
+                  style={{
+                    padding: '7px 12px', cursor: 'pointer',
+                    display: 'flex', flexDirection: 'column', gap: 1,
+                    background: active ? 'rgba(83,74,183,0.12)' : 'transparent',
+                    borderLeft: active ? '2px solid var(--primary)' : '2px solid transparent',
+                  }}
                   onClick={() => onPick(t.id)}
+                  onMouseEnter={(e) => { if (!active) e.currentTarget.style.background = 'var(--bg-elevated)' }}
+                  onMouseLeave={(e) => { if (!active) e.currentTarget.style.background = 'transparent' }}
                   title={t.archived_at ? 'Arquivada' : 'Activa'}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
-                    <span style={{ fontSize: '0.78rem', fontWeight: 500, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 4 }}>
+                    <span style={{ fontSize: '0.74rem', fontWeight: active ? 600 : 500, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
                       {t.title || `(sem título · ${t.message_count} msg)`}
                     </span>
                     {!t.archived_at && (
@@ -655,30 +637,23 @@ function ChatHistoryDrawer({ employeeId, activeThreadId, onPick, onClose }) {
                         title="Arquivar"
                         style={{
                           background: 'none', border: 'none', cursor: 'pointer',
-                          color: 'var(--text-dim)', fontSize: '0.65rem', padding: '2px 6px',
+                          color: 'var(--text-dim)', fontSize: '0.6rem', padding: '1px 4px',
+                          opacity: 0.5,
                         }}
                       >📦</button>
                     )}
                   </div>
-                  <div style={{ fontSize: '0.62rem', color: 'var(--text-dim)', fontFamily: 'JetBrains Mono, monospace' }}>
+                  <div style={{ fontSize: '0.58rem', color: 'var(--text-dim)', fontFamily: 'JetBrains Mono, monospace' }}>
                     {new Date(t.last_message_at).toLocaleString('pt-PT', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
                     {' · '}{t.message_count} msg
                   </div>
-                  {t.last_preview && (
-                    <div style={{
-                      fontSize: '0.66rem', color: 'var(--text-dim)',
-                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                    }}>
-                      {t.last_preview}
-                    </div>
-                  )}
                 </div>
-              ))}
-            </div>
-          ))}
-        </div>
-      </aside>
-    </div>
+              )
+            })}
+          </div>
+        ))}
+      </div>
+    </aside>
   )
 }
 

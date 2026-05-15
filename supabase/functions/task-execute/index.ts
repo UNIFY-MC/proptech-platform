@@ -212,15 +212,27 @@ ${isRevision
   ? "Esta é a REVISÃO. Produz nova versão aplicando a instrução acima."
   : "Produz um plano de execução em PT-PT. Identifica:\n1. Que sub-passos farias para resolver esta task (4-6 passos)\n2. Output concreto que entregarias\n3. Se precisas de aprovação humana antes de executar algo (ex: enviar email externo, gastar dinheiro, mudança irreversível)"}
 
-Responde APENAS JSON válido (sem markdown):
-{
-  "summary": "1 frase do que vais entregar (max 200ch)${isRevision ? " — começa com 'Revisão:' a indicar a mudança" : ""}",
-  "steps_completed": ["Passo 1${isRevision ? " (revisão aplicada)" : ""}", "Passo 2", ...],
-  "output_md": "Output detalhado em markdown PT-PT — o entregável real${isRevision ? " (NOVA versão, NÃO igual à anterior)" : " (ex: rascunho email, lista de prestadores, análise de gap, etc.)"}",
-  "needs_human": false,
-  "needs_human_reason": "Se needs_human=true, explica porquê (max 200ch)",
-  "delegated_to": "Se quiseres passar a outro agent (por skill faltar connector), agent_id. Senão null."
-}`
+Usa a tool 'submit_task_result' para entregares o resultado estruturado.${isRevision ? " summary começa com 'Revisão:'." : ""}`
+
+  // Sprint Q1.7 — usa tool_use para garantir JSON sempre válido (resolve bug
+  // do output_md ficar com escape malformado). Anthropic devolve tool input
+  // como JSON estruturado, sem problemas de unescaped newlines/quotes.
+  const SUBMIT_TOOL = {
+    name: "submit_task_result",
+    description: "Entrega o resultado da execução da task. Output_md em markdown PT-PT bem formatado (headers ##, listas, tabelas).",
+    input_schema: {
+      type: "object",
+      properties: {
+        summary: { type: "string", description: "1 frase do que vais entregar (max 200ch)" },
+        steps_completed: { type: "array", items: { type: "string" }, description: "Lista de sub-passos que executaste" },
+        output_md: { type: "string", description: "Entregável em markdown PT-PT (headers, listas, citações de lei com art.NNNº). Pode ser longo." },
+        needs_human: { type: "boolean", description: "true se requer aprovação humana antes de executar uma acção irreversível" },
+        needs_human_reason: { type: "string", description: "Se needs_human=true, explica porquê (max 200ch)" },
+        delegated_to: { type: ["string","null"], description: "Se quiseres passar a outro agent, agent_id. Senão null." },
+      },
+      required: ["summary", "steps_completed", "output_md", "needs_human"],
+    },
+  }
 
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
@@ -231,8 +243,10 @@ Responde APENAS JSON válido (sem markdown):
     },
     body: JSON.stringify({
       model: MODEL,
-      max_tokens: 2000,
+      max_tokens: 4000,
       system: sysPrompt,
+      tools: [SUBMIT_TOOL],
+      tool_choice: { type: "tool", name: "submit_task_result" },
       messages: [{ role: "user", content: prompt }],
     }),
   })
@@ -243,42 +257,24 @@ Responde APENAS JSON válido (sem markdown):
   }
 
   const data = await res.json()
-  const text = (data.content?.[0]?.text || "").trim()
+  // Tool use sempre devolve JSON válido no input do tool_use block
+  const toolUseBlock = (data.content || []).find((b: any) => b.type === "tool_use" && b.name === "submit_task_result")
+  let parsed: any = toolUseBlock?.input || null
 
-  // Parsing tolerante: tenta JSON puro → fenced → fallback regex-extract
-  function tryParseJSON(s: string): any | null {
-    try { return JSON.parse(s) } catch { return null }
-  }
-
-  let parsed: any = null
-  const clean = text.replace(/^```(?:json)?\s*/, "").replace(/```\s*$/, "")
-  parsed = tryParseJSON(clean)
-
+  // Fallback se por algum motivo o Claude devolveu texto em vez de tool_use
   if (!parsed) {
-    // Tenta extrair o primeiro { ... } balanceado
-    const start = clean.indexOf("{")
-    if (start >= 0) {
-      let depth = 0, end = -1
-      for (let i = start; i < clean.length; i++) {
-        if (clean[i] === "{") depth++
-        else if (clean[i] === "}") { depth--; if (depth === 0) { end = i; break } }
+    const text = (data.content?.find((b: any) => b.type === "text")?.text || "").trim()
+    try {
+      const cleaned = text.replace(/^```(?:json)?\s*/, "").replace(/```\s*$/, "")
+      parsed = JSON.parse(cleaned)
+    } catch {
+      parsed = {
+        summary: "Falha ao parsear resultado do agent",
+        steps_completed: [],
+        output_md: text.slice(0, 4000),
+        needs_human: true,
+        needs_human_reason: "Parse error — revisão humana necessária",
       }
-      if (end > start) parsed = tryParseJSON(clean.slice(start, end + 1))
-    }
-  }
-
-  if (!parsed) {
-    // Fallback final: extracção manual via regex (tolera quotes irregulares no output_md)
-    const sumMatch  = clean.match(/"summary"\s*:\s*"((?:[^"\\]|\\.)*)"/)
-    const stepsMatch = clean.match(/"steps_completed"\s*:\s*\[([\s\S]*?)\]/)
-    const nhMatch   = clean.match(/"needs_human"\s*:\s*(true|false)/)
-    const reasonMatch = clean.match(/"needs_human_reason"\s*:\s*"((?:[^"\\]|\\.)*)"/)
-    parsed = {
-      summary: sumMatch?.[1]?.replace(/\\"/g, '"') || "Output produzido mas JSON parse falhou.",
-      steps_completed: stepsMatch ? Array.from(stepsMatch[1].matchAll(/"((?:[^"\\]|\\.)*)"/g)).map(m => m[1].replace(/\\"/g, '"')) : [],
-      output_md: clean.slice(0, 4000),  // preserva o output completo como markdown
-      needs_human: nhMatch?.[1] === "true",
-      needs_human_reason: reasonMatch?.[1]?.replace(/\\"/g, '"'),
     }
   }
 
