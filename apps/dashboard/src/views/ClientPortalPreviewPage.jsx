@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { ArrowLeft, LayoutDashboard, Inbox, Plug, HelpCircle, Loader2 } from 'lucide-react'
 import { supabase } from '../lib/supabase.js'
+import { useClientFlowSteps } from '../hooks/useClientFlowSteps.js'
 
 export default function ClientPortalPreviewPage() {
   const { slug } = useParams()
@@ -18,6 +19,8 @@ export default function ClientPortalPreviewPage() {
     supabase.from('system_clients').select('*').eq('slug', slug).single()
       .then(({ data }) => { setClient(data); setLoading(false) })
   }, [slug])
+
+  const { steps: flowSteps, progress: flowProgress } = useClientFlowSteps(client?.id)
 
   if (loading) return <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-dim)' }}><Loader2 className="spin" size={18} /></div>
   if (!client) return (
@@ -131,38 +134,52 @@ export default function ClientPortalPreviewPage() {
 
           {tab === 'onboarding' && (
             <div style={{ maxWidth: 600, margin: '0 auto', padding: '40px 20px' }}>
-              <h2 style={{ fontSize: 22, fontWeight: 700, marginBottom: 8, color: '#111827' }}>Onboarding</h2>
-              <p style={{ fontSize: 13, color: '#6b7280', marginBottom: 24 }}>Status: {client.flow_progress || 0}%</p>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                <h2 style={{ fontSize: 22, fontWeight: 700, margin: 0, color: '#111827' }}>Onboarding</h2>
+                <Link
+                  to={`/clients/${slug}/flow`}
+                  style={{ fontSize: 11, color: primaryColor, textDecoration: 'none', fontWeight: 600 }}
+                >
+                  Editar flow →
+                </Link>
+              </div>
+              <p style={{ fontSize: 13, color: '#6b7280', marginBottom: 24 }}>
+                Status: {flowProgress}% · {flowSteps.length} steps
+              </p>
 
               <div style={{ height: 8, background: '#f3f4f6', borderRadius: 4, overflow: 'hidden', marginBottom: 32 }}>
-                <div style={{ width: `${client.flow_progress || 0}%`, height: '100%', background: primaryColor, transition: 'width 0.3s' }} />
+                <div style={{ width: `${flowProgress}%`, height: '100%', background: primaryColor, transition: 'width 0.3s' }} />
               </div>
 
-              {[
-                { step: 1, label: 'Welcome', done: true },
-                { step: 2, label: 'Tell us about your business', done: client.flow_progress > 20 },
-                { step: 3, label: 'Connect tools', done: client.flow_progress > 40 },
-                { step: 4, label: 'Watch how engine works', done: client.flow_progress > 60 },
-                { step: 5, label: 'Quick chat AI strategist', done: client.flow_progress > 80 },
-                { step: 6, label: 'Done', done: client.flow_progress >= 100 },
-              ].map(s => (
-                <div key={s.step} style={{
-                  display: 'flex', alignItems: 'center', gap: 12,
-                  padding: '12px 16px', borderRadius: 6,
-                  background: s.done ? '#f0fdf4' : '#f9fafb',
-                  border: `1px solid ${s.done ? '#86efac' : '#e5e7eb'}`,
-                  marginBottom: 8,
-                }}>
-                  <div style={{
-                    width: 24, height: 24, borderRadius: '50%',
-                    background: s.done ? '#10b981' : '#e5e7eb',
-                    color: s.done ? '#fff' : '#6b7280',
-                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 11, fontWeight: 700,
-                  }}>{s.done ? '✓' : s.step}</div>
-                  <span style={{ fontSize: 13, color: '#111827' }}>{s.label}</span>
+              {flowSteps.length === 0 ? (
+                <div style={{ padding: 30, textAlign: 'center', color: '#6b7280', background: '#f9fafb', border: '1px dashed #e5e7eb', borderRadius: 6 }}>
+                  Sem flow configurado.<br />
+                  <Link to={`/clients/${slug}/flow`} style={{ color: primaryColor }}>Aplica um template →</Link>
                 </div>
-              ))}
+              ) : flowSteps.map(s => {
+                const done = s.status === 'done'
+                return (
+                  <div key={s.id} style={{
+                    display: 'flex', alignItems: 'center', gap: 12,
+                    padding: '12px 16px', borderRadius: 6,
+                    background: done ? '#f0fdf4' : '#f9fafb',
+                    border: `1px solid ${done ? '#86efac' : '#e5e7eb'}`,
+                    marginBottom: 8,
+                  }}>
+                    <div style={{
+                      width: 24, height: 24, borderRadius: '50%',
+                      background: done ? '#10b981' : '#e5e7eb',
+                      color: done ? '#fff' : '#6b7280',
+                      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: 11, fontWeight: 700,
+                    }}>{done ? '✓' : s.step_index}</div>
+                    <span style={{ fontSize: 13, color: '#111827', flex: 1 }}>{s.label}</span>
+                    {!s.required && (
+                      <span style={{ fontSize: 10, color: '#6b7280', padding: '1px 6px', background: '#fff', borderRadius: 3, border: '1px solid #e5e7eb' }}>opcional</span>
+                    )}
+                  </div>
+                )
+              })}
             </div>
           )}
 
