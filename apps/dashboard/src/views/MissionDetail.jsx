@@ -12,6 +12,7 @@ import {
   Flag, FolderInput, GitBranch, User, BarChart3, FileIcon, ChevronUp,
   AlertCircle, Check,
 } from 'lucide-react'
+import ReactMarkdown from 'react-markdown'
 import { supabase } from '../lib/supabase.js'
 import { useData } from '../hooks/useData.js'
 
@@ -356,27 +357,33 @@ export default function MissionDetail() {
             </div>
           )}
 
-          {/* Review output (apenas se há step needs_human) */}
-          {needsHumanStep && (
+          {/* Review output — agora aparece em qualquer task com output (needs_human OU done) */}
+          {(needsHumanStep || (task.status === 'done' && execution?.output_md)) && (
             <div style={S.reviewBlock}>
               <div style={S.reviewHeader}>
                 <MessageSquare size={16} color="#fcd34d" />
-                <h3 style={S.reviewTitle}>Review output</h3>
+                <h3 style={S.reviewTitle}>
+                  {needsHumanStep ? 'Review output (agent precisa aprovação)' : 'Re-rever output'}
+                </h3>
               </div>
               <p style={S.reviewDesc}>
-                Aprova o resultado, ou envia um prompt de revisão para o agent re-executar a task.
+                {needsHumanStep
+                  ? 'Aprova o resultado, ou envia um prompt de revisão para o agent re-executar a task.'
+                  : 'Já aprovaste, mas podes pedir nova revisão se quiseres ajustar o output (ex: consultar legislação adicional, mudar tom, etc.)'}
               </p>
               <textarea
                 value={revisionPrompt}
                 onChange={(e) => setRevisionPrompt(e.target.value)}
-                placeholder="Ex: Remove a linha de preços, muda a cor do CTA para verde."
+                placeholder="Ex: Consulta o Código Civil arts. 1431-1432 e cita literalmente as alíneas."
                 style={S.reviewTextarea}
                 rows={3}
               />
               <div style={S.reviewActions}>
-                <button onClick={handleApprove} disabled={reviewing} style={S.approveBtn}>
-                  <Check size={14} /> Aprovar
-                </button>
+                {needsHumanStep && (
+                  <button onClick={handleApprove} disabled={reviewing} style={S.approveBtn}>
+                    <Check size={14} /> Aprovar
+                  </button>
+                )}
                 <button onClick={handleRequestRevision} disabled={reviewing || !revisionPrompt.trim()} style={S.reviseBtn}>
                   <Send size={14} /> Pedir revisão
                 </button>
@@ -415,7 +422,31 @@ export default function MissionDetail() {
           {execution?.output_md && (
             <div style={S.outputBlock}>
               <div style={S.outputLabel}>OUTPUT DO AGENT</div>
-              <pre style={S.outputPre}>{execution.output_md}</pre>
+              <div style={S.outputMarkdown}>
+                <ReactMarkdown
+                  components={{
+                    h1: ({ node, ...p }) => <h1 style={{ fontSize: '1.15rem', fontWeight: 700, marginTop: 14, marginBottom: 8 }} {...p} />,
+                    h2: ({ node, ...p }) => <h2 style={{ fontSize: '1rem', fontWeight: 700, marginTop: 12, marginBottom: 6, color: 'var(--text)' }} {...p} />,
+                    h3: ({ node, ...p }) => <h3 style={{ fontSize: '0.88rem', fontWeight: 600, marginTop: 10, marginBottom: 4, color: 'var(--text)' }} {...p} />,
+                    p: ({ node, ...p }) => <p style={{ margin: '6px 0', lineHeight: 1.55, color: 'var(--text)' }} {...p} />,
+                    ul: ({ node, ...p }) => <ul style={{ margin: '6px 0 6px 20px', lineHeight: 1.55 }} {...p} />,
+                    ol: ({ node, ...p }) => <ol style={{ margin: '6px 0 6px 20px', lineHeight: 1.55 }} {...p} />,
+                    li: ({ node, ...p }) => <li style={{ margin: '3px 0' }} {...p} />,
+                    code: ({ node, inline, ...p }) => inline
+                      ? <code style={{ background: 'var(--bg-elevated)', padding: '1px 5px', borderRadius: 3, fontSize: '0.82em', fontFamily: 'JetBrains Mono, monospace' }} {...p} />
+                      : <code style={{ display: 'block', background: 'var(--bg)', padding: 10, borderRadius: 5, fontSize: '0.78em', fontFamily: 'JetBrains Mono, monospace', overflow: 'auto' }} {...p} />,
+                    table: ({ node, ...p }) => <table style={{ borderCollapse: 'collapse', margin: '8px 0', fontSize: '0.85em' }} {...p} />,
+                    th: ({ node, ...p }) => <th style={{ border: '1px solid var(--border)', padding: '5px 9px', background: 'var(--bg-elevated)', textAlign: 'left' }} {...p} />,
+                    td: ({ node, ...p }) => <td style={{ border: '1px solid var(--border)', padding: '5px 9px' }} {...p} />,
+                    blockquote: ({ node, ...p }) => <blockquote style={{ borderLeft: '3px solid var(--primary)', paddingLeft: 10, margin: '6px 0', color: 'var(--text-dim)' }} {...p} />,
+                    a: ({ node, ...p }) => <a style={{ color: 'var(--primary)' }} target="_blank" rel="noreferrer" {...p} />,
+                    hr: () => <hr style={{ border: 'none', borderTop: '1px solid var(--border)', margin: '10px 0' }} />,
+                    strong: ({ node, ...p }) => <strong style={{ color: 'var(--text)', fontWeight: 700 }} {...p} />,
+                  }}
+                >
+                  {execution.output_md}
+                </ReactMarkdown>
+              </div>
             </div>
           )}
 
@@ -767,6 +798,9 @@ const S = {
   outputPre: {
     margin: 0, fontSize: 12, color: 'var(--text)', whiteSpace: 'pre-wrap',
     fontFamily: 'JetBrains Mono, monospace', lineHeight: 1.55,
+  },
+  outputMarkdown: {
+    fontSize: 13, color: 'var(--text)', lineHeight: 1.55,
   },
   // Objectives
   objectivesList: { display: 'flex', flexDirection: 'column', gap: 8 },
