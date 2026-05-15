@@ -91,13 +91,16 @@ function formatBrief(b: BriefData): string {
   return lines.join("\n")
 }
 
-async function sendToDiscord(webhookUrl: string, agentId: string, content: string): Promise<boolean> {
+async function sendToDiscord(webhookUrl: string, agentId: string, content: string, displayName?: string): Promise<boolean> {
   try {
+    const username = displayName?.trim()
+      ? displayName.trim().slice(0, 80)
+      : `Property007 · ${agentId}`
     const res = await fetch(webhookUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        username: `Property007 · ${agentId}`,
+        username,
         content: content.slice(0, 2000),
       }),
     })
@@ -115,7 +118,7 @@ Deno.serve(async (req) => {
 
     // Channels Discord activos
     const { data: channels } = await sb.schema("system").from("agent_channels")
-      .select("agent_id, webhook_url")
+      .select("agent_id, webhook_url, display_name")
       .eq("channel_type", "discord")
       .eq("active", true)
 

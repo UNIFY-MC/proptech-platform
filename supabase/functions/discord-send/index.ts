@@ -32,7 +32,7 @@ Deno.serve(async (req) => {
     const sb = createClient(SUPABASE_URL, SERVICE_KEY)
 
     const { data: channel, error } = await sb.schema("system").from("agent_channels")
-      .select("webhook_url, active")
+      .select("webhook_url, active, display_name")
       .eq("agent_id", agent_id)
       .eq("channel_type", "discord")
       .maybeSingle()
@@ -49,9 +49,13 @@ Deno.serve(async (req) => {
       })
     }
 
-    // Discord webhook payload (https://discord.com/developers/docs/resources/webhook)
+    // Discord webhook payload — usa display_name custom se preenchido, senão fallback
+    const username = channel.display_name?.trim()
+      ? channel.display_name.trim().slice(0, 80)
+      : `Property007 · ${agent_id}`
+
     const payload: Record<string, unknown> = {
-      username: `Property007 · ${agent_id}`,
+      username,
       content: content.slice(0, 2000),  // Discord limit
     }
     if (embeds && Array.isArray(embeds)) payload.embeds = embeds.slice(0, 10)

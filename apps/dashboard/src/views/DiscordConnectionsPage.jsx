@@ -9,13 +9,13 @@ const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL
 const ANON_KEY     = import.meta.env.VITE_SUPABASE_ANON_KEY
 
 const DEPT_HEADS = [
-  { id: 'bia',                label: 'Bia · V5 operations',     color: '#f59e0b' },
-  { id: 'orquestrador-condo', label: 'Orquestrador · V2 ops',   color: '#3b82f6' },
-  { id: 'diretor-marketing',  label: 'Diretor Marketing',       color: '#ec4899' },
-  { id: 'gestor-leads',       label: 'Gestor Leads · sales',    color: '#10b981' },
-  { id: 'financeiro-condo',   label: 'Financeiro · V2',         color: '#06b6d4' },
-  { id: 'atendimento-condo',  label: 'Atendimento · V2',        color: '#84cc16' },
-  { id: 'compliance-condo',   label: 'Compliance · V2 legal',   color: '#ef4444' },
+  { id: 'bia',                label: 'Bia · V5 operations',     color: '#f59e0b', default_name: 'Bia' },
+  { id: 'orquestrador-condo', label: 'Orquestrador · V2 ops',   color: '#3b82f6', default_name: 'Iris (Orquestrador)' },
+  { id: 'diretor-marketing',  label: 'Diretor Marketing',       color: '#ec4899', default_name: 'Marco (Marketing)' },
+  { id: 'gestor-leads',       label: 'Gestor Leads · sales',    color: '#10b981', default_name: 'Sofia (Leads)' },
+  { id: 'financeiro-condo',   label: 'Financeiro · V2',         color: '#06b6d4', default_name: 'Rita (Financeiro)' },
+  { id: 'atendimento-condo',  label: 'Atendimento · V2',        color: '#84cc16', default_name: 'Nuno (Atendimento)' },
+  { id: 'compliance-condo',   label: 'Compliance · V2 legal',   color: '#ef4444', default_name: 'Clara (Compliance)' },
 ]
 
 export default function DiscordConnectionsPage() {
@@ -58,6 +58,23 @@ export default function DiscordConnectionsPage() {
     fetch()
   }
 
+  async function applyUrlToAll() {
+    const url = window.prompt('Cola o webhook URL — vai ser aplicado aos 7 agents (com o nome default de cada um):')
+    if (!url?.trim()) return
+    if (!url.includes('discord.com/api/webhooks')) {
+      addToast({ type: 'error', message: 'URL não parece um Discord webhook' })
+      return
+    }
+    for (const h of DEPT_HEADS) {
+      await saveChannel(h.id, {
+        webhook_url: url.trim(),
+        display_name: channels.find(c => c.agent_id === h.id)?.display_name || h.default_name,
+        active: true,
+      })
+    }
+    addToast({ type: 'success', message: `✓ URL aplicado a ${DEPT_HEADS.length} agents` })
+  }
+
   async function testSend(agentId) {
     setTesting(agentId)
     try {
@@ -98,18 +115,39 @@ export default function DiscordConnectionsPage() {
         background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.3)',
         borderRadius: 8, fontSize: '0.78rem', color: 'var(--text)',
       }}>
-        <strong>Setup rápido por agent:</strong>
+        <strong>Setup recomendado (1 canal partilhado para todos os líderes):</strong>
         <ol style={{ margin: '6px 0 0 18px', lineHeight: 1.7 }}>
-          <li>Vai ao teu servidor Discord → Channel settings → Integrations → Webhooks → New Webhook</li>
-          <li>Copia o Webhook URL e cola na linha do agent abaixo</li>
-          <li>Click "Save" → "Test send" para confirmar</li>
+          <li>No teu server Discord, cria um channel (ex: <code style={{ background: 'var(--bg-elevated)', padding: '1px 5px', borderRadius: 3 }}>#lideres</code>) ou usa <code style={{ background: 'var(--bg-elevated)', padding: '1px 5px', borderRadius: 3 }}>#general</code></li>
+          <li>Click direito no channel → Edit Channel → Integrations → Webhooks → New Webhook → Copy Webhook URL</li>
+          <li><strong>Cola a MESMA URL nas 7 linhas abaixo</strong> (todos os agents falam no mesmo canal — username distingue)</li>
+          <li>Preenche <strong>Nome</strong> para teres "Bia: …", "Marco: …" no Discord (em vez de "Property007 · bia")</li>
+          <li>Save → Test send</li>
         </ol>
+        <div style={{ marginTop: 8, fontSize: '0.72rem', color: 'var(--text-dim)' }}>
+          Mais tarde podes dividir em canais por departamento (1 webhook por canal).
+        </div>
       </div>
 
-      <table style={{ width: '100%', marginTop: 20, borderCollapse: 'collapse', fontSize: '0.82rem' }}>
+      <div style={{ marginTop: 14, display: 'flex', gap: 8 }}>
+        <button
+          onClick={applyUrlToAll}
+          style={{
+            background: 'var(--primary)', color: '#fff', border: 'none',
+            borderRadius: 5, padding: '8px 14px', cursor: 'pointer',
+            fontSize: '0.78rem', fontWeight: 600,
+            display: 'inline-flex', alignItems: 'center', gap: 5,
+          }}
+        >📋 Aplicar 1 webhook aos 7 agents</button>
+        <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)', alignSelf: 'center' }}>
+          Cola a URL uma vez · todos vão postar no mesmo canal
+        </span>
+      </div>
+
+      <table style={{ width: '100%', marginTop: 14, borderCollapse: 'collapse', fontSize: '0.82rem' }}>
         <thead>
           <tr style={{ background: 'var(--bg-elevated)' }}>
             <th style={th}>Agent</th>
+            <th style={th}>Nome no Discord</th>
             <th style={th}>Webhook URL</th>
             <th style={th}>Active</th>
             <th style={th}>Acções</th>
@@ -139,13 +177,17 @@ export default function DiscordConnectionsPage() {
 
 function ChannelRow({ head, existing, onSave, onTest, testing }) {
   const [url, setUrl] = useState(existing?.webhook_url || '')
+  const [displayName, setDisplayName] = useState(existing?.display_name || head.default_name || '')
   const [active, setActive] = useState(existing?.active ?? true)
-  const dirty = url !== (existing?.webhook_url || '') || active !== (existing?.active ?? true)
+  const dirty = url !== (existing?.webhook_url || '')
+    || displayName !== (existing?.display_name || head.default_name || '')
+    || active !== (existing?.active ?? true)
 
   useEffect(() => {
     setUrl(existing?.webhook_url || '')
+    setDisplayName(existing?.display_name || head.default_name || '')
     setActive(existing?.active ?? true)
-  }, [existing?.webhook_url, existing?.active])
+  }, [existing?.webhook_url, existing?.display_name, existing?.active, head.default_name])
 
   return (
     <tr style={{ borderBottom: '1px solid var(--border)' }}>
@@ -158,11 +200,25 @@ function ChannelRow({ head, existing, onSave, onTest, testing }) {
       <td style={td}>
         <input
           type="text"
+          value={displayName}
+          onChange={e => setDisplayName(e.target.value)}
+          placeholder={head.default_name}
+          style={{
+            width: '100%', minWidth: 130,
+            background: 'var(--bg-elevated)', border: '1px solid var(--border)',
+            borderRadius: 5, padding: '6px 10px',
+            fontSize: '0.78rem', color: 'var(--text)',
+          }}
+        />
+      </td>
+      <td style={td}>
+        <input
+          type="text"
           value={url}
           onChange={e => setUrl(e.target.value)}
           placeholder="https://discord.com/api/webhooks/..."
           style={{
-            width: '100%', minWidth: 280,
+            width: '100%', minWidth: 240,
             background: 'var(--bg-elevated)', border: '1px solid var(--border)',
             borderRadius: 5, padding: '6px 10px',
             fontSize: '0.72rem', color: 'var(--text)',
@@ -178,7 +234,11 @@ function ChannelRow({ head, existing, onSave, onTest, testing }) {
       <td style={td}>
         <div style={{ display: 'flex', gap: 6 }}>
           <button
-            onClick={() => onSave({ webhook_url: url.trim() || null, active })}
+            onClick={() => onSave({
+              webhook_url: url.trim() || null,
+              display_name: displayName.trim() || null,
+              active,
+            })}
             disabled={!dirty}
             style={{
               background: dirty ? 'var(--text)' : 'transparent', color: dirty ? 'var(--bg)' : 'var(--text-dim)',
