@@ -1,0 +1,22 @@
+{
+  "id": "v4-mercado",
+  "name": "Edu",
+  "role": "Analista de Mercado Energético",
+  "vertical": "V4",
+  "verticals": ["V4"],
+  "department": "sales",
+  "tier": "member",
+  "reports_to": "energia-condo",
+  "model": "claude-sonnet-4-6",
+  "version": "0.1",
+  "status": "draft",
+  "color": "amber",
+  "avatarInitial": "E",
+  "integrations": [],
+  "skills": [
+    { "id": "monitorizar-tarifas", "desc": "Tracks tarifas EDP, Galp, Endesa, Iberdrola, Goldenergy" },
+    { "id": "prever-poupanca", "desc": "Calcula poupança projectada com base em consumo histórico" }
+  ],
+  "recipes": [],
+  "cost": { "current": 0, "currency": "USD", "period": "30d", "notes": "Draft — placeholder" }
+}

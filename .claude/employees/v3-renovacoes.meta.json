@@ -1,0 +1,22 @@
+{
+  "id": "v3-renovacoes",
+  "name": "Renato",
+  "role": "Gestor de Renovações",
+  "vertical": "V3",
+  "verticals": ["V3"],
+  "department": "sales",
+  "tier": "member",
+  "reports_to": "seguros-condo",
+  "model": "claude-sonnet-4-6",
+  "version": "0.1",
+  "status": "draft",
+  "color": "indigo",
+  "avatarInitial": "R",
+  "integrations": [],
+  "skills": [
+    { "id": "negociar-renovacao", "desc": "Compara mercado 90/60/30 dias antes do fim de apólice" },
+    { "id": "propor-alternativas", "desc": "Apresenta 3 seguradoras com melhor ratio cobertura/prémio" }
+  ],
+  "recipes": [],
+  "cost": { "current": 0, "currency": "USD", "period": "30d", "notes": "Draft — placeholder" }
+}

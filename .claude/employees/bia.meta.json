@@ -4,6 +4,8 @@
   "role": "Maintenance Concierge",
   "vertical": "V5 PRATA",
   "department": "operations",
+  "tier": "vertical-lead",
+  "tier_role": "V5 Lead",
   "model": "claude-sonnet-4-6",
   "version": "1.1",
   "status": "active",

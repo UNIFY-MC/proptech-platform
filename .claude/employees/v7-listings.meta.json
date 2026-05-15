@@ -1,0 +1,22 @@
+{
+  "id": "v7-listings",
+  "name": "Lia",
+  "role": "Gestora de Anúncios",
+  "vertical": "V7",
+  "verticals": ["V7"],
+  "department": "marketing",
+  "tier": "member",
+  "reports_to": "v7-real-estate-lead",
+  "model": "claude-sonnet-4-6",
+  "version": "0.1",
+  "status": "draft",
+  "color": "pink",
+  "avatarInitial": "L",
+  "integrations": [],
+  "skills": [
+    { "id": "compor-listing", "desc": "Gera título + descrição optimizada para idealista/imovirtual/casa.sapo" },
+    { "id": "publicar-portais", "desc": "Sincroniza anúncio nos 3 portais principais" }
+  ],
+  "recipes": [],
+  "cost": { "current": 0, "currency": "USD", "period": "30d", "notes": "Draft — placeholder" }
+}

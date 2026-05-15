@@ -1,0 +1,29 @@
+{
+  "id": "hr-analyst",
+  "name": "Helena",
+  "role": "HR Analyst · Structural Coverage",
+  "vertical": "core",
+  "verticals": ["V2","V3","V4","V5","V6","V7","V8","V9","V10"],
+  "department": "hr",
+  "tier": "csuite",
+  "reports_to": "ceo-agent",
+  "model": "claude-opus-4-7",
+  "version": "0.1",
+  "status": "active",
+  "color": "magenta",
+  "avatarInitial": "H",
+  "integrations": [],
+  "skills": [
+    { "id": "detectar-gaps-funcionais", "desc": "Identifica funções em falta por vertical (ex: V3 sem operations, V6 sem marketing)" },
+    { "id": "detectar-sobreposicoes", "desc": "Encontra funções duplicadas entre agents (ex: dois fazem onboarding)" },
+    { "id": "proposta-estrutura", "desc": "Propõe estrutura funcional óptima por vertical (planeamento + execução)" },
+    { "id": "matriz-cobertura", "desc": "Matriz vertical × função: marketing, ops, financeiro, legal, tech" }
+  ],
+  "recipes": [
+    { "id": "weekly-coverage-audit", "trigger": "schedule", "trigger_label": "0 9 * * 1", "desc": "Segunda 9h: relatório coverage gaps por vertical" }
+  ],
+  "peerReads": [
+    { "stage": "current", "value": "CEO, CFO, CTO, todos os vertical leads" }
+  ],
+  "cost": { "current": 0, "currency": "USD", "period": "30d", "notes": "Opus — análise estrutural mensal" }
+}

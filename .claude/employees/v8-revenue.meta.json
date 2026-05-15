@@ -1,0 +1,22 @@
+{
+  "id": "v8-revenue",
+  "name": "Reni",
+  "role": "Revenue Manager (Dynamic Pricing)",
+  "vertical": "V8",
+  "verticals": ["V8"],
+  "department": "finance",
+  "tier": "member",
+  "reports_to": "v8-rentals-lead",
+  "model": "claude-sonnet-4-6",
+  "version": "0.1",
+  "status": "draft",
+  "color": "cyan",
+  "avatarInitial": "R",
+  "integrations": [],
+  "skills": [
+    { "id": "preco-dinamico", "desc": "Ajusta preço por sazonalidade + ocupação local + eventos" },
+    { "id": "competitive-pricing", "desc": "Tracks preços de 10 concorrentes mais próximos" }
+  ],
+  "recipes": [],
+  "cost": { "current": 0, "currency": "USD", "period": "30d", "notes": "Draft — placeholder" }
+}

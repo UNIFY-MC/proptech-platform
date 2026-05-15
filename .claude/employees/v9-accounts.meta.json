@@ -1,0 +1,22 @@
+{
+  "id": "v9-accounts",
+  "name": "Aurora",
+  "role": "Gestora de Contas Swan",
+  "vertical": "V9",
+  "verticals": ["V9"],
+  "department": "operations",
+  "tier": "member",
+  "reports_to": "v9-baas-lead",
+  "model": "claude-sonnet-4-6",
+  "version": "0.1",
+  "status": "draft",
+  "color": "blue",
+  "avatarInitial": "A",
+  "integrations": [],
+  "skills": [
+    { "id": "abrir-iban", "desc": "Abre IBAN Swan por owner / condomínio com KYC validado" },
+    { "id": "emitir-cartao", "desc": "Emite cartão físico/virtual com limites por categoria" }
+  ],
+  "recipes": [],
+  "cost": { "current": 0, "currency": "USD", "period": "30d", "notes": "Draft — placeholder" }
+}

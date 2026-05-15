@@ -7,7 +7,7 @@
 import { useState, useMemo } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import * as Lucide from 'lucide-react'
-import { Users, Briefcase, Network, UserPlus, ArrowLeft, MoreHorizontal, Check, X, Edit2, Hand } from 'lucide-react'
+import { Users, Briefcase, Network, UserPlus, ArrowLeft, MoreHorizontal, Check, X, Edit2, Hand, Layers, Crown } from 'lucide-react'
 import { useVerticalStore } from '../store'
 import { useData } from '../hooks/useData.js'
 import { useTasks } from '../hooks/useTasks.js'
@@ -563,16 +563,23 @@ function OrgChartTab({ employees, activeVertical, navigate }) {
   const counts = countByDept(employees, activeVertical)
   const depts = DEPARTMENTS.filter(d => (counts[d.id] || 0) > 0)
 
-  // Identifica head de cada dept: primeiro agent com role contendo "Chef"/"Director"/"Manager"
-  // ou simplesmente o primeiro da lista
+  // Identifica head de cada dept por prioridade:
+  // 1. tier='csuite' (CEO, CFO, CTO, CMO, COO)
+  // 2. tier='vertical-lead' (Sofia V3, Enzo V4, Bia V5, etc)
+  // 3. role match "director|chief|head|lead|manager|orquestr"
+  // 4. fallback: primeiro da lista
   const headOf = (deptId) => {
     const list = employeesOfDept(employees, deptId, activeVertical)
     if (list.length === 0) return null
-    const head = list.find(e =>
+    const csuite = list.find(e => e.tier === 'csuite')
+    if (csuite) return csuite
+    const vlead = list.find(e => e.tier === 'vertical-lead')
+    if (vlead) return vlead
+    const matched = list.find(e =>
       /direct|chef|head|lead|manager|orquestr/i.test(e.role || '') ||
       /direct|chef|head|lead|manager|orquestr/i.test(e.name || '')
     )
-    return head || list[0]
+    return matched || list[0]
   }
 
   return (
@@ -662,10 +669,10 @@ function OrgChartTab({ employees, activeVertical, navigate }) {
                   </button>
                 )}
 
-                {/* Members (excluding head) */}
+                {/* Members (excluding head) — role inline · sem limite */}
                 {members.length > 1 && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                    {members.filter(m => m.id !== head?.id).slice(0, 5).map(m => (
+                    {members.filter(m => m.id !== head?.id).map(m => (
                       <button
                         key={m.id}
                         onClick={() => navigate(`/employees/${m.id}`)}
@@ -682,16 +689,14 @@ function OrgChartTab({ employees, activeVertical, navigate }) {
                         onMouseLeave={e => e.currentTarget.style.color = 'var(--text-dim)'}
                       >
                         <Avatar emp={m} size={18} />
-                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
-                          {m.name}
+                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, minWidth: 0 }}>
+                          <span style={{ fontWeight: 600, color: 'var(--text)' }}>{m.name}</span>
+                          {m.role && (
+                            <span style={{ color: 'var(--text-dim)', fontWeight: 400 }}> · {m.role}</span>
+                          )}
                         </span>
                       </button>
                     ))}
-                    {members.length > 6 && (
-                      <span style={{ fontSize: 9, color: 'var(--text-dim)', padding: '2px 8px', fontStyle: 'italic' }}>
-                        +{members.length - 6} mais
-                      </span>
-                    )}
                   </div>
                 )}
               </div>
@@ -708,6 +713,630 @@ function OrgChartTab({ employees, activeVertical, navigate }) {
       }}>
         {employees.length} agents · {depts.length} departamentos activos
         {activeVertical !== 'all' && ` · ${activeVertical}`}
+      </div>
+    </div>
+  )
+}
+
+// ───────────────────────────────────────────────────────────
+// TAB 4: Vertical Org Chart — agrupa por vertical (V2..V10) + apoio horizontal
+// ───────────────────────────────────────────────────────────
+const VERTICAL_CONFIG = [
+  { id: 'V2',  label: 'V2 Condomínios',   color: '#10b981', icon: '🏢' },
+  { id: 'V3',  label: 'V3 Seguros',        color: '#3b82f6', icon: '🛡️' },
+  { id: 'V4',  label: 'V4 Energia',        color: '#f59e0b', icon: '⚡' },
+  { id: 'V5',  label: 'V5 Manutenção',     color: '#8b5cf6', icon: '🔧' },
+  { id: 'V6',  label: 'V6 Reabilitação',   color: '#ec4899', icon: '🏗️' },
+  { id: 'V7',  label: 'V7 Real Estate',    color: '#06b6d4', icon: '🏘️' },
+  { id: 'V8',  label: 'V8 Rentals',        color: '#84cc16', icon: '🛏️' },
+  { id: 'V9',  label: 'V9 BaaS Swan',      color: '#0ea5e9', icon: '🏦' },
+  { id: 'V10', label: 'V10 Owners Club',   color: '#fbbf24', icon: '⭐' },
+]
+
+function primaryVertical(emp) {
+  const v = (emp.vertical || '').toUpperCase()
+  const ordered = ['V10','V2','V3','V4','V5','V6','V7','V8','V9']
+  for (const x of ordered) {
+    if (v.startsWith(x)) return x
+  }
+  return null
+}
+
+// Todas as verticais que um agent serve (primary + secondary + verticals[])
+function getEmployeeVerticals(emp) {
+  const out = []
+  const push = (v) => {
+    if (!v) return
+    const m = String(v).toUpperCase().match(/V\d+/)?.[0]
+    if (m && !out.includes(m)) out.push(m)
+  }
+  push(emp.vertical)
+  for (const s of (emp.secondary_verticals || [])) push(s)
+  for (const v of (emp.verticals || [])) push(v)
+  return out
+}
+
+// Horizontal support: serve 5+ verticais ou é 'core' sem rol específico
+function isHorizontalSupport(emp) {
+  if (emp.tier === 'csuite' || emp.tier === 'advisor') return false
+  const verticals = getEmployeeVerticals(emp)
+  if (verticals.length === 0) return true
+  if (verticals.length >= 5 && emp.tier !== 'vertical-lead') return true
+  return false
+}
+
+// Funções canónicas para matriz de cobertura
+const FUNCTIONS = [
+  { key: 'lead',        label: 'Lead',       match: (a) => a.tier === 'vertical-lead' || a.tier === 'csuite' },
+  { key: 'operations',  label: 'Ops',        match: (a) => normalizeDept(a.department) === 'operations' },
+  { key: 'sales',       label: 'Sales',      match: (a) => normalizeDept(a.department) === 'sales' },
+  { key: 'marketing',   label: 'Marketing',  match: (a) => normalizeDept(a.department) === 'marketing' },
+  { key: 'finance',     label: 'Finance',    match: (a) => normalizeDept(a.department) === 'finance' },
+  { key: 'legal',       label: 'Legal',      match: (a) => normalizeDept(a.department) === 'legal' },
+  { key: 'support',     label: 'Support',    match: (a) => normalizeDept(a.department) === 'support' },
+  { key: 'engineering', label: 'Eng',        match: (a) => normalizeDept(a.department) === 'engineering' },
+]
+
+function VerticalColumn({ vConfig, lead, members, navigate }) {
+  return (
+    <div style={{
+      background: 'var(--bg-card)',
+      border: `1px solid ${vConfig.color}55`,
+      borderTop: `4px solid ${vConfig.color}`,
+      borderRadius: 8,
+      padding: 10,
+      display: 'flex', flexDirection: 'column', gap: 6,
+      minWidth: 170,
+    }}>
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+        <span style={{ fontSize: 16 }}>{vConfig.icon}</span>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{
+            fontSize: 11, fontWeight: 700, color: vConfig.color,
+            fontFamily: 'JetBrains Mono, monospace', letterSpacing: '0.06em',
+          }}>{vConfig.id}</div>
+          <div style={{
+            fontSize: 9, color: 'var(--text-dim)',
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          }}>{vConfig.label.replace(vConfig.id + ' ', '')}</div>
+        </div>
+        <span style={{
+          fontSize: 10, fontFamily: 'JetBrains Mono, monospace',
+          color: 'var(--text-dim)', padding: '1px 5px',
+          borderRadius: 3, background: 'var(--bg-elevated)',
+        }}>{(lead ? 1 : 0) + members.length}</span>
+      </div>
+
+      {/* Lead destacado */}
+      {lead ? (
+        <button
+          onClick={() => navigate(`/employees/${lead.id}`)}
+          style={{
+            width: '100%', textAlign: 'left',
+            background: `linear-gradient(135deg, ${vConfig.color}25, ${vConfig.color}10)`,
+            border: `2px solid ${vConfig.color}`,
+            borderRadius: 8, padding: 10, cursor: 'pointer',
+            display: 'flex', flexDirection: 'column', gap: 6,
+            position: 'relative',
+          }}
+        >
+          <span style={{
+            position: 'absolute', top: -8, right: 8,
+            fontSize: 8, fontFamily: 'JetBrains Mono, monospace', fontWeight: 700,
+            letterSpacing: '0.08em', padding: '2px 6px', borderRadius: 3,
+            background: vConfig.color, color: '#fff',
+          }}>RESPONSÁVEL</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Avatar emp={lead} size={36} />
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <div style={{
+                fontSize: 13, fontWeight: 700, color: 'var(--text)',
+                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+              }}>{lead.name}</div>
+              <div style={{
+                fontSize: 9, color: 'var(--text-dim)',
+                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+              }}>{lead.role}</div>
+            </div>
+          </div>
+          {lead.tier === 'csuite' && lead.tier_role && (
+            <span style={{
+              fontSize: 8, fontFamily: 'JetBrains Mono, monospace',
+              color: vConfig.color, fontStyle: 'italic',
+            }}>dual hat: {lead.tier_role}</span>
+          )}
+        </button>
+      ) : (
+        <div style={{
+          padding: 10, borderRadius: 6,
+          border: `1px dashed ${vConfig.color}88`,
+          fontSize: 10, color: vConfig.color, textAlign: 'center',
+          fontStyle: 'italic', fontWeight: 600,
+        }}>⚠ Sem responsável</div>
+      )}
+
+      {/* Sub-agents — role em linha NOVA abaixo do nome */}
+      {members.length > 0 ? (
+        <div style={{
+          display: 'flex', flexDirection: 'column', gap: 4,
+          borderLeft: `2px solid ${vConfig.color}33`, paddingLeft: 8, marginLeft: 4, marginTop: 6,
+        }}>
+          {members.map(m => (
+            <button
+              key={m.id}
+              onClick={() => navigate(`/employees/${m.id}`)}
+              style={{
+                width: '100%', textAlign: 'left',
+                background: 'transparent', border: 'none',
+                padding: '4px 6px', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', gap: 7,
+                borderRadius: 4,
+              }}
+              onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-elevated)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+            >
+              <Avatar emp={m} size={20} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{
+                  fontSize: 11, fontWeight: 600, color: 'var(--text)',
+                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                  lineHeight: 1.3,
+                }}>{m.name}</div>
+                {m.role && (
+                  <div style={{
+                    fontSize: 9, color: 'var(--text-dim)',
+                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                    lineHeight: 1.3,
+                  }}>{m.role}</div>
+                )}
+              </div>
+            </button>
+          ))}
+        </div>
+      ) : (
+        <div style={{
+          fontSize: 9, color: 'var(--text-dim)', textAlign: 'center',
+          fontStyle: 'italic', padding: 4,
+        }}>Sem sub-agents</div>
+      )}
+    </div>
+  )
+}
+
+// Matriz de cobertura · Vertical × Função
+function CoverageMatrix({ verticalData }) {
+  return (
+    <div style={{
+      background: 'var(--bg-card)',
+      border: '1px solid var(--border)',
+      borderRadius: 8, padding: 14, marginTop: 24,
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+        <Layers size={14} style={{ color: 'var(--primary)' }} />
+        <span style={{
+          fontSize: 11, fontWeight: 700, color: 'var(--text-dim)',
+          textTransform: 'uppercase', letterSpacing: '0.1em',
+          fontFamily: 'JetBrains Mono, monospace',
+        }}>Matriz de Cobertura Funcional · análise HR (Helena)</span>
+      </div>
+
+      <div style={{ overflowX: 'auto' }}>
+        <table style={{
+          width: '100%', borderCollapse: 'collapse', fontSize: 11,
+          fontFamily: 'JetBrains Mono, monospace',
+        }}>
+          <thead>
+            <tr>
+              <th style={{
+                textAlign: 'left', padding: '6px 8px', borderBottom: '1px solid var(--border)',
+                color: 'var(--text-dim)', fontSize: 9, fontWeight: 700,
+                letterSpacing: '0.06em', textTransform: 'uppercase',
+              }}>Função</th>
+              {verticalData.map(V => (
+                <th key={V.id} style={{
+                  padding: '6px 4px', borderBottom: '1px solid var(--border)',
+                  color: V.color, fontSize: 9, fontWeight: 700,
+                  letterSpacing: '0.04em', textAlign: 'center', minWidth: 50,
+                }}>{V.id}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {FUNCTIONS.map(f => (
+              <tr key={f.key}>
+                <td style={{
+                  padding: '6px 8px', borderBottom: '1px solid var(--border-soft, transparent)',
+                  color: 'var(--text)', fontWeight: 600, fontSize: 10,
+                }}>{f.label}</td>
+                {verticalData.map(V => {
+                  const all = [V.lead, ...V.members].filter(Boolean)
+                  const covered = all.some(a => f.match(a))
+                  return (
+                    <td key={V.id} style={{
+                      padding: '6px 4px', textAlign: 'center',
+                      borderBottom: '1px solid var(--border-soft, transparent)',
+                      color: covered ? V.color : 'var(--text-dim)',
+                      fontWeight: covered ? 700 : 400,
+                      fontSize: covered ? 12 : 11,
+                    }}>{covered ? '✓' : '—'}</td>
+                  )
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div style={{
+        marginTop: 12, padding: 10, background: 'var(--bg-elevated)',
+        borderRadius: 6, fontSize: 10, color: 'var(--text-dim)', lineHeight: 1.5,
+      }}>
+        <strong style={{ color: 'var(--text)' }}>Como ler:</strong> ✓ = pelo menos 1 agent cobre essa função na vertical. — = ninguém atribuído.
+        Verticais com poucos ✓ precisam de mais agents para serem operacionais (ex: V3 sem operations precisa de pelo menos 1 agent de operações).
+      </div>
+    </div>
+  )
+}
+
+// Grupo C-suite: head + sub-team que reporta a ele
+function CSuiteGroupCard({ head, team, navigate, isAdvisor }) {
+  const accent = isAdvisor ? '#a78bfa' : '#6366f1'
+  return (
+    <div style={{
+      background: 'var(--bg-card)',
+      border: isAdvisor ? `1px dashed ${accent}` : `1px solid ${accent}66`,
+      borderTop: `3px solid ${accent}`,
+      borderRadius: 8, padding: 10,
+      display: 'flex', flexDirection: 'column', gap: 6,
+      minWidth: 0,
+    }}>
+      {/* Head */}
+      <button
+        onClick={() => navigate(`/employees/${head.id}`)}
+        style={{
+          width: '100%', textAlign: 'left',
+          background: `${accent}11`,
+          border: `1px solid ${accent}44`,
+          borderRadius: 6, padding: 8, cursor: 'pointer',
+          display: 'flex', alignItems: 'center', gap: 8,
+        }}
+      >
+        <Avatar emp={head} size={30} />
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <div style={{
+            fontSize: 12, fontWeight: 700, color: 'var(--text)',
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          }}>{head.name}</div>
+          <div style={{
+            fontSize: 9, color: accent, fontWeight: 700,
+            fontFamily: 'JetBrains Mono, monospace', letterSpacing: '0.06em',
+            textTransform: 'uppercase',
+          }}>{isAdvisor ? 'ADVISOR' : (head.tier_role || 'C-SUITE')}</div>
+          <div style={{
+            fontSize: 9, color: 'var(--text-dim)',
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          }}>{head.role}</div>
+        </div>
+      </button>
+
+      {/* Team — sub-agents reporting to this head */}
+      {team.length > 0 && (
+        <div style={{
+          display: 'flex', flexDirection: 'column', gap: 3,
+          borderLeft: `2px solid ${accent}33`,
+          paddingLeft: 8, marginLeft: 4, marginTop: 2,
+        }}>
+          {team.map(m => (
+            <button
+              key={m.id}
+              onClick={() => navigate(`/employees/${m.id}`)}
+              style={{
+                width: '100%', textAlign: 'left',
+                background: 'transparent', border: 'none',
+                padding: '4px 6px', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', gap: 7,
+                borderRadius: 4,
+              }}
+              onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-elevated)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+            >
+              <Avatar emp={m} size={18} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{
+                  fontSize: 10, fontWeight: 600, color: 'var(--text)',
+                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                  lineHeight: 1.3,
+                }}>{m.name}</div>
+                {m.role && (
+                  <div style={{
+                    fontSize: 9, color: 'var(--text-dim)',
+                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                    lineHeight: 1.3,
+                  }}>{m.role}</div>
+                )}
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function CSuiteCard({ emp, navigate, isAdvisor }) {
+  const accent = isAdvisor ? '#a78bfa' : '#6366f1'
+  return (
+    <button
+      onClick={() => navigate(`/employees/${emp.id}`)}
+      style={{
+        background: 'var(--bg-card)',
+        border: isAdvisor ? `1px dashed ${accent}` : `1px solid ${accent}66`,
+        borderTop: `3px solid ${accent}`,
+        borderRadius: 8, padding: '10px 14px', cursor: 'pointer',
+        display: 'flex', alignItems: 'center', gap: 10,
+        minWidth: 180, textAlign: 'left',
+      }}
+    >
+      <Avatar emp={emp} size={32} />
+      <div style={{ minWidth: 0, flex: 1 }}>
+        <div style={{
+          fontSize: 12, fontWeight: 700, color: 'var(--text)',
+          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+        }}>{emp.name}</div>
+        <div style={{
+          fontSize: 9, color: accent, fontWeight: 700,
+          fontFamily: 'JetBrains Mono, monospace', letterSpacing: '0.06em',
+          textTransform: 'uppercase',
+        }}>{isAdvisor ? 'ADVISOR' : 'C-SUITE'}</div>
+        <div style={{
+          fontSize: 10, color: 'var(--text-dim)',
+          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+        }}>{emp.role}</div>
+      </div>
+    </button>
+  )
+}
+
+function HorizontalSupportSection({ employees, navigate }) {
+  // Agrupar por dept (só os horizontais — vertical='core' ou tier='member' sem vertical específica)
+  const byDept = {}
+  for (const emp of employees) {
+    const d = normalizeDept(emp.department) || 'other'
+    if (!byDept[d]) byDept[d] = []
+    byDept[d].push(emp)
+  }
+
+  const depts = Object.keys(byDept).sort()
+  if (depts.length === 0) return null
+
+  return (
+    <div style={{
+      background: 'var(--bg-card)',
+      border: '1px dashed var(--border)',
+      borderRadius: 8, padding: 14, marginTop: 24,
+    }}>
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12,
+      }}>
+        <Network size={14} style={{ color: 'var(--text-dim)' }} />
+        <span style={{
+          fontSize: 11, fontWeight: 700, color: 'var(--text-dim)',
+          textTransform: 'uppercase', letterSpacing: '0.1em',
+          fontFamily: 'JetBrains Mono, monospace',
+        }}>Apoio Horizontal · Serve todas as verticais</span>
+        <span style={{
+          fontSize: 9, padding: '1px 6px', borderRadius: 3,
+          background: 'var(--bg-elevated)', color: 'var(--text-dim)',
+          fontWeight: 700, fontFamily: 'JetBrains Mono, monospace',
+        }}>{employees.length}</span>
+      </div>
+
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
+        gap: 10,
+      }}>
+        {depts.map(deptId => {
+          const dept = deptFor(deptId) || { label: deptId, color: 'var(--text-dim)' }
+          const members = byDept[deptId]
+          return (
+            <div key={deptId} style={{
+              background: 'var(--bg-elevated)',
+              border: '1px solid var(--border)',
+              borderLeft: `2px solid ${dept.color}`,
+              borderRadius: 6, padding: 8,
+            }}>
+              <div style={{
+                fontSize: 10, fontWeight: 700, color: dept.color,
+                fontFamily: 'JetBrains Mono, monospace', letterSpacing: '0.06em',
+                textTransform: 'uppercase', marginBottom: 6,
+              }}>{dept.label} · {members.length}</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                {members.map(m => (
+                  <button
+                    key={m.id}
+                    onClick={() => navigate(`/employees/${m.id}`)}
+                    style={{
+                      width: '100%', textAlign: 'left',
+                      background: 'transparent', border: 'none',
+                      padding: '3px 4px', cursor: 'pointer',
+                      display: 'flex', alignItems: 'center', gap: 5,
+                      fontSize: 10, color: 'var(--text-dim)',
+                      borderRadius: 3,
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.color = 'var(--text)'}
+                    onMouseLeave={e => e.currentTarget.style.color = 'var(--text-dim)'}
+                  >
+                    <Avatar emp={m} size={16} />
+                    <span style={{
+                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, minWidth: 0,
+                    }}>
+                      <span style={{ fontWeight: 600, color: 'var(--text)' }}>{m.name}</span>
+                      {m.role && <span style={{ color: 'var(--text-dim)' }}> · {m.role}</span>}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+function VerticalOrgChartTab({ employees, navigate }) {
+  const advisor = employees.find(e => e.tier === 'advisor')
+  const csuite = employees.filter(e => e.tier === 'csuite')
+
+  // Encontra lead da vertical:
+  // 1. tier='vertical-lead' com PRIMARY vertical = V (não aceita secondary)
+  // 2. tier='csuite' com tier_role contendo "V Lead" (ex: Orquestrador COO+V2 Lead)
+  function findLead(V) {
+    let lead = employees.find(e => {
+      if (e.tier !== 'vertical-lead') return false
+      const primary = (e.vertical || '').toUpperCase().match(/V\d+/)?.[0]
+      return primary === V
+    })
+    if (lead) return lead
+    lead = employees.find(e => e.tier === 'csuite' && (e.tier_role || '').includes(V + ' Lead'))
+    return lead || null
+  }
+
+  // Para cada vertical: agents que servem esta vertical (lead + sub-agents, exclui csuite genérico/advisor)
+  const verticalData = VERTICAL_CONFIG.map(V => {
+    const lead = findLead(V.id)
+    const members = employees.filter(e => {
+      if (e.id === lead?.id) return false
+      if (e.tier === 'csuite' || e.tier === 'advisor') return false
+      if (isHorizontalSupport(e)) return false
+      return getEmployeeVerticals(e).includes(V.id)
+    })
+    return { ...V, lead, members }
+  })
+
+  const horizontal = employees.filter(isHorizontalSupport)
+
+  return (
+    <div style={{ padding: '8px 0' }}>
+      {/* TIER 1: Advisor (esq dotted) + Mário (centro) */}
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        gap: 24, marginBottom: 32, position: 'relative',
+      }}>
+        {advisor && (
+          <div style={{ position: 'relative' }}>
+            <CSuiteCard emp={advisor} navigate={navigate} isAdvisor />
+            <div style={{
+              position: 'absolute', right: -18, top: '50%',
+              width: 18, height: 1,
+              borderTop: '1px dashed var(--text-dim)',
+            }} />
+          </div>
+        )}
+        <div style={{
+          background: 'var(--bg-card)', border: '2px solid var(--primary)',
+          borderRadius: 10, padding: '12px 20px',
+          display: 'flex', alignItems: 'center', gap: 12, minWidth: 260,
+        }}>
+          <div style={{
+            width: 44, height: 44, borderRadius: '50%',
+            background: 'linear-gradient(135deg, #6b4fa0, #d2a8ff)',
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 18, fontWeight: 700, color: '#fff',
+          }}>M</div>
+          <div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>Mário Carvalho</div>
+            <div style={{ fontSize: 11, color: 'var(--text-dim)' }}>Founder · CEO · TOC</div>
+            <div style={{
+              fontSize: 9, fontFamily: 'JetBrains Mono, monospace',
+              color: 'var(--primary)', marginTop: 2, letterSpacing: '0.06em',
+            }}>{employees.length} AGENTS · {VERTICAL_CONFIG.length} VERTICAIS</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Linha conectora */}
+      <div style={{
+        width: 2, height: 16, background: 'var(--border)',
+        margin: '-16px auto 0',
+      }} />
+
+      {/* TIER 2: C-SUITE — cada head com a equipa abaixo (1 linha) */}
+      {csuite.length > 0 && (
+        <>
+          <div style={{ textAlign: 'center', marginBottom: 8 }}>
+            <SectionHeader
+              icon={<Crown size={12} style={{ color: '#a78bfa' }} />}
+              label="C-Suite · Heads + Teams"
+              badge={csuite.length}
+              badgeColor="#a78bfa"
+            />
+          </div>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: `repeat(${csuite.length}, 1fr)`,
+            gap: 8, marginBottom: 28,
+          }}>
+            {csuite.map(head => {
+              const team = horizontal.filter(e => e.reports_to === head.id)
+              return (
+                <CSuiteGroupCard
+                  key={head.id} head={head} team={team} navigate={navigate}
+                />
+              )
+            })}
+          </div>
+        </>
+      )}
+
+      {/* Linha conectora */}
+      <div style={{
+        width: 2, height: 16, background: 'var(--border)',
+        margin: '0 auto 12px',
+      }} />
+
+      {/* TIER 3: VERTICAIS — todas numa linha */}
+      <div style={{ marginBottom: 16 }}>
+        <SectionHeader
+          icon={<Layers size={12} />}
+          label="Verticais · Responsável + Operação corrente"
+          badge={VERTICAL_CONFIG.length}
+        />
+      </div>
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: `repeat(${VERTICAL_CONFIG.length}, 1fr)`,
+        gap: 6,
+      }}>
+        {verticalData.map(V => (
+          <VerticalColumn
+            key={V.id}
+            vConfig={V}
+            lead={V.lead}
+            members={V.members}
+            navigate={navigate}
+          />
+        ))}
+      </div>
+
+      {/* TIER 4: APOIO HORIZONTAL — só órfãos (sem reports_to a um C-suite) */}
+      {(() => {
+        const csuiteIds = new Set(csuite.map(c => c.id))
+        const orphans = horizontal.filter(e => !csuiteIds.has(e.reports_to))
+        return orphans.length > 0 ? (
+          <HorizontalSupportSection employees={orphans} navigate={navigate} />
+        ) : null
+      })()}
+
+      {/* Footer */}
+      <div style={{
+        textAlign: 'center', marginTop: 24,
+        fontSize: 11, color: 'var(--text-dim)',
+        fontFamily: 'JetBrains Mono, monospace', letterSpacing: '0.04em',
+      }}>
+        {employees.length} agents · {VERTICAL_CONFIG.length} verticais · {horizontal.length} em apoio horizontal
       </div>
     </div>
   )
@@ -785,9 +1414,10 @@ export default function EmployeesPage({ data: dataProp }) {
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           {/* Tabs */}
           <div style={{ display: 'inline-flex', gap: 4 }}>
-            <TabButton active={tab === 'overview'}    onClick={() => setTab('overview')}    icon={Users}     label="Overview" />
-            <TabButton active={tab === 'departments'} onClick={() => setTab('departments')} icon={Briefcase} label="Departments" />
-            <TabButton active={tab === 'org-chart'}   onClick={() => setTab('org-chart')}   icon={Network}   label="Team Org Chart" />
+            <TabButton active={tab === 'overview'}      onClick={() => setTab('overview')}      icon={Users}     label="Overview" />
+            <TabButton active={tab === 'departments'}   onClick={() => setTab('departments')}   icon={Briefcase} label="Departments" />
+            <TabButton active={tab === 'org-chart'}     onClick={() => setTab('org-chart')}     icon={Network}   label="By Department" />
+            <TabButton active={tab === 'vertical-chart'} onClick={() => setTab('vertical-chart')} icon={Layers}   label="By Vertical" />
           </div>
 
           {/* Invite (primary) */}
@@ -817,9 +1447,10 @@ export default function EmployeesPage({ data: dataProp }) {
         </div>
       ) : (
         <>
-          {tab === 'overview'    && <OverviewTab employees={employees} tasks={tasks} navigate={navigate} onApprove={handleApprove} onDismiss={handleDismiss} />}
-          {tab === 'departments' && <DepartmentsTab employees={employees} activeVertical={activeVertical} setDept={setDept} drillDept={drillDept} navigate={navigate} />}
-          {tab === 'org-chart'   && <OrgChartTab employees={employees} activeVertical={activeVertical} navigate={navigate} />}
+          {tab === 'overview'       && <OverviewTab employees={employees} tasks={tasks} navigate={navigate} onApprove={handleApprove} onDismiss={handleDismiss} />}
+          {tab === 'departments'    && <DepartmentsTab employees={employees} activeVertical={activeVertical} setDept={setDept} drillDept={drillDept} navigate={navigate} />}
+          {tab === 'org-chart'      && <OrgChartTab employees={employees} activeVertical={activeVertical} navigate={navigate} />}
+          {tab === 'vertical-chart' && <VerticalOrgChartTab employees={employees} navigate={navigate} />}
         </>
       )}
     </div>

@@ -1,0 +1,22 @@
+{
+  "id": "v4-mudancas",
+  "name": "Erica",
+  "role": "Gestora de Mudanças de Comercializador",
+  "vertical": "V4",
+  "verticals": ["V4"],
+  "department": "operations",
+  "tier": "member",
+  "reports_to": "energia-condo",
+  "model": "claude-sonnet-4-6",
+  "version": "0.1",
+  "status": "draft",
+  "color": "amber",
+  "avatarInitial": "E",
+  "integrations": [],
+  "skills": [
+    { "id": "validar-cpe", "desc": "Verifica CPE (código ponto entrega) + leitura via DGEG" },
+    { "id": "submeter-mudanca", "desc": "Submete pedido de mudança no portal do novo comercializador" }
+  ],
+  "recipes": [],
+  "cost": { "current": 0, "currency": "USD", "period": "30d", "notes": "Draft — placeholder" }
+}

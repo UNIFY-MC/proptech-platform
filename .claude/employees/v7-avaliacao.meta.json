@@ -1,0 +1,22 @@
+{
+  "id": "v7-avaliacao",
+  "name": "André",
+  "role": "Avaliador Imobiliário",
+  "vertical": "V7",
+  "verticals": ["V7"],
+  "department": "sales",
+  "tier": "member",
+  "reports_to": "v7-real-estate-lead",
+  "model": "claude-sonnet-4-6",
+  "version": "0.1",
+  "status": "draft",
+  "color": "pink",
+  "avatarInitial": "A",
+  "integrations": [],
+  "skills": [
+    { "id": "avaliar-comparavel", "desc": "Calcula valor via 5 comparáveis idealista/imovirtual" },
+    { "id": "ajustar-tipologia", "desc": "Ajusta por T0-T5, andar, vista, estado conservação" }
+  ],
+  "recipes": [],
+  "cost": { "current": 0, "currency": "USD", "period": "30d", "notes": "Draft — placeholder" }
+}

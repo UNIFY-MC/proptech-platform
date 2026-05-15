@@ -1,0 +1,22 @@
+{
+  "id": "v10-fidelidade",
+  "name": "Lúcia",
+  "role": "Gestora de Fidelidade",
+  "vertical": "V10",
+  "verticals": ["V10"],
+  "department": "marketing",
+  "tier": "member",
+  "reports_to": "v10-owners-lead",
+  "model": "claude-sonnet-4-6",
+  "version": "0.1",
+  "status": "draft",
+  "color": "gold",
+  "avatarInitial": "L",
+  "integrations": [],
+  "skills": [
+    { "id": "calcular-tier", "desc": "Calcula tier (Silver/Gold/Platinum) por MRR + tempo cliente" },
+    { "id": "trigger-recompensa", "desc": "Dispara recompensa em milestone (1 ano, 3 anos, etc)" }
+  ],
+  "recipes": [],
+  "cost": { "current": 0, "currency": "USD", "period": "30d", "notes": "Draft — placeholder" }
+}

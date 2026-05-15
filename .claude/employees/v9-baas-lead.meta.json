@@ -1,0 +1,27 @@
+{
+  "id": "v9-baas-lead",
+  "name": "Bruno",
+  "role": "Vertical Lead · BaaS / Swan",
+  "vertical": "V9",
+  "verticals": ["V9"],
+  "department": "finance",
+  "tier": "vertical-lead",
+  "reports_to": "cfo-agent",
+  "model": "claude-sonnet-4-6",
+  "version": "0.1",
+  "status": "draft",
+  "color": "blue",
+  "avatarInitial": "B",
+  "integrations": [
+    { "id": "swan_baas", "name": "Swan BaaS", "desc": "contas + cartões + IBANs PT", "icon": "SW", "color": "blue", "enabled": false, "planned": true }
+  ],
+  "skills": [
+    { "id": "orquestrar-swan", "desc": "Coordena contas, cartões e transferências SEPA via Swan" },
+    { "id": "compliance-psd2", "desc": "Garante compliance PSD2/AML cross-vertical" }
+  ],
+  "recipes": [],
+  "peerReads": [
+    { "stage": "current", "value": "CFO, Fina (V2 financeiro), Sofia (V3 sinistros pagamentos)" }
+  ],
+  "cost": { "current": 0, "currency": "USD", "period": "30d", "notes": "V9 BaaS infraestrutura financeira — placeholder" }
+}

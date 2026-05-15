@@ -1,0 +1,22 @@
+{
+  "id": "v5-casa-advisor",
+  "name": "Carlos",
+  "role": "Casa Advisor",
+  "vertical": "V5",
+  "verticals": ["V5"],
+  "department": "support",
+  "tier": "member",
+  "reports_to": "bia",
+  "model": "claude-sonnet-4-6",
+  "version": "0.1",
+  "status": "draft",
+  "color": "purple",
+  "avatarInitial": "C",
+  "integrations": [],
+  "skills": [
+    { "id": "sugerir-diy", "desc": "Sugestões DIY antes de chamar prestador (chave em casa, fugas pequenas)" },
+    { "id": "explicar-causa", "desc": "Explica causa provável da avaria em PT-PT simples" }
+  ],
+  "recipes": [],
+  "cost": { "current": 0, "currency": "USD", "period": "30d", "notes": "Draft — placeholder" }
+}

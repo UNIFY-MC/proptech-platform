@@ -1,0 +1,25 @@
+{
+  "id": "v8-rentals-lead",
+  "name": "Tiago",
+  "role": "Vertical Lead · Rentals",
+  "vertical": "V8",
+  "verticals": ["V8"],
+  "department": "operations",
+  "tier": "vertical-lead",
+  "reports_to": "ceo-agent",
+  "model": "claude-sonnet-4-6",
+  "version": "0.1",
+  "status": "draft",
+  "color": "cyan",
+  "avatarInitial": "T",
+  "integrations": [],
+  "skills": [
+    { "id": "gerir-check-in", "desc": "Orquestra check-in/check-out de alojamento" },
+    { "id": "matchear-hospede", "desc": "Match hóspede ↔ imóvel via histórico + preferências" }
+  ],
+  "recipes": [],
+  "peerReads": [
+    { "stage": "current", "value": "Bia (V5 manutenção), CFO (pricing dinâmico)" }
+  ],
+  "cost": { "current": 0, "currency": "USD", "period": "30d", "notes": "Vertical ainda não arrancou — placeholder" }
+}

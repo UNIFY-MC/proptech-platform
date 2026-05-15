@@ -1,0 +1,30 @@
+{
+  "id": "cfo-agent",
+  "name": "CFO",
+  "role": "Chief Financial Officer",
+  "vertical": "core",
+  "verticals": ["V2","V3","V4","V5","V6","V7","V8","V9","V10"],
+  "department": "finance",
+  "tier": "csuite",
+  "reports_to": "ceo-agent",
+  "model": "claude-opus-4-7",
+  "version": "0.1",
+  "status": "draft",
+  "color": "amber",
+  "avatarInitial": "F",
+  "integrations": [
+    { "id": "toconline", "name": "Toconline", "desc": "facturação PT (Mário = TOC)", "icon": "TC", "color": "amber", "enabled": true },
+    { "id": "swan_baas", "name": "Swan BaaS (V9)", "desc": "contas + cartões + IBANs", "icon": "SW", "color": "blue", "enabled": false, "planned": true }
+  ],
+  "skills": [
+    { "id": "consolidar-pnl", "desc": "Consolida P&L cross-vertical (V2..V10 + holding)" },
+    { "id": "monitorar-runway", "desc": "Tracks runway baseado em MRR + burn" }
+  ],
+  "recipes": [
+    { "id": "monthly-pnl", "trigger": "schedule", "trigger_label": "0 10 5 * *", "desc": "Dia 5: P&L consolidado mensal" }
+  ],
+  "peerReads": [
+    { "stage": "current", "value": "Fina (financeiro-condo), CEO" }
+  ],
+  "cost": { "current": 0, "currency": "USD", "period": "30d", "notes": "Opus — análise estratégica financeira" }
+}

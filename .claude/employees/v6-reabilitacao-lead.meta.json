@@ -1,0 +1,25 @@
+{
+  "id": "v6-reabilitacao-lead",
+  "name": "Rui",
+  "role": "Vertical Lead · Reabilitação",
+  "vertical": "V6",
+  "verticals": ["V6"],
+  "department": "operations",
+  "tier": "vertical-lead",
+  "reports_to": "ceo-agent",
+  "model": "claude-sonnet-4-6",
+  "version": "0.1",
+  "status": "draft",
+  "color": "amber",
+  "avatarInitial": "R",
+  "integrations": [],
+  "skills": [
+    { "id": "matchear-empreiteiros", "desc": "Liga obras a empreiteiros + fiscais especializados" },
+    { "id": "auditar-licenciamento", "desc": "Verifica licenças camarárias e prazos APA" }
+  ],
+  "recipes": [],
+  "peerReads": [
+    { "stage": "current", "value": "CTO (integrações), CFO (custos), Bia (V5 manutenção overlap)" }
+  ],
+  "cost": { "current": 0, "currency": "USD", "period": "30d", "notes": "Vertical ainda não arrancou — placeholder" }
+}

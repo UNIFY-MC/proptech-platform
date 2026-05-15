@@ -1,0 +1,25 @@
+{
+  "id": "v7-real-estate-lead",
+  "name": "Rita",
+  "role": "Vertical Lead · Real Estate",
+  "vertical": "V7",
+  "verticals": ["V7"],
+  "department": "sales",
+  "tier": "vertical-lead",
+  "reports_to": "ceo-agent",
+  "model": "claude-sonnet-4-6",
+  "version": "0.1",
+  "status": "draft",
+  "color": "pink",
+  "avatarInitial": "R",
+  "integrations": [],
+  "skills": [
+    { "id": "avaliar-imovel", "desc": "Avaliação automática com comparáveis idealista/imovirtual" },
+    { "id": "gerar-listing", "desc": "Compõe listing optimizado para portais imobiliários" }
+  ],
+  "recipes": [],
+  "peerReads": [
+    { "stage": "current", "value": "CMO Diogo (lead gen), CFO (financiamentos)" }
+  ],
+  "cost": { "current": 0, "currency": "USD", "period": "30d", "notes": "Vertical ainda não arrancou — placeholder" }
+}

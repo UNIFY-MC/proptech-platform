@@ -1,0 +1,22 @@
+{
+  "id": "v8-channels",
+  "name": "César",
+  "role": "Channel Manager (Airbnb, Booking)",
+  "vertical": "V8",
+  "verticals": ["V8"],
+  "department": "operations",
+  "tier": "member",
+  "reports_to": "v8-rentals-lead",
+  "model": "claude-sonnet-4-6",
+  "version": "0.1",
+  "status": "draft",
+  "color": "cyan",
+  "avatarInitial": "C",
+  "integrations": [],
+  "skills": [
+    { "id": "sync-calendario", "desc": "Sincroniza disponibilidade Airbnb + Booking + Vrbo" },
+    { "id": "evitar-double-booking", "desc": "Lock de calendário com janela buffer de check-in/check-out" }
+  ],
+  "recipes": [],
+  "cost": { "current": 0, "currency": "USD", "period": "30d", "notes": "Draft — placeholder" }
+}

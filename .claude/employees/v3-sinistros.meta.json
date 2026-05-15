@@ -1,0 +1,22 @@
+{
+  "id": "v3-sinistros",
+  "name": "Sara",
+  "role": "Especialista em Sinistros",
+  "vertical": "V3",
+  "verticals": ["V3"],
+  "department": "sales",
+  "tier": "member",
+  "reports_to": "seguros-condo",
+  "model": "claude-sonnet-4-6",
+  "version": "0.1",
+  "status": "draft",
+  "color": "indigo",
+  "avatarInitial": "S",
+  "integrations": [],
+  "skills": [
+    { "id": "abrir-sinistro", "desc": "Prepara formulário completo + prazo legal 8 dias úteis" },
+    { "id": "acompanhar-peritagem", "desc": "Monitoriza estado da peritagem e flag se sem movimento >15 dias" }
+  ],
+  "recipes": [],
+  "cost": { "current": 0, "currency": "USD", "period": "30d", "notes": "Draft — placeholder" }
+}

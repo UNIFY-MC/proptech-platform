@@ -1,0 +1,22 @@
+{
+  "id": "v10-crosssell",
+  "name": "Carla",
+  "role": "Especialista Cross-sell",
+  "vertical": "V10",
+  "verticals": ["V10"],
+  "department": "sales",
+  "tier": "member",
+  "reports_to": "v10-owners-lead",
+  "model": "claude-sonnet-4-6",
+  "version": "0.1",
+  "status": "draft",
+  "color": "gold",
+  "avatarInitial": "C",
+  "integrations": [],
+  "skills": [
+    { "id": "matchear-cross", "desc": "Liga owner V2 a V3/V4/V5 com base em perfil e ICP" },
+    { "id": "calc-clv", "desc": "Calcula Customer Lifetime Value para priorizar leads cross-vertical" }
+  ],
+  "recipes": [],
+  "cost": { "current": 0, "currency": "USD", "period": "30d", "notes": "Draft — placeholder" }
+}

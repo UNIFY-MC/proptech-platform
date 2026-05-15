@@ -2,11 +2,13 @@
   "id": "energia-condo",
   "name": "Enzo",
   "role": "Especialista de Energia",
-  "vertical": "V2",
+  "vertical": "V4",
   "secondary_verticals": [
-    "V4"
+    "V2"
   ],
-  "department": "sales",
+  "department": "operations",
+  "tier": "vertical-lead",
+  "tier_role": "V4 Lead",
   "model": "claude-sonnet-4-6",
   "version": "1.0",
   "status": "active",

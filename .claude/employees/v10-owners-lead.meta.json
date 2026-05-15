@@ -1,0 +1,25 @@
+{
+  "id": "v10-owners-lead",
+  "name": "Olívia",
+  "role": "Vertical Lead · Owners Club",
+  "vertical": "V10",
+  "verticals": ["V10"],
+  "department": "marketing",
+  "tier": "vertical-lead",
+  "reports_to": "ceo-agent",
+  "model": "claude-sonnet-4-6",
+  "version": "0.1",
+  "status": "draft",
+  "color": "gold",
+  "avatarInitial": "O",
+  "integrations": [],
+  "skills": [
+    { "id": "gerir-tier-cliente", "desc": "Calcula tier de fidelidade baseado em MRR + tempo de cliente" },
+    { "id": "gerar-oferta-cross", "desc": "Sugere cross-sell entre verticais para owners activos" }
+  ],
+  "recipes": [],
+  "peerReads": [
+    { "stage": "current", "value": "CMO Diogo (campanhas), todos os vertical leads (cross-sell)" }
+  ],
+  "cost": { "current": 0, "currency": "USD", "period": "30d", "notes": "Vertical ainda não arrancou — placeholder" }
+}

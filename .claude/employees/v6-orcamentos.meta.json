@@ -1,0 +1,22 @@
+{
+  "id": "v6-orcamentos",
+  "name": "Hugo",
+  "role": "Gestor de Orçamentos de Obra",
+  "vertical": "V6",
+  "verticals": ["V6"],
+  "department": "finance",
+  "tier": "member",
+  "reports_to": "v6-reabilitacao-lead",
+  "model": "claude-sonnet-4-6",
+  "version": "0.1",
+  "status": "draft",
+  "color": "amber",
+  "avatarInitial": "H",
+  "integrations": [],
+  "skills": [
+    { "id": "estimar-obra", "desc": "Estima custo €/m² baseado em índice CCDR + tipologia" },
+    { "id": "comparar-empreiteiros", "desc": "Compara propostas com baseline + flags de outliers" }
+  ],
+  "recipes": [],
+  "cost": { "current": 0, "currency": "USD", "period": "30d", "notes": "Draft — placeholder" }
+}

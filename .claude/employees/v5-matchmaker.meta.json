@@ -1,0 +1,22 @@
+{
+  "id": "v5-matchmaker",
+  "name": "Marina",
+  "role": "Matchmaker de Prestadores",
+  "vertical": "V5",
+  "verticals": ["V5"],
+  "department": "operations",
+  "tier": "member",
+  "reports_to": "bia",
+  "model": "claude-sonnet-4-6",
+  "version": "0.1",
+  "status": "draft",
+  "color": "purple",
+  "avatarInitial": "M",
+  "integrations": [],
+  "skills": [
+    { "id": "filter-by-geo", "desc": "Filtra prestadores por concelho/freguesia + raio km" },
+    { "id": "score-rating", "desc": "Ordena por rating + histórico + disponibilidade" }
+  ],
+  "recipes": [],
+  "cost": { "current": 0, "currency": "USD", "period": "30d", "notes": "Draft — placeholder" }
+}

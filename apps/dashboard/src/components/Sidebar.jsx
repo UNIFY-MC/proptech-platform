@@ -60,44 +60,49 @@ export default function Sidebar() {
 
   return (
     <aside className={'app-sidebar' + (sidebarCollapsed ? ' collapsed' : '')}>
+      {/* Header combinado: picker vertical (esq) + botão ocultar (dir) */}
       <div className="sidebar-header" style={{
-        padding: '6px 12px',
+        padding: '6px 10px',
         borderBottom: '1px solid var(--border)',
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'flex-end',
+        justifyContent: 'space-between',
+        gap: 6,
         flexShrink: 0,
-        height: 32,
+        height: 36,
       }}>
+        {!sidebarCollapsed && (
+          <select
+            className="sidebar-vertical-select"
+            value={activeVertical}
+            onChange={(e) => setVertical(e.target.value)}
+            title="Filtrar por vertical"
+            style={{ flex: 1, minWidth: 0 }}
+          >
+            <option value="all">Todas verticais</option>
+            <option value="V1">V1 Core</option>
+            <option value="V2">V2 Condomínios</option>
+            <option value="V3">V3 Seguros</option>
+            <option value="V4">V4 Energia</option>
+            <option value="V5">V5 Manutenção</option>
+            <option value="V6">V6 Reabilitação</option>
+            <option value="V7">V7 Real Estate</option>
+            <option value="V8">V8 Rentals</option>
+            <option value="V9">V9 BaaS Swan</option>
+            <option value="V10">V10 Owners</option>
+          </select>
+        )}
         <button
           onClick={toggleSidebar}
           title={sidebarCollapsed ? 'Expandir' : 'Colapsar'}
           style={{
             background: 'none', border: 'none', cursor: 'pointer',
             color: 'var(--text-dim)', padding: 4,
-            display: 'flex', alignItems: 'center',
+            display: 'flex', alignItems: 'center', flexShrink: 0,
           }}
         >
           {sidebarCollapsed ? <PanelLeft size={14} /> : <PanelLeftClose size={14} />}
         </button>
-      </div>
-
-      {/* Filtro vertical — sempre visível no topo (Q1 UX feedback) */}
-      <div className="sidebar-vertical">
-        <select
-          className="sidebar-vertical-select"
-          value={activeVertical}
-          onChange={(e) => setVertical(e.target.value)}
-          title="Filtrar por vertical"
-        >
-          <option value="all">Todas verticais</option>
-          <option value="V1">V1 Core</option>
-          <option value="V2">V2 Condomínios</option>
-          <option value="V3">V3 Seguros</option>
-          <option value="V4">V4 Energia</option>
-          <option value="V5">V5 Manutenção</option>
-          <option value="V10">V10 Owners</option>
-        </select>
       </div>
 
       <div className="sidebar-nav">

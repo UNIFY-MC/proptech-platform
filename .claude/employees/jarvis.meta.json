@@ -1,0 +1,30 @@
+{
+  "id": "jarvis",
+  "name": "Jarvis",
+  "role": "Estratega Global · Personal Assistant",
+  "vertical": "core",
+  "verticals": ["V2","V3","V4","V5","V6","V7","V8","V9","V10"],
+  "department": "operations",
+  "tier": "advisor",
+  "reports_to": "mario",
+  "model": "claude-opus-4-7",
+  "version": "1.0",
+  "status": "active",
+  "color": "purple",
+  "avatarInitial": "J",
+  "integrations": [],
+  "skills": [
+    { "id": "orquestrar-cross-vertical", "desc": "Coordena C-suite e leads verticais em decisões estratégicas" },
+    { "id": "advisor-mario", "desc": "Conselheiro 24/7 do Mário em terminal/IDE — PT-PT, sem fluff" }
+  ],
+  "recipes": [],
+  "peerReads": [
+    { "stage": "current", "value": "todos os C-suite + vertical leads" }
+  ],
+  "cost": {
+    "current": 0,
+    "currency": "USD",
+    "period": "30d",
+    "notes": "Opus — usado on-demand para decisões estratégicas globais"
+  }
+}

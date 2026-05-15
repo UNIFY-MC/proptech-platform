@@ -1,0 +1,22 @@
+{
+  "id": "v9-kyc",
+  "name": "Kim",
+  "role": "Especialista KYC / AML",
+  "vertical": "V9",
+  "verticals": ["V9"],
+  "department": "legal",
+  "tier": "member",
+  "reports_to": "v9-baas-lead",
+  "model": "claude-sonnet-4-6",
+  "version": "0.1",
+  "status": "draft",
+  "color": "blue",
+  "avatarInitial": "K",
+  "integrations": [],
+  "skills": [
+    { "id": "validar-cc-nif", "desc": "Valida CC/passaporte + NIF + cruza dados AT/IRC" },
+    { "id": "flag-pep-sanctions", "desc": "Verifica listas PEP + sanctions OFAC/EU" }
+  ],
+  "recipes": [],
+  "cost": { "current": 0, "currency": "USD", "period": "30d", "notes": "Draft — placeholder" }
+}

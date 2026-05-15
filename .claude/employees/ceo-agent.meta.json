@@ -1,0 +1,27 @@
+{
+  "id": "ceo-agent",
+  "name": "CEO",
+  "role": "Chief Executive Officer",
+  "vertical": "core",
+  "verticals": ["V2","V3","V4","V5","V6","V7","V8","V9","V10"],
+  "department": "operations",
+  "tier": "csuite",
+  "reports_to": "mario",
+  "model": "claude-opus-4-7",
+  "version": "0.1",
+  "status": "draft",
+  "color": "purple",
+  "avatarInitial": "C",
+  "integrations": [],
+  "skills": [
+    { "id": "definir-okrs", "desc": "Define OKRs trimestrais cross-vertical" },
+    { "id": "go-no-go-novas-verticais", "desc": "Decide arranque de novas verticais V6/V7/V8/V10" }
+  ],
+  "recipes": [
+    { "id": "weekly-sync-csuite", "trigger": "schedule", "trigger_label": "0 9 * * 1", "desc": "Segunda 9h: sync C-suite (CFO, CTO, CMO, COO)" }
+  ],
+  "peerReads": [
+    { "stage": "current", "value": "CFO, CTO, CMO, COO, todos os vertical leads" }
+  ],
+  "cost": { "current": 0, "currency": "USD", "period": "30d", "notes": "Estratégico on-demand" }
+}

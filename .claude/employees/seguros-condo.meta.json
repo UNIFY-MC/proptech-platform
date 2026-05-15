@@ -2,11 +2,13 @@
   "id": "seguros-condo",
   "name": "Sofia",
   "role": "Especialista de Seguros",
-  "vertical": "V2",
+  "vertical": "V3",
   "secondary_verticals": [
-    "V3"
+    "V2"
   ],
-  "department": "sales",
+  "department": "operations",
+  "tier": "vertical-lead",
+  "tier_role": "V3 Lead",
   "model": "claude-sonnet-4-6",
   "version": "1.0",
   "status": "active",

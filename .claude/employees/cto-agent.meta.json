@@ -1,0 +1,31 @@
+{
+  "id": "cto-agent",
+  "name": "CTO",
+  "role": "Chief Technology Officer",
+  "vertical": "core",
+  "verticals": ["V2","V3","V4","V5","V6","V7","V8","V9","V10"],
+  "department": "engineering",
+  "tier": "csuite",
+  "reports_to": "ceo-agent",
+  "model": "claude-opus-4-7",
+  "version": "0.1",
+  "status": "draft",
+  "color": "slate",
+  "avatarInitial": "T",
+  "integrations": [
+    { "id": "supabase_v1", "name": "Supabase V1 Core", "desc": "schemas, RLS, edge functions", "icon": "SB", "color": "emerald", "enabled": true },
+    { "id": "vercel", "name": "Vercel", "desc": "deploys + previews", "icon": "VC", "color": "stone", "enabled": true },
+    { "id": "github", "name": "GitHub", "desc": "repos + actions", "icon": "GH", "color": "stone", "enabled": true }
+  ],
+  "skills": [
+    { "id": "rever-arquitectura", "desc": "Decisões cross-vertical, ADRs, débito técnico" },
+    { "id": "auditar-seguranca", "desc": "RLS, secrets, compliance RGPD" }
+  ],
+  "recipes": [
+    { "id": "weekly-stack-health", "trigger": "schedule", "trigger_label": "0 9 * * 1", "desc": "Segunda 9h: auditoria stack-health" }
+  ],
+  "peerReads": [
+    { "stage": "current", "value": "Orquestrador, todos os vertical leads em decisões técnicas" }
+  ],
+  "cost": { "current": 0, "currency": "USD", "period": "30d", "notes": "Opus — decisões arquitecturais" }
+}
