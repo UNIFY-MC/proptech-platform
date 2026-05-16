@@ -79,6 +79,7 @@ export default function RecipeDetailPage() {
   const [saving, setSaving]   = useState(false)
   const [running, setRunning] = useState(false)
   const [stepsView, setStepsView] = useState('list')
+  const [selectedStepIdx, setSelectedStepIdx] = useState(null)
   const [draft, setDraft] = useState(null)
 
   useEffect(() => {
@@ -406,20 +407,25 @@ export default function RecipeDetailPage() {
           </div>
 
           {stepsView === 'chart' ? (
-            <RecipeFlowChart steps={steps} />
+            <RecipeFlowChart steps={steps} onStepClick={setSelectedStepIdx} />
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {steps.map((s, i) => {
                 const isHuman = s.type === 'human'
                 const stepSkills = Array.isArray(s.skills) ? s.skills : (s.skill_tag ? [s.skill_tag] : [])
                 return (
-                  <div key={i} style={{
-                    background: 'var(--bg-card)',
-                    border: `1px solid ${isHuman ? 'rgba(245,158,11,0.4)' : 'var(--border)'}`,
-                    borderLeft: `3px solid ${isHuman ? '#f59e0b' : '#10b981'}`,
-                    borderRadius: 8, padding: '12px 16px',
-                    display: 'flex', flexDirection: 'column', gap: 8,
-                  }}>
+                  <div
+                    key={i}
+                    onClick={() => setSelectedStepIdx(i)}
+                    style={{
+                      background: selectedStepIdx === i ? 'var(--bg-elevated)' : 'var(--bg-card)',
+                      border: `1px solid ${selectedStepIdx === i ? 'var(--primary)' : (isHuman ? 'rgba(245,158,11,0.4)' : 'var(--border)')}`,
+                      borderLeft: `3px solid ${isHuman ? '#f59e0b' : '#10b981'}`,
+                      borderRadius: 8, padding: '12px 16px',
+                      display: 'flex', flexDirection: 'column', gap: 8,
+                      cursor: 'pointer',
+                    }}
+                  >
                     <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                       <span style={{
                         fontSize: 13, fontWeight: 700, color: 'var(--primary)',
@@ -522,6 +528,172 @@ export default function RecipeDetailPage() {
           </button>
         )}
       </div>
+
+      {/* Step detail side panel (Cook AI-style) */}
+      {selectedStepIdx !== null && steps[selectedStepIdx] && (
+        <StepDetailPanel
+          step={steps[selectedStepIdx]}
+          idx={selectedStepIdx}
+          total={steps.length}
+          assignedAgent={assignedAgent}
+          onClose={() => setSelectedStepIdx(null)}
+          onPrev={selectedStepIdx > 0 ? () => setSelectedStepIdx(selectedStepIdx - 1) : null}
+          onNext={selectedStepIdx < steps.length - 1 ? () => setSelectedStepIdx(selectedStepIdx + 1) : null}
+        />
+      )}
+    </div>
+  )
+}
+
+// ─── StepDetailPanel ──────────────────────────────────────────────────────
+function StepDetailPanel({ step, idx, total, assignedAgent, onClose, onPrev, onNext }) {
+  const isHuman = step.type === 'human'
+  const accent = isHuman ? '#f59e0b' : '#10b981'
+  const skills = Array.isArray(step.skills) ? step.skills : (step.skill_tag ? [step.skill_tag] : [])
+
+  return (
+    <div style={{
+      position: 'fixed', top: 0, right: 0, bottom: 0,
+      width: 420, maxWidth: '100vw',
+      background: 'var(--bg)', borderLeft: '1px solid var(--border)',
+      overflowY: 'auto', zIndex: 50,
+      boxShadow: '-8px 0 24px rgba(0,0,0,0.25)',
+      display: 'flex', flexDirection: 'column',
+    }}>
+      <div style={{
+        padding: '14px 18px', borderBottom: '1px solid var(--border)',
+        display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0,
+      }}>
+        <span style={{
+          fontSize: 10, padding: '3px 8px', borderRadius: 4,
+          background: `${accent}22`, color: accent,
+          fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, letterSpacing: '0.08em',
+        }}>STEP {idx + 1} / {total}</span>
+        <span style={{
+          fontSize: 9, padding: '2px 6px', borderRadius: 3,
+          background: isHuman ? 'rgba(245,158,11,0.18)' : 'rgba(16,185,129,0.18)',
+          color: accent, fontFamily: 'JetBrains Mono, monospace', fontWeight: 700,
+        }}>{isHuman ? 'HUMAN' : 'AGENT'}</span>
+        <div style={{ flex: 1 }} />
+        <button
+          onClick={onClose}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-dim)', padding: 4 }}
+        ><X size={16} /></button>
+      </div>
+
+      <div style={{ flex: 1, padding: 18, overflowY: 'auto' }}>
+        <h2 style={{ margin: '0 0 14px', fontSize: 18, color: 'var(--text)', fontWeight: 700, lineHeight: 1.3 }}>
+          {step.name}
+        </h2>
+
+        {/* Quem executa */}
+        <Section label="Quem executa">
+          {isHuman ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#f59e0b' }}>
+              <UserIcon size={14} /> <strong>Tu (Mário)</strong>
+              <span style={{ color: 'var(--text-dim)', fontSize: 11 }}>· revê + aprova</span>
+            </div>
+          ) : assignedAgent ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <img src={assignedAgent.avatar_url} alt="" style={{ width: 24, height: 24, borderRadius: '50%' }} onError={(e) => { e.currentTarget.style.display = 'none' }}/>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{assignedAgent.name}</div>
+                <div style={{ fontSize: 10, color: 'var(--text-dim)', fontFamily: 'JetBrains Mono, monospace' }}>{assignedAgent.employee_id}</div>
+              </div>
+            </div>
+          ) : (
+            <span style={{ color: 'var(--text-dim)', fontStyle: 'italic' }}>edge function autónoma (sem persona)</span>
+          )}
+        </Section>
+
+        {/* Input / instrução */}
+        {step.input && (
+          <Section label="Input · instrução">
+            <div style={{
+              padding: '10px 12px', background: 'var(--bg-card)', border: '1px solid var(--border)',
+              borderRadius: 6, fontSize: 12, color: 'var(--text)',
+              fontFamily: 'JetBrains Mono, monospace', lineHeight: 1.6,
+              whiteSpace: 'pre-wrap',
+            }}>{step.input}</div>
+          </Section>
+        )}
+
+        {/* Skills usadas */}
+        {skills.length > 0 && (
+          <Section label={`Skills · ${skills.length} edge fn${skills.length === 1 ? '' : 's'}`}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+              {skills.map((sk) => (
+                <div key={sk} style={{
+                  display: 'flex', alignItems: 'center', gap: 8,
+                  padding: '7px 10px', background: 'rgba(107,79,160,0.08)',
+                  border: '1px solid rgba(107,79,160,0.25)', borderRadius: 5,
+                  fontSize: 12, fontFamily: 'JetBrains Mono, monospace',
+                }}>
+                  <span style={{ color: 'var(--primary)' }}>↪</span>
+                  <span style={{ color: 'var(--text)' }}>{sk}</span>
+                </div>
+              ))}
+            </div>
+          </Section>
+        )}
+
+        {/* Config: retry, jump_back, type */}
+        <Section label="Configuração">
+          <Row k="Tipo" v={isHuman ? 'Human approval' : 'Agent autónomo'} />
+          {!isHuman && <Row k="Retry máximo" v={`${step.retry_max ?? 2}×`} />}
+          {step.jump_back_to && <Row k="Em caso de falha" v={step.jump_back_to === 'stop' ? 'pára pipeline' : `volta para step ${step.jump_back_to}`} />}
+        </Section>
+      </div>
+
+      {/* Footer nav prev/next */}
+      <div style={{
+        padding: '12px 18px', borderTop: '1px solid var(--border)',
+        display: 'flex', gap: 8, flexShrink: 0,
+      }}>
+        <button
+          onClick={onPrev} disabled={!onPrev}
+          style={{
+            flex: 1, padding: '7px 10px', borderRadius: 5,
+            background: 'transparent', border: '1px solid var(--border)',
+            color: onPrev ? 'var(--text)' : 'var(--text-dim)',
+            cursor: onPrev ? 'pointer' : 'not-allowed', fontSize: 12,
+          }}
+        >← Step anterior</button>
+        <button
+          onClick={onNext} disabled={!onNext}
+          style={{
+            flex: 1, padding: '7px 10px', borderRadius: 5,
+            background: 'transparent', border: '1px solid var(--border)',
+            color: onNext ? 'var(--text)' : 'var(--text-dim)',
+            cursor: onNext ? 'pointer' : 'not-allowed', fontSize: 12,
+          }}
+        >Próximo step →</button>
+      </div>
+    </div>
+  )
+}
+
+function Section({ label, children }) {
+  return (
+    <div style={{ marginBottom: 18 }}>
+      <div style={{
+        fontSize: 9, fontWeight: 700, color: 'var(--text-dim)',
+        textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 8,
+        fontFamily: 'JetBrains Mono, monospace',
+      }}>{label}</div>
+      {children}
+    </div>
+  )
+}
+
+function Row({ k, v }) {
+  return (
+    <div style={{
+      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+      padding: '6px 0', borderBottom: '1px dashed var(--border)', fontSize: 12,
+    }}>
+      <span style={{ color: 'var(--text-dim)' }}>{k}</span>
+      <span style={{ color: 'var(--text)', fontFamily: 'JetBrains Mono, monospace' }}>{v}</span>
     </div>
   )
 }
