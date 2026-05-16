@@ -1,0 +1,22 @@
+name = "proptech-discord"
+main = "src/worker.ts"
+compatibility_date = "2025-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Durable Object — 1 instância única que segura WebSocket Discord
+[[durable_objects.bindings]]
+name = "BOT_DO"
+class_name = "BotDO"
+
+# Migration v1 — declarar nova classe DO (SQLite-backed, requisito free plan)
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["BotDO"]
+
+# Cron trigger — pinga o DO a cada 5 min para garantir wake-up se hibernar mal
+[triggers]
+crons = ["*/5 * * * *"]
+
+# Observability (free)
+[observability]
+enabled = true
