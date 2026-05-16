@@ -81,8 +81,10 @@ export default function EmailPage() {
   const [emails, setEmails] = useState([])
   const [loading, setLoading] = useState(true)
   const [syncing, setSyncing] = useState(false)
-  const [filter, setFilter] = useState('all')
+  const [filter, setFilter] = useState('awaiting_routing')  // landing default = "a rever pelo agent"
   const [search, setSearch] = useState('')
+  const [agentFilter, setAgentFilter] = useState('all')
+  const [verticalFilter, setVerticalFilter] = useState('all')
   const [selectedId, setSelectedId] = useState(null)
   const [busy, setBusy] = useState(false)
 
@@ -111,23 +113,38 @@ export default function EmailPage() {
 
   const filtered = useMemo(() => {
     let arr = emails
-    if (filter === 'inbound')      arr = arr.filter(e => e.direction === 'inbound' && !['archived','trashed','spam'].includes(e.status))
-    if (filter === 'outbound')     arr = arr.filter(e => e.direction === 'outbound')
-    if (filter === 'needs_review') arr = arr.filter(e => e.status === 'awaiting_approval' || e.status === 'received')
-    if (filter === 'archive')      arr = arr.filter(e => e.status === 'archived')
-    if (filter === 'trash')        arr = arr.filter(e => e.status === 'trashed' || e.status === 'spam')
-    if (filter === 'all')          arr = arr.filter(e => !['trashed','spam'].includes(e.status))
+    if (filter === 'inbound')          arr = arr.filter(e => e.direction === 'inbound' && !['archived','trashed','spam'].includes(e.status))
+    if (filter === 'outbound')         arr = arr.filter(e => e.direction === 'outbound')
+    if (filter === 'awaiting_routing') arr = arr.filter(e => e.status === 'awaiting_routing')
+    if (filter === 'awaiting_approval')arr = arr.filter(e => e.status === 'awaiting_approval')
+    if (filter === 'received')         arr = arr.filter(e => e.status === 'received')
+    if (filter === 'archive')          arr = arr.filter(e => e.status === 'archived')
+    if (filter === 'trash')            arr = arr.filter(e => e.status === 'trashed' || e.status === 'spam')
+    if (filter === 'all')              arr = arr.filter(e => !['trashed','spam'].includes(e.status))
+    if (agentFilter !== 'all')         arr = arr.filter(e => e.routed_to_agent === agentFilter)
+    if (verticalFilter !== 'all')      arr = arr.filter(e => e.vertical === verticalFilter)
     if (search) {
       const q = search.toLowerCase()
       arr = arr.filter(e =>
         e.subject?.toLowerCase().includes(q) ||
         e.from_email?.toLowerCase().includes(q) ||
         e.body_snippet?.toLowerCase().includes(q) ||
-        e.routed_to_agent?.toLowerCase().includes(q),
+        e.routed_to_agent?.toLowerCase().includes(q) ||
+        e.classify_intent?.toLowerCase().includes(q),
       )
     }
     return arr
-  }, [emails, filter, search])
+  }, [emails, filter, search, agentFilter, verticalFilter])
+
+  const allAgents = useMemo(() => {
+    const set = new Set(emails.filter(e => e.routed_to_agent).map(e => e.routed_to_agent))
+    return Array.from(set).sort()
+  }, [emails])
+
+  const allVerticals = useMemo(() => {
+    const set = new Set(emails.filter(e => e.vertical).map(e => e.vertical))
+    return Array.from(set).sort()
+  }, [emails])
 
   // Auto-seleccionar primeiro email se nada seleccionado
   useEffect(() => {
@@ -139,12 +156,14 @@ export default function EmailPage() {
   const selected = useMemo(() => emails.find(e => e.id === selectedId), [emails, selectedId])
 
   const counts = useMemo(() => ({
-    all:          emails.filter(e => !['trashed','spam'].includes(e.status)).length,
-    inbound:      emails.filter(e => e.direction === 'inbound' && !['archived','trashed','spam'].includes(e.status)).length,
-    outbound:     emails.filter(e => e.direction === 'outbound').length,
-    needs_review: emails.filter(e => e.status === 'awaiting_approval' || e.status === 'received').length,
-    archive:      emails.filter(e => e.status === 'archived').length,
-    trash:        emails.filter(e => e.status === 'trashed' || e.status === 'spam').length,
+    all:                emails.filter(e => !['trashed','spam'].includes(e.status)).length,
+    awaiting_routing:   emails.filter(e => e.status === 'awaiting_routing').length,
+    awaiting_approval:  emails.filter(e => e.status === 'awaiting_approval').length,
+    received:           emails.filter(e => e.status === 'received').length,
+    inbound:            emails.filter(e => e.direction === 'inbound' && !['archived','trashed','spam'].includes(e.status)).length,
+    outbound:           emails.filter(e => e.direction === 'outbound').length,
+    archive:            emails.filter(e => e.status === 'archived').length,
+    trash:              emails.filter(e => e.status === 'trashed' || e.status === 'spam').length,
   }), [emails])
 
   const doAction = async (action) => {
@@ -185,15 +204,17 @@ export default function EmailPage() {
         </button>
       </div>
 
-      {/* Filters + search */}
-      <div style={{ display: 'flex', gap: 6, marginBottom: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+      {/* Filters principais */}
+      <div style={{ display: 'flex', gap: 6, marginBottom: 8, alignItems: 'center', flexWrap: 'wrap' }}>
         {[
-          { id: 'all',          label: 'Todos',       count: counts.all },
-          { id: 'needs_review', label: 'A rever',     count: counts.needs_review, color: '#f59e0b' },
-          { id: 'inbound',      label: 'Recebidos',   count: counts.inbound,  icon: Inbox },
-          { id: 'outbound',     label: 'Enviados',    count: counts.outbound, icon: Send },
-          { id: 'archive',      label: 'Arquivo',     count: counts.archive },
-          { id: 'trash',        label: 'Lixo',        count: counts.trash },
+          { id: 'awaiting_routing',  label: 'A rever',       count: counts.awaiting_routing,  color: '#f59e0b' },
+          { id: 'awaiting_approval', label: 'Drafts pendentes', count: counts.awaiting_approval, color: '#3b82f6' },
+          { id: 'received',          label: 'Recebido',      count: counts.received },
+          { id: 'all',               label: 'Todos',         count: counts.all },
+          { id: 'inbound',           label: 'Inbound',       count: counts.inbound,  icon: Inbox },
+          { id: 'outbound',          label: 'Enviados',      count: counts.outbound, icon: Send },
+          { id: 'archive',           label: 'Arquivo',       count: counts.archive },
+          { id: 'trash',             label: 'Lixo',          count: counts.trash },
         ].map(f => (
           <button
             key={f.id}
@@ -216,10 +237,48 @@ export default function EmailPage() {
             }}>{f.count}</span>
           </button>
         ))}
+      </div>
+
+      {/* Sub-filtros: agent + vertical + search */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+        <select
+          value={agentFilter}
+          onChange={e => { setAgentFilter(e.target.value); setSelectedId(null) }}
+          style={{
+            padding: '5px 8px', borderRadius: 5,
+            background: 'var(--bg-card)', border: '1px solid var(--border)',
+            color: 'var(--text)', fontSize: 11, cursor: 'pointer', minWidth: 160,
+          }}
+        >
+          <option value="all">Todos os agents</option>
+          {allAgents.map(a => <option key={a} value={a}>{a}</option>)}
+        </select>
+        <select
+          value={verticalFilter}
+          onChange={e => { setVerticalFilter(e.target.value); setSelectedId(null) }}
+          style={{
+            padding: '5px 8px', borderRadius: 5,
+            background: 'var(--bg-card)', border: '1px solid var(--border)',
+            color: 'var(--text)', fontSize: 11, cursor: 'pointer', minWidth: 120,
+          }}
+        >
+          <option value="all">Todas verticais</option>
+          {allVerticals.map(v => <option key={v} value={v}>{v}</option>)}
+        </select>
+        {(agentFilter !== 'all' || verticalFilter !== 'all') && (
+          <button
+            onClick={() => { setAgentFilter('all'); setVerticalFilter('all') }}
+            style={{
+              padding: '4px 8px', borderRadius: 4, fontSize: 10,
+              background: 'transparent', border: '1px solid var(--border)',
+              color: 'var(--text-dim)', cursor: 'pointer',
+            }}
+          >× Limpar</button>
+        )}
         <div style={{
           marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 6,
           background: 'var(--bg-card)', border: '1px solid var(--border)',
-          borderRadius: 5, padding: '5px 10px', minWidth: 220,
+          borderRadius: 5, padding: '5px 10px', minWidth: 240,
         }}>
           <Search size={11} color="var(--text-dim)" />
           <input
