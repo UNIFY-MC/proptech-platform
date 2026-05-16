@@ -4,14 +4,15 @@
 // Filtra pelo activeVertical do dropdown topo (useVerticalStore).
 // 'all' mostra todas; v2/v3/v4/... mostra globais (*) + específicas dessa vertical.
 
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import * as Lucide from 'lucide-react'
-import { ExternalLink, Search, Check, Loader2, Sparkles, Settings } from 'lucide-react'
+import { ExternalLink, Search, Check, Loader2, Sparkles, Settings, Activity, X, RefreshCw } from 'lucide-react'
 import { useIntegrations } from '../hooks/useIntegrations.js'
 import { useVerticalStore, useNotificationsStore } from '../store/index.js'
 import { getIntegrationLogo, getIntegrationLogoFallback, NEEDS_DARK_INVERT } from '../lib/integration-logos.js'
 import IntegrationDetailModal from '../components/IntegrationDetailModal.jsx'
+import { supabase } from '../lib/supabase.js'
 
 // Mapa de integrações com config UI já implementada → rota da page
 // Ao clicar Connect, em vez de toggle silencioso, navega para a config form.
@@ -139,9 +140,182 @@ function BrandLogo({ integ }) {
   )
 }
 
-// (Stack Usage Drawer removido — só mostrava dados hardcoded.
-//  Voltará quando tivermos APIs reais de utilização: Anthropic tokens,
-//  Supabase Management, Vercel/GitHub invocations, Resend stats.)
+// Stack Usage Drawer — dados reais de public.integration_usage_latest
+// (alimentado pelo edge fn stack-usage-fetch cron diário 6am)
+const SLUG_LABEL = {
+  supabase: 'Supabase',
+  vercel:   'Vercel',
+  github:   'GitHub Actions',
+  resend:   'Resend',
+}
+const METRIC_LABEL = {
+  db_size_gb:         'Database',
+  storage_gb:         'Storage',
+  bandwidth_gb:       'Bandwidth',
+  edge_fn_invocations:'Edge Function invocations',
+  fn_invocations:     'Function invocations',
+  build_minutes:      'Build minutes',
+  deployments_month:  'Deployments este mês',
+  actions_minutes:    'Actions minutes',
+  emails_sent_month:  'Emails enviados',
+}
+
+function StackUsageDrawer({ onClose }) {
+  const [rows, setRows] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
+
+  const fetchUsage = async () => {
+    if (!supabase) return setLoading(false)
+    setLoading(true)
+    const { data } = await supabase.from('integration_usage_latest').select('*').order('slug').order('metric')
+    setRows(data || [])
+    setLoading(false)
+  }
+
+  useEffect(() => { fetchUsage() }, [])
+
+  const handleRefresh = async () => {
+    setRefreshing(true)
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+    const anonKey     = import.meta.env.VITE_SUPABASE_ANON_KEY
+    await window.fetch(`${supabaseUrl}/functions/v1/stack-usage-fetch`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${anonKey}`, 'apikey': anonKey },
+      body: JSON.stringify({}),
+    })
+    await fetchUsage()
+    setRefreshing(false)
+  }
+
+  // Agrupar por slug
+  const grouped = useMemo(() => {
+    const g = {}
+    rows.forEach(r => {
+      if (!g[r.slug]) g[r.slug] = []
+      g[r.slug].push(r)
+    })
+    return g
+  }, [rows])
+
+  return (
+    <div onClick={onClose} style={{
+      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)',
+      display: 'flex', justifyContent: 'flex-end', zIndex: 1100,
+    }}>
+      <aside onClick={e => e.stopPropagation()} style={{
+        width: 580, maxWidth: '96vw', height: '100vh',
+        background: 'var(--bg-card)', borderLeft: '1px solid var(--border)',
+        display: 'flex', flexDirection: 'column', overflowY: 'auto',
+      }}>
+        <div style={{
+          padding: '14px 18px', borderBottom: '1px solid var(--border)',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <Activity size={18} style={{ color: 'var(--primary)' }} />
+            <div>
+              <strong style={{ fontSize: '1rem' }}>Stack Usage</strong>
+              <div style={{ fontSize: '0.62rem', color: 'var(--text-dim)' }}>
+                Dados reais · sync diário 6am UTC · usado / limite-free / falta
+              </div>
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 6 }}>
+            <button onClick={handleRefresh} disabled={refreshing} style={{
+              background: 'var(--bg-elevated)', border: '1px solid var(--border)',
+              borderRadius: 5, padding: '5px 10px', fontSize: 11, color: 'var(--text)',
+              cursor: refreshing ? 'wait' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4,
+            }}>
+              <RefreshCw size={11} style={{ animation: refreshing ? 'spin 1s linear infinite' : 'none' }} />
+              {refreshing ? 'A buscar…' : 'Refresh'}
+            </button>
+            <button onClick={onClose} style={{
+              background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-dim)',
+            }}><X size={18} /></button>
+          </div>
+        </div>
+
+        {loading ? (
+          <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-dim)' }}>A carregar…</div>
+        ) : Object.keys(grouped).length === 0 ? (
+          <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-dim)', fontSize: 12 }}>
+            Sem dados. Clica Refresh para correr stack-usage-fetch.
+          </div>
+        ) : Object.entries(grouped).map(([slug, items]) => (
+          <div key={slug} style={{ padding: '14px 18px', borderBottom: '1px solid var(--border)' }}>
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10,
+            }}>
+              <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>
+                {SLUG_LABEL[slug] || slug}
+              </span>
+              <span style={{
+                fontSize: 9, color: 'var(--text-dim)', fontFamily: 'JetBrains Mono, monospace',
+              }}>{items[0]?.recorded_at ? `actualizado: ${new Date(items[0].recorded_at).toLocaleString('pt-PT')}` : ''}</span>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {items.map(m => {
+                const pct = m.free_limit ? Math.min(100, (m.used / m.free_limit) * 100) : null
+                const remaining = m.free_limit ? Math.max(0, m.free_limit - m.used) : null
+                const color = pct == null ? '#6b7280'
+                  : pct >= 90 ? '#ef4444' : pct >= 75 ? '#f59e0b' : '#10b981'
+                return (
+                  <div key={m.metric}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                      <span style={{ fontSize: 12, color: 'var(--text)' }}>
+                        {METRIC_LABEL[m.metric] || m.metric}
+                      </span>
+                      <span style={{
+                        fontSize: 11, color: 'var(--text-dim)',
+                        fontFamily: 'JetBrains Mono, monospace',
+                      }}>
+                        <strong style={{ color: 'var(--text)' }}>
+                          {Number(m.used).toLocaleString('pt-PT', { maximumFractionDigits: 3 })}
+                        </strong>
+                        {' / '}
+                        {m.free_limit != null
+                          ? `${Number(m.free_limit).toLocaleString('pt-PT', { maximumFractionDigits: 0 })} ${m.unit}`
+                          : '—'}
+                        {pct != null && (
+                          <> · <span style={{ color, fontWeight: 700 }}>{pct.toFixed(1)}%</span></>
+                        )}
+                      </span>
+                    </div>
+                    {pct != null && (
+                      <div style={{
+                        width: '100%', height: 5, borderRadius: 3,
+                        background: 'var(--bg-elevated)', overflow: 'hidden',
+                      }}>
+                        <div style={{
+                          width: `${pct}%`, height: '100%', background: color, transition: 'width 0.3s',
+                        }} />
+                      </div>
+                    )}
+                    {remaining != null && (
+                      <div style={{ fontSize: 10, color: 'var(--text-dim)', marginTop: 2, fontFamily: 'JetBrains Mono, monospace' }}>
+                        falta {Number(remaining).toLocaleString('pt-PT', { maximumFractionDigits: 3 })} {m.unit}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        ))}
+
+        <div style={{
+          padding: '12px 18px', marginTop: 'auto', background: 'var(--bg-elevated)',
+          fontSize: 10, color: 'var(--text-dim)', lineHeight: 1.5,
+        }}>
+          <strong style={{ color: 'var(--text)' }}>Não disponível:</strong>
+          {' '}GitHub Actions (PAT precisa scope <code style={{ fontFamily: 'JetBrains Mono, monospace' }}>admin:org</code>/<code>read:plan</code>),
+          Anthropic Console (sem API pública para tokens). Vercel hobby plan só expõe deployments (não bandwidth/invocations).
+        </div>
+      </aside>
+    </div>
+  )
+}
 
 function IntegrationCard({ integ, onToggle, onConfig, busy }) {
   const status = integ.status || 'not_connected'
@@ -293,6 +467,7 @@ export default function IntegrationsPage() {
   }, [items])
 
   const [detailIntegration, setDetailIntegration] = useState(null)
+  const [showStackDrawer, setShowStackDrawer] = useState(false)
 
   const handleToggle = async (integ, nextStatus) => {
     setBusyId(integ.id)
@@ -313,8 +488,23 @@ export default function IntegrationsPage() {
 
   return (
     <div style={{ padding: '8px 0 40px', maxWidth: 1400, margin: '0 auto', position: 'relative' }}>
-      {/* Botão Useful Tools — topo direito */}
-      <div style={{ position: 'absolute', top: 16, right: 16 }}>
+      {/* Botões topo direito */}
+      <div style={{ position: 'absolute', top: 16, right: 16, display: 'flex', gap: 8 }}>
+        <button
+          onClick={() => setShowStackDrawer(true)}
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+            padding: '8px 14px', borderRadius: 6,
+            background: 'var(--bg-card)', border: '1px solid var(--border)',
+            color: 'var(--text)', cursor: 'pointer', fontSize: 13,
+            fontWeight: 500, transition: 'all 0.15s',
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--primary)'; e.currentTarget.style.color = 'var(--primary)' }}
+          onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text)' }}
+        >
+          <Activity size={14} />
+          Stack Usage
+        </button>
         <Link
           to="/useful-tools"
           style={{
@@ -331,6 +521,8 @@ export default function IntegrationsPage() {
           Useful Tools
         </Link>
       </div>
+
+      {showStackDrawer && <StackUsageDrawer onClose={() => setShowStackDrawer(false)} />}
 
       {/* Header — title + subtitle CookAI-style */}
       <div style={{ textAlign: 'center', marginBottom: 28, paddingTop: 20 }}>
