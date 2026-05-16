@@ -7,7 +7,7 @@ import {
   Bot, PanelLeftClose, PanelLeft,
   TrendingUp, UserPlus, Target, Zap,
   Plug2, Settings as SettingsIcon,
-  Monitor, Calendar, AtSign,
+  Monitor, Calendar, AtSign, Mail,
 } from 'lucide-react'
 import { useVerticalStore, useAppShellStore } from '../store'
 import { useInboxItems } from '../hooks/useSupabase'
@@ -110,6 +110,7 @@ export default function Sidebar() {
           <NavItem to="/inbox"       label="Inbox"       icon={Inbox} badge={unreadCount} />
           <NavItem to="/chat"        label="Chat"        icon={MessageSquare} />
           <NavItem to="/calendar"    label="Calendário"  icon={Calendar} />
+          <NavItem to="/email"       label="Email"       icon={Mail} />
           <NavItem to="/tasks"       label="Tasks"       icon={CheckSquare} />
           <NavItem to="/influencers" label="Influencers" icon={AtSign} />
           <NavItem to="/files"       label="Files"       icon={Folder} />
