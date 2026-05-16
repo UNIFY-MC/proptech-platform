@@ -187,17 +187,42 @@ function IntegrationCard({ integ, onToggle, onConfig, busy }) {
       )}
 
       {isConnected && (
-        <span style={{
-          display: 'inline-flex', alignItems: 'center', gap: 4,
-          padding: '3px 8px', borderRadius: 3,
-          background: meta.bg,
-          border: `1px solid ${meta.border}`,
-          color: meta.color,
-          fontSize: '0.55rem', fontWeight: 700,
-          fontFamily: 'JetBrains Mono, monospace', letterSpacing: '0.08em',
-        }}>
-          <Check size={9} /> {meta.label}
-        </span>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, width: '100%' }}>
+          <span style={{
+            display: 'inline-flex', alignItems: 'center', gap: 4,
+            padding: '3px 8px', borderRadius: 3,
+            background: meta.bg,
+            border: `1px solid ${meta.border}`,
+            color: meta.color,
+            fontSize: '0.55rem', fontWeight: 700,
+            fontFamily: 'JetBrains Mono, monospace', letterSpacing: '0.08em',
+          }}>
+            <Check size={9} /> {meta.label}
+          </span>
+          {/* Identidade ligada — email Google, server Discord, etc */}
+          {integ.config?.connected_email && (
+            <div style={{
+              fontSize: '0.6rem', color: 'var(--text-dim)',
+              fontFamily: 'JetBrains Mono, monospace',
+              maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+            }} title={integ.config.connected_email}>
+              {integ.config.connected_email}
+            </div>
+          )}
+          {integ.config?.server_name && (
+            <div style={{
+              fontSize: '0.6rem', color: 'var(--text-dim)',
+              fontFamily: 'JetBrains Mono, monospace',
+            }} title={`Server: ${integ.config.server_name}`}>
+              #{integ.config.server_name}
+              {integ.config.active_count != null && (
+                <span style={{ marginLeft: 4, opacity: 0.7 }}>
+                  · {integ.config.active_count}/{integ.config.total_count || integ.config.active_count} ativos
+                </span>
+              )}
+            </div>
+          )}
+        </div>
       )}
 
       {status === 'not_connected' && (
