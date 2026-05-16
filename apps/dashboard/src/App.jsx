@@ -54,6 +54,7 @@ import FlowTemplatesPage from './views/FlowTemplatesPage.jsx'
 import SkillsMarketplacePage from './views/SkillsMarketplacePage.jsx'
 import CalendarPage from './views/CalendarPage.jsx'
 import CalendarSettingsPage from './views/CalendarSettingsPage.jsx'
+import EmailPage from './views/EmailPage.jsx'
 import SkillReviewPage from './views/SkillReviewPage.jsx'
 import InfluencersPage from './views/InfluencersPage.jsx'
 import ApifyActorsPage from './views/ApifyActorsPage.jsx'
@@ -161,6 +162,7 @@ export default function App() {
               <Route path="/connections/discord" element={<DiscordConnectionsPage />} />
               <Route path="/calendar"          element={<CalendarPage />} />
               <Route path="/calendar/settings" element={<CalendarSettingsPage />} />
+              <Route path="/email"             element={<EmailPage />} />
               <Route path="/skills/review" element={<SkillReviewPage />} />
               <Route path="/influencers"   element={<InfluencersPage />} />
               <Route path="/apify-actors"  element={<ApifyActorsPage />} />
