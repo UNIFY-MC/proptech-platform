@@ -9,11 +9,58 @@
 //  • Click → RecipeDetailModal (steps com skills, trigger, run)
 
 import { useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import * as Lucide from 'lucide-react'
-import { Plus, Search, Play, X, Loader2, Sparkles, MoreHorizontal, ChevronDown, Edit2, Trash2, List, Network } from 'lucide-react'
+import { Plus, Search, Play, X, Loader2, Sparkles, MoreHorizontal, ChevronDown, Edit2, Trash2, List, Network, Save, Clock, Zap, User as UserIcon, AlertCircle, CheckCircle2 } from 'lucide-react'
 import { useRecipes } from '../hooks/useRecipes.js'
+import { useAgentsList } from '../hooks/useAgentsList.js'
 import { useVerticalStore } from '../store/index.js'
 import RecipeFlowChart from '../components/RecipeFlowChart.jsx'
+
+// Humaniza cron expression em PT-PT
+function humanizeCron(expr) {
+  if (!expr) return ''
+  // diariamente
+  let m = expr.match(/^(\d+)\s+(\d+)\s+\*\s+\*\s+\*$/)
+  if (m) return `diariamente às ${String(m[2]).padStart(2,'0')}h${String(m[1]).padStart(2,'0')}`
+  // a cada N min
+  m = expr.match(/^\*\/(\d+)\s+\*\s+\*\s+\*\s+\*$/)
+  if (m) return `a cada ${m[1]} minutos`
+  // dia N do mês
+  m = expr.match(/^(\d+)\s+(\d+)\s+(\d+)\s+\*\s+\*$/)
+  if (m) return `dia ${m[3]} do mês às ${String(m[2]).padStart(2,'0')}h${String(m[1]).padStart(2,'0')}`
+  // dia da semana
+  m = expr.match(/^(\d+)\s+(\d+)\s+\*\s+\*\s+(\d+)$/)
+  if (m) {
+    const dias = ['domingo','segunda','terça','quarta','quinta','sexta','sábado']
+    return `${dias[parseInt(m[3])] || `dia ${m[3]}`} às ${String(m[2]).padStart(2,'0')}h${String(m[1]).padStart(2,'0')}`
+  }
+  return expr
+}
+
+// Calcula próxima execução estimada (aproximada — só para display)
+function nextRunEstimate(cron, lastRunAt) {
+  if (!cron) return null
+  const now = new Date()
+  // diariamente HH:MM
+  let m = cron.match(/^(\d+)\s+(\d+)\s+\*\s+\*\s+\*$/)
+  if (m) {
+    const next = new Date(now)
+    next.setHours(parseInt(m[2]), parseInt(m[1]), 0, 0)
+    if (next <= now) next.setDate(next.getDate() + 1)
+    return next
+  }
+  // a cada N min
+  m = cron.match(/^\*\/(\d+)\s+\*\s+\*\s+\*\s+\*$/)
+  if (m) {
+    const minutes = parseInt(m[1])
+    const next = new Date(now)
+    next.setMinutes(Math.ceil(now.getMinutes() / minutes) * minutes, 0, 0)
+    if (next <= now) next.setMinutes(next.getMinutes() + minutes)
+    return next
+  }
+  return null
+}
 
 const VERTICAL_LABEL = {
   all: 'todas verticais', v1: 'V1 Core', v2: 'V2 Condomínios', v3: 'V3 Seguros',
@@ -60,13 +107,17 @@ function RecipeIcon({ recipe }) {
 }
 
 // ─── RecipeCard ────────────────────────────────────────────────────────────
-function RecipeCard({ recipe, onClick, onMenu }) {
+function RecipeCard({ recipe, onClick, onMenu, onToggleReviewed }) {
   const color = recipe.brand_color || categoryColor(recipe.category)
   const trigger = TRIGGER_BADGE[recipe.trigger] || TRIGGER_BADGE.manual
   const steps = Array.isArray(recipe.steps) ? recipe.steps : []
+  const isReviewed = !!recipe.reviewed_at
   return (
-    <button
+    <div
+      role="button"
+      tabIndex={0}
       onClick={onClick}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onClick?.() }}
       style={{
         textAlign: 'left',
         background: 'var(--bg-card)', border: '1px solid var(--border)',
@@ -79,14 +130,30 @@ function RecipeCard({ recipe, onClick, onMenu }) {
       onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bg-elevated)'; e.currentTarget.style.borderColor = color }}
       onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--bg-card)'; e.currentTarget.style.borderColor = 'var(--border)' }}
     >
-      <button
-        onClick={(e) => { e.stopPropagation(); onMenu && onMenu(recipe) }}
-        style={{
-          position: 'absolute', top: 12, right: 12,
-          background: 'none', border: 'none', cursor: 'pointer',
-          color: 'var(--text-dim)', padding: 2,
-        }}
-      ><MoreHorizontal size={14} /></button>
+      <div style={{ position: 'absolute', top: 10, right: 10, display: 'flex', gap: 4 }}>
+        <button
+          onClick={(e) => { e.stopPropagation(); onToggleReviewed && onToggleReviewed(recipe) }}
+          title={isReviewed ? `Revista em ${new Date(recipe.reviewed_at).toLocaleDateString('pt-PT')} — click para remover` : 'Marcar como revista/testada'}
+          style={{
+            background: isReviewed ? 'rgba(16,185,129,0.15)' : 'transparent',
+            border: `1px solid ${isReviewed ? '#10b981' : 'var(--border)'}`,
+            borderRadius: 4, padding: '2px 6px', cursor: 'pointer',
+            color: isReviewed ? '#10b981' : 'var(--text-dim)',
+            display: 'inline-flex', alignItems: 'center', gap: 3,
+            fontSize: 9, fontWeight: 600, fontFamily: 'JetBrains Mono, monospace',
+          }}
+        >
+          <CheckCircle2 size={10} />
+          {isReviewed ? 'OK' : ''}
+        </button>
+        <button
+          onClick={(e) => { e.stopPropagation(); onMenu && onMenu(recipe) }}
+          style={{
+            background: 'none', border: 'none', cursor: 'pointer',
+            color: 'var(--text-dim)', padding: 2,
+          }}
+        ><MoreHorizontal size={14} /></button>
+      </div>
 
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
         <RecipeIcon recipe={recipe} />
@@ -125,20 +192,64 @@ function RecipeCard({ recipe, onClick, onMenu }) {
           {categoryColor(recipe.category) && recipe.category.toUpperCase()}
         </span>
       </div>
-    </button>
+    </div>
   )
 }
 
 // ─── RecipeDetailModal ─────────────────────────────────────────────────────
-function RecipeDetailModal({ recipe, onClose, onRun }) {
+function RecipeDetailModal({ recipe, onClose, onRun, onUpdate }) {
   const steps = Array.isArray(recipe.steps) ? recipe.steps : []
   const [running, setRunning] = useState(false)
   const [stepsView, setStepsView] = useState('list') // 'list' | 'chart'
+  const [editMode, setEditMode] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [draft, setDraft] = useState({
+    name: recipe.name || '',
+    description: recipe.description || '',
+    employee_id: recipe.employee_id || '',
+    trigger: recipe.trigger || 'manual',
+    cron_expr: recipe.cron_expr || '',
+    event_pattern: recipe.event_pattern || '',
+    active: !!recipe.active,
+  })
+  const { agents } = useAgentsList()
+  const assignedAgent = agents.find(a => a.employee_id === recipe.employee_id)
+  const nextRun = recipe.trigger === 'cron' ? nextRunEstimate(recipe.cron_expr) : null
 
   const handleRun = async () => {
     setRunning(true)
     if (onRun) await onRun(recipe)
     setRunning(false)
+  }
+
+  const handleSave = async () => {
+    setSaving(true)
+    const patch = {
+      name: draft.name,
+      description: draft.description,
+      trigger: draft.trigger,
+      active: draft.active,
+    }
+    // employee_id é opcional mas se preenchido tem de matchar o pattern
+    if (draft.employee_id && /^v\d+\.[a-z_]+$/.test(draft.employee_id)) {
+      patch.employee_id = draft.employee_id
+    } else if (draft.employee_id === '') {
+      patch.employee_id = null
+    }
+    // Só guarda cron_expr se trigger=cron, idem event_pattern
+    if (draft.trigger === 'cron') {
+      patch.cron_expr = draft.cron_expr || null
+      patch.event_pattern = null
+    } else if (draft.trigger === 'event') {
+      patch.event_pattern = draft.event_pattern || null
+      patch.cron_expr = null
+    } else {
+      patch.cron_expr = null
+      patch.event_pattern = null
+    }
+    if (onUpdate) await onUpdate(recipe.id, patch)
+    setSaving(false)
+    setEditMode(false)
   }
 
   return (
@@ -154,26 +265,174 @@ function RecipeDetailModal({ recipe, onClose, onRun }) {
         onClick={(e) => e.stopPropagation()}
         style={{
           background: 'var(--bg-card)', border: '1px solid var(--border)',
-          borderRadius: 10, padding: 24, width: 600, maxWidth: '100%',
-          maxHeight: '85vh', overflowY: 'auto',
+          borderRadius: 10, padding: 24, width: 640, maxWidth: '100%',
+          maxHeight: '88vh', overflowY: 'auto',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 16 }}>
           <RecipeIcon recipe={recipe} />
           <div style={{ flex: 1, minWidth: 0 }}>
-            <h2 style={{ margin: 0, fontSize: 18, color: 'var(--text)' }}>{recipe.name}</h2>
+            {editMode ? (
+              <input
+                value={draft.name}
+                onChange={(e) => setDraft({ ...draft, name: e.target.value })}
+                style={{ ...input, fontSize: 16, fontWeight: 600 }}
+              />
+            ) : (
+              <h2 style={{ margin: 0, fontSize: 18, color: 'var(--text)' }}>{recipe.name}</h2>
+            )}
             <div style={{ fontSize: 11, color: 'var(--text-dim)', fontFamily: 'JetBrains Mono, monospace', marginTop: 4 }}>
-              {recipe.category} · trigger: {recipe.trigger} · by {recipe.author_name || 'system'}
+              {recipe.category} · {recipe.slug} · by {recipe.author_name || 'system'}
+              {recipe.active === false && <span style={{ marginLeft: 8, color: '#f59e0b', fontWeight: 700 }}>INACTIVE</span>}
             </div>
           </div>
+          {!editMode && (
+            <button onClick={() => setEditMode(true)} title="Editar" style={{
+              background: 'none', border: '1px solid var(--border)', borderRadius: 5,
+              padding: '4px 8px', cursor: 'pointer', color: 'var(--text-dim)',
+              display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11,
+            }}>
+              <Edit2 size={11} /> Edit
+            </button>
+          )}
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-dim)', padding: 4 }}>
             <X size={18} />
           </button>
         </div>
 
-        {recipe.description && (
+        {editMode ? (
+          <textarea
+            rows={2}
+            value={draft.description}
+            onChange={(e) => setDraft({ ...draft, description: e.target.value })}
+            placeholder="Descrição do que esta recipe faz"
+            style={{ ...input, resize: 'vertical', fontFamily: 'inherit', marginBottom: 12 }}
+          />
+        ) : recipe.description ? (
           <p style={{ fontSize: 13, color: 'var(--text-dim)', lineHeight: 1.5, marginTop: 0 }}>{recipe.description}</p>
-        )}
+        ) : null}
+
+        {/* Assign to + Schedule (sempre visíveis) */}
+        <div style={{
+          display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10,
+          marginTop: 4, marginBottom: 16,
+        }}>
+          {/* Assign to */}
+          <div style={{
+            background: 'var(--bg-elevated)', border: '1px solid var(--border)',
+            borderRadius: 6, padding: '10px 12px',
+          }}>
+            <div style={{
+              fontSize: 9, fontWeight: 700, color: 'var(--text-dim)',
+              textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 6,
+              fontFamily: 'JetBrains Mono, monospace',
+              display: 'inline-flex', alignItems: 'center', gap: 4,
+            }}><UserIcon size={10} /> Assign to</div>
+            {editMode ? (
+              <select
+                value={draft.employee_id}
+                onChange={(e) => setDraft({ ...draft, employee_id: e.target.value })}
+                style={input}
+              >
+                <option value="">— sem agente —</option>
+                {agents.map(a => (
+                  <option key={a.employee_id} value={a.employee_id}>{a.label}</option>
+                ))}
+              </select>
+            ) : assignedAgent ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <img
+                  src={assignedAgent.avatar_url}
+                  alt={assignedAgent.name}
+                  style={{ width: 24, height: 24, borderRadius: '50%', background: 'var(--bg)' }}
+                  onError={(e) => { e.currentTarget.style.display = 'none' }}
+                />
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: 13, color: 'var(--text)', fontWeight: 500 }}>{assignedAgent.name}</div>
+                  <div style={{ fontSize: 10, color: 'var(--text-dim)', fontFamily: 'JetBrains Mono, monospace' }}>{assignedAgent.employee_id}</div>
+                </div>
+              </div>
+            ) : (
+              <div style={{
+                display: 'inline-flex', alignItems: 'center', gap: 4,
+                fontSize: 11, color: '#f59e0b', fontStyle: 'italic',
+              }}>
+                <AlertCircle size={11} /> Sem agente atribuído
+              </div>
+            )}
+          </div>
+
+          {/* Schedule / Trigger */}
+          <div style={{
+            background: 'var(--bg-elevated)', border: '1px solid var(--border)',
+            borderRadius: 6, padding: '10px 12px',
+          }}>
+            <div style={{
+              fontSize: 9, fontWeight: 700, color: 'var(--text-dim)',
+              textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 6,
+              fontFamily: 'JetBrains Mono, monospace',
+              display: 'inline-flex', alignItems: 'center', gap: 4,
+            }}><Clock size={10} /> When it runs</div>
+            {editMode ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                <select
+                  value={draft.trigger}
+                  onChange={(e) => setDraft({ ...draft, trigger: e.target.value })}
+                  style={input}
+                >
+                  <option value="manual">Manual</option>
+                  <option value="cron">Cron (schedule)</option>
+                  <option value="event">Event</option>
+                </select>
+                {draft.trigger === 'cron' && (
+                  <input
+                    value={draft.cron_expr}
+                    onChange={(e) => setDraft({ ...draft, cron_expr: e.target.value })}
+                    placeholder="0 18 * * *"
+                    style={{ ...input, fontFamily: 'JetBrains Mono, monospace', fontSize: 11 }}
+                  />
+                )}
+                {draft.trigger === 'event' && (
+                  <input
+                    value={draft.event_pattern}
+                    onChange={(e) => setDraft({ ...draft, event_pattern: e.target.value })}
+                    placeholder="discord.message_create"
+                    style={{ ...input, fontFamily: 'JetBrains Mono, monospace', fontSize: 11 }}
+                  />
+                )}
+                <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--text-dim)' }}>
+                  <input
+                    type="checkbox"
+                    checked={draft.active}
+                    onChange={(e) => setDraft({ ...draft, active: e.target.checked })}
+                  />
+                  Activa
+                </label>
+              </div>
+            ) : (
+              <>
+                <div style={{ fontSize: 13, color: 'var(--text)', fontWeight: 500 }}>
+                  {recipe.trigger === 'cron' && (recipe.cron_expr ? humanizeCron(recipe.cron_expr) : 'Schedule não definido')}
+                  {recipe.trigger === 'event' && (recipe.event_pattern || 'Event não definido')}
+                  {recipe.trigger === 'manual' && 'Manual (botão Run)'}
+                </div>
+                <div style={{ fontSize: 10, color: 'var(--text-dim)', fontFamily: 'JetBrains Mono, monospace', marginTop: 2 }}>
+                  {recipe.trigger === 'cron' && recipe.cron_expr ? recipe.cron_expr : recipe.trigger.toUpperCase()}
+                </div>
+                {nextRun && (
+                  <div style={{ fontSize: 10, color: '#10b981', marginTop: 4 }}>
+                    Próxima: {nextRun.toLocaleString('pt-PT', { dateStyle: 'short', timeStyle: 'short' })}
+                  </div>
+                )}
+                {recipe.last_run_at && (
+                  <div style={{ fontSize: 10, color: 'var(--text-dim)', marginTop: 2 }}>
+                    Último run: {new Date(recipe.last_run_at).toLocaleString('pt-PT', { dateStyle: 'short', timeStyle: 'short' })}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </div>
 
         {/* Steps — invoca skills (com type Agent/Human + retry + input) */}
         {steps.length > 0 && (
@@ -336,19 +595,53 @@ function RecipeDetailModal({ recipe, onClose, onRun }) {
 
         {/* Actions */}
         <div style={{ marginTop: 24, display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-          <button
-            onClick={handleRun}
-            disabled={running}
-            style={{
-              display: 'inline-flex', alignItems: 'center', gap: 6,
-              padding: '8px 14px', borderRadius: 6,
-              background: 'var(--primary)', color: '#fff', border: 'none',
-              fontSize: 13, fontWeight: 600, cursor: 'pointer',
-            }}
-          >
-            {running ? <Loader2 size={13} className="spin" /> : <Play size={13} />}
-            Run now
-          </button>
+          {editMode ? (
+            <>
+              <button
+                onClick={() => { setEditMode(false); setDraft({
+                  name: recipe.name || '',
+                  description: recipe.description || '',
+                  employee_id: recipe.employee_id || '',
+                  trigger: recipe.trigger || 'manual',
+                  cron_expr: recipe.cron_expr || '',
+                  event_pattern: recipe.event_pattern || '',
+                  active: !!recipe.active,
+                })}}
+                style={{
+                  padding: '8px 14px', borderRadius: 6, background: 'transparent',
+                  border: '1px solid var(--border)', color: 'var(--text-dim)',
+                  cursor: 'pointer', fontSize: 13,
+                }}
+              >Cancelar</button>
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 6,
+                  padding: '8px 14px', borderRadius: 6,
+                  background: '#10b981', color: '#fff', border: 'none',
+                  fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                }}
+              >
+                {saving ? <Loader2 size={13} className="spin" /> : <Save size={13} />}
+                Guardar
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={handleRun}
+              disabled={running}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                padding: '8px 14px', borderRadius: 6,
+                background: 'var(--primary)', color: '#fff', border: 'none',
+                fontSize: 13, fontWeight: 600, cursor: 'pointer',
+              }}
+            >
+              {running ? <Loader2 size={13} className="spin" /> : <Play size={13} />}
+              Run now
+            </button>
+          )}
         </div>
       </div>
     </div>
@@ -726,6 +1019,7 @@ const input = {
 import { useIntegrations } from '../hooks/useIntegrations.js'
 
 export default function RecipesPage() {
+  const navigate = useNavigate()
   const { activeVertical } = useVerticalStore()
   const { items, loading, create, update, remove } = useRecipes()
   const { items: integrations } = useIntegrations()
@@ -736,9 +1030,17 @@ export default function RecipesPage() {
   const [search, setSearch] = useState('')
   const [activeCat, setActiveCat] = useState('all')
   const [scope, setScope] = useState(activeVertical || 'all')
-  const [selectedRecipe, setSelectedRecipe] = useState(null)
   const [createOpen, setCreateOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(null)
+
+  const reviewedCount = items.filter(r => r.reviewed_at).length
+
+  const handleToggleReviewed = async (recipe) => {
+    await update(recipe.id, {
+      reviewed_at: recipe.reviewed_at ? null : new Date().toISOString(),
+      reviewed_by: recipe.reviewed_at ? null : 'mario',
+    })
+  }
 
   const filtered = useMemo(() => {
     let arr = items
@@ -766,14 +1068,7 @@ export default function RecipesPage() {
   }
 
   return (
-    <div style={{ maxWidth: 1400, margin: '0 auto', padding: '4px 0 40px' }}>
-      {selectedRecipe && (
-        <RecipeDetailModal
-          recipe={selectedRecipe}
-          onClose={() => setSelectedRecipe(null)}
-          onRun={handleRun}
-        />
-      )}
+    <div style={{ maxWidth: 1400, margin: '0 auto', padding: '4px 0 40px', position: 'relative' }}>
       {createOpen && (
         <CreateRecipeModal
           onClose={() => setCreateOpen(false)}
@@ -782,6 +1077,37 @@ export default function RecipesPage() {
         />
       )}
 
+      {/* Top-right shortcuts: Schedules + Triggers (Cook AI-style) */}
+      <div style={{
+        position: 'absolute', top: 18, right: 12,
+        display: 'flex', gap: 6, zIndex: 5,
+      }}>
+        <button
+          onClick={() => navigate('/schedules')}
+          title="Ver schedules (cron)"
+          style={{
+            width: 34, height: 34, borderRadius: '50%',
+            background: 'var(--bg-card)', border: '1px solid var(--border)',
+            color: 'var(--text)', cursor: 'pointer',
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#10b981'; e.currentTarget.style.color = '#10b981' }}
+          onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text)' }}
+        ><Clock size={15} /></button>
+        <button
+          onClick={() => navigate('/triggers')}
+          title="Ver triggers (event)"
+          style={{
+            width: 34, height: 34, borderRadius: '50%',
+            background: 'var(--bg-card)', border: '1px solid var(--border)',
+            color: 'var(--text)', cursor: 'pointer',
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#3b82f6'; e.currentTarget.style.color = '#3b82f6' }}
+          onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text)' }}
+        ><Zap size={15} /></button>
+      </div>
+
       {/* Header centrado CookAI-style */}
       <div style={{ textAlign: 'center', marginBottom: 24, paddingTop: 20 }}>
         <h1 style={{ fontSize: 28, fontWeight: 700, color: 'var(--text)', margin: '0 0 8px' }}>
@@ -789,6 +1115,11 @@ export default function RecipesPage() {
         </h1>
         <p style={{ fontSize: 13, color: 'var(--text-dim)', margin: '0 0 16px', lineHeight: 1.5 }}>
           As recipes automatizam trabalho no teu negócio. Corre on-demand ou via trigger.
+          {items.length > 0 && (
+            <span style={{ marginLeft: 8, color: '#10b981', fontFamily: 'JetBrains Mono, monospace', fontSize: 11 }}>
+              · {reviewedCount}/{items.length} revistas
+            </span>
+          )}
         </p>
         <button
           onClick={() => setCreateOpen(true)}
@@ -905,8 +1236,9 @@ export default function RecipesPage() {
             <RecipeCard
               key={r.id}
               recipe={r}
-              onClick={() => setSelectedRecipe(r)}
+              onClick={() => navigate(`/recipes/${r.slug}`)}
               onMenu={() => setMenuOpen(r.id === menuOpen ? null : r.id)}
+              onToggleReviewed={handleToggleReviewed}
             />
           ))}
         </div>

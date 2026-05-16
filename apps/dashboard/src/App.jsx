@@ -25,6 +25,7 @@ import BiaScorecard from './views/BiaScorecard.jsx'
 import BiaTaskLauncher from './views/BiaTaskLauncher.jsx'
 import SkillsPage from './views/SkillsPage.jsx'
 import RecipesPage from './views/RecipesPage.jsx'
+import RecipeDetailPage from './views/RecipeDetailPage.jsx'
 import IntegrationsPage from './views/IntegrationsPage.jsx'
 import UsefulToolsPage from './views/UsefulToolsPage.jsx'
 import ContextPage from './views/ContextPage.jsx'
@@ -123,8 +124,9 @@ export default function App() {
               <Route path="/inbox"        element={<InboxUnified />} />
               <Route path="/activity"     element={<Activity data={data} />} />
               <Route path="/employees"         element={<EmployeesPage data={data} />} />
-              <Route path="/employees/bia"            element={<BiaTaskLauncher />} />
+              <Route path="/employees/bia"            element={<BiaScorecard />} />
               <Route path="/employees/bia/scorecard"  element={<BiaScorecard />} />
+              <Route path="/employees/bia/test"       element={<BiaTaskLauncher />} />
               <Route path="/employees/:slug"  element={<EmployeePage data={data} />} />
               <Route path="/agentes"      element={<Agents data={data} />} />
               <Route path="/roadmap"      element={<Roadmap data={data} />} />
@@ -135,6 +137,7 @@ export default function App() {
               <Route path="/skills"       element={<SkillsPage data={data} />} />
               <Route path="/skills/marketplace" element={<SkillsMarketplacePage />} />
               <Route path="/recipes"      element={<RecipesPage data={data} />} />
+              <Route path="/recipes/:slug" element={<RecipeDetailPage />} />
               <Route path="/integrations" element={<IntegrationsPage data={data} />} />
               <Route path="/useful-tools" element={<UsefulToolsPage />} />
               <Route path="/schedules"   element={<SchedulesPage />} />
