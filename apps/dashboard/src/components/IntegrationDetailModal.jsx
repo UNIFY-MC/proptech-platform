@@ -167,14 +167,30 @@ export default function IntegrationDetailModal({ integ, busy, onToggle, onClose 
         </div>
 
         {/* Connection Info (só quando connected) */}
-        {isConnected && integ.config && Object.keys(integ.config).length > 0 && (
+        {isConnected && (
           <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', background: 'rgba(45,106,79,0.04)' }}>
             <div style={{
               fontSize: '0.6rem', fontWeight: 700, color: 'var(--text-dim)',
               textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10,
-              display: 'flex', alignItems: 'center', gap: 5,
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 5,
             }}>
-              <LinkIcon size={11} /> Ligação
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                <LinkIcon size={11} /> Ligação
+              </span>
+              {integ.docs_url && (
+                <a
+                  href={integ.docs_url} target="_blank" rel="noreferrer"
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 4,
+                    padding: '4px 10px', borderRadius: 4,
+                    background: 'var(--primary)', color: '#fff',
+                    fontSize: '0.65rem', fontWeight: 600,
+                    textDecoration: 'none', letterSpacing: 0, textTransform: 'none',
+                  }}
+                >
+                  <ExternalLink size={11} /> Abrir página oficial
+                </a>
+              )}
             </div>
             <table style={{ width: '100%', fontSize: '0.78rem', borderCollapse: 'collapse' }}>
               <tbody>
