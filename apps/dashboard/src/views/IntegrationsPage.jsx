@@ -7,11 +7,12 @@
 import { useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import * as Lucide from 'lucide-react'
-import { ExternalLink, Search, Check, Loader2, Sparkles, Settings } from 'lucide-react'
+import { ExternalLink, Search, Check, Loader2, Sparkles, Settings, Activity, X } from 'lucide-react'
 import { useIntegrations } from '../hooks/useIntegrations.js'
 import { useVerticalStore, useNotificationsStore } from '../store/index.js'
 import { getIntegrationLogo, getIntegrationLogoFallback, NEEDS_DARK_INVERT } from '../lib/integration-logos.js'
 import IntegrationDetailModal from '../components/IntegrationDetailModal.jsx'
+import { useData } from '../hooks/useData.js'
 
 // Mapa de integrações com config UI já implementada → rota da page
 // Ao clicar Connect, em vez de toggle silencioso, navega para a config form.
@@ -135,6 +136,125 @@ function BrandLogo({ integ }) {
       }}>
         <Fallback size={22} strokeWidth={2} />
       </span>
+    </div>
+  )
+}
+
+// Stack Usage Drawer — replica Stack Health + Tech Stack do /strategy
+function StackUsageDrawer({ data, onClose }) {
+  const stackHealth = data?.stackHealth || []
+  const techStack   = data?.techStack || []
+
+  return (
+    <div onClick={onClose} style={{
+      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)',
+      display: 'flex', justifyContent: 'flex-end', zIndex: 1100,
+    }}>
+      <aside onClick={(e) => e.stopPropagation()} style={{
+        width: 720, maxWidth: '96vw', height: '100vh',
+        background: 'var(--bg-card)', borderLeft: '1px solid var(--border)',
+        display: 'flex', flexDirection: 'column', overflowY: 'auto',
+      }}>
+        <div style={{
+          padding: '16px 20px', borderBottom: '1px solid var(--border)',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <Activity size={18} style={{ color: 'var(--primary)' }} />
+            <div>
+              <strong style={{ fontSize: '1.05rem' }}>Stack Usage</strong>
+              <div style={{ fontSize: '0.65rem', color: 'var(--text-dim)' }}>
+                Health gauges · Tech stack · Custos
+              </div>
+            </div>
+          </div>
+          <button onClick={onClose} style={{
+            background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-dim)',
+          }}><X size={18} /></button>
+        </div>
+
+        {/* Stack Health */}
+        {stackHealth.length > 0 && (
+          <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>
+            <div style={{
+              fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-dim)',
+              textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 14,
+              fontFamily: 'JetBrains Mono, monospace',
+            }}>Stack Health</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {stackHealth.map(g => {
+                const color = g.status === 'critical' ? '#ef4444' : g.status === 'warn' ? '#f59e0b' : '#10b981'
+                return (
+                  <div key={g.service}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                      <div>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{g.service}</div>
+                        <div style={{ fontSize: 11, color: 'var(--text-dim)', fontFamily: 'JetBrains Mono, monospace' }}>{g.label}</div>
+                      </div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color, fontFamily: 'JetBrains Mono, monospace' }}>{g.usage}%</div>
+                    </div>
+                    <div style={{
+                      width: '100%', height: 6, borderRadius: 3,
+                      background: 'var(--bg-elevated)', overflow: 'hidden',
+                    }}>
+                      <div style={{ width: `${Math.min(g.usage, 100)}%`, height: '100%', background: color, transition: 'width 0.3s' }} />
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+            <div style={{ marginTop: 12, fontSize: '0.62rem', color: 'var(--text-dim)' }}>
+              📄 <code style={{ fontFamily: 'JetBrains Mono, monospace' }}>proptech-state/stack-health.md</code>
+            </div>
+          </div>
+        )}
+
+        {/* Tech Stack */}
+        {techStack.length > 0 && (
+          <div style={{ padding: '16px 20px' }}>
+            <div style={{
+              fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-dim)',
+              textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 12,
+              fontFamily: 'JetBrains Mono, monospace',
+            }}>Tech Stack</div>
+            <table style={{
+              width: '100%', borderCollapse: 'collapse', fontSize: 12,
+              fontFamily: 'JetBrains Mono, monospace',
+            }}>
+              <thead>
+                <tr>
+                  <th style={{ textAlign: 'left',  padding: '6px 8px', borderBottom: '1px solid var(--border)', color: 'var(--text-dim)', fontSize: 9, fontWeight: 700, textTransform: 'uppercase' }}>Serviço</th>
+                  <th style={{ textAlign: 'left',  padding: '6px 8px', borderBottom: '1px solid var(--border)', color: 'var(--text-dim)', fontSize: 9, fontWeight: 700, textTransform: 'uppercase' }}>Role</th>
+                  <th style={{ textAlign: 'left',  padding: '6px 8px', borderBottom: '1px solid var(--border)', color: 'var(--text-dim)', fontSize: 9, fontWeight: 700, textTransform: 'uppercase' }}>Status</th>
+                  <th style={{ textAlign: 'right', padding: '6px 8px', borderBottom: '1px solid var(--border)', color: 'var(--text-dim)', fontSize: 9, fontWeight: 700, textTransform: 'uppercase' }}>Custo</th>
+                </tr>
+              </thead>
+              <tbody>
+                {techStack.map(t => {
+                  const statusColor = t.status === 'ok' ? '#10b981' : t.status === 'planned' ? '#3b82f6' : t.status === 'deferred' ? '#6b7280' : '#9ca3af'
+                  const statusBg    = t.status === 'ok' ? 'rgba(16,185,129,0.15)' : t.status === 'planned' ? 'rgba(59,130,246,0.15)' : 'var(--bg-elevated)'
+                  return (
+                    <tr key={t.name}>
+                      <td style={{ padding: '7px 8px', borderBottom: '1px solid var(--border-soft, transparent)', color: 'var(--text)', fontWeight: 600 }}>{t.name}</td>
+                      <td style={{ padding: '7px 8px', borderBottom: '1px solid var(--border-soft, transparent)', color: 'var(--text-dim)' }}>{t.role}</td>
+                      <td style={{ padding: '7px 8px', borderBottom: '1px solid var(--border-soft, transparent)' }}>
+                        <span style={{
+                          padding: '2px 7px', borderRadius: 3, fontSize: 9, fontWeight: 700,
+                          background: statusBg, color: statusColor, letterSpacing: '0.05em', textTransform: 'uppercase',
+                        }}>{t.status}</span>
+                      </td>
+                      <td style={{ padding: '7px 8px', borderBottom: '1px solid var(--border-soft, transparent)', color: 'var(--text-dim)', textAlign: 'right' }}>{t.cost}</td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+            <div style={{ marginTop: 12, padding: 10, background: 'var(--bg-elevated)', borderRadius: 6, fontSize: 11, color: 'var(--text-dim)', lineHeight: 1.5 }}>
+              <strong style={{ color: 'var(--text)' }}>TODO:</strong> obter dados reais de utilização via APIs (Anthropic tokens/mês, Supabase Management API, Vercel/GitHub invocations, Resend emails enviados). Sprint dedicada.
+            </div>
+          </div>
+        )}
+      </aside>
     </div>
   )
 }
@@ -289,6 +409,8 @@ export default function IntegrationsPage() {
   }, [items])
 
   const [detailIntegration, setDetailIntegration] = useState(null)
+  const [showStackDrawer, setShowStackDrawer] = useState(false)
+  const { data: dashboardData } = useData()
 
   const handleToggle = async (integ, nextStatus) => {
     setBusyId(integ.id)
@@ -309,8 +431,23 @@ export default function IntegrationsPage() {
 
   return (
     <div style={{ padding: '8px 0 40px', maxWidth: 1400, margin: '0 auto', position: 'relative' }}>
-      {/* Botão Useful Tools — topo direito */}
-      <div style={{ position: 'absolute', top: 16, right: 16 }}>
+      {/* Botões topo direito: Stack Usage + Useful Tools */}
+      <div style={{ position: 'absolute', top: 16, right: 16, display: 'flex', gap: 8 }}>
+        <button
+          onClick={() => setShowStackDrawer(true)}
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+            padding: '8px 14px', borderRadius: 6,
+            background: 'var(--bg-card)', border: '1px solid var(--border)',
+            color: 'var(--text)', cursor: 'pointer', fontSize: 13,
+            fontWeight: 500, transition: 'all 0.15s',
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--primary)'; e.currentTarget.style.color = 'var(--primary)' }}
+          onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text)' }}
+        >
+          <Activity size={14} />
+          Stack Usage
+        </button>
         <Link
           to="/useful-tools"
           style={{
@@ -327,6 +464,11 @@ export default function IntegrationsPage() {
           Useful Tools
         </Link>
       </div>
+
+      {/* Stack Usage Drawer */}
+      {showStackDrawer && (
+        <StackUsageDrawer data={dashboardData} onClose={() => setShowStackDrawer(false)} />
+      )}
 
       {/* Header — title + subtitle CookAI-style */}
       <div style={{ textAlign: 'center', marginBottom: 28, paddingTop: 20 }}>
