@@ -166,6 +166,78 @@ export default function IntegrationDetailModal({ integ, busy, onToggle, onClose 
           )}
         </div>
 
+        {/* Connection Info (só quando connected) */}
+        {isConnected && integ.config && Object.keys(integ.config).length > 0 && (
+          <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', background: 'rgba(45,106,79,0.04)' }}>
+            <div style={{
+              fontSize: '0.6rem', fontWeight: 700, color: 'var(--text-dim)',
+              textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10,
+              display: 'flex', alignItems: 'center', gap: 5,
+            }}>
+              <LinkIcon size={11} /> Ligação
+            </div>
+            <table style={{ width: '100%', fontSize: '0.78rem', borderCollapse: 'collapse' }}>
+              <tbody>
+                {integ.config.connected_email && (
+                  <tr>
+                    <td style={{ padding: '4px 0', color: 'var(--text-dim)', width: 110 }}>Conta</td>
+                    <td style={{ padding: '4px 0', color: 'var(--text)', fontFamily: 'JetBrains Mono, monospace' }}>
+                      {integ.config.connected_email}
+                    </td>
+                  </tr>
+                )}
+                {integ.config.oauth_provider && (
+                  <tr>
+                    <td style={{ padding: '4px 0', color: 'var(--text-dim)' }}>Auth</td>
+                    <td style={{ padding: '4px 0', color: 'var(--text)' }}>OAuth 2.0 ({integ.config.oauth_provider})</td>
+                  </tr>
+                )}
+                {integ.config.auth_type === 'api_key' && (
+                  <tr>
+                    <td style={{ padding: '4px 0', color: 'var(--text-dim)' }}>Auth</td>
+                    <td style={{ padding: '4px 0', color: 'var(--text)' }}>API key</td>
+                  </tr>
+                )}
+                {integ.config.connected_via && (
+                  <tr>
+                    <td style={{ padding: '4px 0', color: 'var(--text-dim)' }}>Via</td>
+                    <td style={{ padding: '4px 0', color: 'var(--text)', fontSize: '0.72rem' }}>{integ.config.connected_via}</td>
+                  </tr>
+                )}
+                {integ.config.workspace && (
+                  <tr>
+                    <td style={{ padding: '4px 0', color: 'var(--text-dim)' }}>Workspace</td>
+                    <td style={{ padding: '4px 0', color: 'var(--text)' }}>{integ.config.workspace}</td>
+                  </tr>
+                )}
+                {integ.config.server_name && (
+                  <tr>
+                    <td style={{ padding: '4px 0', color: 'var(--text-dim)' }}>Server</td>
+                    <td style={{ padding: '4px 0', color: 'var(--text)', fontFamily: 'JetBrains Mono, monospace' }}>
+                      #{integ.config.server_name}
+                    </td>
+                  </tr>
+                )}
+                {integ.config.active_count != null && (
+                  <tr>
+                    <td style={{ padding: '4px 0', color: 'var(--text-dim)' }}>Webhooks</td>
+                    <td style={{ padding: '4px 0', color: 'var(--text)' }}>
+                      <strong style={{ color: 'var(--success)' }}>{integ.config.active_count}</strong>
+                      {' '}activos / {integ.config.total_count} configurados
+                    </td>
+                  </tr>
+                )}
+                {integ.config.channel_type && (
+                  <tr>
+                    <td style={{ padding: '4px 0', color: 'var(--text-dim)' }}>Tipo</td>
+                    <td style={{ padding: '4px 0', color: 'var(--text)' }}>{integ.config.channel_type}</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+
         {/* Description */}
         {integ.description && (
           <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)' }}>

@@ -268,7 +268,18 @@ export default function IntegrationsPage() {
         i.slug?.toLowerCase().includes(q),
       )
     }
-    return arr
+    // Ordenar: connected primeiro, depois not_connected (com display_order),
+    // depois coming_soon. Dentro do mesmo grupo: display_order + name.
+    const STATUS_RANK = { connected: 0, not_connected: 1, disabled: 2, coming_soon: 3 }
+    return [...arr].sort((a, b) => {
+      const sa = STATUS_RANK[a.status || 'not_connected'] ?? 9
+      const sb = STATUS_RANK[b.status || 'not_connected'] ?? 9
+      if (sa !== sb) return sa - sb
+      const da = a.display_order ?? 999
+      const db = b.display_order ?? 999
+      if (da !== db) return da - db
+      return (a.name || '').localeCompare(b.name || '')
+    })
   }, [items, kindFilter, categoryFilter, search])
 
   const kindCounts = useMemo(() => {
