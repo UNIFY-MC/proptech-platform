@@ -5,7 +5,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Mail, Inbox, Send, RefreshCw, Search, ExternalLink,
-  Archive, Trash2, AlertOctagon, Eye, EyeOff, UserPlus, Reply, Forward,
+  Archive, Trash2, AlertOctagon, Eye, EyeOff, UserPlus, Reply, Forward, Loader2,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase.js'
 
@@ -87,6 +87,7 @@ export default function EmailPage() {
   const [verticalFilter, setVerticalFilter] = useState('all')
   const [selectedId, setSelectedId] = useState(null)
   const [busy, setBusy] = useState(false)
+  const [showReply, setShowReply] = useState(false)
 
   const fetchEmails = useCallback(async () => {
     if (!supabase) return setLoading(false)
@@ -168,10 +169,10 @@ export default function EmailPage() {
 
   const doAction = async (action) => {
     if (!selected || busy) return
+    if (action === 'reply') { setShowReply(true); return }
     setBusy(true)
     await callGmailAction(selected.external_id, action)
     await fetchEmails()
-    // Avançar para próximo email da lista se acção remove o actual
     if (['trash','junk','archive'].includes(action)) {
       const idx = filtered.findIndex(e => e.id === selectedId)
       const next = filtered[idx + 1] || filtered[idx - 1]
@@ -386,6 +387,236 @@ export default function EmailPage() {
               onAction={doAction}
               navigate={navigate}
             />
+          )}
+        </div>
+      </div>
+
+      {showReply && selected && (
+        <ReplyModal
+          email={selected}
+          onClose={() => setShowReply(false)}
+          onSent={async () => {
+            setShowReply(false)
+            await fetchEmails()
+            // Marcar email original como lido depois de responder
+            await callGmailAction(selected.external_id, 'mark_read')
+          }}
+        />
+      )}
+    </div>
+  )
+}
+
+const AGENT_OPTIONS = [
+  { id: 'bia',                 label: 'Bia · V5 Manutenção' },
+  { id: 'sofia',               label: 'Sofia · V3 Seguros' },
+  { id: 'enzo',                label: 'Enzo · V4 Energia' },
+  { id: 'orquestrador-condo',  label: 'Orquestrador · V2 COO' },
+  { id: 'financeiro-condo',    label: 'Fina · V2 Financeiro' },
+  { id: 'compliance-condo',    label: 'Clara · Compliance' },
+  { id: 'atendimento-condo',   label: 'Ana · Atendimento' },
+  { id: 'docs-condo',          label: 'Dora · Documentos' },
+  { id: 'comunicacao-condo',   label: 'Cami · Comunicações' },
+  { id: 'diretor-marketing',   label: 'Diogo · Marketing' },
+  { id: 'gestor-leads',        label: 'Leo · Leads' },
+  { id: 'ceo-agent',           label: 'CEO · Estratégico' },
+  { id: 'cfo-agent',           label: 'CFO · Financeiro core' },
+]
+
+function ReplyModal({ email, onClose, onSent }) {
+  const [agentId, setAgentId]       = useState(email.routed_to_agent || 'atendimento-condo')
+  const [instructions, setInstructions] = useState('')
+  const [draft, setDraft]           = useState({ subject: '', body_text: '' })
+  const [generating, setGenerating] = useState(false)
+  const [sending, setSending]       = useState(false)
+  const [error, setError]           = useState(null)
+
+  const generate = async () => {
+    setGenerating(true)
+    setError(null)
+    try {
+      const res = await window.fetch(`${SUPABASE_URL}/functions/v1/gmail-draft-reply`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${ANON_KEY}`, 'apikey': ANON_KEY },
+        body: JSON.stringify({ email_id: email.id, agent_id: agentId, user_instructions: instructions || undefined }),
+      })
+      const data = await res.json()
+      if (!data.ok) throw new Error(data.error || 'generate_failed')
+      setDraft({ subject: data.subject, body_text: data.body_text })
+    } catch (e) {
+      setError(String(e.message || e))
+    } finally {
+      setGenerating(false)
+    }
+  }
+
+  const send = async () => {
+    if (!draft.subject || !draft.body_text) { setError('Falta subject ou corpo'); return }
+    setSending(true)
+    setError(null)
+    try {
+      const res = await window.fetch(`${SUPABASE_URL}/functions/v1/gmail-send-google`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${ANON_KEY}`, 'apikey': ANON_KEY },
+        body: JSON.stringify({
+          staff_id: 'p7.digitall@gmail.com',
+          to: email.from_email,
+          subject: draft.subject,
+          body_text: draft.body_text,
+          thread_id: email.thread_id,
+          reply_to_message_id: email.message_id,
+        }),
+      })
+      const data = await res.json()
+      if (!data.ok) throw new Error(data.error || 'send_failed')
+      await onSent()
+    } catch (e) {
+      setError(String(e.message || e))
+      setSending(false)
+    }
+  }
+
+  return (
+    <div onClick={onClose} style={{
+      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1200,
+    }}>
+      <div onClick={e => e.stopPropagation()} style={{
+        width: 720, maxWidth: '94vw', maxHeight: '90vh', overflowY: 'auto',
+        background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10,
+        display: 'flex', flexDirection: 'column',
+      }}>
+        <div style={{
+          padding: '14px 18px', borderBottom: '1px solid var(--border)',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        }}>
+          <div>
+            <strong style={{ fontSize: 14 }}>Responder com agent</strong>
+            <div style={{ fontSize: 11, color: 'var(--text-dim)' }}>
+              Para: {email.from_name || email.from_email}
+            </div>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-dim)', fontSize: 18 }}>×</button>
+        </div>
+
+        <div style={{ padding: '14px 18px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div>
+            <label style={{ fontSize: 11, color: 'var(--text-dim)', fontWeight: 600 }}>Quem responde?</label>
+            <select
+              value={agentId}
+              onChange={e => setAgentId(e.target.value)}
+              style={{
+                width: '100%', marginTop: 4, padding: '7px 10px',
+                background: 'var(--bg-elevated)', border: '1px solid var(--border)',
+                borderRadius: 5, color: 'var(--text)', fontSize: 12, cursor: 'pointer',
+              }}
+            >
+              {AGENT_OPTIONS.map(a => (
+                <option key={a.id} value={a.id}>
+                  {a.label}{email.routed_to_agent === a.id ? ' · sugerida' : ''}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label style={{ fontSize: 11, color: 'var(--text-dim)', fontWeight: 600 }}>
+              Instruções opcionais (Claude segue à risca)
+            </label>
+            <textarea
+              value={instructions}
+              onChange={e => setInstructions(e.target.value)}
+              placeholder="Ex: agradecer interesse, propor reunião 5ª feira à tarde, mencionar V3..."
+              rows={2}
+              style={{
+                width: '100%', marginTop: 4, padding: '7px 10px',
+                background: 'var(--bg-elevated)', border: '1px solid var(--border)',
+                borderRadius: 5, color: 'var(--text)', fontSize: 12,
+                fontFamily: 'inherit', resize: 'vertical',
+              }}
+            />
+          </div>
+
+          <button
+            onClick={generate}
+            disabled={generating}
+            style={{
+              padding: '8px 12px', borderRadius: 5,
+              background: 'var(--primary)', color: '#fff', border: 'none',
+              cursor: generating ? 'wait' : 'pointer', fontSize: 12, fontWeight: 600,
+              display: 'inline-flex', alignItems: 'center', gap: 6, alignSelf: 'flex-start',
+            }}
+          >
+            {generating ? <Loader2 size={12} className="spin" /> : <Mail size={12} />}
+            {generating ? 'A gerar...' : (draft.subject ? 'Re-gerar draft' : 'Gerar draft')}
+          </button>
+
+          {error && (
+            <div style={{
+              padding: '8px 10px', borderRadius: 5,
+              background: 'rgba(239,68,68,0.15)', color: '#ef4444',
+              fontSize: 11, fontFamily: 'JetBrains Mono, monospace',
+            }}>⚠ {error}</div>
+          )}
+
+          {draft.subject && (
+            <>
+              <div style={{ borderTop: '1px solid var(--border)', paddingTop: 10 }}>
+                <label style={{ fontSize: 11, color: 'var(--text-dim)', fontWeight: 600 }}>Subject</label>
+                <input
+                  value={draft.subject}
+                  onChange={e => setDraft({ ...draft, subject: e.target.value })}
+                  style={{
+                    width: '100%', marginTop: 4, padding: '7px 10px',
+                    background: 'var(--bg-elevated)', border: '1px solid var(--border)',
+                    borderRadius: 5, color: 'var(--text)', fontSize: 12,
+                  }}
+                />
+              </div>
+              <div>
+                <label style={{ fontSize: 11, color: 'var(--text-dim)', fontWeight: 600 }}>Corpo</label>
+                <textarea
+                  value={draft.body_text}
+                  onChange={e => setDraft({ ...draft, body_text: e.target.value })}
+                  rows={14}
+                  style={{
+                    width: '100%', marginTop: 4, padding: '10px',
+                    background: 'var(--bg-elevated)', border: '1px solid var(--border)',
+                    borderRadius: 5, color: 'var(--text)', fontSize: 12,
+                    fontFamily: 'system-ui, sans-serif', lineHeight: 1.55, resize: 'vertical',
+                  }}
+                />
+              </div>
+            </>
+          )}
+        </div>
+
+        <div style={{
+          padding: '12px 18px', borderTop: '1px solid var(--border)',
+          display: 'flex', gap: 8, justifyContent: 'flex-end',
+        }}>
+          <button
+            onClick={onClose}
+            style={{
+              padding: '8px 14px', borderRadius: 5,
+              background: 'transparent', border: '1px solid var(--border)',
+              color: 'var(--text)', cursor: 'pointer', fontSize: 12,
+            }}
+          >Cancelar</button>
+          {draft.subject && (
+            <button
+              onClick={send}
+              disabled={sending}
+              style={{
+                padding: '8px 16px', borderRadius: 5,
+                background: '#10b981', color: '#fff', border: 'none',
+                cursor: sending ? 'wait' : 'pointer', fontSize: 12, fontWeight: 600,
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+              }}
+            >
+              {sending ? <Loader2 size={12} className="spin" /> : <Send size={12} />}
+              {sending ? 'A enviar...' : 'Enviar via Gmail'}
+            </button>
           )}
         </div>
       </div>
