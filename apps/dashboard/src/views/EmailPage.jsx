@@ -137,15 +137,13 @@ export default function EmailPage() {
     return arr
   }, [emails, filter, search, agentFilter, verticalFilter])
 
-  const allAgents = useMemo(() => {
-    const set = new Set(emails.filter(e => e.routed_to_agent).map(e => e.routed_to_agent))
-    return Array.from(set).sort()
-  }, [emails])
-
-  const allVerticals = useMemo(() => {
-    const set = new Set(emails.filter(e => e.vertical).map(e => e.vertical))
-    return Array.from(set).sort()
-  }, [emails])
+  // Dropdowns: mostra TODAS as opções possíveis (não só as presentes)
+  const allAgents = [
+    'bia','sofia','enzo','orquestrador-condo','financeiro-condo',
+    'compliance-condo','atendimento-condo','docs-condo','comunicacao-condo',
+    'diretor-marketing','gestor-leads','ceo-agent','cfo-agent',
+  ]
+  const allVerticals = ['V2','V3','V4','V5','core']
 
   // Auto-seleccionar primeiro email se nada seleccionado
   useEffect(() => {
