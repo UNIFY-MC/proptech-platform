@@ -1,0 +1,70 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================================
+   Truth Engine — Design tokens
+   Tema dark (por defeito — contrasta com dashboard light)
+   Accent: --truth (#10b981 verde Paperclip)
+   ============================================================ */
+
+:root {
+  --bg:       #0a0f1c;
+  --surface:  #111827;
+  --surface2: #1a2233;
+  --surface3: #232d42;
+  --border:   rgba(255,255,255,0.06);
+  --border-s: rgba(255,255,255,0.12);
+  --text:     #e6edf3;
+  --muted:    #8b95a8;
+  --dim:      #5a6376;
+  --blue:     #58a6ff;
+  --green:    #3fb950;
+  --gold:     #e3b341;
+  --red:      #ff7b72;
+  --purple:   #d2a8ff;
+  --orange:   #f59e0b;
+  --pink:     #f472b6;
+  --truth:    #10b981;  /* accent Truth Engine */
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body, #root {
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 13px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+.mono {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+/* Scrollbar discreta */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--surface3); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: var(--dim); }
+
+/* Animação pulse para workers running */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
