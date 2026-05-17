@@ -10,15 +10,14 @@ import { useEffect, useState } from 'react'
 import { Mail, Send, FileText, MessageSquare, Briefcase, CheckCircle2 } from 'lucide-react'
 import { supabase } from '../lib/supabase.js'
 
-function timeAgo(iso) {
+function fmtDateTime(iso) {
   if (!iso) return '—'
-  const diff = Date.now() - new Date(iso).getTime()
-  const m = Math.floor(diff / 60_000)
-  if (m < 1) return 'agora'
-  if (m < 60) return `${m}m`
-  const h = Math.floor(m / 60)
-  if (h < 24) return `${h}h`
-  return `${Math.floor(h / 24)}d`
+  const d = new Date(iso)
+  const dd = String(d.getDate()).padStart(2, '0')
+  const mm = String(d.getMonth() + 1).padStart(2, '0')
+  const hh = String(d.getHours()).padStart(2, '0')
+  const mi = String(d.getMinutes()).padStart(2, '0')
+  return `${dd}/${mm} ${hh}:${mi}`
 }
 
 export default function EmployeeActivityFeed({ agentId, limit = 10 }) {
@@ -163,8 +162,11 @@ function ActivityRow({ item }) {
             background: `${meta.color}22`, color: meta.color,
             fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, letterSpacing: '0.06em',
           }}>{meta.label}</span>
-          <span style={{ fontSize: 9, color: 'var(--text-dim)', fontFamily: 'JetBrains Mono, monospace' }}>
-            {timeAgo(item.ts)}
+          <span
+            style={{ fontSize: 9, color: 'var(--text-dim)', fontFamily: 'JetBrains Mono, monospace' }}
+            title={item.ts ? new Date(item.ts).toLocaleString('pt-PT') : ''}
+          >
+            {fmtDateTime(item.ts)}
           </span>
         </div>
         <div style={{

@@ -91,8 +91,11 @@ export default function DailyRoundupCard({ onDismiss }) {
           textTransform: 'uppercase', letterSpacing: '0.08em',
           fontFamily: 'JetBrains Mono, monospace',
         }}>Daily Roundup</span>
-        <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>
-          {new Date(roundup.created_at).toLocaleString('pt-PT', { dateStyle: 'short', timeStyle: 'short' })}
+        <span style={{ fontSize: 11, color: 'var(--text-dim)', fontFamily: 'JetBrains Mono, monospace' }}>
+          {new Date(roundup.created_at).toLocaleString('pt-PT', {
+            day: '2-digit', month: '2-digit', year: '2-digit',
+            hour: '2-digit', minute: '2-digit',
+          }).replace(',', ' ·')}
         </span>
         <button
           onClick={regenerate} disabled={refreshing}

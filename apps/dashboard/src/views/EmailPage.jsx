@@ -646,10 +646,11 @@ export default function EmailPage() {
           onMouseLeave={(e) => { e.currentTarget.style.opacity = '0.5'; e.currentTarget.style.background = 'var(--border)' }}
         />
 
-        {/* ─── PANE 3: Preview ───────────────────────────────── */}
+        {/* ─── PANE 3: Preview (scrollable end-to-end para ver draft + email original) ─── */}
         <div style={{
           flex: 1, minWidth: 320,
-          background: 'var(--bg-card)', overflow: 'hidden',
+          background: 'var(--bg-card)',
+          overflowY: 'auto', overflowX: 'hidden',
           display: 'flex', flexDirection: 'column',
         }}>
           {!selected ? (
@@ -1133,57 +1134,64 @@ function EmailPreview({ email, busy, onAction, navigate }) {
             </div>
           </div>
 
-          <div style={{ display: 'flex', gap: 6, marginTop: 12, flexWrap: 'wrap' }}>
+          <div style={{
+            display: 'flex', gap: 5, marginTop: 12,
+            flexWrap: 'nowrap', alignItems: 'center',
+          }}>
             <button
               disabled={busy}
               onClick={() => onAction('approve_send')}
               style={{
-                display: 'inline-flex', alignItems: 'center', gap: 5,
-                padding: '8px 14px', borderRadius: 5,
+                display: 'inline-flex', alignItems: 'center', gap: 4,
+                padding: '7px 11px', borderRadius: 5,
                 background: '#10b981', color: '#fff', border: 'none',
-                cursor: busy ? 'wait' : 'pointer', fontSize: 12, fontWeight: 600,
+                cursor: busy ? 'wait' : 'pointer', fontSize: 11, fontWeight: 600,
+                whiteSpace: 'nowrap',
               }}
             >
-              <Send size={12} /> Aprovar e enviar
+              <Send size={11} /> Aprovar e enviar
             </button>
             <button
               disabled={busy}
               onClick={() => onAction('reply')}
+              title="Editar antes de enviar"
               style={{
-                display: 'inline-flex', alignItems: 'center', gap: 5,
-                padding: '8px 14px', borderRadius: 5,
+                display: 'inline-flex', alignItems: 'center', gap: 4,
+                padding: '7px 11px', borderRadius: 5,
                 background: 'var(--bg)', color: 'var(--text)',
                 border: '1px solid var(--border)',
-                cursor: busy ? 'wait' : 'pointer', fontSize: 12, fontWeight: 500,
+                cursor: busy ? 'wait' : 'pointer', fontSize: 11, fontWeight: 500,
+                whiteSpace: 'nowrap',
               }}
             >
-              <Reply size={12} /> Editar antes de enviar
+              <Reply size={11} /> Editar
             </button>
             <button
               disabled={busy}
               onClick={() => onAction('reject_draft')}
               title="Apaga este draft (o agente regera no próximo ciclo)"
               style={{
-                display: 'inline-flex', alignItems: 'center', gap: 5,
-                padding: '8px 14px', borderRadius: 5,
+                display: 'inline-flex', alignItems: 'center', gap: 4,
+                padding: '7px 11px', borderRadius: 5,
                 background: 'transparent', color: 'var(--text-dim)',
                 border: '1px solid var(--border)',
-                cursor: busy ? 'wait' : 'pointer', fontSize: 12, fontWeight: 500,
+                cursor: busy ? 'wait' : 'pointer', fontSize: 11, fontWeight: 500,
+                whiteSpace: 'nowrap',
               }}
             >
-              <Trash2 size={12} /> Rejeitar
+              <Trash2 size={11} /> Rejeitar
             </button>
-            <div style={{ width: 1, background: 'var(--border)', alignSelf: 'stretch', margin: '0 2px' }} />
             <button
               disabled={busy}
               onClick={() => onAction('create_task')}
               title="Cria task em system.tasks para o agente tratar internamente (sem responder ao remetente)"
               style={{
-                display: 'inline-flex', alignItems: 'center', gap: 5,
-                padding: '8px 14px', borderRadius: 5,
+                display: 'inline-flex', alignItems: 'center', gap: 4,
+                padding: '7px 11px', borderRadius: 5,
                 background: 'transparent', color: 'var(--text-dim)',
                 border: '1px solid var(--border)',
-                cursor: busy ? 'wait' : 'pointer', fontSize: 12, fontWeight: 500,
+                cursor: busy ? 'wait' : 'pointer', fontSize: 11, fontWeight: 500,
+                whiteSpace: 'nowrap',
               }}
             >
               📋 Abrir tarefa
@@ -1193,11 +1201,12 @@ function EmailPreview({ email, busy, onAction, navigate }) {
               onClick={() => onAction('mark_handled')}
               title="Marca como tratado sem responder (ex: já resolveste por outro canal)"
               style={{
-                display: 'inline-flex', alignItems: 'center', gap: 5,
-                padding: '8px 14px', borderRadius: 5,
+                display: 'inline-flex', alignItems: 'center', gap: 4,
+                padding: '7px 11px', borderRadius: 5,
                 background: 'transparent', color: 'var(--text-dim)',
                 border: '1px solid var(--border)',
-                cursor: busy ? 'wait' : 'pointer', fontSize: 12, fontWeight: 500,
+                cursor: busy ? 'wait' : 'pointer', fontSize: 11, fontWeight: 500,
+                whiteSpace: 'nowrap',
               }}
             >
               ✓ Já tratado
@@ -1224,19 +1233,15 @@ function EmailPreview({ email, busy, onAction, navigate }) {
         </div>
       )}
 
-      {/* Body — minHeight garante que está sempre visível mesmo com draft enorme */}
-      <div style={{
-        flex: 1, overflowY: 'auto',
-        minHeight: email.draft_body ? 280 : 'auto',
-      }}>
+      {/* Body — a coluna preview faz scroll inteira; aqui só conteúdo */}
+      <div style={{ minHeight: 0 }}>
         {email.body_html ? (
           <iframe
             srcDoc={email.body_html}
             sandbox=""
             style={{
               width: '100%',
-              height: email.draft_body ? 400 : '100%',
-              minHeight: 280,
+              height: 500,
               border: 'none', background: '#fff',
             }}
             title="email-body"
@@ -1247,7 +1252,6 @@ function EmailPreview({ email, busy, onAction, navigate }) {
             whiteSpace: 'pre-wrap', wordBreak: 'break-word',
             fontSize: 12, color: 'var(--text)', lineHeight: 1.55,
             fontFamily: 'system-ui, sans-serif', background: 'var(--bg-card)',
-            minHeight: email.draft_body ? 200 : 'auto',
           }}>{email.body_text || email.body_snippet || '(sem corpo)'}</pre>
         )}
       </div>
