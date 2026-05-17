@@ -205,6 +205,52 @@ export default function EmailPage() {
     if (!selected || busy) return
     if (action === 'reply') { setShowReply(true); return }
     setBusy(true)
+
+    if (action === 'approve_send') {
+      // Aprovar draft do agente e enviar via Gmail
+      try {
+        const res = await window.fetch(`${SUPABASE_URL}/functions/v1/gmail-send-google`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${ANON_KEY}`, 'apikey': ANON_KEY },
+          body: JSON.stringify({
+            staff_id: 'p7.digitall@gmail.com',
+            to: selected.from_email,
+            subject: selected.draft_subject,
+            body_text: selected.draft_body,
+            thread_id: selected.thread_id,
+            reply_to_message_id: selected.message_id,
+            email_id: selected.id,
+          }),
+        })
+        const data = await res.json()
+        if (!data.ok) throw new Error(data.error || 'send_failed')
+        if (selected.external_id) await callGmailAction(selected.external_id, 'mark_read')
+      } catch (err) {
+        alert('Falha ao enviar: ' + (err.message || err))
+        setBusy(false)
+        return
+      }
+      await fetchEmails()
+      const idx = filtered.findIndex(e => e.id === selectedId)
+      const next = filtered[idx + 1] || filtered[idx - 1]
+      setSelectedId(next?.id || null)
+      setBusy(false)
+      return
+    }
+
+    if (action === 'reject_draft') {
+      // Limpar draft: status volta para awaiting_routing (será re-tentado pelo cron)
+      try {
+        await supabase.schema('system').from('email_messages').update({
+          draft_body: null, draft_subject: null, draft_agent: null,
+          draft_generated_at: null, status: 'received', updated_at: new Date().toISOString(),
+        }).eq('id', selected.id)
+      } catch (err) { console.error('reject_draft', err) }
+      await fetchEmails()
+      setBusy(false)
+      return
+    }
+
     await callGmailAction(selected.external_id, action)
     await fetchEmails()
     if (['trash','junk','archive'].includes(action)) {
@@ -891,6 +937,91 @@ function EmailPreview({ email, busy, onAction, navigate }) {
           )}
         </div>
       </div>
+
+      {/* DRAFT PROPOSTO (quando existe — sempre em destaque acima do email original) */}
+      {email.draft_body && (
+        <div style={{
+          margin: '12px 16px 0', padding: '14px 16px',
+          background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.35)',
+          borderLeft: '4px solid #10b981', borderRadius: 6,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+            <span style={{
+              padding: '3px 8px', borderRadius: 3,
+              background: '#10b981', color: '#fff',
+              fontSize: 9, fontWeight: 700, fontFamily: 'JetBrains Mono, monospace',
+              textTransform: 'uppercase', letterSpacing: '0.08em',
+            }}>📝 Draft proposto</span>
+            <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>
+              por <strong style={{ color: 'var(--text)' }}>{email.draft_agent || email.routed_to_agent}</strong>
+              {email.draft_generated_at && (
+                <> · gerado {new Date(email.draft_generated_at).toLocaleString('pt-PT')}</>
+              )}
+            </span>
+          </div>
+          <div style={{
+            fontSize: 13, fontWeight: 600, color: 'var(--text)', marginBottom: 8,
+          }}><strong style={{ color: 'var(--text-dim)', fontWeight: 500 }}>Para:</strong> {email.from_email}</div>
+          <div style={{
+            fontSize: 13, fontWeight: 600, color: 'var(--text)', marginBottom: 10,
+          }}><strong style={{ color: 'var(--text-dim)', fontWeight: 500 }}>Assunto:</strong> {email.draft_subject}</div>
+          <div style={{
+            padding: '12px 14px', background: 'var(--bg)', borderRadius: 4,
+            fontSize: 13, color: 'var(--text)', lineHeight: 1.6,
+            whiteSpace: 'pre-wrap', fontFamily: 'inherit',
+            maxHeight: 280, overflowY: 'auto',
+          }}>{email.draft_body}</div>
+          <div style={{ display: 'flex', gap: 6, marginTop: 12, flexWrap: 'wrap' }}>
+            <button
+              disabled={busy}
+              onClick={() => onAction('approve_send')}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 5,
+                padding: '8px 14px', borderRadius: 5,
+                background: '#10b981', color: '#fff', border: 'none',
+                cursor: busy ? 'wait' : 'pointer', fontSize: 12, fontWeight: 600,
+              }}
+            >
+              <Send size={12} /> Aprovar e enviar
+            </button>
+            <button
+              disabled={busy}
+              onClick={() => onAction('reply')}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 5,
+                padding: '8px 14px', borderRadius: 5,
+                background: 'var(--bg)', color: 'var(--text)',
+                border: '1px solid var(--border)',
+                cursor: busy ? 'wait' : 'pointer', fontSize: 12, fontWeight: 500,
+              }}
+            >
+              <Reply size={12} /> Editar antes de enviar
+            </button>
+            <button
+              disabled={busy}
+              onClick={() => onAction('reject_draft')}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 5,
+                padding: '8px 14px', borderRadius: 5,
+                background: 'transparent', color: 'var(--text-dim)',
+                border: '1px solid var(--border)',
+                cursor: busy ? 'wait' : 'pointer', fontSize: 12, fontWeight: 500,
+              }}
+            >
+              <Trash2 size={12} /> Rejeitar draft
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Email original (collapsed quando há draft, expandido quando não há) */}
+      {email.draft_body && (
+        <div style={{
+          margin: '14px 16px 4px', fontSize: 10, color: 'var(--text-dim)',
+          textTransform: 'uppercase', letterSpacing: '0.08em',
+          fontFamily: 'JetBrains Mono, monospace',
+        }}>━━ Email original ━━</div>
+      )}
 
       {/* Body */}
       <div style={{ flex: 1, overflowY: 'auto' }}>

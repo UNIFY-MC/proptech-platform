@@ -116,8 +116,13 @@ ${(email.body_text || email.body_snippet || "").slice(0, 2000)}`
 }
 
 // Auto-router: decide status baseado em confidence + intent
+// Intents que NÃO requerem resposta humana — arquiva-os directamente
+const NO_REPLY_INTENTS = ["newsletter", "internal_team", "other"]
+
 function decideStatus(intent: string, score: number): { status: string, autoJunk: boolean } {
   if (intent === "spam" && score >= 0.9) return { status: "spam",              autoJunk: true  }
+  // Newsletter / internal / other com confidence alta → arquiva (não precisa draft)
+  if (NO_REPLY_INTENTS.includes(intent) && score >= 0.7) return { status: "archived", autoJunk: false }
   if (score >= 0.85)                     return { status: "awaiting_routing",  autoJunk: false }
   if (score >= 0.5)                      return { status: "received",          autoJunk: false }
   return                                        { status: "received",          autoJunk: false }
