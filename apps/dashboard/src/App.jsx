@@ -23,6 +23,7 @@ import EmployeesPage from './views/EmployeesPage.jsx'
 import EmployeePage from './views/EmployeePage.jsx'
 import BiaScorecard from './views/BiaScorecard.jsx'
 import BiaTaskLauncher from './views/BiaTaskLauncher.jsx'
+import EmployeeScorecardPage from './views/EmployeeScorecardPage.jsx'
 import SkillsPage from './views/SkillsPage.jsx'
 import RecipesPage from './views/RecipesPage.jsx'
 import RecipeDetailPage from './views/RecipeDetailPage.jsx'
@@ -129,6 +130,8 @@ export default function App() {
               <Route path="/employees/bia"            element={<BiaScorecard />} />
               <Route path="/employees/bia/scorecard"  element={<BiaScorecard />} />
               <Route path="/employees/bia/test"       element={<BiaTaskLauncher />} />
+              {/* Rota genérica scorecard para todos os 26 agentes */}
+              <Route path="/employees/:employee_id/scorecard" element={<EmployeeScorecardPage />} />
               <Route path="/employees/:slug"  element={<EmployeePage data={data} />} />
               <Route path="/agentes"      element={<Agents data={data} />} />
               <Route path="/roadmap"      element={<Roadmap data={data} />} />
