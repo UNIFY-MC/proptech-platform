@@ -205,6 +205,10 @@ export default function EmailPage() {
     if (!selected || busy) return
     if (action === 'reply') { setShowReply(true); return }
     if (action === 'refresh') { await fetchEmails(); return }
+    if (action === 'view_task' && selected.task_id) {
+      navigate(`/tasks/${selected.task_id}`)
+      return
+    }
     setBusy(true)
 
     if (action === 'approve_send') {
@@ -1020,6 +1024,11 @@ function EmailPreview({ email, busy, onAction, navigate }) {
         </div>
       </div>
 
+      {/* ACÇÃO SUGERIDA pelo agente classificador (mostrar mesmo sem draft) */}
+      {email.suggested_action && email.suggested_action !== 'reply' && (
+        <SuggestedActionBanner email={email} busy={busy} onAction={onAction} />
+      )}
+
       {/* DRAFT PROPOSTO (quando existe — sempre em destaque acima do email original) */}
       {email.draft_body && (
         <div style={{
@@ -1213,5 +1222,98 @@ function EmailPreview({ email, busy, onAction, navigate }) {
         )}
       </div>
     </>
+  )
+}
+
+// ─── SuggestedActionBanner ──────────────────────────────────────────────
+// Mostra a acção decidida pelo agente classificador (Haiku) quando não é "reply"
+function SuggestedActionBanner({ email, busy, onAction }) {
+  const action = email.suggested_action
+  const meta = {
+    create_task:          { icon: '📋', label: 'Abrir tarefa interna', color: '#3b82f6', bg: 'rgba(59,130,246,0.10)', border: 'rgba(59,130,246,0.4)',
+                            description: 'O agente decidiu que este email requer acção interna (sem responder ao remetente).' },
+    mark_handled:         { icon: '✓',  label: 'Marcar como tratado',   color: '#10b981', bg: 'rgba(16,185,129,0.10)', border: 'rgba(16,185,129,0.4)',
+                            description: 'O agente decidiu que este email é informativo ou já tratado noutro canal.' },
+    newsletter_archive:   { icon: '📰', label: 'Arquivar newsletter',   color: '#6b7280', bg: 'rgba(107,114,128,0.10)', border: 'rgba(107,114,128,0.4)',
+                            description: 'Newsletter / marketing automático — sem necessidade de resposta.' },
+    spam:                 { icon: '🚫', label: 'Spam',                  color: '#dc2626', bg: 'rgba(220,38,38,0.10)', border: 'rgba(220,38,38,0.4)',
+                            description: 'Phishing / lixo — já movido para Junk do Gmail.' },
+    needs_human_decision: { icon: '🤔', label: 'O agente está em dúvida', color: '#f59e0b', bg: 'rgba(245,158,11,0.10)', border: 'rgba(245,158,11,0.4)',
+                            description: 'O agente não conseguiu decidir com confiança. Decide tu o que fazer.' },
+  }[action]
+
+  if (!meta) return null
+
+  return (
+    <div style={{
+      margin: '12px 16px 0', padding: '14px 16px',
+      background: meta.bg, border: `1px solid ${meta.border}`,
+      borderLeft: `4px solid ${meta.color}`, borderRadius: 6,
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+        <span style={{ fontSize: 16 }}>{meta.icon}</span>
+        <span style={{
+          padding: '3px 8px', borderRadius: 3,
+          background: meta.color, color: '#fff',
+          fontSize: 9, fontWeight: 700, fontFamily: 'JetBrains Mono, monospace',
+          textTransform: 'uppercase', letterSpacing: '0.08em',
+        }}>Acção sugerida pelo agente</span>
+        <span style={{ fontSize: 12, color: 'var(--text)', fontWeight: 600 }}>{meta.label}</span>
+      </div>
+      <div style={{ fontSize: 12, color: 'var(--text-dim)', lineHeight: 1.5, marginBottom: 8 }}>
+        {meta.description}
+      </div>
+      {email.suggested_action_reason && (
+        <div style={{
+          fontSize: 11, color: 'var(--text)', padding: '8px 10px',
+          background: 'var(--bg)', borderRadius: 4, marginBottom: 10,
+          fontStyle: 'italic',
+        }}>
+          <strong style={{ color: 'var(--text-dim)', fontStyle: 'normal' }}>Porquê:</strong> {email.suggested_action_reason}
+        </div>
+      )}
+
+      {/* CTA principal por acção sugerida */}
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+        {action === 'create_task' && email.task_id && (
+          <button onClick={() => onAction('view_task')} style={{
+            display: 'inline-flex', alignItems: 'center', gap: 5,
+            padding: '7px 14px', borderRadius: 5,
+            background: meta.color, color: '#fff', border: 'none',
+            cursor: 'pointer', fontSize: 12, fontWeight: 600,
+          }}>
+            <ExternalLink size={12} /> Ver tarefa criada
+          </button>
+        )}
+        {action === 'create_task' && !email.task_id && (
+          <button onClick={() => onAction('create_task')} disabled={busy} style={{
+            padding: '7px 14px', borderRadius: 5, background: meta.color, color: '#fff',
+            border: 'none', cursor: busy ? 'wait' : 'pointer', fontSize: 12, fontWeight: 600,
+          }}>📋 Confirmar e abrir tarefa</button>
+        )}
+        {action === 'needs_human_decision' && (
+          <>
+            <button onClick={() => onAction('reply')} disabled={busy} style={{
+              padding: '7px 14px', borderRadius: 5, background: meta.color, color: '#fff',
+              border: 'none', cursor: busy ? 'wait' : 'pointer', fontSize: 12, fontWeight: 600,
+            }}>↩ Responder eu</button>
+            <button onClick={() => onAction('create_task')} disabled={busy} style={{
+              padding: '7px 14px', borderRadius: 5, background: 'var(--bg)', color: 'var(--text)',
+              border: '1px solid var(--border)', cursor: busy ? 'wait' : 'pointer', fontSize: 12,
+            }}>📋 Abrir tarefa</button>
+            <button onClick={() => onAction('mark_handled')} disabled={busy} style={{
+              padding: '7px 14px', borderRadius: 5, background: 'var(--bg)', color: 'var(--text)',
+              border: '1px solid var(--border)', cursor: busy ? 'wait' : 'pointer', fontSize: 12,
+            }}>✓ Já tratado</button>
+          </>
+        )}
+        {(action === 'mark_handled' || action === 'newsletter_archive') && (
+          <button onClick={() => onAction('reply')} disabled={busy} style={{
+            padding: '7px 14px', borderRadius: 5, background: 'var(--bg)', color: 'var(--text)',
+            border: '1px solid var(--border)', cursor: busy ? 'wait' : 'pointer', fontSize: 12,
+          }}>↩ Quero responder mesmo assim</button>
+        )}
+      </div>
+    </div>
   )
 }
