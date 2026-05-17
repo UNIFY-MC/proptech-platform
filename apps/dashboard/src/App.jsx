@@ -26,6 +26,8 @@ import BiaTaskLauncher from './views/BiaTaskLauncher.jsx'
 import SkillsPage from './views/SkillsPage.jsx'
 import RecipesPage from './views/RecipesPage.jsx'
 import RecipeDetailPage from './views/RecipeDetailPage.jsx'
+import CondominiosPage from './views/CondominiosPage.jsx'
+import CondominioEditPage from './views/CondominioEditPage.jsx'
 import IntegrationsPage from './views/IntegrationsPage.jsx'
 import UsefulToolsPage from './views/UsefulToolsPage.jsx'
 import ContextPage from './views/ContextPage.jsx'
@@ -138,6 +140,8 @@ export default function App() {
               <Route path="/skills/marketplace" element={<SkillsMarketplacePage />} />
               <Route path="/recipes"      element={<RecipesPage data={data} />} />
               <Route path="/recipes/:slug" element={<RecipeDetailPage />} />
+              <Route path="/condominios"       element={<CondominiosPage />} />
+              <Route path="/condominios/:codigo" element={<CondominioEditPage />} />
               <Route path="/integrations" element={<IntegrationsPage data={data} />} />
               <Route path="/useful-tools" element={<UsefulToolsPage />} />
               <Route path="/schedules"   element={<SchedulesPage />} />

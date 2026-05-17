@@ -124,10 +124,11 @@ export default function Sidebar() {
         </SidebarGroup>
 
         <SidebarGroup id="manage" label="Manage">
-          <NavItem to="/employees" label="Employees" icon={Users} badge={totalAgents} />
-          <NavItem to="/clients"   label="Clients"   icon={Building2} />
-          <NavItem to="/projects"  label="Projects"  icon={FolderKanban} />
-          <NavItem to="/tasks"     label="Tasks"     icon={CheckSquare} />
+          <NavItem to="/employees"   label="Employees"   icon={Users} badge={totalAgents} />
+          <NavItem to="/clients"     label="Clients"     icon={Building2} />
+          <NavItem to="/condominios" label="Condomínios" icon={Building2} />
+          <NavItem to="/projects"    label="Projects"    icon={FolderKanban} />
+          <NavItem to="/tasks"       label="Tasks"       icon={CheckSquare} />
         </SidebarGroup>
 
         <SidebarGroup id="build" label="Build">
