@@ -176,7 +176,20 @@ Deno.serve(async (req) => {
         updated_at:       new Date().toISOString(),
       }
 
-      await sb.schema("system").from("email_messages").update(updateFields).eq("id", e.id)
+      const { error: updErr } = await sb.schema("system").from("email_messages")
+        .update(updateFields).eq("id", e.id)
+
+      if (updErr) {
+        console.error("update_failed", e.id, updErr.message)
+        results.push({
+          id: e.id,
+          intent: classify.intent,
+          score:  classify.score,
+          status: "update_failed",
+          error:  updErr.message,
+        })
+        continue
+      }
 
       if (autoJunk && e.external_id) {
         await callGmailAction(SUPABASE_URL, e.external_id, "junk")
