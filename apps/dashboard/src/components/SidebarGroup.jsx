@@ -4,7 +4,7 @@
 import { ChevronRight, ChevronDown } from 'lucide-react'
 import { useSidebarGroups } from '../hooks/useSidebarGroups.js'
 
-export default function SidebarGroup({ id, label, badge, children }) {
+export default function SidebarGroup({ id, label, badge, accent, children }) {
   const { isOpen, toggle } = useSidebarGroups()
   const open = isOpen(id)
 
@@ -18,7 +18,12 @@ export default function SidebarGroup({ id, label, badge, children }) {
         <span className="sidebar-group-chevron">
           {open ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
         </span>
-        <span className="sidebar-group-label">{label}</span>
+        <span
+          className="sidebar-group-label"
+          style={accent ? { color: accent } : undefined}
+        >
+          {label}
+        </span>
         {badge !== undefined && badge !== null && (
           <span className="sidebar-group-badge">{badge}</span>
         )}

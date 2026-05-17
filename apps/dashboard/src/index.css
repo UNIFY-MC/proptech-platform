@@ -16,6 +16,19 @@
   --bg-card-soft:     rgba(255, 255, 255, 0.025);
   --bg-card-elevated: rgba(255, 255, 255, 0.04);
   --border-soft:      rgba(255, 255, 255, 0.06);
+
+  /* ——— CRM Attio-style tokens (Sprint C1) ——— */
+  /* Aliases para compatibilidade com componentes CRM que usam nomenclatura do design system canónico */
+  --surface:  var(--bg-card);
+  --surface2: var(--bg-elevated);
+  --muted:    var(--text-dim);
+  --blue:     #58a6ff;
+  --green:    #3fb950;
+  --gold:     #e3b341;
+  --red:      #ff7b72;
+  --purple:   #d2a8ff;
+  --orange:   #f59e0b;
+  --mono:     'JetBrains Mono', 'SF Mono', Menlo, monospace;
 }
 
 body[data-theme="light"] {
@@ -26,6 +39,17 @@ body[data-theme="light"] {
   --text: #18160f;
   --text-dim: #6b6458;
   --primary: #534AB7;
+  /* CRM tokens light overrides */
+  --blue:   #1a5296;
+  --green:  #2d6a4f;
+  --gold:   #8c6508;
+  --red:    #8b1a1a;
+  --purple: #6b4fa0;
+}
+
+/* CRM table row hover */
+.crm-table-row:hover td {
+  background: var(--surface2);
 }
 
 * {
@@ -1883,23 +1907,22 @@ body {
 }
 
 .bia-intg-label {
-  font-size: 11px;
-  font-weight: 500;
-  font-family: var(--bia-mono);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--text-dim);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .bia-intg-manage {
-  font-size: 11px;
-  font-weight: 600;
-  font-family: var(--bia-mono);
+  font-size: 12px;
+  font-weight: 500;
   color: var(--text-dim);
   background: none;
   border: 1px solid var(--border);
-  padding: 3px 10px;
-  border-radius: 5px;
+  padding: 4px 12px;
+  border-radius: 6px;
   cursor: pointer;
 }
 
@@ -1914,14 +1937,35 @@ body {
 
 .bia-intg-card {
   background: var(--bg-card-elevated);
-  padding: 12px 16px;
+  padding: 10px 16px;
   display: flex;
-  align-items: flex-start;
-  gap: 10px;
+  align-items: center;
+  gap: 12px;
   transition: background 0.1s;
 }
 
-.bia-intg-card:hover { background: rgba(255, 255, 255, 0.065); }
+.bia-intg-card:hover { background: rgba(255, 255, 255, 0.045); }
+
+/* Sub-rows dentro de uma secção (estilo Hermes Channels: Members, Reply policy, …) */
+.bia-intg-subrow {
+  background: var(--bg-card-elevated);
+  padding: 9px 16px 9px 32px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 12px;
+  border-top: 1px solid var(--border-soft);
+}
+.bia-intg-subrow .label { color: var(--text); font-weight: 500; }
+.bia-intg-subrow .sub   { color: var(--text-dim); font-size: 11px; margin-left: 6px; }
+.bia-intg-subrow .right { margin-left: auto; }
+.bia-intg-subrow .action {
+  font-size: 11px; font-weight: 600;
+  color: var(--text-dim);
+  background: none; border: none;
+  cursor: pointer; padding: 3px 8px; border-radius: 4px;
+}
+.bia-intg-subrow .action:hover { color: var(--text); background: rgba(255,255,255,0.04); }
 
 .bia-intg-card.planned { opacity: 0.55; }
 
@@ -1974,31 +2018,35 @@ body {
 }
 
 .bia-intg-toggle {
-  width: 30px;
-  height: 17px;
-  border-radius: 8px;
+  width: 36px;
+  height: 20px;
+  border-radius: 10px;
   flex-shrink: 0;
   margin-top: 2px;
-  cursor: default;
+  cursor: pointer;
   position: relative;
-  transition: background 0.15s;
+  transition: background 0.18s;
+  box-shadow: inset 0 1px 1px rgba(0,0,0,0.18);
 }
 
-.bia-intg-toggle.on  { background: var(--bia-green); }
-.bia-intg-toggle.off { background: var(--border); }
+.bia-intg-toggle.on  { background: #10b981; }
+.bia-intg-toggle.off { background: #2b3140; }
+body[data-theme="light"] .bia-intg-toggle.off { background: #d4d4d8; }
+.bia-intg-toggle:hover { filter: brightness(1.08); }
 
 .bia-intg-toggle::after {
   content: '';
   position: absolute;
   top: 2px;
-  width: 13px;
-  height: 13px;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
   background: #fff;
-  transition: left 0.15s;
+  transition: left 0.18s, box-shadow 0.18s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.35), 0 1px 2px rgba(0,0,0,0.2);
 }
 
-.bia-intg-toggle.on::after  { left: 15px; }
+.bia-intg-toggle.on::after  { left: 18px; }
 .bia-intg-toggle.off::after { left: 2px; }
 
 /* ============================================================
