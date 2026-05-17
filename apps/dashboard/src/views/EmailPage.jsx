@@ -213,7 +213,7 @@ export default function EmailPage() {
     setBusy(true)
 
     if (action === 'approve_send') {
-      // Aprovar draft do agente e enviar via Gmail
+      // Aprovar draft do agente e enviar via Gmail (com attachments se houver)
       try {
         const res = await window.fetch(`${SUPABASE_URL}/functions/v1/gmail-send-google`, {
           method: 'POST',
@@ -230,6 +230,9 @@ export default function EmailPage() {
         })
         const data = await res.json()
         if (!data.ok) throw new Error(data.error || 'send_failed')
+        if (data.attachments_sent > 0) {
+          console.log(`Enviado com ${data.attachments_sent} anexos:`, data.attachment_files)
+        }
         if (selected.external_id) await callGmailAction(selected.external_id, 'mark_read')
       } catch (err) {
         alert('Falha ao enviar: ' + (err.message || err))
@@ -915,21 +918,30 @@ function EmailPreview({ email, busy, onAction, navigate }) {
   const [refining, setRefining]   = useState(false)
   const [refineErr, setRefineErr] = useState(null)
   const [history, setHistory]     = useState([])
+  const [attachments, setAttachments] = useState([])
 
-  // Fetch histórico de refinements para este email
+  // Fetch histórico de refinements + attachments
   useEffect(() => {
-    if (!email.id || !email.draft_body || !supabase) { setHistory([]); return }
+    if (!email.id || !email.draft_body || !supabase) { setHistory([]); setAttachments([]); return }
     let cancelled = false
     ;(async () => {
-      const { data } = await supabase.schema('system').from('draft_refinements')
-        .select('id, instruction, created_at, created_by, before_subject, after_subject')
-        .eq('email_id', email.id)
-        .order('created_at', { ascending: false })
-        .limit(10)
-      if (!cancelled) setHistory(data || [])
+      const [refRes, attRes] = await Promise.all([
+        supabase.schema('system').from('draft_refinements')
+          .select('id, instruction, created_at, created_by').eq('email_id', email.id)
+          .order('created_at', { ascending: false }).limit(10),
+        supabase.schema('system').from('email_attachments')
+          .select('id, filename, mime_type, size_bytes, source_kind').eq('email_id', email.id)
+          .order('created_at', { ascending: true }),
+      ])
+      if (!cancelled) {
+        setHistory(refRes.data || [])
+        setAttachments(attRes.data || [])
+      }
     })()
     return () => { cancelled = true }
   }, [email.id, email.draft_body, email.draft_generated_at])
+
+  const toolCalls = Array.isArray(email.draft_tool_calls) ? email.draft_tool_calls : []
 
   const refineDraft = async () => {
     if (!refineMsg.trim() || refining) return
@@ -950,14 +962,7 @@ function EmailPreview({ email, busy, onAction, navigate }) {
       })
       const data = await res.json()
       if (!data.ok) throw new Error(data.error || 'refine_failed')
-      // Persiste o draft refinado em email_messages
-      await supabase.schema('system').from('email_messages').update({
-        draft_subject:      data.subject,
-        draft_body:         data.body_text,
-        draft_generated_at: new Date().toISOString(),
-        updated_at:         new Date().toISOString(),
-      }).eq('id', email.id)
-      // Guarda a instrução para o agente "aprender" nas próximas vezes
+      // A fn v6 já persiste draft + tool_calls em email_messages — UI só guarda a instrução do Mário
       await supabase.schema('system').from('draft_refinements').insert({
         email_id:       email.id,
         agent_id:       agentId,
@@ -1094,6 +1099,74 @@ function EmailPreview({ email, busy, onAction, navigate }) {
           <div style={{
             fontSize: 13, fontWeight: 600, color: 'var(--text)', marginBottom: 10,
           }}><strong style={{ color: 'var(--text-dim)', fontWeight: 500 }}>Assunto:</strong> {email.draft_subject}</div>
+
+          {/* Ferramentas usadas pelo agente — fluxo visual */}
+          {toolCalls.length > 0 && (
+            <div style={{
+              marginBottom: 10, padding: '8px 10px',
+              background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.25)',
+              borderRadius: 5,
+            }}>
+              <div style={{
+                fontSize: 9, fontWeight: 700, color: '#3b82f6',
+                textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6,
+                fontFamily: 'JetBrains Mono, monospace',
+              }}>🔧 Ferramentas usadas pela {email.draft_agent || email.routed_to_agent} ({toolCalls.length})</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                {toolCalls.map((tc, i) => (
+                  <div key={i} style={{
+                    display: 'flex', alignItems: 'center', gap: 8,
+                    fontSize: 11, padding: '3px 6px',
+                    background: 'var(--bg)', borderRadius: 3,
+                  }}>
+                    <span style={{
+                      fontSize: 9, padding: '1px 5px', borderRadius: 2,
+                      background: tc.ok === false ? 'rgba(239,68,68,0.15)' : 'rgba(59,130,246,0.18)',
+                      color: tc.ok === false ? '#ef4444' : '#3b82f6',
+                      fontFamily: 'JetBrains Mono, monospace', fontWeight: 700,
+                      whiteSpace: 'nowrap',
+                    }}>{i + 1}. {tc.name}</span>
+                    <span style={{ flex: 1, color: 'var(--text)' }}>{tc.summary || JSON.stringify(tc.input).slice(0, 60)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Attachments preparados */}
+          {attachments.length > 0 && (
+            <div style={{
+              marginBottom: 10, padding: '8px 10px',
+              background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)',
+              borderRadius: 5,
+            }}>
+              <div style={{
+                fontSize: 9, fontWeight: 700, color: '#f59e0b',
+                textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6,
+                fontFamily: 'JetBrains Mono, monospace',
+              }}>📎 Anexos preparados ({attachments.length})</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                {attachments.map((a) => (
+                  <div key={a.id} style={{
+                    display: 'flex', alignItems: 'center', gap: 8,
+                    fontSize: 11, padding: '3px 6px',
+                    background: 'var(--bg)', borderRadius: 3,
+                  }}>
+                    <Paperclip size={11} color="#f59e0b" />
+                    <span style={{ flex: 1, color: 'var(--text)', fontFamily: 'JetBrains Mono, monospace', fontSize: 11 }}>{a.filename}</span>
+                    {a.size_bytes && (
+                      <span style={{ fontSize: 9, color: 'var(--text-dim)', fontFamily: 'JetBrains Mono, monospace' }}>
+                        {a.size_bytes < 1024 ? `${a.size_bytes}B` : `${Math.round(a.size_bytes/1024)}KB`}
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <div style={{ fontSize: 10, color: 'var(--text-dim)', marginTop: 5, fontStyle: 'italic' }}>
+                PDFs gerados automaticamente quando carregares <strong>Aprovar e enviar</strong>
+              </div>
+            </div>
+          )}
           <div style={{
             padding: '12px 14px', background: 'var(--bg)', borderRadius: 4,
             fontSize: 13, color: 'var(--text)', lineHeight: 1.6,
