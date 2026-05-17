@@ -914,6 +914,22 @@ function EmailPreview({ email, busy, onAction, navigate }) {
   const [refineMsg, setRefineMsg] = useState('')
   const [refining, setRefining]   = useState(false)
   const [refineErr, setRefineErr] = useState(null)
+  const [history, setHistory]     = useState([])
+
+  // Fetch histórico de refinements para este email
+  useEffect(() => {
+    if (!email.id || !email.draft_body || !supabase) { setHistory([]); return }
+    let cancelled = false
+    ;(async () => {
+      const { data } = await supabase.schema('system').from('draft_refinements')
+        .select('id, instruction, created_at, created_by, before_subject, after_subject')
+        .eq('email_id', email.id)
+        .order('created_at', { ascending: false })
+        .limit(10)
+      if (!cancelled) setHistory(data || [])
+    })()
+    return () => { cancelled = true }
+  }, [email.id, email.draft_body, email.draft_generated_at])
 
   const refineDraft = async () => {
     if (!refineMsg.trim() || refining) return
@@ -1132,6 +1148,48 @@ function EmailPreview({ email, busy, onAction, navigate }) {
             <div style={{ fontSize: 10, color: 'var(--text-dim)', marginTop: 4, fontStyle: 'italic' }}>
               Enter para enviar · Shift+Enter para nova linha · o {email.draft_agent || email.routed_to_agent} regera o draft com a tua instrução
             </div>
+
+            {/* Histórico de refinements para este email */}
+            {history.length > 0 && (
+              <div style={{
+                marginTop: 10, padding: '8px 10px',
+                background: 'rgba(107,79,160,0.08)',
+                border: '1px solid rgba(107,79,160,0.20)',
+                borderRadius: 5,
+              }}>
+                <div style={{
+                  fontSize: 9, fontWeight: 700, color: 'var(--primary)',
+                  textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6,
+                  fontFamily: 'JetBrains Mono, monospace',
+                  display: 'flex', alignItems: 'center', gap: 5,
+                }}>
+                  💭 Histórico de instruções ({history.length})
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                  {history.map(h => (
+                    <div key={h.id} style={{
+                      display: 'flex', gap: 8, alignItems: 'flex-start',
+                      padding: '5px 7px', background: 'var(--bg)',
+                      borderRadius: 3, fontSize: 11, lineHeight: 1.45,
+                    }}>
+                      <span style={{
+                        fontSize: 9, color: 'var(--text-dim)',
+                        fontFamily: 'JetBrains Mono, monospace',
+                        whiteSpace: 'nowrap', flexShrink: 0, paddingTop: 1,
+                      }} title={new Date(h.created_at).toLocaleString('pt-PT')}>
+                        {(() => {
+                          const d = new Date(h.created_at)
+                          return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`
+                        })()}
+                      </span>
+                      <span style={{ flex: 1, color: 'var(--text)' }}>
+                        <strong style={{ color: 'var(--text-dim)', fontWeight: 500 }}>{h.created_by || 'mario'}:</strong> {h.instruction}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           <div style={{
