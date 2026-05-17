@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import { supabase } from '../lib/supabase.js'
 import DailyRoundupCard from '../components/DailyRoundupCard.jsx'
+import AgentChatThread  from '../components/AgentChatThread.jsx'
 
 // Agrupamento por data (Outlook style: Today, Yesterday, This week, Last week, Older)
 function dateBucket(iso) {
@@ -908,6 +909,77 @@ function ReplyModal({ email, onClose, onSent }) {
   )
 }
 
+// AttachmentRow — clicável para preview do PDF em nova tab
+function AttachmentRow({ attachment }) {
+  const [loading, setLoading] = useState(false)
+  const [error, setError]     = useState(null)
+
+  async function openPdf() {
+    if (loading) return
+    setError(null)
+    setLoading(true)
+    try {
+      // Tenta primeiro buscar content_b64 já em cache em BD
+      const { data: row } = await supabase.schema('system').from('email_attachments')
+        .select('content_b64, source_kind, source_ref').eq('id', attachment.id).maybeSingle()
+      let b64 = row?.content_b64
+      if (!b64 && row?.source_kind === 'recibo_v2' && row?.source_ref) {
+        const res = await window.fetch(`${SUPABASE_URL}/functions/v1/v2-recibo-pdf`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${ANON_KEY}`, 'apikey': ANON_KEY },
+          body: JSON.stringify({ recebimento_id: row.source_ref }),
+        })
+        const data = await res.json()
+        if (!data.ok || !data.pdf_b64) throw new Error(data.error || 'pdf_failed')
+        b64 = data.pdf_b64
+        // Cache para próximas visualizações
+        await supabase.schema('system').from('email_attachments')
+          .update({ content_b64: b64, size_bytes: data.size_bytes })
+          .eq('id', attachment.id)
+      }
+      if (!b64) throw new Error('Sem conteúdo PDF')
+      const binary = atob(b64)
+      const bytes  = new Uint8Array(binary.length)
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
+      const blob = new Blob([bytes], { type: 'application/pdf' })
+      const url  = URL.createObjectURL(blob)
+      window.open(url, '_blank', 'noopener')
+      setTimeout(() => URL.revokeObjectURL(url), 60_000)
+    } catch (err) {
+      setError(String(err.message || err))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div
+      onClick={openPdf}
+      style={{
+        display: 'flex', alignItems: 'center', gap: 8,
+        fontSize: 11, padding: '4px 7px',
+        background: 'var(--bg)', borderRadius: 3,
+        cursor: loading ? 'wait' : 'pointer',
+        opacity: loading ? 0.6 : 1,
+        transition: 'background 0.1s',
+      }}
+      onMouseEnter={e => { if (!loading) e.currentTarget.style.background = 'rgba(245,158,11,0.10)' }}
+      onMouseLeave={e => { e.currentTarget.style.background = 'var(--bg)' }}
+      title="Clica para abrir PDF em nova tab"
+    >
+      {loading ? <Loader2 size={11} className="spin" color="#f59e0b" /> : <Paperclip size={11} color="#f59e0b" />}
+      <span style={{ flex: 1, color: 'var(--text)', fontFamily: 'JetBrains Mono, monospace', fontSize: 11 }}>{attachment.filename}</span>
+      {attachment.size_bytes && (
+        <span style={{ fontSize: 9, color: 'var(--text-dim)', fontFamily: 'JetBrains Mono, monospace' }}>
+          {attachment.size_bytes < 1024 ? `${attachment.size_bytes}B` : `${Math.round(attachment.size_bytes/1024)}KB`}
+        </span>
+      )}
+      {error && <span style={{ fontSize: 9, color: '#ef4444' }}>{error}</span>}
+      <ExternalLink size={10} color="var(--text-dim)" />
+    </div>
+  )
+}
+
 function EmailPreview({ email, busy, onAction, navigate }) {
   const dirMeta    = DIRECTION_META[email.direction] || DIRECTION_META.inbound
   const statusMeta = STATUS_META[email.status]       || { label: email.status, color: 'var(--text-dim)' }
@@ -1100,40 +1172,26 @@ function EmailPreview({ email, busy, onAction, navigate }) {
             fontSize: 13, fontWeight: 600, color: 'var(--text)', marginBottom: 10,
           }}><strong style={{ color: 'var(--text-dim)', fontWeight: 500 }}>Assunto:</strong> {email.draft_subject}</div>
 
-          {/* Ferramentas usadas pelo agente — fluxo visual */}
-          {toolCalls.length > 0 && (
+          {/* Chat com agente — thread completo (user / assistant / tool) */}
+          <div style={{
+            marginBottom: 10, padding: '8px 10px',
+            background: 'var(--bg)', border: '1px solid var(--border)',
+            borderRadius: 5,
+          }}>
             <div style={{
-              marginBottom: 10, padding: '8px 10px',
-              background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.25)',
-              borderRadius: 5,
-            }}>
-              <div style={{
-                fontSize: 9, fontWeight: 700, color: '#3b82f6',
-                textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6,
-                fontFamily: 'JetBrains Mono, monospace',
-              }}>🔧 Ferramentas usadas pela {email.draft_agent || email.routed_to_agent} ({toolCalls.length})</div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                {toolCalls.map((tc, i) => (
-                  <div key={i} style={{
-                    display: 'flex', alignItems: 'center', gap: 8,
-                    fontSize: 11, padding: '3px 6px',
-                    background: 'var(--bg)', borderRadius: 3,
-                  }}>
-                    <span style={{
-                      fontSize: 9, padding: '1px 5px', borderRadius: 2,
-                      background: tc.ok === false ? 'rgba(239,68,68,0.15)' : 'rgba(59,130,246,0.18)',
-                      color: tc.ok === false ? '#ef4444' : '#3b82f6',
-                      fontFamily: 'JetBrains Mono, monospace', fontWeight: 700,
-                      whiteSpace: 'nowrap',
-                    }}>{i + 1}. {tc.name}</span>
-                    <span style={{ flex: 1, color: 'var(--text)' }}>{tc.summary || JSON.stringify(tc.input).slice(0, 60)}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+              fontSize: 9, fontWeight: 700, color: 'var(--text-dim)',
+              textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 7,
+              fontFamily: 'JetBrains Mono, monospace',
+              display: 'flex', alignItems: 'center', gap: 5,
+            }}>💬 Chat com {email.draft_agent || email.routed_to_agent}</div>
+            <AgentChatThread
+              emailId={email.id}
+              agentName={email.draft_agent || email.routed_to_agent}
+              refreshKey={email.draft_generated_at || email.updated_at}
+            />
+          </div>
 
-          {/* Attachments preparados */}
+          {/* Attachments preparados — clicáveis para preview PDF */}
           {attachments.length > 0 && (
             <div style={{
               marginBottom: 10, padding: '8px 10px',
@@ -1144,26 +1202,14 @@ function EmailPreview({ email, busy, onAction, navigate }) {
                 fontSize: 9, fontWeight: 700, color: '#f59e0b',
                 textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6,
                 fontFamily: 'JetBrains Mono, monospace',
-              }}>📎 Anexos preparados ({attachments.length})</div>
+              }}>📎 Anexos preparados ({attachments.length}) — clica para ver PDF</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
                 {attachments.map((a) => (
-                  <div key={a.id} style={{
-                    display: 'flex', alignItems: 'center', gap: 8,
-                    fontSize: 11, padding: '3px 6px',
-                    background: 'var(--bg)', borderRadius: 3,
-                  }}>
-                    <Paperclip size={11} color="#f59e0b" />
-                    <span style={{ flex: 1, color: 'var(--text)', fontFamily: 'JetBrains Mono, monospace', fontSize: 11 }}>{a.filename}</span>
-                    {a.size_bytes && (
-                      <span style={{ fontSize: 9, color: 'var(--text-dim)', fontFamily: 'JetBrains Mono, monospace' }}>
-                        {a.size_bytes < 1024 ? `${a.size_bytes}B` : `${Math.round(a.size_bytes/1024)}KB`}
-                      </span>
-                    )}
-                  </div>
+                  <AttachmentRow key={a.id} attachment={a} />
                 ))}
               </div>
               <div style={{ fontSize: 10, color: 'var(--text-dim)', marginTop: 5, fontStyle: 'italic' }}>
-                PDFs gerados automaticamente quando carregares <strong>Aprovar e enviar</strong>
+                PDFs gerados on-demand. São anexados ao email automaticamente quando carregares <strong>Aprovar e enviar</strong>.
               </div>
             </div>
           )}
@@ -1219,50 +1265,8 @@ function EmailPreview({ email, busy, onAction, navigate }) {
               <div style={{ fontSize: 11, color: '#ef4444', marginTop: 5 }}>Erro: {refineErr}</div>
             )}
             <div style={{ fontSize: 10, color: 'var(--text-dim)', marginTop: 4, fontStyle: 'italic' }}>
-              Enter para enviar · Shift+Enter para nova linha · o {email.draft_agent || email.routed_to_agent} regera o draft com a tua instrução
+              Enter para enviar · Shift+Enter para nova linha · vês a conversa completa no chat acima
             </div>
-
-            {/* Histórico de refinements para este email */}
-            {history.length > 0 && (
-              <div style={{
-                marginTop: 10, padding: '8px 10px',
-                background: 'rgba(107,79,160,0.08)',
-                border: '1px solid rgba(107,79,160,0.20)',
-                borderRadius: 5,
-              }}>
-                <div style={{
-                  fontSize: 9, fontWeight: 700, color: 'var(--primary)',
-                  textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6,
-                  fontFamily: 'JetBrains Mono, monospace',
-                  display: 'flex', alignItems: 'center', gap: 5,
-                }}>
-                  💭 Histórico de instruções ({history.length})
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-                  {history.map(h => (
-                    <div key={h.id} style={{
-                      display: 'flex', gap: 8, alignItems: 'flex-start',
-                      padding: '5px 7px', background: 'var(--bg)',
-                      borderRadius: 3, fontSize: 11, lineHeight: 1.45,
-                    }}>
-                      <span style={{
-                        fontSize: 9, color: 'var(--text-dim)',
-                        fontFamily: 'JetBrains Mono, monospace',
-                        whiteSpace: 'nowrap', flexShrink: 0, paddingTop: 1,
-                      }} title={new Date(h.created_at).toLocaleString('pt-PT')}>
-                        {(() => {
-                          const d = new Date(h.created_at)
-                          return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`
-                        })()}
-                      </span>
-                      <span style={{ flex: 1, color: 'var(--text)' }}>
-                        <strong style={{ color: 'var(--text-dim)', fontWeight: 500 }}>{h.created_by || 'mario'}:</strong> {h.instruction}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
 
           <div style={{
