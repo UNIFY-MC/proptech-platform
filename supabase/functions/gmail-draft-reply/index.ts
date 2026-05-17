@@ -53,11 +53,18 @@ REGRAS:
 OUTPUT FORMAT (apenas JSON válido, sem markdown):
 {"subject": "Re: assunto original ou novo se mais claro", "body_text": "texto completo da resposta em PT-PT"}`
 
-async function generateReply(persona: string, originalEmail: any, userInstructions?: string): Promise<any | null> {
+async function generateReply(persona: string, originalEmail: any, userInstructions?: string, pastRefinements: any[] = []): Promise<any | null> {
   if (!ANTHROPIC_KEY) return null
   const fromDisplay = originalEmail.from_name
     ? `${originalEmail.from_name} <${originalEmail.from_email}>`
     : originalEmail.from_email
+
+  // Aprendizado: últimos refinements do mesmo agente+intent (Mário corrigiu antes)
+  let learningBlock = ""
+  if (pastRefinements.length > 0) {
+    learningBlock = `\nLIÇÕES APRENDIDAS — em emails anteriores deste tipo o Mário pediu-te ajustes específicos. Aplica este conhecimento a este draft:\n${pastRefinements.map((r, i) => `${i + 1}. "${r.instruction}"`).join("\n")}\n`
+  }
+
   const userMsg = `EMAIL ORIGINAL recebido:
 
 De: ${fromDisplay}
@@ -66,10 +73,10 @@ Data: ${originalEmail.received_at}
 
 Corpo:
 ${(originalEmail.body_text || originalEmail.body_snippet || "").slice(0, 4000)}
+${learningBlock}
+${userInstructions ? `\nINSTRUÇÕES ACTUAIS DO MÁRIO (prioridade máxima — segue à risca):\n${userInstructions}\n` : ""}
 
-${userInstructions ? `\nINSTRUÇÕES DO MÁRIO (segue à risca):\n${userInstructions}\n` : ""}
-
-Escreve a resposta agora, seguindo a tua persona e regras.`
+Escreve a resposta agora, seguindo a tua persona, as lições aprendidas, e as regras.`
 
   try {
     const res = await fetch("https://api.anthropic.com/v1/messages", {
@@ -123,7 +130,7 @@ Deno.serve(async (req) => {
 
     const sb = createClient(SUPABASE_URL, SERVICE_KEY)
     const { data: email, error } = await sb.schema("system").from("email_messages")
-      .select("from_email, from_name, subject, body_text, body_snippet, received_at, thread_id, message_id")
+      .select("from_email, from_name, subject, body_text, body_snippet, received_at, thread_id, message_id, classify_intent")
       .eq("id", email_id).maybeSingle()
     if (error || !email) {
       return new Response(JSON.stringify({ error: "email_not_found" }), {
@@ -131,7 +138,15 @@ Deno.serve(async (req) => {
       })
     }
 
-    const reply = await generateReply(persona, email, user_instructions)
+    // Feedback loop: lê os últimos 5 refinements do mesmo agent+intent
+    const { data: refinements } = await sb.schema("system").from("draft_refinements")
+      .select("instruction, intent, created_at")
+      .eq("agent_id", agent_id)
+      .eq("intent", email.classify_intent || "")
+      .order("created_at", { ascending: false })
+      .limit(5)
+
+    const reply = await generateReply(persona, email, user_instructions, refinements || [])
     if (!reply) {
       return new Response(JSON.stringify({ error: "generation_failed" }), {
         status: 502, headers: { ...cors, "Content-Type": "application/json" },

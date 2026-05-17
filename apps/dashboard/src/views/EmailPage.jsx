@@ -9,6 +9,7 @@ import {
   Archive, Trash2, AlertOctagon, Eye, EyeOff, UserPlus, Reply, Forward, Loader2, Paperclip,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase.js'
+import DailyRoundupCard from '../components/DailyRoundupCard.jsx'
 
 // Agrupamento por data (Outlook style: Today, Yesterday, This week, Last week, Older)
 function dateBucket(iso) {
@@ -510,6 +511,13 @@ export default function EmailPage() {
           background: 'var(--bg-card)', display: 'flex', flexDirection: 'column',
           overflow: 'hidden',
         }}>
+          {/* Daily Roundup card no topo da lista — só visível em "all" e "awaiting_*" */}
+          {['all','awaiting_routing','awaiting_approval','received','inbound'].includes(filter) && (
+            <div style={{ padding: '10px 12px 0' }}>
+              <DailyRoundupCard />
+            </div>
+          )}
+
           {/* Coluna headers */}
           <div style={{
             display: 'grid',
@@ -910,13 +918,16 @@ function EmailPreview({ email, busy, onAction, navigate }) {
     if (!refineMsg.trim() || refining) return
     setRefining(true)
     setRefineErr(null)
+    const beforeSubject = email.draft_subject
+    const beforeBody    = email.draft_body
+    const agentId       = email.draft_agent || email.routed_to_agent
     try {
       const res = await window.fetch(`${SUPABASE_URL}/functions/v1/gmail-draft-reply`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${ANON_KEY}`, 'apikey': ANON_KEY },
         body: JSON.stringify({
           email_id: email.id,
-          agent_id: email.draft_agent || email.routed_to_agent,
+          agent_id: agentId,
           user_instructions: refineMsg,
         }),
       })
@@ -929,8 +940,18 @@ function EmailPreview({ email, busy, onAction, navigate }) {
         draft_generated_at: new Date().toISOString(),
         updated_at:         new Date().toISOString(),
       }).eq('id', email.id)
+      // Guarda a instrução para o agente "aprender" nas próximas vezes
+      await supabase.schema('system').from('draft_refinements').insert({
+        email_id:       email.id,
+        agent_id:       agentId,
+        intent:         email.classify_intent,
+        instruction:    refineMsg,
+        before_subject: beforeSubject,
+        before_body:    beforeBody,
+        after_subject:  data.subject,
+        after_body:     data.body_text,
+      })
       setRefineMsg('')
-      // Sinaliza ao pai para re-fetch
       onAction('refresh')
     } catch (err) {
       setRefineErr(String(err.message || err))
@@ -1141,6 +1162,7 @@ function EmailPreview({ email, busy, onAction, navigate }) {
             <button
               disabled={busy}
               onClick={() => onAction('reject_draft')}
+              title="Apaga este draft (o agente regera no próximo ciclo)"
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: 5,
                 padding: '8px 14px', borderRadius: 5,
@@ -1149,29 +1171,19 @@ function EmailPreview({ email, busy, onAction, navigate }) {
                 cursor: busy ? 'wait' : 'pointer', fontSize: 12, fontWeight: 500,
               }}
             >
-              <Trash2 size={12} /> Rejeitar draft
+              <Trash2 size={12} /> Rejeitar
             </button>
-          </div>
-
-          {/* Outras acções — não responder, mas tratar */}
-          <div style={{
-            marginTop: 12, paddingTop: 10, borderTop: '1px dashed rgba(16,185,129,0.25)',
-            display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center',
-          }}>
-            <span style={{
-              fontSize: 10, color: 'var(--text-dim)', marginRight: 4,
-              fontFamily: 'JetBrains Mono, monospace', textTransform: 'uppercase', letterSpacing: '0.05em',
-            }}>Em vez de responder:</span>
+            <div style={{ width: 1, background: 'var(--border)', alignSelf: 'stretch', margin: '0 2px' }} />
             <button
               disabled={busy}
               onClick={() => onAction('create_task')}
               title="Cria task em system.tasks para o agente tratar internamente (sem responder ao remetente)"
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: 5,
-                padding: '6px 12px', borderRadius: 5,
-                background: 'var(--bg)', color: 'var(--text)',
+                padding: '8px 14px', borderRadius: 5,
+                background: 'transparent', color: 'var(--text-dim)',
                 border: '1px solid var(--border)',
-                cursor: busy ? 'wait' : 'pointer', fontSize: 11, fontWeight: 500,
+                cursor: busy ? 'wait' : 'pointer', fontSize: 12, fontWeight: 500,
               }}
             >
               📋 Abrir tarefa
@@ -1179,13 +1191,13 @@ function EmailPreview({ email, busy, onAction, navigate }) {
             <button
               disabled={busy}
               onClick={() => onAction('mark_handled')}
-              title="Marca como tratado sem responder (ex: já resolveste por outro canal, ou é apenas informativo)"
+              title="Marca como tratado sem responder (ex: já resolveste por outro canal)"
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: 5,
-                padding: '6px 12px', borderRadius: 5,
-                background: 'var(--bg)', color: 'var(--text)',
+                padding: '8px 14px', borderRadius: 5,
+                background: 'transparent', color: 'var(--text-dim)',
                 border: '1px solid var(--border)',
-                cursor: busy ? 'wait' : 'pointer', fontSize: 11, fontWeight: 500,
+                cursor: busy ? 'wait' : 'pointer', fontSize: 12, fontWeight: 500,
               }}
             >
               ✓ Já tratado
@@ -1194,22 +1206,39 @@ function EmailPreview({ email, busy, onAction, navigate }) {
         </div>
       )}
 
-      {/* Email original (collapsed quando há draft, expandido quando não há) */}
+      {/* Email original — sempre visível para validar a resposta proposta */}
       {email.draft_body && (
         <div style={{
-          margin: '14px 16px 4px', fontSize: 10, color: 'var(--text-dim)',
+          margin: '16px 16px 6px', padding: '6px 10px',
+          background: 'var(--bg-elevated)', borderRadius: 4,
+          fontSize: 10, fontWeight: 700, color: 'var(--text-dim)',
           textTransform: 'uppercase', letterSpacing: '0.08em',
           fontFamily: 'JetBrains Mono, monospace',
-        }}>━━ Email original ━━</div>
+          display: 'flex', alignItems: 'center', gap: 6,
+        }}>
+          <Mail size={11} />
+          Email original do cliente
+          <span style={{ marginLeft: 'auto', fontWeight: 500, textTransform: 'none', fontSize: 10 }}>
+            (valida antes de aprovar)
+          </span>
+        </div>
       )}
 
-      {/* Body */}
-      <div style={{ flex: 1, overflowY: 'auto' }}>
+      {/* Body — minHeight garante que está sempre visível mesmo com draft enorme */}
+      <div style={{
+        flex: 1, overflowY: 'auto',
+        minHeight: email.draft_body ? 280 : 'auto',
+      }}>
         {email.body_html ? (
           <iframe
             srcDoc={email.body_html}
             sandbox=""
-            style={{ width: '100%', height: '100%', border: 'none', background: '#fff' }}
+            style={{
+              width: '100%',
+              height: email.draft_body ? 400 : '100%',
+              minHeight: 280,
+              border: 'none', background: '#fff',
+            }}
             title="email-body"
           />
         ) : (
@@ -1218,6 +1247,7 @@ function EmailPreview({ email, busy, onAction, navigate }) {
             whiteSpace: 'pre-wrap', wordBreak: 'break-word',
             fontSize: 12, color: 'var(--text)', lineHeight: 1.55,
             fontFamily: 'system-ui, sans-serif', background: 'var(--bg-card)',
+            minHeight: email.draft_body ? 200 : 'auto',
           }}>{email.body_text || email.body_snippet || '(sem corpo)'}</pre>
         )}
       </div>
