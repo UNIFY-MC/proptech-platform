@@ -204,6 +204,7 @@ export default function EmailPage() {
   const doAction = async (action) => {
     if (!selected || busy) return
     if (action === 'reply') { setShowReply(true); return }
+    if (action === 'refresh') { await fetchEmails(); return }
     setBusy(true)
 
     if (action === 'approve_send') {
@@ -249,6 +250,49 @@ export default function EmailPage() {
       await fetchEmails()
       setBusy(false)
       return
+    }
+
+    if (action === 'create_task') {
+      // Abrir tarefa em vez de responder — atribui ao agente já encaminhado
+      try {
+        const { data: task, error } = await supabase.schema('system').from('tasks').insert({
+          title: `📧 ${selected.subject || '(sem assunto)'}`,
+          description_md: `**De:** ${selected.from_email}\n\n**Recebido:** ${new Date(selected.received_at).toLocaleString('pt-PT')}\n\n---\n\n${selected.body_text || selected.body_snippet || ''}`,
+          status: 'open', priority: 'normal', kind: 'email_followup',
+          vertical: selected.vertical || null,
+          owner_agent_id: selected.routed_to_agent || null,
+          source_kind: 'email', source_id: selected.id,
+          payload: { email_from: selected.from_email, email_subject: selected.subject, classify_intent: selected.classify_intent },
+          tags: ['email', selected.classify_intent].filter(Boolean),
+        }).select('id').single()
+        if (error) throw error
+        // Linka task ao email + arquiva (já tratado)
+        await supabase.schema('system').from('email_messages').update({
+          task_id: task.id, status: 'archived', updated_at: new Date().toISOString(),
+        }).eq('id', selected.id)
+      } catch (err) {
+        alert('Falha ao criar tarefa: ' + (err.message || err))
+        setBusy(false); return
+      }
+      await fetchEmails()
+      const idx = filtered.findIndex(e => e.id === selectedId)
+      const next = filtered[idx + 1] || filtered[idx - 1]
+      setSelectedId(next?.id || null)
+      setBusy(false); return
+    }
+
+    if (action === 'mark_handled') {
+      // Marca como tratado (arquiva sem responder) — útil quando o email é informativo ou já resolveste por outro canal
+      try {
+        await supabase.schema('system').from('email_messages').update({
+          status: 'archived', updated_at: new Date().toISOString(),
+        }).eq('id', selected.id)
+      } catch (err) { console.error('mark_handled', err) }
+      await fetchEmails()
+      const idx = filtered.findIndex(e => e.id === selectedId)
+      const next = filtered[idx + 1] || filtered[idx - 1]
+      setSelectedId(next?.id || null)
+      setBusy(false); return
     }
 
     await callGmailAction(selected.external_id, action)
@@ -853,6 +897,44 @@ function EmailPreview({ email, busy, onAction, navigate }) {
   const statusMeta = STATUS_META[email.status]       || { label: email.status, color: 'var(--text-dim)' }
   const isInbound  = email.direction === 'inbound'
 
+  // Refinar draft: caixa inline com instrução para o agente regenerar
+  const [refineMsg, setRefineMsg] = useState('')
+  const [refining, setRefining]   = useState(false)
+  const [refineErr, setRefineErr] = useState(null)
+
+  const refineDraft = async () => {
+    if (!refineMsg.trim() || refining) return
+    setRefining(true)
+    setRefineErr(null)
+    try {
+      const res = await window.fetch(`${SUPABASE_URL}/functions/v1/gmail-draft-reply`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${ANON_KEY}`, 'apikey': ANON_KEY },
+        body: JSON.stringify({
+          email_id: email.id,
+          agent_id: email.draft_agent || email.routed_to_agent,
+          user_instructions: refineMsg,
+        }),
+      })
+      const data = await res.json()
+      if (!data.ok) throw new Error(data.error || 'refine_failed')
+      // Persiste o draft refinado em email_messages
+      await supabase.schema('system').from('email_messages').update({
+        draft_subject:      data.subject,
+        draft_body:         data.body_text,
+        draft_generated_at: new Date().toISOString(),
+        updated_at:         new Date().toISOString(),
+      }).eq('id', email.id)
+      setRefineMsg('')
+      // Sinaliza ao pai para re-fetch
+      onAction('refresh')
+    } catch (err) {
+      setRefineErr(String(err.message || err))
+    } finally {
+      setRefining(false)
+    }
+  }
+
   const ActionBtn = ({ icon: Icon, label, action, color = 'var(--text)', danger }) => (
     <button
       disabled={busy}
@@ -971,6 +1053,56 @@ function EmailPreview({ email, busy, onAction, navigate }) {
             whiteSpace: 'pre-wrap', fontFamily: 'inherit',
             maxHeight: 280, overflowY: 'auto',
           }}>{email.draft_body}</div>
+
+          {/* Caixa "pergunta/refina à Fina" — inline */}
+          <div style={{ marginTop: 12 }}>
+            <div style={{
+              fontSize: 10, fontWeight: 700, color: 'var(--text-dim)',
+              textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 5,
+              fontFamily: 'JetBrains Mono, monospace',
+            }}>💬 Pergunta ou refina a resposta</div>
+            <div style={{ display: 'flex', gap: 6, alignItems: 'stretch' }}>
+              <textarea
+                value={refineMsg}
+                onChange={(e) => setRefineMsg(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); refineDraft() }
+                }}
+                placeholder={`Ex: "responde mais formal", "menciona o IRS e o prazo", "pede o NIF para emitir o recibo"…`}
+                rows={2}
+                style={{
+                  flex: 1, padding: '8px 10px',
+                  background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 5,
+                  color: 'var(--text)', fontSize: 12, fontFamily: 'inherit', resize: 'vertical',
+                  outline: 'none', lineHeight: 1.5,
+                }}
+                disabled={refining}
+              />
+              <button
+                onClick={refineDraft}
+                disabled={refining || !refineMsg.trim()}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 5,
+                  padding: '0 14px', borderRadius: 5,
+                  background: refineMsg.trim() ? 'var(--primary)' : 'var(--bg-elevated)',
+                  color: refineMsg.trim() ? '#fff' : 'var(--text-dim)',
+                  border: 'none',
+                  cursor: refining || !refineMsg.trim() ? 'not-allowed' : 'pointer',
+                  fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap',
+                }}
+              >
+                {refining ? <Loader2 size={12} className="spin" /> : <Reply size={12} />}
+                {refining ? 'A refinar…' : 'Refinar'}
+              </button>
+            </div>
+            {refineErr && (
+              <div style={{ fontSize: 11, color: '#ef4444', marginTop: 5 }}>Erro: {refineErr}</div>
+            )}
+            <div style={{ fontSize: 10, color: 'var(--text-dim)', marginTop: 4, fontStyle: 'italic' }}>
+              Enter para enviar · Shift+Enter para nova linha · o {email.draft_agent || email.routed_to_agent} regera o draft com a tua instrução
+            </div>
+          </div>
+
           <div style={{ display: 'flex', gap: 6, marginTop: 12, flexWrap: 'wrap' }}>
             <button
               disabled={busy}
@@ -1009,6 +1141,45 @@ function EmailPreview({ email, busy, onAction, navigate }) {
               }}
             >
               <Trash2 size={12} /> Rejeitar draft
+            </button>
+          </div>
+
+          {/* Outras acções — não responder, mas tratar */}
+          <div style={{
+            marginTop: 12, paddingTop: 10, borderTop: '1px dashed rgba(16,185,129,0.25)',
+            display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center',
+          }}>
+            <span style={{
+              fontSize: 10, color: 'var(--text-dim)', marginRight: 4,
+              fontFamily: 'JetBrains Mono, monospace', textTransform: 'uppercase', letterSpacing: '0.05em',
+            }}>Em vez de responder:</span>
+            <button
+              disabled={busy}
+              onClick={() => onAction('create_task')}
+              title="Cria task em system.tasks para o agente tratar internamente (sem responder ao remetente)"
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 5,
+                padding: '6px 12px', borderRadius: 5,
+                background: 'var(--bg)', color: 'var(--text)',
+                border: '1px solid var(--border)',
+                cursor: busy ? 'wait' : 'pointer', fontSize: 11, fontWeight: 500,
+              }}
+            >
+              📋 Abrir tarefa
+            </button>
+            <button
+              disabled={busy}
+              onClick={() => onAction('mark_handled')}
+              title="Marca como tratado sem responder (ex: já resolveste por outro canal, ou é apenas informativo)"
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 5,
+                padding: '6px 12px', borderRadius: 5,
+                background: 'var(--bg)', color: 'var(--text)',
+                border: '1px solid var(--border)',
+                cursor: busy ? 'wait' : 'pointer', fontSize: 11, fontWeight: 500,
+              }}
+            >
+              ✓ Já tratado
             </button>
           </div>
         </div>
