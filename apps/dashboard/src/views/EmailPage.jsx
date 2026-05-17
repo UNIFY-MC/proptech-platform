@@ -1,13 +1,49 @@
-// EmailPage — /email · split-pane: lista esquerda + preview sempre visível direita
+// EmailPage — /email · layout Outlook 3-painéis (folders | lista | preview)
+// Splitters draggable + agrupamento por data + persistência de larguras em localStorage.
 // Mostra inbound + outbound de system.email_messages, acções via gmail-action edge fn.
 
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  Mail, Inbox, Send, RefreshCw, Search, ExternalLink,
-  Archive, Trash2, AlertOctagon, Eye, EyeOff, UserPlus, Reply, Forward, Loader2,
+  Mail, Inbox, Send, RefreshCw, Search, ExternalLink, FileText, Folder, ChevronDown, ChevronRight,
+  Archive, Trash2, AlertOctagon, Eye, EyeOff, UserPlus, Reply, Forward, Loader2, Paperclip,
 } from 'lucide-react'
 import { supabase } from '../lib/supabase.js'
+
+// Agrupamento por data (Outlook style: Today, Yesterday, This week, Last week, Older)
+function dateBucket(iso) {
+  if (!iso) return { key: 'sem-data', label: 'Sem data', order: 999 }
+  const d = new Date(iso)
+  const now = new Date()
+  const startToday = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const startYesterday = new Date(startToday); startYesterday.setDate(startYesterday.getDate() - 1)
+  const dow = now.getDay() // 0=dom, 1=seg…
+  const startWeek = new Date(startToday); startWeek.setDate(startWeek.getDate() - ((dow + 6) % 7)) // segunda da semana actual
+  const startLastWeek = new Date(startWeek); startLastWeek.setDate(startLastWeek.getDate() - 7)
+  if (d >= startToday)      return { key: 'today',     label: 'Hoje',          order: 1 }
+  if (d >= startYesterday)  return { key: 'yesterday', label: 'Ontem',         order: 2 }
+  if (d >= startWeek)       return { key: 'thisweek',  label: 'Esta semana',   order: 3 }
+  if (d >= startLastWeek)   return { key: 'lastweek',  label: 'Semana passada',order: 4 }
+  const startMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+  if (d >= startMonth)      return { key: 'thismonth', label: 'Este mês',      order: 5 }
+  return { key: 'older', label: 'Mais antigos', order: 6 }
+}
+
+function formatBytes(b) {
+  if (!b) return '—'
+  if (b < 1024) return `${b} B`
+  if (b < 1024*1024) return `${Math.round(b/1024)} KB`
+  return `${(b/1024/1024).toFixed(1)} MB`
+}
+
+function formatDate(iso) {
+  if (!iso) return '—'
+  const d = new Date(iso)
+  const now = new Date()
+  const isToday = d.toDateString() === now.toDateString()
+  if (isToday) return d.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })
+  return d.toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit', year: '2-digit' })
+}
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL
 const ANON_KEY     = import.meta.env.VITE_SUPABASE_ANON_KEY
@@ -179,104 +215,71 @@ export default function EmailPage() {
     setBusy(false)
   }
 
+  // ─── 3-pane Outlook layout: widths persistidos em localStorage ──────────
+  const [foldersW, setFoldersW] = useState(() => Number(localStorage.getItem('email_foldersW')) || 220)
+  const [listW,    setListW]    = useState(() => Number(localStorage.getItem('email_listW'))    || 460)
+  useEffect(() => { localStorage.setItem('email_foldersW', String(foldersW)) }, [foldersW])
+  useEffect(() => { localStorage.setItem('email_listW',    String(listW)) },    [listW])
+
+  // Splitter drag — folders / list
+  const draggingRef = useRef(null)
+  const onDragStart = (which) => (e) => {
+    e.preventDefault()
+    draggingRef.current = which
+    document.body.style.cursor = 'col-resize'
+    document.body.style.userSelect = 'none'
+  }
+  useEffect(() => {
+    const onMove = (e) => {
+      if (!draggingRef.current) return
+      if (draggingRef.current === 'folders') {
+        setFoldersW(Math.max(160, Math.min(400, e.clientX - 12)))
+      } else if (draggingRef.current === 'list') {
+        setListW(Math.max(280, Math.min(900, e.clientX - foldersW - 24)))
+      }
+    }
+    const onUp = () => {
+      if (draggingRef.current) {
+        draggingRef.current = null
+        document.body.style.cursor = ''
+        document.body.style.userSelect = ''
+      }
+    }
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup',   onUp)
+    return () => {
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup',   onUp)
+    }
+  }, [foldersW])
+
+  // Agrupar filtered por bucket de data
+  const grouped = useMemo(() => {
+    const map = new Map()
+    filtered.forEach(e => {
+      const b = dateBucket(e.received_at || e.sent_at || e.created_at)
+      if (!map.has(b.key)) map.set(b.key, { ...b, items: [] })
+      map.get(b.key).items.push(e)
+    })
+    return Array.from(map.values()).sort((a, b) => a.order - b.order)
+  }, [filtered])
+
   return (
-    <div style={{ padding: '8px 0 20px', maxWidth: 1500, margin: '0 auto' }}>
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-        <div>
-          <h1 style={{ fontSize: '1.4rem', fontWeight: 700, margin: 0, color: 'var(--text)' }}>Email</h1>
-          <p style={{ fontSize: '0.7rem', color: 'var(--text-dim)', margin: '2px 0 0' }}>
-            {emails.length} emails · sync automático 10 min via Gmail OAuth (p7.digitall@gmail.com)
-          </p>
-        </div>
-        <button
-          onClick={handleSync} disabled={syncing}
-          style={{
-            display: 'inline-flex', alignItems: 'center', gap: 6,
-            padding: '7px 14px', borderRadius: 6,
-            background: 'var(--bg-card)', border: '1px solid var(--border)',
-            color: 'var(--text)', cursor: syncing ? 'wait' : 'pointer', fontSize: 12,
-          }}
-        >
-          <RefreshCw size={12} style={{ animation: syncing ? 'spin 1s linear infinite' : 'none' }} />
-          {syncing ? 'A sincronizar…' : 'Sync agora'}
-        </button>
-      </div>
-
-      {/* Filters principais */}
-      <div style={{ display: 'flex', gap: 6, marginBottom: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-        {[
-          { id: 'awaiting_routing',  label: 'A rever',       count: counts.awaiting_routing,  color: '#f59e0b' },
-          { id: 'awaiting_approval', label: 'Drafts pendentes', count: counts.awaiting_approval, color: '#3b82f6' },
-          { id: 'received',          label: 'Recebido',      count: counts.received },
-          { id: 'all',               label: 'Todos',         count: counts.all },
-          { id: 'inbound',           label: 'Inbound',       count: counts.inbound,  icon: Inbox },
-          { id: 'outbound',          label: 'Enviados',      count: counts.outbound, icon: Send },
-          { id: 'archive',           label: 'Arquivo',       count: counts.archive },
-          { id: 'trash',             label: 'Lixo',          count: counts.trash },
-        ].map(f => (
-          <button
-            key={f.id}
-            onClick={() => { setFilter(f.id); setSelectedId(null) }}
-            style={{
-              padding: '5px 10px', borderRadius: 5,
-              background: filter === f.id ? 'var(--primary)' : 'var(--bg-card)',
-              border: `1px solid ${filter === f.id ? 'var(--primary)' : 'var(--border)'}`,
-              color: filter === f.id ? '#fff' : (f.color || 'var(--text)'),
-              cursor: 'pointer', fontSize: 11, fontWeight: 500,
-              display: 'inline-flex', alignItems: 'center', gap: 5,
-            }}
-          >
-            {f.icon && <f.icon size={11} />}
-            {f.label}
-            <span style={{
-              fontSize: 9, padding: '0 5px', borderRadius: 8,
-              background: filter === f.id ? 'rgba(255,255,255,0.25)' : 'var(--bg-elevated)',
-              fontFamily: 'JetBrains Mono, monospace',
-            }}>{f.count}</span>
-          </button>
-        ))}
-      </div>
-
-      {/* Sub-filtros: agent + vertical + search */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-        <select
-          value={agentFilter}
-          onChange={e => { setAgentFilter(e.target.value); setSelectedId(null) }}
-          style={{
-            padding: '5px 8px', borderRadius: 5,
-            background: 'var(--bg-card)', border: '1px solid var(--border)',
-            color: 'var(--text)', fontSize: 11, cursor: 'pointer', minWidth: 160,
-          }}
-        >
-          <option value="all">Todos os agents</option>
-          {allAgents.map(a => <option key={a} value={a}>{a}</option>)}
-        </select>
-        <select
-          value={verticalFilter}
-          onChange={e => { setVerticalFilter(e.target.value); setSelectedId(null) }}
-          style={{
-            padding: '5px 8px', borderRadius: 5,
-            background: 'var(--bg-card)', border: '1px solid var(--border)',
-            color: 'var(--text)', fontSize: 11, cursor: 'pointer', minWidth: 120,
-          }}
-        >
-          <option value="all">Todas verticais</option>
-          {allVerticals.map(v => <option key={v} value={v}>{v}</option>)}
-        </select>
-        {(agentFilter !== 'all' || verticalFilter !== 'all') && (
-          <button
-            onClick={() => { setAgentFilter('all'); setVerticalFilter('all') }}
-            style={{
-              padding: '4px 8px', borderRadius: 4, fontSize: 10,
-              background: 'transparent', border: '1px solid var(--border)',
-              color: 'var(--text-dim)', cursor: 'pointer',
-            }}
-          >× Limpar</button>
-        )}
+    <div style={{ padding: 0, margin: 0, height: 'calc(100vh - 56px)', display: 'flex', flexDirection: 'column' }}>
+      {/* Top ribbon: header + sync + search */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 12,
+        padding: '10px 16px', borderBottom: '1px solid var(--border)',
+        background: 'var(--bg-card)', flexShrink: 0,
+      }}>
+        <h1 style={{ fontSize: '1.05rem', fontWeight: 700, margin: 0, color: 'var(--text)' }}>Email</h1>
+        <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>
+          {emails.length} · sync 10 min · p7.digitall@gmail.com
+        </span>
+        <div style={{ flex: 1 }} />
         <div style={{
-          marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 6,
-          background: 'var(--bg-card)', border: '1px solid var(--border)',
+          display: 'inline-flex', alignItems: 'center', gap: 6,
+          background: 'var(--bg)', border: '1px solid var(--border)',
           borderRadius: 5, padding: '5px 10px', minWidth: 240,
         }}>
           <Search size={11} color="var(--text-dim)" />
@@ -290,20 +293,146 @@ export default function EmailPage() {
             }}
           />
         </div>
+        <button
+          onClick={handleSync} disabled={syncing}
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+            padding: '6px 12px', borderRadius: 5,
+            background: 'var(--bg)', border: '1px solid var(--border)',
+            color: 'var(--text)', cursor: syncing ? 'wait' : 'pointer', fontSize: 11,
+          }}
+        >
+          <RefreshCw size={11} style={{ animation: syncing ? 'spin 1s linear infinite' : 'none' }} />
+          {syncing ? 'A sincronizar…' : 'Send / Receive'}
+        </button>
       </div>
 
-      {/* Split-pane: lista | preview */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: '380px 1fr',
-        gap: 10,
-        height: 'calc(100vh - 220px)',
-      }}>
-        {/* LEFT — list */}
+      {/* 3-pane Outlook layout */}
+      <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
+
+        {/* ─── PANE 1: Folders sidebar ──────────────────────── */}
         <div style={{
-          background: 'var(--bg-card)', border: '1px solid var(--border)',
-          borderRadius: 8, overflow: 'hidden', display: 'flex', flexDirection: 'column',
+          width: foldersW, flexShrink: 0,
+          background: 'var(--bg-card)', borderRight: '1px solid var(--border)',
+          display: 'flex', flexDirection: 'column', overflow: 'hidden',
         }}>
+          <div style={{ padding: '10px 12px', flex: 1, overflowY: 'auto' }}>
+            <div style={{
+              fontSize: 9, fontWeight: 700, color: 'var(--text-dim)',
+              textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 6,
+              fontFamily: 'JetBrains Mono, monospace', padding: '4px 6px',
+            }}>p7.digitall@gmail.com</div>
+            {[
+              { id: 'awaiting_routing',  label: 'A rever',           count: counts.awaiting_routing,  icon: AlertOctagon, color: '#f59e0b' },
+              { id: 'awaiting_approval', label: 'Drafts pendentes',  count: counts.awaiting_approval, icon: FileText,     color: '#3b82f6' },
+              { id: 'received',          label: 'Caixa de entrada',  count: counts.received,          icon: Inbox },
+              { id: 'all',               label: 'Todos',             count: counts.all,               icon: Mail },
+              { id: 'inbound',           label: 'Recebidos',         count: counts.inbound,           icon: Inbox },
+              { id: 'outbound',          label: 'Enviados',          count: counts.outbound,          icon: Send },
+              { id: 'archive',           label: 'Arquivo',           count: counts.archive,           icon: Archive },
+              { id: 'trash',             label: 'Lixo / Spam',       count: counts.trash,             icon: Trash2 },
+            ].map(f => {
+              const active = filter === f.id
+              const FolderIcon = f.icon || Folder
+              return (
+                <button
+                  key={f.id}
+                  onClick={() => { setFilter(f.id); setSelectedId(null) }}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 8,
+                    width: '100%', textAlign: 'left',
+                    padding: '7px 10px', borderRadius: 4, marginBottom: 1,
+                    background: active ? 'rgba(59,130,246,0.15)' : 'transparent',
+                    border: 'none', cursor: 'pointer',
+                    color: active ? 'var(--text)' : 'var(--text)',
+                    fontSize: 12,
+                    borderLeft: `3px solid ${active ? (f.color || '#3b82f6') : 'transparent'}`,
+                  }}
+                  onMouseEnter={(e) => { if (!active) e.currentTarget.style.background = 'rgba(255,255,255,0.04)' }}
+                  onMouseLeave={(e) => { if (!active) e.currentTarget.style.background = 'transparent' }}
+                >
+                  <FolderIcon size={13} color={f.color || 'var(--text-dim)'} />
+                  <span style={{ flex: 1 }}>{f.label}</span>
+                  {f.count > 0 && (
+                    <span style={{
+                      fontSize: 10, color: active ? 'var(--text)' : 'var(--text-dim)',
+                      fontWeight: active ? 700 : 500,
+                      fontFamily: 'JetBrains Mono, monospace',
+                    }}>{f.count}</span>
+                  )}
+                </button>
+              )
+            })}
+
+            {/* Filters secundários: agent + vertical */}
+            <div style={{ marginTop: 16, padding: '0 6px' }}>
+              <div style={{
+                fontSize: 9, fontWeight: 700, color: 'var(--text-dim)',
+                textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 6,
+                fontFamily: 'JetBrains Mono, monospace',
+              }}>Filtrar</div>
+              <select
+                value={agentFilter}
+                onChange={e => { setAgentFilter(e.target.value); setSelectedId(null) }}
+                style={{
+                  padding: '5px 8px', borderRadius: 4, marginBottom: 5,
+                  background: 'var(--bg)', border: '1px solid var(--border)',
+                  color: 'var(--text)', fontSize: 11, width: '100%',
+                }}
+              >
+                <option value="all">Todos os agents</option>
+                {allAgents.map(a => <option key={a} value={a}>{a}</option>)}
+              </select>
+              <select
+                value={verticalFilter}
+                onChange={e => { setVerticalFilter(e.target.value); setSelectedId(null) }}
+                style={{
+                  padding: '5px 8px', borderRadius: 4,
+                  background: 'var(--bg)', border: '1px solid var(--border)',
+                  color: 'var(--text)', fontSize: 11, width: '100%',
+                }}
+              >
+                <option value="all">Todas verticais</option>
+                {allVerticals.map(v => <option key={v} value={v}>{v}</option>)}
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* Splitter 1: folders / list */}
+        <div
+          onMouseDown={onDragStart('folders')}
+          style={{
+            width: 4, cursor: 'col-resize', flexShrink: 0,
+            background: 'var(--border)', opacity: 0.5,
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.background = 'var(--primary)' }}
+          onMouseLeave={(e) => { e.currentTarget.style.opacity = '0.5'; e.currentTarget.style.background = 'var(--border)' }}
+        />
+
+        {/* ─── PANE 2: Lista (com colunas + agrupamento) ────── */}
+        <div style={{
+          width: listW, flexShrink: 0,
+          background: 'var(--bg-card)', display: 'flex', flexDirection: 'column',
+          overflow: 'hidden',
+        }}>
+          {/* Coluna headers */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: '24px 1fr auto auto',
+            gap: 8, padding: '8px 12px',
+            borderBottom: '1px solid var(--border)',
+            fontSize: 9, fontWeight: 700, color: 'var(--text-dim)',
+            textTransform: 'uppercase', letterSpacing: '0.08em',
+            fontFamily: 'JetBrains Mono, monospace',
+            background: 'var(--bg)',
+          }}>
+            <span></span>
+            <span>From / Subject</span>
+            <span>Received</span>
+            <span style={{ minWidth: 50, textAlign: 'right' }}>Size</span>
+          </div>
+
           {loading ? (
             <div style={{ padding: 30, textAlign: 'center', color: 'var(--text-dim)' }}>A carregar…</div>
           ) : filtered.length === 0 ? (
@@ -313,62 +442,113 @@ export default function EmailPage() {
             </div>
           ) : (
             <div style={{ overflowY: 'auto', flex: 1 }}>
-              {filtered.map(e => {
-                const isSelected = e.id === selectedId
-                const dirMeta = DIRECTION_META[e.direction] || DIRECTION_META.inbound
-                const counterparty = e.direction === 'inbound'
-                  ? (e.from_name || e.from_email || '—')
-                  : (Array.isArray(e.to_emails) ? e.to_emails[0] : (e.to_emails || '—'))
-                const dateRef = e.received_at || e.sent_at || e.created_at
-                return (
-                  <button
-                    key={e.id}
-                    onClick={() => setSelectedId(e.id)}
-                    style={{
-                      width: '100%', textAlign: 'left', cursor: 'pointer',
-                      padding: '10px 12px',
-                      background: isSelected ? 'var(--bg-elevated)' : 'transparent',
-                      border: 'none', borderLeft: `3px solid ${isSelected ? dirMeta.color : 'transparent'}`,
-                      borderBottom: '1px solid var(--border-soft, rgba(255,255,255,0.04))',
-                      display: 'flex', flexDirection: 'column', gap: 3,
-                    }}
-                    onMouseEnter={ev => { if (!isSelected) ev.currentTarget.style.background = 'rgba(255,255,255,0.02)' }}
-                    onMouseLeave={ev => { if (!isSelected) ev.currentTarget.style.background = 'transparent' }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                      <span style={{
-                        padding: '1px 5px', borderRadius: 3,
-                        background: dirMeta.bg, color: dirMeta.color,
-                        fontSize: 8, fontWeight: 700, fontFamily: 'JetBrains Mono, monospace',
-                      }}>{dirMeta.label}</span>
-                      <span style={{
-                        fontSize: 11, fontWeight: 600, color: 'var(--text)',
-                        flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                      }}>{counterparty}</span>
-                      <span style={{ fontSize: 9, color: 'var(--text-dim)', fontFamily: 'JetBrains Mono, monospace' }}>{timeAgo(dateRef)}</span>
-                    </div>
-                    <div style={{
-                      fontSize: 11, color: 'var(--text)', fontWeight: 500,
-                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                    }}>{e.subject || '(sem assunto)'}</div>
-                    <div style={{
-                      fontSize: 10, color: 'var(--text-dim)',
-                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                    }}>{e.body_snippet || (e.body_text || '').slice(0, 80)}</div>
-                    {e.routed_to_agent && (
-                      <div style={{ marginTop: 2 }}><AgentBadge agentId={e.routed_to_agent} /></div>
-                    )}
-                  </button>
-                )
-              })}
+              {grouped.map(g => (
+                <div key={g.key}>
+                  {/* Header do grupo (Outlook style "▼ Friday") */}
+                  <div style={{
+                    display: 'flex', alignItems: 'center', gap: 6,
+                    padding: '6px 12px', background: 'var(--bg)',
+                    borderBottom: '1px solid var(--border)',
+                    position: 'sticky', top: 0, zIndex: 1,
+                  }}>
+                    <ChevronDown size={11} color="var(--text-dim)" />
+                    <span style={{
+                      fontSize: 11, fontWeight: 700, color: 'var(--text)',
+                    }}>{g.label}</span>
+                    <span style={{
+                      fontSize: 9, color: 'var(--text-dim)',
+                      fontFamily: 'JetBrains Mono, monospace', marginLeft: 4,
+                    }}>{g.items.length}</span>
+                  </div>
+
+                  {g.items.map(e => {
+                    const isSelected = e.id === selectedId
+                    const dirMeta = DIRECTION_META[e.direction] || DIRECTION_META.inbound
+                    const counterparty = e.direction === 'inbound'
+                      ? (e.from_name || e.from_email || '—')
+                      : (Array.isArray(e.to_emails) ? e.to_emails[0] : (e.to_emails || '—'))
+                    const dateRef = e.received_at || e.sent_at || e.created_at
+                    const attachments = Array.isArray(e.attachments) ? e.attachments : []
+                    const bodyLen = (e.body_text?.length || 0) + (e.body_html?.length || 0)
+                    return (
+                      <div
+                        key={e.id}
+                        onClick={() => setSelectedId(e.id)}
+                        style={{
+                          display: 'grid',
+                          gridTemplateColumns: '24px 1fr auto auto',
+                          gap: 8, padding: '8px 12px', cursor: 'pointer',
+                          background: isSelected ? 'rgba(59,130,246,0.15)' : 'transparent',
+                          borderLeft: `3px solid ${isSelected ? dirMeta.color : 'transparent'}`,
+                          borderBottom: '1px solid var(--border-soft, rgba(255,255,255,0.04))',
+                          fontSize: 12,
+                        }}
+                        onMouseEnter={ev => { if (!isSelected) ev.currentTarget.style.background = 'rgba(255,255,255,0.03)' }}
+                        onMouseLeave={ev => { if (!isSelected) ev.currentTarget.style.background = 'transparent' }}
+                      >
+                        {/* Icon: paperclip se tem attachments, reply se outbound, senão vazio */}
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          {attachments.length > 0 && <Paperclip size={11} color="var(--text-dim)" />}
+                          {e.direction === 'outbound' && attachments.length === 0 && <Reply size={11} color="#10b981" />}
+                        </div>
+                        {/* From + subject + snippet */}
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{
+                            fontSize: 12, fontWeight: 600, color: 'var(--text)',
+                            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                          }}>{counterparty}</div>
+                          <div style={{
+                            fontSize: 11, color: 'var(--text)', marginTop: 1,
+                            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                          }}>{e.subject || '(sem assunto)'}</div>
+                          {(e.body_snippet || e.body_text) && (
+                            <div style={{
+                              fontSize: 10, color: 'var(--text-dim)', marginTop: 1,
+                              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                            }}>{e.body_snippet || (e.body_text || '').slice(0, 100)}</div>
+                          )}
+                          {e.routed_to_agent && (
+                            <div style={{ marginTop: 3 }}><AgentBadge agentId={e.routed_to_agent} /></div>
+                          )}
+                        </div>
+                        {/* Received */}
+                        <div style={{
+                          fontSize: 10, color: 'var(--text-dim)',
+                          fontFamily: 'JetBrains Mono, monospace',
+                          whiteSpace: 'nowrap', alignSelf: 'flex-start', paddingTop: 1,
+                        }}>{formatDate(dateRef)}</div>
+                        {/* Size */}
+                        <div style={{
+                          fontSize: 10, color: 'var(--text-dim)',
+                          fontFamily: 'JetBrains Mono, monospace',
+                          whiteSpace: 'nowrap', alignSelf: 'flex-start', paddingTop: 1,
+                          minWidth: 50, textAlign: 'right',
+                        }}>{formatBytes(bodyLen)}</div>
+                      </div>
+                    )
+                  })}
+                </div>
+              ))}
             </div>
           )}
         </div>
 
-        {/* RIGHT — preview */}
+        {/* Splitter 2: list / preview */}
+        <div
+          onMouseDown={onDragStart('list')}
+          style={{
+            width: 4, cursor: 'col-resize', flexShrink: 0,
+            background: 'var(--border)', opacity: 0.5,
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.background = 'var(--primary)' }}
+          onMouseLeave={(e) => { e.currentTarget.style.opacity = '0.5'; e.currentTarget.style.background = 'var(--border)' }}
+        />
+
+        {/* ─── PANE 3: Preview ───────────────────────────────── */}
         <div style={{
-          background: 'var(--bg-card)', border: '1px solid var(--border)',
-          borderRadius: 8, overflow: 'hidden', display: 'flex', flexDirection: 'column',
+          flex: 1, minWidth: 320,
+          background: 'var(--bg-card)', overflow: 'hidden',
+          display: 'flex', flexDirection: 'column',
         }}>
           {!selected ? (
             <div style={{
