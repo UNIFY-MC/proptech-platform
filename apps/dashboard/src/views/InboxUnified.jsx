@@ -1,15 +1,14 @@
-// InboxUnified — /inbox em estilo CookAI v2
+// InboxUnified — /inbox em estilo CookAI v2 (Sprint A2 — refactored)
 // Layout: greeting + stats · Daily Roundup card destacado · feed agrupado por dia · AskAnythingBar bottom
 //
-// Replica fielmente CookAI:
-//   - "Welcome back, {primeiro_nome}" + "X messages to see, Y missions complete"
-//   - Daily Roundup card highlighted no topo com check-list de action items
-//   - "All ⌄" filter dropdown + "Configure Feed" button
-//   - Feed: "Today {count}" header + items com author avatar + badge type + age
-//   - Bottom: AskAnythingBar (já existe)
+// Alterações Sprint A2:
+//   - useDailyRoundup hook separado (validação hora >= 08:00 PT)
+//   - Botão "Marcar todos lidos" + "Ver completo" no Roundup
+//   - Cor border Roundup alinhada com mockup (green)
+//   - Tipos discovery/mora_alert/renewal adicionados
 
 import { useState, useMemo, useEffect } from 'react'
-import { Sparkles, Lightbulb, Sliders, X, ChevronDown, History } from 'lucide-react'
+import { Sparkles, Lightbulb, Sliders, X, ChevronDown, History, CheckCheck, ExternalLink } from 'lucide-react'
 import { useInboxItems, useApprovals } from '../hooks/useSupabase'
 import { useInboxReads } from '../hooks/useInboxReads'
 import { useVerticalStore } from '../store'
@@ -17,6 +16,7 @@ import { useApprovalActions } from '../hooks/useApprovalActions'
 import { useUserContext } from '../hooks/useUserContext.js'
 import { useWatcherProfiles } from '../hooks/useWatcherProfiles.js'
 import { useDrawer } from '../context/DrawerContext'
+import { useDailyRoundup } from '../hooks/useDailyRoundup.js'
 import InboxItemDrawer from '../components/inbox/InboxItemDrawer'
 import AskAnythingBar from '../components/inbox/AskAnythingBar.jsx'
 import ExpandableInboxRow from '../components/inbox/ExpandableInboxRow.jsx'
@@ -53,6 +53,9 @@ const TYPE_BADGE = {
   insight:       { bg: '#fde04722', color: '#fde047', label: 'INSIGHT' },
   social_digest: { bg: '#a855f722', color: '#a855f7', label: 'SOCIAL' },
   system:        { bg: '#6b728022', color: '#9ca3af', label: 'SYSTEM' },
+  discovery:     { bg: '#06b6d422', color: '#06b6d4', label: 'DISCOVERY' },
+  mora_alert:    { bg: '#ef444422', color: '#ef4444', label: 'MORA' },
+  renewal:       { bg: '#f59e0b22', color: '#f59e0b', label: 'RENOVAÇÃO' },
 }
 
 function ageLabel(iso) {
@@ -74,9 +77,7 @@ export default function InboxUnified() {
   const [showFilterMenu, setShowFilterMenu] = useState(false)
   const [showConfigureFeed, setShowConfigureFeed] = useState(false)
   const [showHistory, setShowHistory] = useState(false)
-  const [dismissedRoundupIds, setDismissedRoundupIds] = useState(() =>
-    new Set(JSON.parse(localStorage.getItem('cc:dismissed-roundups') ?? '[]'))
-  )
+  const [roundupExpanded, setRoundupExpanded] = useState(false)
 
   const { activeVertical } = useVerticalStore()
   // Multi-tenant: cada vertical é tratada como tenant isolado. 'all' = cross-vertical
@@ -93,6 +94,14 @@ export default function InboxUnified() {
   const [taskModalState, setTaskModalState] = useState(null)  // { kind, item, suggestion }
   const [taskToast, setTaskToast] = useState(null)
 
+  // Daily Roundup via hook dedicado (valida hora >= 08:00)
+  const {
+    roundup: todayRoundup,
+    dismissRoundup,
+    markAllActions,
+    allRoundups,
+  } = useDailyRoundup(inboxItems)
+
   // Auto-dismiss toast 5s
   useEffect(() => {
     if (!taskToast) return
@@ -102,21 +111,6 @@ export default function InboxUnified() {
 
   function handleCreateTask({ kind, item, suggestion }) {
     setTaskModalState({ kind, item, suggestion })
-  }
-
-  // Daily Roundup mais recente (não dismissed)
-  const todayRoundup = useMemo(() => {
-    return inboxItems
-      .filter(i => i.item_type === 'daily_roundup'
-                && isToday(i.created_at)
-                && !dismissedRoundupIds.has(i.id))
-      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0]
-  }, [inboxItems, dismissedRoundupIds])
-
-  function dismissRoundup(id) {
-    const next = new Set([...dismissedRoundupIds, id])
-    setDismissedRoundupIds(next)
-    localStorage.setItem('cc:dismissed-roundups', JSON.stringify([...next]))
   }
 
   // Items unificados (excluindo o roundup destacado para não duplicar)
@@ -254,6 +248,16 @@ export default function InboxUnified() {
         <DailyRoundupCard
           item={todayRoundup}
           onDismiss={() => dismissRoundup(todayRoundup.id)}
+          onMarkAll={(count) => markAllActions(todayRoundup.id, count)}
+          onViewFull={() => setRoundupExpanded(true)}
+        />
+      )}
+
+      {/* Drawer "Ver completo" do roundup */}
+      {roundupExpanded && todayRoundup && (
+        <RoundupFullDrawer
+          item={todayRoundup}
+          onClose={() => setRoundupExpanded(false)}
         />
       )}
 
@@ -311,7 +315,7 @@ export default function InboxUnified() {
       {/* Histórico de roundups */}
       {showHistory && (
         <RoundupHistoryDrawer
-          roundups={inboxItems.filter(i => i.kind === 'roundup' || i.item_type === 'daily_roundup')}
+          roundups={allRoundups}
           onClose={() => setShowHistory(false)}
         />
       )}
@@ -474,8 +478,47 @@ function RoundupAction({ itemId, idx, label }) {
   )
 }
 
+// ─── Roundup Full Drawer ─────────────────────────────────────────────────────
+function RoundupFullDrawer({ item, onClose }) {
+  return (
+    <div onClick={onClose} style={{
+      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)',
+      zIndex: 1200, display: 'flex', justifyContent: 'flex-end',
+    }}>
+      <div onClick={e => e.stopPropagation()} style={{
+        background: 'var(--bg-card)', borderLeft: '1px solid var(--border)',
+        width: 'min(600px, 96vw)', height: '100%',
+        overflowY: 'auto', display: 'flex', flexDirection: 'column',
+      }}>
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 10,
+          padding: '16px 20px', borderBottom: '1px solid var(--border)',
+          position: 'sticky', top: 0, background: 'var(--bg-card)', zIndex: 2,
+        }}>
+          <Sparkles size={16} color="#3fb950" />
+          <span style={{ fontWeight: 700, fontSize: '0.95rem' }}>Daily Roundup completo</span>
+          <button onClick={onClose} style={{
+            marginLeft: 'auto', background: 'none', border: 'none',
+            cursor: 'pointer', color: 'var(--text-dim)', display: 'flex',
+          }}><X size={16} /></button>
+        </div>
+        <div style={{ padding: 24, flex: 1 }}>
+          <DailyRoundupCard item={item} onDismiss={onClose} onMarkAll={() => {}} onViewFull={() => {}} />
+          {/* Body completo sem truncagem */}
+          {item.body && (
+            <div style={{
+              marginTop: 20, fontSize: '0.88rem', lineHeight: 1.7,
+              color: 'var(--text)', whiteSpace: 'pre-wrap',
+            }}>{item.body}</div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ─── Daily Roundup card ──────────────────────────────────────────────────────
-function DailyRoundupCard({ item, onDismiss }) {
+function DailyRoundupCard({ item, onDismiss, onMarkAll, onViewFull }) {
   // Payload novo (daily-roundup v2): executive_summary + top_actions[] + stats
   // Fallback: parse markdown legacy se payload incompleto
   const payload = item.payload || {}
@@ -511,13 +554,14 @@ function DailyRoundupCard({ item, onDismiss }) {
 
   return (
     <div style={{
-      background: 'rgba(83, 74, 183, 0.05)',
-      border: '1px solid rgba(83, 74, 183, 0.25)',
-      borderRadius: 12, padding: '20px 24px',
+      background: 'rgba(63, 185, 80, 0.04)',
+      border: '1px solid rgba(63, 185, 80, 0.3)',
+      borderLeft: '3px solid #3fb950',
+      borderRadius: 8, padding: '16px 20px',
       position: 'relative',
     }}>
       <button onClick={onDismiss} style={{
-        position: 'absolute', top: 12, right: 12,
+        position: 'absolute', top: 10, right: 10,
         background: 'none', border: 'none', cursor: 'pointer',
         color: 'var(--text-dim)', padding: 4,
         display: 'flex', alignItems: 'center',
@@ -530,8 +574,8 @@ function DailyRoundupCard({ item, onDismiss }) {
         display: 'flex', alignItems: 'center', gap: 8,
         marginBottom: 4,
       }}>
-        <Sparkles size={16} color="var(--primary)" />
-        <span style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text)' }}>
+        <Sparkles size={16} color="#3fb950" />
+        <span style={{ fontSize: '0.95rem', fontWeight: 700, color: '#3fb950' }}>
           Daily Roundup
         </span>
       </div>
@@ -588,6 +632,35 @@ function DailyRoundupCard({ item, onDismiss }) {
           </div>
         </div>
       )}
+
+      {/* Footer actions */}
+      <div style={{
+        display: 'flex', gap: 8, marginTop: 14, paddingTop: 12,
+        borderTop: '1px solid rgba(63,185,80,0.15)',
+      }}>
+        {actions.length > 0 && onMarkAll && (
+          <button onClick={() => onMarkAll(actions.length)} style={{
+            display: 'inline-flex', alignItems: 'center', gap: 5,
+            background: 'rgba(63,185,80,0.1)', color: '#3fb950',
+            border: '1px solid rgba(63,185,80,0.3)',
+            padding: '5px 12px', borderRadius: 6, cursor: 'pointer',
+            fontSize: '0.72rem', fontWeight: 600,
+          }}>
+            <CheckCheck size={12} /> Marcar todos feitos
+          </button>
+        )}
+        {onViewFull && (
+          <button onClick={onViewFull} style={{
+            display: 'inline-flex', alignItems: 'center', gap: 5,
+            background: 'var(--bg-elevated)', color: 'var(--text-dim)',
+            border: '1px solid var(--border)',
+            padding: '5px 12px', borderRadius: 6, cursor: 'pointer',
+            fontSize: '0.72rem', fontWeight: 500,
+          }}>
+            <ExternalLink size={11} /> Ver completo
+          </button>
+        )}
+      </div>
     </div>
   )
 }
