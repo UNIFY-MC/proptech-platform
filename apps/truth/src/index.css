@@ -81,3 +81,9 @@ body {
   from { opacity: 0; transform: translateX(20px); }
   to   { opacity: 1; transform: translateX(0); }
 }
+
+/* Discovery nova via Realtime na tabela (slide do topo) */
+@keyframes slideInTop {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}

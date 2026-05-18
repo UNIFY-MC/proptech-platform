@@ -12,6 +12,8 @@ export default function App() {
         <Route path="/" element={<Navigate to="/swarm" replace />} />
         <Route element={<Layout />}>
           <Route path="/swarm" element={<SwarmPage />} />
+          {/* /swarm/discoveries — alias canónico; /discoveries mantém-se por compatibilidade */}
+          <Route path="/swarm/discoveries" element={<DiscoveriesPage />} />
           <Route path="/discoveries" element={<DiscoveriesPage />} />
           <Route path="/niches" element={<NichesPage />} />
           <Route path="/studio" element={<StudioPage />} />

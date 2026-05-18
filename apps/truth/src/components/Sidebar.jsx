@@ -1,15 +1,35 @@
+import { useState, useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { Search, Lightbulb, Target, Megaphone, Activity } from 'lucide-react';
+import { supaSystem } from '../lib/supabase.js';
+
+function useDiscovery24hCount() {
+  const [count, setCount] = useState(null);
+
+  useEffect(() => {
+    const since = new Date(Date.now() - 24 * 3_600_000).toISOString();
+    supaSystem
+      .from('swarm_discoveries')
+      .select('id', { count: 'exact', head: true })
+      .gte('created_at', since)
+      .then(({ count: c }) => {
+        if (c != null) setCount(c);
+      });
+  }, []);
+
+  return count;
+}
 
 const NAV = [
   { to: '/swarm',       label: 'Swarm',       icon: Activity,   accent: '#10b981' },
-  { to: '/discoveries', label: 'Discoveries', icon: Lightbulb,  accent: '#58a6ff' },
+  { to: '/swarm/discoveries', label: 'Discoveries', icon: Lightbulb,  accent: '#58a6ff' },
   { to: '/niches',      label: 'Niches',      icon: Target,     accent: '#d2a8ff' },
   { to: '/studio',      label: 'Ad Studio',   icon: Megaphone,  accent: '#f59e0b' },
 ];
 
 export default function Sidebar() {
   const loc = useLocation();
+  const discoveryCount = useDiscovery24hCount();
 
   return (
     <aside style={{
@@ -38,6 +58,9 @@ export default function Sidebar() {
       <nav style={{ flex: 1, padding: '0 8px' }}>
         {NAV.map(({ to, label, icon: Icon, accent }) => {
           const active = loc.pathname.startsWith(to);
+          const isDiscoveries = to === '/discoveries';
+          const isSwarm = to === '/swarm';
+
           return (
             <NavLink
               key={to}
@@ -63,16 +86,34 @@ export default function Sidebar() {
                 style={{ flexShrink: 0 }}
               />
               {label}
-              {to === '/swarm' && (
+
+              {/* Swarm — live dot */}
+              {isSwarm && (
                 <span style={{
                   marginLeft: 'auto',
-                  width: 6,
-                  height: 6,
+                  width: 6, height: 6,
                   borderRadius: '50%',
                   background: 'var(--green)',
                   animation: 'pulse 2s infinite',
                   flexShrink: 0,
                 }} />
+              )}
+
+              {/* Discoveries — badge count últimas 24h */}
+              {isDiscoveries && discoveryCount != null && discoveryCount > 0 && (
+                <span style={{
+                  marginLeft: 'auto',
+                  background: active ? '#58a6ff' : 'rgba(88,166,255,0.2)',
+                  color: active ? '#000' : '#58a6ff',
+                  borderRadius: 8,
+                  padding: '0 5px',
+                  fontSize: 9,
+                  fontWeight: 700,
+                  fontFamily: 'JetBrains Mono, monospace',
+                  flexShrink: 0,
+                }}>
+                  {discoveryCount > 99 ? '99+' : discoveryCount}
+                </span>
               )}
             </NavLink>
           );
