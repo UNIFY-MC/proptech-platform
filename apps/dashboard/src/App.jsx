@@ -64,6 +64,12 @@ import ApifyActorsPage from './views/ApifyActorsPage.jsx'
 import CompetitorsPage from './views/CompetitorsPage.jsx'
 import StubView from './views/StubView.jsx'
 import { useAppShellStore } from './store'
+// CRM Attio-style — Sprint C1+C2
+import RecordsListPage from './views/crm/RecordsListPage.jsx'
+import RecordDetailPage from './views/crm/RecordDetailPage.jsx'
+import OportunidadesKanban from './views/crm/OportunidadesKanban.jsx'
+import ListsPage from './views/crm/ListsPage.jsx'
+import DedupQueuePage from './views/crm/DedupQueuePage.jsx'
 
 // Detect se a aplicação está embebida dentro de outra (window.parent !== window).
 // Quando assim, renderiza-se sem sidebars (evita recursão visual de app dentro de app).
@@ -176,6 +182,19 @@ export default function App() {
               <Route path="/projects"     element={<ProjectsPage />} />
               <Route path="/tasks"        element={<TasksPage />} />
               <Route path="/tasks/:id"    element={<MissionDetail />} />
+              {/* CRM Attio-style — Sprint C1+C2 */}
+              <Route path="/crm"                    element={<Navigate to="/crm/pessoas" replace />} />
+              <Route path="/crm/pessoas"            element={<RecordsListPage recordType="pessoa" />} />
+              <Route path="/crm/pessoas/:id"        element={<RecordDetailPage recordType="pessoa" />} />
+              <Route path="/crm/empresas"           element={<RecordsListPage recordType="empresa" />} />
+              <Route path="/crm/empresas/:id"       element={<RecordDetailPage recordType="empresa" />} />
+              <Route path="/crm/imoveis"            element={<RecordsListPage recordType="imovel" />} />
+              <Route path="/crm/imoveis/:id"        element={<RecordDetailPage recordType="imovel" />} />
+              <Route path="/crm/condominios"        element={<RecordsListPage recordType="condominio" />} />
+              <Route path="/crm/condominios/:id"    element={<RecordDetailPage recordType="condominio" />} />
+              <Route path="/crm/oportunidades"      element={<OportunidadesKanban />} />
+              <Route path="/crm/listas"             element={<ListsPage />} />
+              <Route path="/crm/dedup"              element={<DedupQueuePage />} />
               {/* Legacy live views */}
               <Route path="/live-inbox"   element={<InboxView />} />
               <Route path="/approvals"    element={<ApprovalsView />} />

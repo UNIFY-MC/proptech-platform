@@ -8,6 +8,7 @@ import {
   TrendingUp, UserPlus, Target, Zap,
   Plug2, Settings as SettingsIcon,
   Monitor, Calendar, AtSign, Mail,
+  ContactRound, List, GitMerge,
 } from 'lucide-react'
 import { useVerticalStore, useAppShellStore } from '../store'
 import { useInboxItems } from '../hooks/useSupabase'
@@ -16,6 +17,8 @@ import { useData } from '../hooks/useData.js'
 import SidebarGroup from './SidebarGroup.jsx'
 import ActiveAgentsWidget from './ActiveAgentsWidget.jsx'
 import { countByDept } from '../lib/departments.js'
+import { useRecordCount } from '../hooks/useRecordCount.js'
+import { useDedupCount } from '../hooks/useDedupQueue.js'
 
 const IC = ({ icon: Icon }) => (
   <Icon size={15} style={{ color: 'var(--text-dim)', flexShrink: 0, marginRight: 8 }} />
@@ -43,6 +46,16 @@ function NavItem({ to, label, icon, badge, end, accent }) {
   )
 }
 
+// Hook CRM counts para sidebar
+function useCRMCounts() {
+  const { count: pessoasCount }      = useRecordCount('pessoa')
+  const { count: empresasCount }     = useRecordCount('empresa')
+  const { count: imoveisCount }      = useRecordCount('imovel')
+  const { count: condominiosCount }  = useRecordCount('condominio')
+  const { count: oportunidadesCount }= useRecordCount('oportunidade')
+  return { pessoasCount, empresasCount, imoveisCount, condominiosCount, oportunidadesCount }
+}
+
 export default function Sidebar() {
   const { activeVertical, setVertical } = useVerticalStore()
   const { activeAppSlug, sidebarCollapsed, toggleSidebar } = useAppShellStore()
@@ -50,6 +63,8 @@ export default function Sidebar() {
   const { items } = useInboxItems(activeVertical)
   const { readSet } = useInboxReads()
   const { data } = useData()
+  const { pessoasCount, empresasCount, imoveisCount, condominiosCount, oportunidadesCount } = useCRMCounts()
+  const { count: dedupCount } = useDedupCount()
 
   // Em app embedded, esconde sidebar do dashboard
   if (!isDashboardMode) return null
@@ -114,6 +129,17 @@ export default function Sidebar() {
           <NavItem to="/tasks"       label="Tasks"       icon={CheckSquare} />
           <NavItem to="/influencers" label="Influencers" icon={AtSign} />
           <NavItem to="/files"       label="Files"       icon={Folder} />
+        </SidebarGroup>
+
+        {/* CRM Attio-style — grupo em purple */}
+        <SidebarGroup id="crm" label="CRM" accent="var(--purple)">
+          <NavItem to="/crm/pessoas"       label="Pessoas"       icon={ContactRound} badge={pessoasCount} accent="var(--purple)" />
+          <NavItem to="/crm/empresas"      label="Empresas"      icon={Building2}    badge={empresasCount} />
+          <NavItem to="/crm/imoveis"       label="Imóveis"       icon={Building2}    badge={imoveisCount} />
+          <NavItem to="/crm/condominios"   label="Condomínios"   icon={Building2}    badge={condominiosCount} />
+          <NavItem to="/crm/oportunidades" label="Oportunidades" icon={Target}       badge={oportunidadesCount} />
+          <NavItem to="/crm/listas"        label="Listas"        icon={List} />
+          <NavItem to="/crm/dedup"         label="Dedup queue"   icon={GitMerge}     badge={dedupCount} />
         </SidebarGroup>
 
         <SidebarGroup id="growth" label="Growth">
