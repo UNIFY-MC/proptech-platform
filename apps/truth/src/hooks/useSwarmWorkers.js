@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { supaSystem } from '../lib/supabase.js';
 
 export function useSwarmWorkers() {
@@ -6,24 +6,23 @@ export function useSwarmWorkers() {
   const [loading, setLoading] = useState(true);
   const channelRef = useRef(null);
 
-  async function fetchWorkers() {
+  const fetchWorkers = useCallback(async () => {
     const { data, error } = await supaSystem
       .from('swarm_workers')
       .select('*')
-      .order('worker_id', { ascending: true });
+      .order('id', { ascending: true });
 
     if (!error && data) {
       setWorkers(data);
     }
     setLoading(false);
-  }
+  }, []);
 
   useEffect(() => {
     fetchWorkers();
 
-    // Realtime subscribe a alterações em swarm_workers
     channelRef.current = supaSystem
-      .channel('truth-swarm-workers')
+      .channel('truth-swarm-workers-v2')
       .on('postgres_changes', {
         event: '*',
         schema: 'system',
@@ -31,10 +30,12 @@ export function useSwarmWorkers() {
       }, (payload) => {
         setWorkers(prev => {
           if (payload.eventType === 'INSERT') {
-            return [...prev, payload.new];
+            return [...prev, payload.new].sort((a, b) => a.id.localeCompare(b.id));
           }
           if (payload.eventType === 'UPDATE') {
-            return prev.map(w => w.id === payload.new.id ? payload.new : w);
+            return prev.map(w =>
+              w.id === payload.new.id ? { ...payload.new, _updatedAt: Date.now() } : w
+            );
           }
           if (payload.eventType === 'DELETE') {
             return prev.filter(w => w.id !== payload.old.id);
@@ -49,7 +50,7 @@ export function useSwarmWorkers() {
         supaSystem.removeChannel(channelRef.current);
       }
     };
-  }, []);
+  }, [fetchWorkers]);
 
-  return { workers, loading };
+  return { workers, loading, refresh: fetchWorkers };
 }

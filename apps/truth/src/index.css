@@ -68,3 +68,16 @@ body {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
+
+/* Mobile: grid colapsa para 2 cols, feed fica abaixo */
+@media (max-width: 900px) {
+  .swarm-main-layout { grid-template-columns: 1fr !important; }
+  .worker-grid { grid-template-columns: repeat(2, 1fr) !important; }
+  .kpi-strip-grid { grid-template-columns: repeat(2, 1fr) !important; }
+}
+
+/* Discovery slide-in via Realtime */
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(20px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
