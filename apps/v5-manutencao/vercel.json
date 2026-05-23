@@ -1,0 +1,7 @@
+{
+  "framework": "vite",
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "installCommand": "cd ../.. && pnpm install --filter v5-manutencao...",
+  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+}

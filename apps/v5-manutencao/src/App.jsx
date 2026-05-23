@@ -1,6 +1,7 @@
 // src/App.jsx — v5-manutencao 2026.0422 (catálogo canalização + personalizado)
 
 import React, { useState, useMemo, useEffect, useRef } from 'react'
+import { Routes, Route, useNavigate, useLocation, useParams, Navigate } from 'react-router-dom'
 import CWishlist from './CWishlist'
 // @deprecated 3.4A · usar useAuth().pessoa_id
 import { DEMO_PESSOA_ID, DEMO_ORGANIZATION_ID } from './lib/demo.js'
@@ -10329,28 +10330,117 @@ function LoadingScreen() {
   )
 }
 
+// AuthRouter — agora URL-based (Story 019.9 AC-2).
+// Mantém-se compatível com a API onNavigate({screen, params}) que os screens existentes usam
+// — internamente faz navigate() para a route correspondente.
 function AuthRouter({ onDemoLogin, onDemoAuth }) {
-  const [authScreen, setAuthScreen] = React.useState('login')
+  const navigate = useNavigate()
+  const location = useLocation()
   const [authParams, setAuthParams] = React.useState({})
 
+  // API compat: onNavigate('signup'|'recover_password'|...) → navigate('/auth/...')
   const onNavigate = (screen, params = {}) => {
-    setAuthScreen(screen)
     setAuthParams(params)
+    const map = {
+      login:                 '/auth/login',
+      signup:                '/auth/signup',
+      recover_password:      '/auth/recover-password',
+      confirm_email_pending: '/auth/confirm-email-pending',
+      confirm_email:         '/auth/confirm-email',
+      reset_password:        '/auth/reset-password',
+    }
+    navigate(map[screen] || '/auth/login')
   }
 
-  switch (authScreen) {
-    case 'signup':               return <SignupScreen onNavigate={onNavigate}/>
-    case 'recover_password':     return <RecoverPasswordScreen onNavigate={onNavigate}/>
-    case 'confirm_email_pending': return <ConfirmEmailPendingScreen onNavigate={onNavigate} params={authParams}/>
-    case 'confirm_email':        return <ConfirmEmailScreen onNavigate={onNavigate}/>
-    case 'reset_password':       return <ResetPasswordScreen onNavigate={onNavigate}/>
-    default: return <LoginScreen onNavigate={onNavigate} onDemoLogin={onDemoLogin} onDemoAuth={onDemoAuth}/>
-  }
+  // Auth routes — cada path mapeia a um screen existente, sem refactor.
+  return (
+    <Routes>
+      <Route path="/auth/login"                 element={<LoginScreen onNavigate={onNavigate} onDemoLogin={onDemoLogin} onDemoAuth={onDemoAuth}/>} />
+      <Route path="/auth/signup"                element={<SignupScreen onNavigate={onNavigate}/>} />
+      <Route path="/auth/recover-password"      element={<RecoverPasswordScreen onNavigate={onNavigate}/>} />
+      <Route path="/auth/confirm-email-pending" element={<ConfirmEmailPendingScreen onNavigate={onNavigate} params={authParams}/>} />
+      <Route path="/auth/confirm-email"         element={<ConfirmEmailScreen onNavigate={onNavigate}/>} />
+      <Route path="/auth/reset-password"        element={<ResetPasswordScreen onNavigate={onNavigate}/>} />
+      {/* Fallback: qualquer URL não-auth quando não autenticado redirecciona ao login.
+          Excepção: paths /r/join/* são geridos antes do AuthRouter no App. */}
+      <Route path="*"                           element={<Navigate to="/auth/login" replace state={{ from: location }}/>} />
+    </Routes>
+  )
 }
 
 /* ══════════════════════════════════
-   ROOT
+   NOT FOUND (Story 019.9 AC-2 — /404 fallback)
 ══════════════════════════════════ */
+function NotFoundScreen() {
+  const navigate = useNavigate()
+  return (
+    <div style={{ minHeight:'100vh', padding:'48px 24px', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', textAlign:'center', background:'#f8fafc' }}>
+      <div style={{ fontSize:64, fontWeight:800, color:'#0B3D2E', marginBottom:8 }}>404</div>
+      <h1 style={{ fontFamily:'Fraunces, serif', fontSize:24, fontWeight:600, color:'#0A1620', margin:'0 0 12px' }}>Página não encontrada</h1>
+      <p style={{ fontSize:14, color:'#6B7685', maxWidth:320, marginBottom:24 }}>O endereço que tentou abrir não existe. Pode ter sido um link partilhado já desactualizado.</p>
+      <button
+        onClick={() => navigate('/')}
+        style={{ padding:'12px 24px', borderRadius:8, background:'#0B3D2E', color:'#fff', border:'none', fontSize:14, fontWeight:600, cursor:'pointer' }}
+      >
+        Voltar ao início
+      </button>
+    </div>
+  )
+}
+
+/* ══════════════════════════════════
+   URL ↔ STATE BRIDGE (Story 019.9 AC-1/AC-2/AC-5/AC-6)
+══════════════════════════════════
+   V5 mantém o seu state machine interno (tab + ecra + selNav) por respeito à regra
+   "single-file App.jsx" em apps/v5-manutencao/CLAUDE.md. Em vez de refactorizar
+   1000+ callsites para useNavigate(), introduzimos uma camada de bridge que:
+
+   1) URL → state: quando o utilizador escreve /catalogo ou faz back, mapeamos para tab/ecra
+   2) state → URL: quando tab/ecra muda internamente (via setTab/setEcra), espelhamos no URL
+
+   Routes URL canónicas (AC-2):
+     /                 → tab=inicio, ecra=home   (IniciaScreen)
+     /catalogo         → tab=servicos, ecra=home (ServicosScreen)
+     /ordens           → tab=pedidos, ecra=home  (PedidosScreen)
+     /ordens/:id       → tab=pedidos, ecra=ordem (COrdem)
+     /casa             → tab=casa, ecra=home     (CasaScreen)
+     /missoes          → ecra=missoes_semana
+     /perfil           → tab=perfil, ecra=home   (CPerfil)
+     /auth/*           → AuthRouter
+     /auth/onboarding  → OnboardingWizardScreen
+     /404              → NotFoundScreen
+     /e/:ecra          → ecra=:ecra (escape hatch para screens secundários, internas)
+     /r/join/:token    → PrestadorOnboardingFlow (já existia, magic link)
+
+   Sub-fluxos como catScreen (booking wizard) e casaSub (sub-secções) mantêm-se in-state
+   (AC-4: modais/wizards não viram routes a menos que sejam config flows independentes).
+*/
+
+// Mapping helpers — fonte única de verdade entre URL e state interno (tab+ecra)
+const URL_TO_STATE = {
+  '/':         { tab: 'inicio',   ecra: 'home' },
+  '/catalogo': { tab: 'servicos', ecra: 'home' },
+  '/ordens':   { tab: 'pedidos',  ecra: 'home' },
+  '/casa':     { tab: 'casa',     ecra: 'home' },
+  '/perfil':   { tab: 'perfil',   ecra: 'home' },
+  '/missoes':  { tab: 'inicio',   ecra: 'missoes_semana' },
+}
+
+// Reverse map — usado pelo state→URL para escolher a URL canónica para um (tab, ecra) dado
+function stateToUrl(tab, ecra, sel) {
+  if (ecra === 'home') {
+    if (tab === 'inicio')   return '/'
+    if (tab === 'servicos') return '/catalogo'
+    if (tab === 'pedidos')  return '/ordens'
+    if (tab === 'casa')     return '/casa'
+    if (tab === 'perfil')   return '/perfil'
+  }
+  if (ecra === 'ordem' && sel?.id)   return `/ordens/${sel.id}`
+  if (ecra === 'missoes_semana')      return '/missoes'
+  // Escape hatch para outros ecrãs: /e/<ecra-name> (não-bookmarkável mas browser-back-friendly)
+  return `/e/${ecra}`
+}
+
 export default function App() {
   // ── Magic link detection — Sprint 1D Receipt Trojan Horse ────────────────
   // Lido antes de qualquer hook (é uma const estática, não um hook).
@@ -10391,6 +10481,11 @@ export default function App() {
     }
   }, [pessoa?.nome]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // ── Routing (Story 019.9) ──────────────────────────────────
+  // BrowserRouter está em main.jsx; useNavigate/useLocation aqui.
+  const navigate = useNavigate()
+  const location = useLocation()
+
   const [tab,     setTab]    = useState('inicio')
   const [prevTab, setPrevTab] = useState('inicio')
   const [ecra,    setEcra]   = useState('home')
@@ -10399,6 +10494,61 @@ export default function App() {
   const [selAlerta,setSelAlerta]= useState(null)
   const [svcNova,  setSvcNova]  = useState(null)
   const [notifsNaoLidas, setNotifsNaoLidas] = useState(0)
+
+  // ── URL → state bridge (Story 019.9 AC-1/AC-5/AC-6) ──────────
+  // Quando o utilizador escreve /catalogo, faz browser-back, ou abre um deep link,
+  // mapeamos a URL → (tab, ecra). Sem este efeito, browser-back não actualiza UI.
+  useEffect(() => {
+    const path = location.pathname
+    // Auth paths e magic link são geridos antes — não tocar
+    if (path.startsWith('/auth') || path.startsWith('/r/join') || path === '/404') return
+
+    // Match exacto na tabela canónica
+    if (URL_TO_STATE[path]) {
+      const s = URL_TO_STATE[path]
+      if (s.tab  !== tab)  setTab(s.tab)
+      if (s.ecra !== ecra) setEcra(s.ecra)
+      return
+    }
+    // /ordens/:id → ecra=ordem
+    const mOrdem = path.match(/^\/ordens\/([^/]+)$/)
+    if (mOrdem) {
+      const id = mOrdem[1]
+      if (tab !== 'pedidos') setTab('pedidos')
+      if (ecra !== 'ordem')  setEcra('ordem')
+      // sel pode estar vazio se for deep link directo — tentamos achar na lista carregada
+      if (!sel || String(sel.id) !== id) {
+        const found = (ordens || []).find(o => String(o.id) === id)
+        if (found) setSel(found)
+      }
+      return
+    }
+    // /e/:ecra → escape hatch para ecrãs secundários
+    const mEcra = path.match(/^\/e\/([a-z_]+)$/)
+    if (mEcra && mEcra[1] !== ecra) {
+      setEcra(mEcra[1])
+      return
+    }
+  }, [location.pathname, ordens]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── state → URL bridge ──────────────────────────────────────
+  // Quando tab/ecra mudam internamente (via setTab/setEcra em handlers existentes),
+  // espelhamos no URL. A flag _syncing evita loops infinitos.
+  const _syncingRef = useRef(false)
+  useEffect(() => {
+    if (_syncingRef.current) { _syncingRef.current = false; return }
+    // Só sincronizamos quando estamos em modo cliente autenticado — admin/prestador/gestor têm o seu próprio routing.
+    // Auth/onboarding/magic link também não precisam de bridge state→URL.
+    if (!authenticated) return
+    const path = location.pathname
+    if (path.startsWith('/auth') || path.startsWith('/r/join') || path === '/404') return
+
+    const desired = stateToUrl(tab, ecra, sel)
+    if (desired !== path) {
+      _syncingRef.current = true
+      navigate(desired, { replace: false })
+    }
+  }, [tab, ecra, sel?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const pessoaId = authPessoaId || DEMO_PESSOA_ID
@@ -10825,12 +10975,30 @@ export default function App() {
     return <PrestadorOnboardingFlow token={magicLinkToken} />
   }
 
-  // ── Routing de auth ──────────────────────────────────────
+  // ── Routing de auth (Story 019.9 — agora URL-aware) ────────────────────
   if (authLoading) return <LoadingScreen/>
   if (!authUser && !authenticated) return <AuthRouter onDemoLogin={demoLogin} onDemoAuth={onAuth}/>
   // 3.4B: Onboarding bloqueante — sem skip, só RPC G1 desbloqueia
-  if (authenticated && needsOnboarding) return <OnboardingWizardScreen user={session.user} onComplete={refreshPessoa}/>
+  // AC-2: route canónica é /auth/onboarding
+  if (authenticated && needsOnboarding) {
+    return (
+      <Routes>
+        <Route path="/auth/onboarding" element={<OnboardingWizardScreen user={session.user} onComplete={refreshPessoa}/>} />
+        <Route path="*"                element={<Navigate to="/auth/onboarding" replace/>} />
+      </Routes>
+    )
+  }
   if (authenticated && !authUser) return <LoadingScreen/>
+
+  // AC-3: se autenticado e URL ainda aponta a /auth/* → redirige para /
+  if (authenticated && location.pathname.startsWith('/auth')) {
+    return <Navigate to="/" replace/>
+  }
+
+  // AC-2: rota dedicada /404 (NotFoundScreen)
+  if (location.pathname === '/404') {
+    return <NotFoundScreen/>
+  }
 
   const hideRole = ecra==='carteira' || role==='admin' || (role==='cliente' && catScreen !== null)
   const cliOver  = ['nova','ordem','chat_c','chat_ordem_c','score_detail','alerta_detail','owners_club','chat_prestador',
