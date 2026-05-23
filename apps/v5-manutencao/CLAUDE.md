@@ -70,11 +70,51 @@ Não esperar pelo fim do projecto. Cada commit que muda padrão estrutural deve 
 
 - **React 18** com Vite 5
 - **Supabase** para auth + BD + storage
-- **Single-file App.jsx** — `src/App.jsx` contém toda a lógica (>3000 linhas). Isto é intencional para facilitar leitura contextual; não refactorizar para múltiplos ficheiros sem pedido explícito.
-- **Sem router externo** — o routing é feito por state (`ecra`, `role`, etc.) dentro do `App`.
+- **Single-file App.jsx** — `src/App.jsx` contém toda a lógica (>11.000 linhas). Isto é intencional para facilitar leitura contextual; não refactorizar para múltiplos ficheiros sem pedido explícito.
+- **Routing**: **React Router v6** (BrowserRouter em `src/main.jsx`) acoplado ao state machine interno via **URL ↔ state bridge** (Story 019.9, 2026-05-23). Ver "Convenção de routing" abaixo.
 - **Estilos inline** — usa `style={{...}}` com uma constante `C = {...}` no topo como design tokens. Não usar Tailwind.
 - **Fontes**: Fraunces (display, serif) + Outfit (body, sans) via Google Fonts.
 - **Ícones**: lucide-react.
+
+### Convenção de routing (Story 019.9)
+
+V5 usa React Router v6 mas mantém o seu state machine interno (`tab`, `ecra`, `selNav`) por respeito à regra "single-file App.jsx". O routing é uma camada de bridge, não um rewrite.
+
+**Routes canónicas:**
+
+| URL | Significado |
+|---|---|
+| `/` | Home (tab=inicio + IniciaScreen) |
+| `/catalogo` | Catálogo de serviços (tab=servicos + ServicosScreen) |
+| `/ordens` | Lista de ordens (tab=pedidos + PedidosScreen) |
+| `/ordens/:id` | Detalhe de uma ordem específica (sel.id deep-linkable) |
+| `/casa` | Casa/equipamentos (tab=casa + CasaScreen) |
+| `/missoes` | Missões/gamification (ecra=missoes_semana) |
+| `/perfil` | Perfil utilizador (tab=perfil) |
+| `/auth/login`, `/auth/signup`, `/auth/recover-password`, `/auth/reset-password`, `/auth/confirm-email`, `/auth/confirm-email-pending` | AuthRouter |
+| `/auth/onboarding` | OnboardingWizardScreen (bloqueante para utilizadores em pre-onboarding) |
+| `/r/join/:token` | Magic link prestador (já existia, mantido) |
+| `/e/<ecra>` | Escape hatch para ecrãs secundários (ex: `/e/score_detail`, `/e/notificacoes`). Não bookmarkáveis mas browser-back-friendly. |
+| `/404` | NotFoundScreen |
+
+**Regra modais vs routes:**
+
+| Tipo | Decisão | Exemplos |
+|------|---------|----------|
+| **Sheets/Drawers UI in-place** | Mantêm-se modais — **não viram routes** | PerfilSheet, PerfilDrawer, ImovelSelectorSheet, OrgLocBottomSheet, FabPickerModal, SubscricaoScreen |
+| **Wizards multi-step in-flow** | Mantêm-se in-state (catScreen, casaSub) — **não viram routes** | Catálogo wizard (list→variant→detail→checkout→done), Casa sub-secções (docs/energia/camera/aiexpert/locais) |
+| **Config flows que devem ser bookmarkáveis** | Viram routes (ex: `/ordens/:id/editar` no futuro) — alinhado com [[feedback_config_flows_full_page]] |
+
+**Como navegar (continuar a usar callbacks existentes):**
+
+O state→URL bridge sincroniza automaticamente. Continua a usar `setTab(...)` e `setEcra(...)` nos handlers existentes — a URL é actualizada via `navigate()` no `useEffect`. Para deep links manuais, usa `navigate('/catalogo')` directamente.
+
+**Browser back e deep linking:**
+
+- Browser back funciona — o URL→state bridge actualiza `tab`/`ecra` ao detectar mudança de `location.pathname`
+- Deep links funcionam — `/ordens/123` em separador novo abre directamente (após auth, se necessário)
+- URLs desconhecidos redirigem a `/404`
+- SPA fallback configurado em `vercel.json` (Vercel) e `public/_redirects` (Netlify)
 
 ### SMTP (DEV — 3.4D)
 
