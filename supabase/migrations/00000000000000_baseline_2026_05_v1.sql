@@ -1,0 +1,49 @@
+-- =============================================================
+-- Migration: 00000000000000_baseline_2026_05_v1
+-- Story: 019.4 (debt DB-003)
+-- Author: PLACEHOLDER — to be populated by `scripts/db/baseline-dump-v1.ps1`
+-- Date: 2026-05-23
+-- Scope: Schema-only snapshot of V1 Core Hub (hkmvszkpxjbxmnixzqbl)
+-- Reversible: no (this is a sentinel — never executed)
+-- Idempotent: n/a (do not run)
+--
+-- CRITICAL: Do NOT execute this file. It represents the state of V1
+-- as of 2026-05-23 ONCE THE DUMP IS POPULATED. It must be registered as
+-- already-applied in supabase_migrations.schema_migrations following the
+-- procedure in docs/database/baseline-mark-as-applied.md.
+--
+-- =============================================================
+-- STATUS: PLACEHOLDER (not yet populated)
+-- =============================================================
+--
+-- This file is intentionally empty (apart from this header). To populate it:
+--
+--   1. Ensure Supabase CLI is installed and authenticated:
+--      supabase --version
+--      supabase login
+--
+--   2. Link to the V1 project (will prompt for DB password):
+--      supabase link --project-ref hkmvszkpxjbxmnixzqbl
+--
+--   3. Run the dump script from the repo root:
+--      .\scripts\db\baseline-dump-v1.ps1
+--      (or, on bash:   ./scripts/db/baseline-dump-v1.sh)
+--
+--   4. Inspect this file — should now contain CREATE SCHEMA, CREATE TABLE,
+--      CREATE INDEX, CREATE POLICY, CREATE FUNCTION statements covering all
+--      custom schemas of V1.
+--
+--   5. Follow docs/database/baseline-mark-as-applied.md to register this
+--      baseline in supabase_migrations.schema_migrations.
+--
+--   6. Commit: git commit -m "feat(db): baseline V1 dump [Story 019.4]"
+--
+-- Schemas to be included by the dump:
+--   public, core, iam, system, growth, marketing,
+--   v2_condominios, v3_seguros, v4_energia, v5_manutencao,
+--   v1_owners_club, v10_owners_club
+--
+-- If a schema does not exist in the BD yet, pg_dump skips it silently.
+-- =============================================================
+
+-- Intentionally no executable SQL below this line.
