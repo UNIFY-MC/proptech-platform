@@ -10523,13 +10523,17 @@ export default function App() {
       }
       return
     }
-    // /e/:ecra → escape hatch para ecrãs secundários
+    // /e/:ecra → escape hatch para ecrãs secundários (ecras conhecidos do state machine V5)
     const mEcra = path.match(/^\/e\/([a-z_]+)$/)
-    if (mEcra && mEcra[1] !== ecra) {
-      setEcra(mEcra[1])
+    if (mEcra) {
+      if (mEcra[1] !== ecra) setEcra(mEcra[1])
       return
     }
-  }, [location.pathname, ordens]) // eslint-disable-line react-hooks/exhaustive-deps
+    // Path desconhecido — não matches nenhum padrão conhecido → redirige a /404 (AC-2)
+    if (authenticated && path !== '/404') {
+      navigate('/404', { replace: true })
+    }
+  }, [location.pathname, ordens, authenticated]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── state → URL bridge ──────────────────────────────────────
   // Quando tab/ecra mudam internamente (via setTab/setEcra em handlers existentes),
