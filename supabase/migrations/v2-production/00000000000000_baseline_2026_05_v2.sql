@@ -1,0 +1,37 @@
+-- =============================================================
+-- Migration: 00000000000000_baseline_2026_05_v2
+-- Story: 019.4 (debt DB-003) — AC-6
+-- Author: PLACEHOLDER — to be populated by `scripts/db/baseline-dump-v2.ps1`
+-- Date: 2026-05-23
+-- Scope: Schema-only READ-ONLY snapshot of V2 Condo Hub PRODUÇÃO (eozklslwfaqujaijvdnl)
+-- Reversible: no — this file is reference only
+-- Idempotent: n/a — DO NOT RUN
+--
+-- =============================================================
+-- READ-ONLY BASELINE — DO NOT APPLY — STATUS: PLACEHOLDER
+-- =============================================================
+--
+-- Este ficheiro está intencionalmente vazio até ser populado.
+--
+-- V2 é produção viva: `eozklslwfaqujaijvdnl`. Tem ~5000 linhas reais.
+--
+-- Para popular:
+--   1. Mário aprova explicitamente (não correr sem aprovação)
+--   2. supabase login
+--   3. supabase link --project-ref eozklslwfaqujaijvdnl
+--      (pode pedir password V2 — vir do dashboard Supabase V2)
+--   4. .\scripts\db\baseline-dump-v2.ps1
+--      (vai pedir confirmação "Sim, snapshot read-only V2")
+--   5. Inspeccionar resultado — deve ter CREATE TABLE para condominos,
+--      fracoes, recebimentos, extrato_bancario, etc.
+--   6. supabase_migrations.schema_migrations de V2 NÃO é tocado por
+--      este procedimento — V2 fica intocado.
+--
+-- Para que serve este ficheiro:
+--   - Documentar o estado de V2 num ponto fixo no tempo (2026-05-23).
+--   - Comparar mudanças futuras com a baseline.
+--   - Base de discussão para futura migração V2 a forward-only.
+--
+-- NUNCA aplicar este ficheiro. Não fazer `supabase db push` numa
+-- branch que tenha V2 ficheiros sem aprovação Mário.
+-- =============================================================
