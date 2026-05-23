@@ -8,27 +8,27 @@
 
 ## 1. Estado actual
 
-- **Local:** 45 ficheiros em `supabase/migrations/` (não 47 como o spawn prompt mencionava — confirmado por `ls supabase/migrations | wc -l`).
+- **Local:** 46 ficheiros em `supabase/migrations/` (não 47 como o spawn prompt mencionava — confirmado por `ls supabase/migrations | wc -l`). Corrigido em QA gate 019.4: contagem original errada para 45 — `20260512_v4_ocr_facturas.sql` em falta na classificação BASELINE V1.
 - **Remoto V1:** 215+ migrations registadas em `supabase_migrations.schema_migrations` (segundo DB-AUDIT 2026-05-05).
-- **Naming gap:** Todos os 45 ficheiros locais usam formato `YYYYMMDD_*.sql` (8 dígitos). O Supabase standard é `YYYYMMDDHHMMSS_*.sql` (14 dígitos). **Nenhum ficheiro local corresponde directamente a um version no registo remoto.**
+- **Naming gap:** Todos os 46 ficheiros locais usam formato `YYYYMMDD_*.sql` (8 dígitos). O Supabase standard é `YYYYMMDDHHMMSS_*.sql` (14 dígitos). **Nenhum ficheiro local corresponde directamente a um version no registo remoto.**
 - **Origem do drift:** Trabalho aplicado entre 2026-04-12 (criação do projecto V1) e 2026-05-15 maioritariamente via SQL Editor / MCP `apply_migration`. Ficheiros locais foram criados retroactivamente como "registo histórico" (ver primeira linha de `20260504_system_grants_anon_authenticated.sql`).
 
 ---
 
 ## 2. Estratégia de classificação
 
-Cada um dos 45 ficheiros locais é classificado em uma destas 4 categorias:
+Cada um dos 46 ficheiros locais é classificado em uma destas 4 categorias:
 
 | Classificação | Significado | Acção |
 |---------------|-------------|-------|
 | **BASELINE** | Conteúdo já presente no `00000000000000_baseline_2026_05_v1.sql` (porque já está na BD) | Manter ficheiro como histórico no repo; **NÃO** registar em `schema_migrations` (o baseline cobre). Considerar mover para `supabase/migrations/_archive-pre-baseline/` numa story futura. |
-| **RENAME** | Versão remota correspondente identificável; renomear local para 14 dígitos | Em principio inaplicável aqui porque os 45 ficheiros têm conteúdo idêntico ao que já correu — todos caem em BASELINE. Categoria fica documentada para futuros casos. |
+| **RENAME** | Versão remota correspondente identificável; renomear local para 14 dígitos | Em principio inaplicável aqui porque os 46 ficheiros têm conteúdo idêntico ao que já correu — todos caem em BASELINE. Categoria fica documentada para futuros casos. |
 | **INSERT_MANUAL** | Divergência: o ficheiro tem mudança real não capturada no baseline | Aplicar via SQL Editor + INSERT manual em `schema_migrations`. Caso raro. |
 | **V2_ONLY** | Ficheiro destinado à BD V2 produção, não V1 | Mover para `supabase/migrations/v2-production/`. Aplicar separadamente após aprovação Mário. |
 
 ---
 
-## 3. Classificação dos 45 ficheiros
+## 3. Classificação dos 46 ficheiros
 
 ### 3.1 V2-ONLY — mover para `supabase/migrations/v2-production/` (12 ficheiros)
 
@@ -118,12 +118,12 @@ Inaplicável — todos os ficheiros locais correspondem a estado já reflectido 
 
 | Categoria | Contagem |
 |-----------|----------|
-| Local files total | 45 |
-| BASELINE (cobertos pelo `00000000000000_baseline_2026_05_v1.sql`) | 34 |
+| Local files total | 46 |
+| BASELINE (cobertos pelo `00000000000000_baseline_2026_05_v1.sql`) | 35 |
 | V2_ONLY (mover para `v2-production/`) | 11 |
 | RENAME | 0 |
 | INSERT_MANUAL | 0 |
-| **Soma** | **45** ✓ |
+| **Soma** | **46** ✓ |
 
 | Categoria remota | Contagem estimada |
 |-------------------|-------------------|
@@ -131,7 +131,7 @@ Inaplicável — todos os ficheiros locais correspondem a estado já reflectido 
 | Baseline (`00000000000000_baseline_2026_05_v1`) a inserir | 1 |
 | Após baseline marcado, total efectivo | 216+ |
 
-A diferença `215 remotas − 45 locais = 170 migrations sem ficheiro local` é o drift acumulado por uso de `apply_migration` MCP sem backing file. **Esse drift fica capturado para sempre no baseline** — nada se perde.
+A diferença `215 remotas − 46 locais = 169 migrations sem ficheiro local` é o drift acumulado por uso de `apply_migration` MCP sem backing file. **Esse drift fica capturado para sempre no baseline** — nada se perde.
 
 ---
 
