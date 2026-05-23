@@ -67,12 +67,15 @@ proptech-platform/
     │   ├── package.json
     │   └── vite.config.js
     ├── v2-condominios/          ← V2 produção (port 5172) · prataowners.pt
+    ├── v2-condomino-mobile/     ← ⚠️ DIST-ONLY (source missing) · ver apps/v2-condomino-mobile/CLAUDE.md
     ├── v4-energia/              ← V4 em construção (port livre) · simulador tarifas
     ├── v5-manutencao/           ← V5 produção (port 5175) · catálogo serviços
     └── (v3-seguros, v6-reabilitacao, ... a construir)
 ```
 
-> **Nota cleanup 2026-05-13:** `apps/core/` e `apps/v1-core/` (cópias legacy do admin/index.html, 1941 linhas duplicadas) **removidos** com a centralização. Tudo o que era "core" é agora `apps/dashboard/` + schemas centrais (`core`, `iam`, `growth`, `system`).
+> **Nota cleanup 2026-05-13 (re-confirmado 2026-05-23):** `apps/core/` e `apps/v1-core/` (cópias legacy do admin/index.html, 1941 linhas duplicadas) **removidos** com a centralização. Tudo o que era "core" é agora `apps/dashboard/` + schemas centrais (`core`, `iam`, `growth`, `system`). A remoção efectiva do filesystem ocorreu em 2026-05-23 (story 019.5), confirmando o que CLAUDE.md já afirmava desde 2026-05-13.
+
+> **Nota `apps/v2-condomino-mobile/` (story 019.5, 2026-05-23):** Directório existe com `dist/` + `node_modules/` mas SEM `src/` (source code missing, nunca commitado a git). Servido em produção. Ver `apps/v2-condomino-mobile/CLAUDE.md` e `docs/cleanup/v2-condomino-mobile-status-2026-05-23.md` para decisão pendente (recuperar / reescrever / deprecar).
 
 ---
 
@@ -279,7 +282,7 @@ body.dark {
 
 - **`architect-proptech`** — decisões arquitecturais · consulta Notion · valida impactos cross-vertical · escreve ADRs
 - **`supabase-designer`** — schemas, migrations, RLS policies, edge functions via MCP Supabase
-- **`vertical-builder`** — constrói novas verticais React em `apps/vN-<nome>/` · reutiliza design system do v1-core
+- **`vertical-builder`** — constrói novas verticais React em `apps/vN-<nome>/` · reutiliza design system de `apps/v2-condominios/` (canónico desde remoção de v1-core em 2026-05-13)
 
 ---
 
