@@ -114,30 +114,98 @@ Opções:
 
 Se Hermes usar memory **própria** (opção A), o proptech-platform não precisa de schema novo. Se Mário quiser memory **unificada** (Hermes ↔ CookAI agents), criar `dm.agent_memory` com pgvector — mas isto é trabalho separado, fora do scope deste ADR.
 
-### D5 · Hermes invoca CookAI via Supabase API com role scoped (PROPOSTO)
+### D5 · Hermes invoca CookAI via Supabase API com role scoped (CORRIGIDO 2026-05-23 por @supabase-designer)
 
-Para Hermes invocar recipes/skills/missions do CookAI sem ter acesso total:
+**Correcção importante vs proposta original:** `iam.permission_grants` tem PK `(group_code, section_code)` — **não tem coluna `api_key_id`**. Solução adoptada: `system.api_keys.permission_group_code` aponta para `iam.permission_groups` (mesmo padrão que `iam.staff_login_aliases`). RPC `iam.api_key_can(p_api_key, p_section, p_action)` faz bridge.
 
 ```sql
--- 1. Row em system.api_keys (futuro schema — ADR-018 cria)
-INSERT INTO system.api_keys (name, role, description)
-VALUES ('hermes_executor', 'hermes', 'Hermes Agent (Nous Research) — invoca recipes CookAI');
+-- 1. Tabela system.api_keys (criar — não existe no V1 hoje, confirmado via MCP)
+CREATE TABLE system.api_keys (
+  id                    uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  name                  text NOT NULL UNIQUE,
+  role                  text NOT NULL,                  -- 'hermes' | 'cli' | 'integration'
+  api_key_hash          text NOT NULL,                  -- bcrypt via pgcrypto
+  api_key_preview       text,                            -- '...abc1' para identificação
+  permission_group_code text NOT NULL REFERENCES iam.permission_groups(code) ON DELETE RESTRICT,
+  scope_json            jsonb DEFAULT '{}'::jsonb,
+  last_used_at          timestamptz,
+  usage_count           integer NOT NULL DEFAULT 0,
+  active                boolean NOT NULL DEFAULT true,
+  created_at            timestamptz NOT NULL DEFAULT now(),
+  created_by            uuid REFERENCES auth.users(id) ON DELETE SET NULL,
+  revoked_at            timestamptz,
+  revoked_by            uuid REFERENCES auth.users(id) ON DELETE SET NULL
+);
+-- RLS staff-only via public.is_staff() — 3 policies (select/insert/update)
+-- Service role bypass automático
 
--- 2. Permission grants whitelist via iam.permission_grants
-INSERT INTO iam.permission_grants (api_key_id, section, action) VALUES
-  ('<hermes-key-id>', 'system.recipes', 'execute'),
-  ('<hermes-key-id>', 'system.tasks', 'create'),
-  ('<hermes-key-id>', 'core.pessoas', 'read'),
-  ('<hermes-key-id>', 'core.empresas', 'read'),
-  ('<hermes-key-id>', 'core.imoveis', 'read'),
-  ('<hermes-key-id>', 'core.condominios', 'read'),
-  ('<hermes-key-id>', 'core.activity_unified', 'read'),
-  ('<hermes-key-id>', 'system.swarm_discoveries', 'read');
+-- 2. Grupo IAM para Hermes
+INSERT INTO iam.permission_groups (code, name, description) VALUES
+  ('hermes_executor', 'Hermes Executor', 'Hermes Agent (Nous Research) — invoca recipes CookAI');
 
--- 3. Edge Function 'hermes-invoke-recipe' (wrapper REST)
---    POST { recipe_id, payload, idempotency_key }
---    → valida api_key + permission → cria system.tasks → trigger recipe → devolve task_id
---    Hermes faz polling ou subscribe Realtime para resultado
+-- 3. Sections (criar 8 se não existirem) — formato canónico ADR-013
+INSERT INTO iam.permission_sections (code, name, description) VALUES
+  ('system.recipes_exec',        'Executar recipes',          'Invocar recipes CookAI'),
+  ('system.tasks_create',        'Criar tasks',                'Criar missions runtime'),
+  ('core.pessoas_read',          'Ler pessoas',                'SELECT records type Person'),
+  ('core.empresas_read',         'Ler empresas',               'SELECT records type Company'),
+  ('core.imoveis_read',          'Ler imóveis',                'SELECT records type Property'),
+  ('core.condominios_read',      'Ler condomínios',            'SELECT records type Condomínio'),
+  ('core.activity_unified_read', 'Ler activity timeline',     'SELECT cross-vertical timeline'),
+  ('system.swarm_discoveries_read', 'Ler discoveries Truth Engine', 'SELECT swarm market intel')
+ON CONFLICT (code) DO NOTHING;
+
+-- 4. Grants whitelist (8 rows) ligando 'hermes_executor' às 8 sections
+INSERT INTO iam.permission_grants (group_code, section_code, can_view, can_create, can_update, can_delete) VALUES
+  ('hermes_executor', 'system.recipes_exec',        true, true,  false, false),
+  ('hermes_executor', 'system.tasks_create',        true, true,  false, false),
+  ('hermes_executor', 'core.pessoas_read',          true, false, false, false),
+  ('hermes_executor', 'core.empresas_read',         true, false, false, false),
+  ('hermes_executor', 'core.imoveis_read',          true, false, false, false),
+  ('hermes_executor', 'core.condominios_read',      true, false, false, false),
+  ('hermes_executor', 'core.activity_unified_read', true, false, false, false),
+  ('hermes_executor', 'system.swarm_discoveries_read', true, false, false, false);
+
+-- 5. RPC helper bridge api_key ↔ permission_grants
+CREATE FUNCTION iam.api_key_can(p_api_key text, p_section text, p_action text)
+RETURNS boolean SECURITY DEFINER AS $$
+  -- 1. Hash recebida → match contra system.api_keys.api_key_hash via pgcrypto crypt()
+  -- 2. Se match + active=true → check iam.permission_grants do permission_group_code
+  -- 3. Retorna boolean
+$$ LANGUAGE plpgsql;
+GRANT EXECUTE ON FUNCTION iam.api_key_can(text,text,text) TO service_role;
+
+-- 6. Seed row Hermes (placeholder hash, active=false até Mário fazer UPDATE manual com bcrypt real)
+INSERT INTO system.api_keys (name, role, api_key_hash, permission_group_code, active)
+VALUES ('hermes_executor', 'hermes', '$PENDING$', 'hermes_executor', false);
+
+-- 7. Edge Function 'hermes-invoke-recipe' (wrapper REST):
+--    POST { recipe_slug | recipe_id, payload, idempotency_key }
+--    Headers: x-api-key
+--    → SELECT iam.api_key_can(x-api-key, 'system.recipes_exec', 'create')
+--    → cria system.tasks via core.create_task RPC → devolve task_id
+--    → Hermes faz polling GET ou subscribe Realtime para resultado
+```
+
+**Como Mário gera a api_key real após apply (script bash):**
+```bash
+# Passo 1 — Gerar key segura (terminal local ou Hetzner Hermes host)
+HERMES_KEY=$(openssl rand -base64 48 | tr -d '/+=\n' | head -c 64)
+echo "Key: $HERMES_KEY"   # GUARDAR EM BITWARDEN AGORA — nunca verás de novo
+
+# Passo 2 — Gerar hash bcrypt (SQL Editor Supabase V1):
+#   SELECT crypt('COLA_KEY_AQUI', gen_salt('bf', 10)) AS hash;
+
+# Passo 3 — Activar a row:
+#   UPDATE system.api_keys
+#   SET api_key_hash = 'HASH_BCRYPT_DO_PASSO_2',
+#       api_key_preview = '...' || RIGHT(api_key_hash, 4),
+#       active = true
+#   WHERE name = 'hermes_executor';
+
+# Passo 4 — Hermes setup recebe key:
+#   No servidor Hermes: hermes secret set SUPABASE_URL=https://hkmvszkpxjbxmnixzqbl.supabase.co
+#   hermes secret set HERMES_API_KEY=$HERMES_KEY
 ```
 
 **Whitelist de RPCs que Hermes pode invocar (não tabelas directas):**
