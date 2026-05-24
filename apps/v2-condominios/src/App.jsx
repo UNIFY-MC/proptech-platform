@@ -34,9 +34,8 @@ import V2Legacy from './views/V2Legacy.jsx'
 
 function AppInner() {
   const { authenticated, loading } = useAuth()
-  // V2 Condomínios é SEMPRE dark theme (parity visual com prataowners.pt legacy luxo).
-  // Memory: feedback-design-parity-v2-legacy — Mário rejeita light variant aqui.
-  const [theme] = useState('dark')
+  // Default dark (parity prataowners.pt legacy). Sidebar tem botão "Light mode" para toggle.
+  const [theme, setTheme] = useState(() => localStorage.getItem('v2theme') || 'dark')
 
   // Growth pixel — tracka pageviews + form submits cross-vertical (ADR-015)
   useGrowthPixel({ vertical: 'v2', autoPageview: true, autoForms: false })
@@ -44,10 +43,6 @@ function AppInner() {
   useEffect(() => {
     document.body.setAttribute('data-theme', theme)
     localStorage.setItem('v2theme', theme)
-    // Limpar override antigo se existir
-    if (localStorage.getItem('v2theme') === 'light') {
-      localStorage.setItem('v2theme', 'dark')
-    }
   }, [theme])
 
   if (loading) {
@@ -63,8 +58,7 @@ function AppInner() {
       <DrawerProvider>
        <YearProvider>
         <div className="app-shell">
-          {/* Sidebar recebe theme fixo dark; setTheme=no-op (V2 nunca light). */}
-          <Sidebar theme={theme} setTheme={() => {}} />
+          <Sidebar theme={theme} setTheme={setTheme} />
           <div className="app-main-wrap">
             <Topbar />
             <main className="app-main">
