@@ -36,11 +36,14 @@ export default function Mora() {
   useEffect(() => {
     let active = true
     async function load() {
+      // Source canónica: v_mora_actual (view calculada em V1)
+      // = orcamento_por_fracao 2026 (quotas esperadas) - pagamentos efectuados (V2 bridge + matcher)
+      // Substitui a tabela v2_condominios.recebimentos que tinha 638 rows com label estado errado
+      // (ver memory project-v2-import-artifacts-2026-05-16).
       const { data, error } = await v2Client
-        .from('recebimentos')
-        .select('id, fracao_id, valor_emitido, valor_pago, vencimento, periodo, estado, fracoes:fracao_id(codigo)')
-        .in('estado', ['pendente', 'mora', 'acordo'])
-        .order('vencimento', { ascending: true })
+        .from('v_mora_actual')
+        .select('fracao_codigo, fracao_id, periodo, vencimento, valor_emitido, valor_pago, divida, dias_atraso, nivel_mora')
+        .order('dias_atraso', { ascending: false })
         .limit(500)
       if (!active) return
       if (error) setError(error.message)
@@ -50,14 +53,26 @@ export default function Mora() {
     return () => { active = false }
   }, [])
 
-  const hoje = new Date()
+  // v_mora_actual já calcula divida/dias_atraso, mas mantemos compat com aging buckets locais
+  // (cria objecto bucket por row para renderer continuar a funcionar)
   const enriched = useMemo(() => {
     if (!rows) return null
     return rows.map(r => {
-      const divida = Number(r.valor_emitido ?? 0) - Number(r.valor_pago ?? 0)
-      const dias = r.vencimento ? Math.floor((hoje - new Date(r.vencimento)) / 86400000) : 0
+      const dias = Number(r.dias_atraso ?? 0)
       const bucket = agingBucket(dias)
-      return { ...r, divida, dias, bucket }
+      return {
+        id: `${r.fracao_codigo}-${r.periodo}`, // chave estável (view não tem id próprio)
+        fracao_id: r.fracao_id,
+        fracoes: { codigo: r.fracao_codigo },
+        valor_emitido: r.valor_emitido,
+        valor_pago: r.valor_pago,
+        vencimento: r.vencimento,
+        periodo: r.periodo,
+        nivel_mora: r.nivel_mora,
+        divida: Number(r.divida ?? 0),
+        dias,
+        bucket,
+      }
     }).filter(r => r.divida > 0)
   }, [rows])
 
