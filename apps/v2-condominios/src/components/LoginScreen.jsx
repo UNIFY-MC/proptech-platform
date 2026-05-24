@@ -156,8 +156,11 @@ function FormMagic({ mainClient, lang, onSwitchStaff, onSwitchToken }) {
 
 /* ─── Form Staff (alias/email + password) ─── */
 function FormStaff({ mainClient, lang, onBack }) {
-  const [alias, setAlias] = useState('')
-  const [password, setPassword] = useState('')
+  // Em dev (Vite import.meta.env.DEV), pré-popular com staff BOSSMC para acelerar testes
+  // Não fazer nada em produção.
+  const isDev = import.meta.env.DEV
+  const [alias, setAlias] = useState(isDev ? 'BOSSMC' : '')
+  const [password, setPassword] = useState(isDev ? 'BOSSMC@2026' : '')
   const [loading, setLoading] = useState(false)
   const [err, setErr] = useState(null)
 

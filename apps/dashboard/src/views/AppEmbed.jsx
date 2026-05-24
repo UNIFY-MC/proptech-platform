@@ -119,10 +119,16 @@ export default function AppEmbed() {
       }}>
         <span style={{ fontWeight: 600, color: 'var(--text)' }}>{app.label}</span>
         <SurfaceSwitcher apps={apps} currentApp={app} />
-        <code style={{
+        {/* Em vez de mostrar URL crua (e.g. "http://localhost:5172"), mostra
+            "linkado ao Dashboard" para sinalizar que esta vertical está embebida.
+            URL real fica no title (hover) + no link "Abrir em janela" → */}
+        <span style={{
           fontFamily: 'JetBrains Mono, monospace', fontSize: '0.65rem',
           color: 'var(--info)', opacity: 0.7,
-        }}>{import.meta.env.DEV ? app.dev_url : app.prod_url}</code>
+        }}
+        title={import.meta.env.DEV ? app.dev_url : app.prod_url}>
+          · linkado ao Dashboard
+        </span>
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 12, alignItems: 'center' }}>
           <button onClick={() => setReloadKey(k => k + 1)} title="Recarregar iframe"
             style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-dim)', fontSize: '0.9rem', padding: '0 4px' }}>↻</button>

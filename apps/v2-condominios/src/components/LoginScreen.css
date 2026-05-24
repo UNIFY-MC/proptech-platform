@@ -4,8 +4,14 @@
  */
 
 #scLogin {
+  /* Standalone: position:fixed cobre viewport completo (página directa em 5172).
+   * Dentro de iframe (dashboard:5180): position:fixed continua a funcionar — fixed
+   * num iframe é relativo ao iframe viewport, não à janela top-level.
+   * Garantir min-height:100vh para iframe respeitar altura. */
   position: fixed;
   inset: 0;
+  min-height: 100vh;
+  width: 100%;
   display: flex;
   align-items: stretch;
   justify-content: flex-end;
