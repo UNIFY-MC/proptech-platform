@@ -1,0 +1,708 @@
+{
+  "captured_at": "2026-05-24T09:50:08.660Z",
+  "target_domain": "prataowners.pt",
+  "captures": [
+    {
+      "name": "00-root",
+      "requested_url": "https://prataowners.pt/",
+      "final_url": "https://prataowners.pt/",
+      "http_status": 200,
+      "title": "Prata Owners · Gestão do Condomínio",
+      "html_bytes": 1301743,
+      "error": null,
+      "duration_ms": 8390,
+      "visible_texts": {
+        "h1": [],
+        "h2": [],
+        "buttons": [
+          "🇵🇹 PT",
+          "🇬🇧 EN",
+          "✉ Enviar link de acesso",
+          "Usar outro email",
+          "Staff →",
+          "Token",
+          "Entrar →",
+          "← Voltar",
+          "Entrar →",
+          "← Voltar",
+          "🌙 Dark",
+          "Sair",
+          "✕",
+          "«",
+          "🔄 Atualizar Extrato",
+          "🌙 Dark",
+          "Sair",
+          "☰",
+          "📊Prestação de Contas",
+          "👥Condóminos",
+          "🗺️Mapa de Receitas",
+          "💶Recebimentos",
+          "📈Dívida Actual",
+          "🏠Fracções",
+          "⚙️Automações",
+          "👤Ver como Condómino",
+          "Voltar ao Início",
+          "Sair",
+          "0Minha Conta Corrente",
+          "Meu Carregador EV"
+        ],
+        "links": [
+          "Saltar para o conteúdo",
+          "↗ DOC",
+          "↗ DOC",
+          "↗ DOC",
+          "↗ DOC",
+          "↗ DOC",
+          "↗ DOC",
+          "↗ DOC",
+          "↗ DOC",
+          "↗ DOC",
+          "↗ DOC",
+          "↗ DOC",
+          "↗ DOC",
+          "↗ DOC",
+          "↗ DOC",
+          "↗ DOC",
+          "↗ DOC",
+          "↗ DOC",
+          "↗ DOC",
+          "↗ DOC"
+        ],
+        "inputs": [
+          {
+            "type": "email",
+            "name": "magicEmail",
+            "placeholder": "o.seu@email.com"
+          },
+          {
+            "type": "text",
+            "name": "tokenInput",
+            "placeholder": "UUID de acesso"
+          },
+          {
+            "type": "text",
+            "name": "staffUsername",
+            "placeholder": "utilizador"
+          },
+          {
+            "type": "password",
+            "name": "staffPwd",
+            "placeholder": "••••••••••••"
+          },
+          {
+            "type": "file",
+            "name": "extratoFileInput",
+            "placeholder": ""
+          },
+          {
+            "type": "text",
+            "name": "fracSr",
+            "placeholder": "Pesquisar fração…"
+          },
+          {
+            "type": "text",
+            "name": "txSr",
+            "placeholder": "Pesquisar descrição…"
+          },
+          {
+            "type": "select-one",
+            "name": "txTy",
+            "placeholder": ""
+          },
+          {
+            "type": "select-one",
+            "name": "txMo",
+            "placeholder": ""
+          },
+          {
+            "type": "select-one",
+            "name": "txCa",
+            "placeholder": ""
+          },
+          {
+            "type": "select-one",
+            "name": "txFr",
+            "placeholder": ""
+          },
+          {
+            "type": "text",
+            "name": "condPickerSearch",
+            "placeholder": "Pesquisar nome ou fracção…"
+          },
+          {
+            "type": "text",
+            "name": "aiInput",
+            "placeholder": "Escreva a sua pergunta…"
+          }
+        ]
+      }
+    },
+    {
+      "name": "01-login-admin",
+      "requested_url": "https://prataowners.pt/?view=admin",
+      "final_url": "https://prataowners.pt/?view=admin",
+      "http_status": 200,
+      "title": "Prata Owners · Gestão do Condomínio",
+      "html_bytes": 1301743,
+      "error": null,
+      "duration_ms": 3596,
+      "visible_texts": {
+        "h1": [],
+        "h2": [],
+        "buttons": [
+          "🇵🇹 PT",
+          "🇬🇧 EN",
+          "✉ Enviar link de acesso",
+          "Usar outro email",
+          "Staff →",
+          "Token",
+          "Entrar →",
+          "← Voltar",
+          "Entrar →",
+          "← Voltar",
+          "🌙 Dark",
+          "Sair",
+          "✕",
+          "«",
+          "🔄 Atualizar Extrato",
+          "🌙 Dark",
+          "Sair",
+          "☰",
+          "📊Prestação de Contas",
+          "👥Condóminos",
+          "🗺️Mapa de Receitas",
+          "💶Recebimentos",
+          "📈Dívida Actual",
+          "🏠Fracções",
+          "⚙️Automações",
+          "👤Ver como Condómino",
+          "Voltar ao Início",
+          "Sair",
+          "0Minha Conta Corrente",
+          "Meu Carregador EV"
+        ],
+        "links": [
+          "Saltar para o conteúdo",
+          "↗ DOC",
+          "↗ DOC",
+          "↗ DOC",
+          "↗ DOC",
+          "↗ DOC",
+          "↗ DOC",
+          "↗ DOC",
+          "↗ DOC",
+          "↗ DOC",
+          "↗ DOC",
+          "↗ DOC",
+          "↗ DOC",
+          "↗ DOC",
+          "↗ DOC",
+          "↗ DOC",
+          "↗ DOC",
+          "↗ DOC",
+          "↗ DOC",
+          "↗ DOC"
+        ],
+        "inputs": [
+          {
+            "type": "email",
+            "name": "magicEmail",
+            "placeholder": "o.seu@email.com"
+          },
+          {
+            "type": "text",
+            "name": "tokenInput",
+            "placeholder": "UUID de acesso"
+          },
+          {
+            "type": "text",
+            "name": "staffUsername",
+            "placeholder": "utilizador"
+          },
+          {
+            "type": "password",
+            "name": "staffPwd",
+            "placeholder": "••••••••••••"
+          },
+          {
+            "type": "file",
+            "name": "extratoFileInput",
+            "placeholder": ""
+          },
+          {
+            "type": "text",
+            "name": "fracSr",
+            "placeholder": "Pesquisar fração…"
+          },
+          {
+            "type": "text",
+            "name": "txSr",
+            "placeholder": "Pesquisar descrição…"
+          },
+          {
+            "type": "select-one",
+            "name": "txTy",
+            "placeholder": ""
+          },
+          {
+            "type": "select-one",
+            "name": "txMo",
+            "placeholder": ""
+          },
+          {
+            "type": "select-one",
+            "name": "txCa",
+            "placeholder": ""
+          },
+          {
+            "type": "select-one",
+            "name": "txFr",
+            "placeholder": ""
+          },
+          {
+            "type": "text",
+            "name": "condPickerSearch",
+            "placeholder": "Pesquisar nome ou fracção…"
+          },
+          {
+            "type": "text",
+            "name": "aiInput",
+            "placeholder": "Escreva a sua pergunta…"
+          }
+        ]
+      }
+    },
+    {
+      "name": "02-portal-cond",
+      "requested_url": "https://prataowners.pt/?view=cond",
+      "final_url": "https://prataowners.pt/?view=cond",
+      "http_status": 200,
+      "title": "Prata Owners · Gestão do Condomínio",
+      "html_bytes": 1301743,
+      "error": null,
+      "duration_ms": 3383,
+      "visible_texts": {
+        "h1": [],
+        "h2": [],
+        "buttons": [
+          "🇵🇹 PT",
+          "🇬🇧 EN",
+          "✉ Enviar link de acesso",
+          "Usar outro email",
+          "Staff →",
+          "Token",
+          "Entrar →",
+          "← Voltar",
+          "Entrar →",
+          "← Voltar",
+          "🌙 Dark",
+          "Sair",
+          "✕",
+          "«",
+          "🔄 Atualizar Extrato",
+          "🌙 Dark",
+          "Sair",
+          "☰",
+          "📊Prestação de Contas",
+          "👥Condóminos",
+          "🗺️Mapa de Receitas",
+          "💶Recebimentos",
+          "📈Dívida Actual",
+          "🏠Fracções",
+          "⚙️Automações",
+          "👤Ver como Condómino",
+          "Voltar ao Início",
+          "Sair",
+          "0Minha Conta Corrente",
+          "Meu Carregador EV"
+        ],
+        "links": [
+          "Saltar para o conteúdo",
+          "↗ DOC",
+          "↗ DOC",
+          "↗ DOC",
+          "↗ DOC",
+          "↗ DOC",
+          "↗ DOC",
+          "↗ DOC",
+          "↗ DOC",
+          "↗ DOC",
+          "↗ DOC",
+          "↗ DOC",
+          "↗ DOC",
+          "↗ DOC",
+          "↗ DOC",
+          "↗ DOC",
+          "↗ DOC",
+          "↗ DOC",
+          "↗ DOC",
+          "↗ DOC"
+        ],
+        "inputs": [
+          {
+            "type": "email",
+            "name": "magicEmail",
+            "placeholder": "o.seu@email.com"
+          },
+          {
+            "type": "text",
+            "name": "tokenInput",
+            "placeholder": "UUID de acesso"
+          },
+          {
+            "type": "text",
+            "name": "staffUsername",
+            "placeholder": "utilizador"
+          },
+          {
+            "type": "password",
+            "name": "staffPwd",
+            "placeholder": "••••••••••••"
+          },
+          {
+            "type": "file",
+            "name": "extratoFileInput",
+            "placeholder": ""
+          },
+          {
+            "type": "text",
+            "name": "fracSr",
+            "placeholder": "Pesquisar fração…"
+          },
+          {
+            "type": "text",
+            "name": "txSr",
+            "placeholder": "Pesquisar descrição…"
+          },
+          {
+            "type": "select-one",
+            "name": "txTy",
+            "placeholder": ""
+          },
+          {
+            "type": "select-one",
+            "name": "txMo",
+            "placeholder": ""
+          },
+          {
+            "type": "select-one",
+            "name": "txCa",
+            "placeholder": ""
+          },
+          {
+            "type": "select-one",
+            "name": "txFr",
+            "placeholder": ""
+          },
+          {
+            "type": "text",
+            "name": "condPickerSearch",
+            "placeholder": "Pesquisar nome ou fracção…"
+          },
+          {
+            "type": "text",
+            "name": "aiInput",
+            "placeholder": "Escreva a sua pergunta…"
+          }
+        ]
+      }
+    },
+    {
+      "name": "03-hash-dashboard",
+      "requested_url": "https://prataowners.pt/#dashboard",
+      "final_url": "https://prataowners.pt/#dashboard",
+      "http_status": 200,
+      "title": "Prata Owners · Gestão do Condomínio",
+      "html_bytes": 1301743,
+      "error": null,
+      "duration_ms": 3360,
+      "visible_texts": {
+        "h1": [],
+        "h2": [],
+        "buttons": [
+          "🇵🇹 PT",
+          "🇬🇧 EN",
+          "✉ Enviar link de acesso",
+          "Usar outro email",
+          "Staff →",
+          "Token",
+          "Entrar →",
+          "← Voltar",
+          "Entrar →",
+          "← Voltar",
+          "🌙 Dark",
+          "Sair",
+          "✕",
+          "«",
+          "🔄 Atualizar Extrato",
+          "🌙 Dark",
+          "Sair",
+          "☰",
+          "📊Prestação de Contas",
+          "👥Condóminos",
+          "🗺️Mapa de Receitas",
+          "💶Recebimentos",
+          "📈Dívida Actual",
+          "🏠Fracções",
+          "⚙️Automações",
+          "👤Ver como Condómino",
+          "Voltar ao Início",
+          "Sair",
+          "0Minha Conta Corrente",
+          "Meu Carregador EV"
+        ],
+        "links": [
+          "Saltar para o conteúdo",
+          "↗ DOC",
+          "↗ DOC",
+          "↗ DOC",
+          "↗ DOC",
+          "↗ DOC",
+          "↗ DOC",
+          "↗ DOC",
+          "↗ DOC",
+          "↗ DOC",
+          "↗ DOC",
+          "↗ DOC",
+          "↗ DOC",
+          "↗ DOC",
+          "↗ DOC",
+          "↗ DOC",
+          "↗ DOC",
+          "↗ DOC",
+          "↗ DOC",
+          "↗ DOC"
+        ],
+        "inputs": [
+          {
+            "type": "email",
+            "name": "magicEmail",
+            "placeholder": "o.seu@email.com"
+          },
+          {
+            "type": "text",
+            "name": "tokenInput",
+            "placeholder": "UUID de acesso"
+          },
+          {
+            "type": "text",
+            "name": "staffUsername",
+            "placeholder": "utilizador"
+          },
+          {
+            "type": "password",
+            "name": "staffPwd",
+            "placeholder": "••••••••••••"
+          },
+          {
+            "type": "file",
+            "name": "extratoFileInput",
+            "placeholder": ""
+          },
+          {
+            "type": "text",
+            "name": "fracSr",
+            "placeholder": "Pesquisar fração…"
+          },
+          {
+            "type": "text",
+            "name": "txSr",
+            "placeholder": "Pesquisar descrição…"
+          },
+          {
+            "type": "select-one",
+            "name": "txTy",
+            "placeholder": ""
+          },
+          {
+            "type": "select-one",
+            "name": "txMo",
+            "placeholder": ""
+          },
+          {
+            "type": "select-one",
+            "name": "txCa",
+            "placeholder": ""
+          },
+          {
+            "type": "select-one",
+            "name": "txFr",
+            "placeholder": ""
+          },
+          {
+            "type": "text",
+            "name": "condPickerSearch",
+            "placeholder": "Pesquisar nome ou fracção…"
+          },
+          {
+            "type": "text",
+            "name": "aiInput",
+            "placeholder": "Escreva a sua pergunta…"
+          }
+        ]
+      }
+    },
+    {
+      "name": "04-hash-portal",
+      "requested_url": "https://prataowners.pt/#portal",
+      "final_url": "https://prataowners.pt/#portal",
+      "http_status": 0,
+      "title": "Prata Owners · Gestão do Condomínio",
+      "html_bytes": 1301743,
+      "error": null,
+      "duration_ms": 2206,
+      "visible_texts": {
+        "h1": [],
+        "h2": [],
+        "buttons": [
+          "🇵🇹 PT",
+          "🇬🇧 EN",
+          "✉ Enviar link de acesso",
+          "Usar outro email",
+          "Staff →",
+          "Token",
+          "Entrar →",
+          "← Voltar",
+          "Entrar →",
+          "← Voltar",
+          "🌙 Dark",
+          "Sair",
+          "✕",
+          "«",
+          "🔄 Atualizar Extrato",
+          "🌙 Dark",
+          "Sair",
+          "☰",
+          "📊Prestação de Contas",
+          "👥Condóminos",
+          "🗺️Mapa de Receitas",
+          "💶Recebimentos",
+          "📈Dívida Actual",
+          "🏠Fracções",
+          "⚙️Automações",
+          "👤Ver como Condómino",
+          "Voltar ao Início",
+          "Sair",
+          "0Minha Conta Corrente",
+          "Meu Carregador EV"
+        ],
+        "links": [
+          "Saltar para o conteúdo",
+          "↗ DOC",
+          "↗ DOC",
+          "↗ DOC",
+          "↗ DOC",
+          "↗ DOC",
+          "↗ DOC",
+          "↗ DOC",
+          "↗ DOC",
+          "↗ DOC",
+          "↗ DOC",
+          "↗ DOC",
+          "↗ DOC",
+          "↗ DOC",
+          "↗ DOC",
+          "↗ DOC",
+          "↗ DOC",
+          "↗ DOC",
+          "↗ DOC",
+          "↗ DOC"
+        ],
+        "inputs": [
+          {
+            "type": "email",
+            "name": "magicEmail",
+            "placeholder": "o.seu@email.com"
+          },
+          {
+            "type": "text",
+            "name": "tokenInput",
+            "placeholder": "UUID de acesso"
+          },
+          {
+            "type": "text",
+            "name": "staffUsername",
+            "placeholder": "utilizador"
+          },
+          {
+            "type": "password",
+            "name": "staffPwd",
+            "placeholder": "••••••••••••"
+          },
+          {
+            "type": "file",
+            "name": "extratoFileInput",
+            "placeholder": ""
+          },
+          {
+            "type": "text",
+            "name": "fracSr",
+            "placeholder": "Pesquisar fração…"
+          },
+          {
+            "type": "text",
+            "name": "txSr",
+            "placeholder": "Pesquisar descrição…"
+          },
+          {
+            "type": "select-one",
+            "name": "txTy",
+            "placeholder": ""
+          },
+          {
+            "type": "select-one",
+            "name": "txMo",
+            "placeholder": ""
+          },
+          {
+            "type": "select-one",
+            "name": "txCa",
+            "placeholder": ""
+          },
+          {
+            "type": "select-one",
+            "name": "txFr",
+            "placeholder": ""
+          },
+          {
+            "type": "text",
+            "name": "condPickerSearch",
+            "placeholder": "Pesquisar nome ou fracção…"
+          },
+          {
+            "type": "text",
+            "name": "aiInput",
+            "placeholder": "Escreva a sua pergunta…"
+          }
+        ]
+      }
+    },
+    {
+      "name": "05-path-app",
+      "requested_url": "https://prataowners.pt/app",
+      "final_url": "https://prataowners.pt/app",
+      "http_status": 404,
+      "title": "Page not found",
+      "html_bytes": 3395,
+      "error": null,
+      "duration_ms": 1740,
+      "visible_texts": {
+        "h1": [
+          "Page not found"
+        ],
+        "h2": [],
+        "buttons": [],
+        "links": [
+          "“page not found” support guide"
+        ],
+        "inputs": []
+      }
+    }
+  ],
+  "summary": {
+    "total": 6,
+    "ok": 4,
+    "not_found": 1,
+    "errors": 0
+  }
+}
