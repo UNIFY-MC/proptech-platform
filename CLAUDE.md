@@ -69,10 +69,20 @@ proptech-platform/
     ├── v2-condominios/          ← V2 produção (port 5172) · prataowners.pt
     ├── v4-energia/              ← V4 em construção (port livre) · simulador tarifas
     ├── v5-manutencao/           ← V5 produção (port 5175) · catálogo serviços
+    ├── truth/                   ← Truth Engine UI (port 5181) · React 19 + Tailwind · ADR-V11-005
+    │   ├── /swarm — grid 5×5 de 25 workers Jina + heartbeats Realtime
+    │   ├── /discoveries — tabela paginada + filtros (kind, significance, niche)
+    │   ├── /niches — 10 niches + ICP cards + lock state
+    │   └── /studio — playground de queries manuais
+    ├── discord-bot/             ← Discord listener Deno + Fly.io (apps/discord-bot v1, sempre on)
+    ├── discord-bot-cf/          ← Alternativa Cloudflare Workers + Durable Objects (standby)
+    ├── cli/                     ← TUI Ink (6 comandos · sem deploy · local-only)
     └── (v3-seguros, v6-reabilitacao, ... a construir)
 ```
 
 > **Nota cleanup 2026-05-13:** `apps/core/` e `apps/v1-core/` (cópias legacy do admin/index.html, 1941 linhas duplicadas) **removidos** com a centralização. Tudo o que era "core" é agora `apps/dashboard/` + schemas centrais (`core`, `iam`, `growth`, `system`).
+
+> **ARCH-004 (2026-05-24):** `apps/truth/` documentada (Truth Engine UI · React 19 + Tailwind, porta 5181). Owner: Mário. Deploy: **local-only** por agora (deploy Vercel `proptech-truth-alpha` adiado até consolidação Swarm v9). Source da Edge Function `swarm-worker-jina` em `supabase/functions/swarm-worker-jina/` (mirror committed via Story 019.12 + fix v9 DB-011 2026-05-24).
 
 ---
 
