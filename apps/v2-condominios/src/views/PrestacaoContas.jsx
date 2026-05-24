@@ -540,15 +540,35 @@ function LinhaOrcReal({ ano, rubrica, efetivo }) {
     // FIX 2026-05-24: V1 espelho tem extrato_bancario.codigo populado por bridge v10
     // (R001 receitas, 2A001-2A015 despesas, FCR fundo reserva). Antes filtravamos por
     // desc.includes(key) que nunca dava match — descricao bancária não tem código rubrica.
+    //
+    // Cuidados:
+    //   - V2 produção tem 2 rows por movimento (mesmo numero_doc, IDs diferentes,
+    //     uma sem PDF outra com PDF). Dedup no frontend por numero_doc, prefer com drive_url.
+    //   - `valor` em V1 está bugado (bridge v10 mappeou `credito - debito` mas debito já é
+    //     negativo → sinal invertido). Usar debito/credito raw + COALESCE.
     v2Client.from('extrato_bancario')
-      .select('id, data_movimento, descricao, valor, saldo_apos, referencia_banco, codigo, drive_url, drive_file_id, forn, alocacao')
+      .select('id, data_movimento, descricao, debito, credito, saldo_apos, referencia_banco, numero_doc, codigo, drive_url, drive_file_id, forn, alocacao')
       .eq('codigo', rubrica.codigo)
       .eq('ano', ano)
       .order('data_movimento')
       .limit(500)
       .then(({ data, error }) => {
-        if (error) setErrMov(error.message)
-        else setMovs(data || [])
+        if (error) { setErrMov(error.message); return }
+        // Dedup por numero_doc — prefere a row com drive_url (PDF) se existir
+        const byDoc = new Map()
+        for (const m of (data || [])) {
+          const key = m.numero_doc || m.id
+          const existing = byDoc.get(key)
+          if (!existing || (!existing.drive_url && m.drive_url)) {
+            byDoc.set(key, m)
+          }
+        }
+        // Calcular valor correcto: debito já vem negativo, credito positivo
+        const deduped = Array.from(byDoc.values()).map(m => ({
+          ...m,
+          valor: Number(m.credito ?? 0) + Number(m.debito ?? 0),
+        }))
+        setMovs(deduped)
       })
   }, [open, ano, rubrica.codigo, movs])
 
@@ -698,12 +718,24 @@ function TabExtrato({ ano }) {
     setMovs(null); setError(null)
     const i = `${ano}-01-01`, f = `${ano}-12-31`
     v2Client.from('extrato_bancario')
-      .select('id, data_movimento, descricao, valor, saldo_apos, reconciliado, referencia_banco, drive_url, drive_file_id, forn, codigo')
+      .select('id, data_movimento, descricao, debito, credito, saldo_apos, reconciliado, referencia_banco, numero_doc, drive_url, drive_file_id, forn, codigo')
       .gte('data_movimento', i).lte('data_movimento', f)
       .order('data_movimento', { ascending: false }).limit(1000)
       .then(({ data, error }) => {
         if (!active) return
-        if (error) setError(error.message); else setMovs(data || [])
+        if (error) { setError(error.message); return }
+        // Dedup por numero_doc (V2 tem 2 rows por movimento, prefer com PDF) + calcular valor correcto
+        const byDoc = new Map()
+        for (const m of (data || [])) {
+          const key = m.numero_doc || m.id
+          const existing = byDoc.get(key)
+          if (!existing || (!existing.drive_url && m.drive_url)) byDoc.set(key, m)
+        }
+        const deduped = Array.from(byDoc.values()).map(m => ({
+          ...m,
+          valor: Number(m.credito ?? 0) + Number(m.debito ?? 0),
+        }))
+        setMovs(deduped)
       })
     return () => { active = false }
   }, [ano])
