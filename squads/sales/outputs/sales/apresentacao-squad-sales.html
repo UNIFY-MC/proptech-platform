@@ -1,0 +1,1799 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Squad Sales -- Academia Lendária Fundamentals</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+  :root {
+    --bg-primary: #0a0a0f;
+    --bg-secondary: #111118;
+    --bg-card: #16161f;
+    --bg-card-hover: #1c1c28;
+    --accent-gold: #d4a853;
+    --accent-gold-dim: #b8923e;
+    --accent-blue: #4a7dff;
+    --accent-cyan: #22d3ee;
+    --accent-green: #34d399;
+    --accent-red: #f87171;
+    --accent-purple: #a78bfa;
+    --accent-orange: #fb923c;
+    --text-primary: #f0f0f5;
+    --text-secondary: #9ca3af;
+    --text-muted: #6b7280;
+    --border: #2a2a3a;
+    --gradient-gold: linear-gradient(135deg, #d4a853 0%, #f0d48a 50%, #d4a853 100%);
+    --shadow-card: 0 4px 24px rgba(0,0,0,0.4);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html {
+    scroll-behavior: smooth;
+    scroll-snap-type: y mandatory;
+  }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    overflow-x: hidden;
+    line-height: 1.6;
+  }
+
+  /* ========== SVG ICON SYSTEM ========== */
+  .icon {
+    width: 20px;
+    height: 20px;
+    stroke: currentColor;
+    stroke-width: 2;
+    fill: none;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    flex-shrink: 0;
+  }
+  .icon-sm { width: 16px; height: 16px; }
+  .icon-lg { width: 24px; height: 24px; }
+  .icon-xl { width: 28px; height: 28px; }
+
+  /* ========== SLIDE SYSTEM ========== */
+  .slide {
+    height: 100vh;
+    max-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 40px 40px;
+    scroll-snap-align: start;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .slide-inner {
+    max-width: 1140px;
+    width: 100%;
+    z-index: 2;
+    max-height: calc(100vh - 80px);
+    overflow: hidden;
+  }
+
+  /* ========== NAVIGATION ========== */
+  .nav-dots {
+    position: fixed;
+    right: 24px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    z-index: 100;
+  }
+
+  .nav-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--border);
+    border: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+  }
+
+  .nav-dot:hover,
+  .nav-dot.active {
+    background: var(--accent-gold);
+    box-shadow: 0 0 12px rgba(212, 168, 83, 0.5);
+    transform: scale(1.3);
+  }
+
+  .nav-dot::after {
+    content: attr(data-label);
+    position: absolute;
+    right: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: var(--bg-card);
+    color: var(--text-primary);
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 11px;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+    border: 1px solid var(--border);
+  }
+
+  .nav-dot:hover::after { opacity: 1; }
+
+  /* ========== PROGRESS BAR ========== */
+  .progress-bar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 3px;
+    background: var(--gradient-gold);
+    z-index: 200;
+    transition: width 0.3s ease;
+  }
+
+  /* ========== SLIDE COUNTER ========== */
+  .slide-counter {
+    position: fixed;
+    bottom: 20px;
+    right: 24px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--text-muted);
+    z-index: 100;
+    background: rgba(10,10,15,0.8);
+    padding: 5px 12px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    backdrop-filter: blur(10px);
+  }
+
+  .slide-counter span { color: var(--accent-gold); font-weight: 600; }
+
+  /* ========== TYPOGRAPHY ========== */
+  .title-mega {
+    font-size: clamp(2.2rem, 5vw, 4.2rem);
+    font-weight: 900;
+    line-height: 1.05;
+    letter-spacing: -0.03em;
+  }
+
+  .title-large {
+    font-size: clamp(1.6rem, 3.5vw, 2.6rem);
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+  }
+
+  .title-medium {
+    font-size: clamp(1.2rem, 2.5vw, 1.8rem);
+    font-weight: 700;
+    line-height: 1.2;
+  }
+
+  .title-small {
+    font-size: 0.95rem;
+    font-weight: 600;
+    line-height: 1.3;
+  }
+
+  .text-gold {
+    background: var(--gradient-gold);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .text-dim { color: var(--text-secondary); }
+  .text-muted { color: var(--text-muted); }
+
+  .subtitle {
+    font-size: clamp(0.88rem, 1.5vw, 1.1rem);
+    color: var(--text-secondary);
+    font-weight: 400;
+    line-height: 1.5;
+    max-width: 650px;
+  }
+
+  .label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--accent-gold);
+    margin-bottom: 12px;
+    display: inline-block;
+  }
+
+  .label-pill {
+    background: rgba(212, 168, 83, 0.1);
+    border: 1px solid rgba(212, 168, 83, 0.25);
+    padding: 3px 12px;
+    border-radius: 20px;
+  }
+
+  /* ========== CARDS ========== */
+  .card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 22px;
+    transition: all 0.3s ease;
+  }
+
+  .card:hover {
+    background: var(--bg-card-hover);
+    border-color: rgba(212, 168, 83, 0.3);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-card);
+  }
+
+  /* ========== GRID LAYOUTS ========== */
+  .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+
+  /* ========== AGENT CARD ========== */
+  .agent-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 18px;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .agent-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: var(--card-accent, var(--accent-gold));
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+
+  .agent-card:hover {
+    transform: translateY(-3px);
+    border-color: var(--card-accent, rgba(212, 168, 83, 0.4));
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  }
+
+  .agent-card:hover::before { opacity: 1; }
+
+  .agent-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 10px;
+    background: rgba(212, 168, 83, 0.1);
+    border: 1px solid rgba(212, 168, 83, 0.2);
+    color: var(--accent-gold);
+  }
+
+  .agent-name { font-size: 0.92rem; font-weight: 700; margin-bottom: 2px; }
+  .agent-role { font-size: 0.72rem; color: var(--text-muted); font-weight: 500; margin-bottom: 8px; }
+
+  .agent-method {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--accent-cyan);
+    background: rgba(34, 211, 238, 0.08);
+    padding: 2px 8px;
+    border-radius: 5px;
+    display: inline-block;
+    margin-bottom: 8px;
+  }
+
+  .agent-desc { font-size: 0.76rem; color: var(--text-secondary); line-height: 1.4; }
+
+  /* ========== TIER BADGE ========== */
+  .tier-badge {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    padding: 2px 8px;
+    border-radius: 5px;
+    display: inline-block;
+    margin-bottom: 8px;
+  }
+
+  .tier-0 { background: rgba(251, 146, 60, 0.15); color: var(--accent-orange); border: 1px solid rgba(251, 146, 60, 0.3); }
+  .tier-1 { background: rgba(212, 168, 83, 0.12); color: var(--accent-gold); border: 1px solid rgba(212, 168, 83, 0.3); }
+  .tier-2 { background: rgba(74, 125, 255, 0.12); color: var(--accent-blue); border: 1px solid rgba(74, 125, 255, 0.3); }
+  .tier-3 { background: rgba(167, 139, 250, 0.12); color: var(--accent-purple); border: 1px solid rgba(167, 139, 250, 0.3); }
+
+  /* ========== TASK CARD ========== */
+  .task-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 18px;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    transition: all 0.3s ease;
+  }
+
+  .task-card:hover {
+    background: var(--bg-card-hover);
+    border-color: rgba(52, 211, 153, 0.3);
+    transform: translateX(3px);
+  }
+
+  .task-number {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--accent-green);
+    background: rgba(52, 211, 153, 0.1);
+    border: 1px solid rgba(52, 211, 153, 0.2);
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .task-info h4 { font-size: 0.85rem; font-weight: 600; margin-bottom: 2px; }
+  .task-info p { font-size: 0.72rem; color: var(--text-muted); line-height: 1.3; }
+
+  .task-agents { display: flex; gap: 4px; margin-top: 6px; flex-wrap: wrap; }
+
+  .task-agent-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    padding: 1px 6px;
+    border-radius: 4px;
+    background: rgba(74, 125, 255, 0.1);
+    color: var(--accent-blue);
+    border: 1px solid rgba(74, 125, 255, 0.2);
+  }
+
+  /* ========== FUNNEL ========== */
+  .funnel { display: flex; flex-direction: column; gap: 0; max-width: 860px; margin: 0 auto; }
+
+  .funnel-step {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    padding: 14px 24px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    position: relative;
+    transition: all 0.3s ease;
+  }
+
+  .funnel-step:first-child { border-radius: 14px 14px 0 0; }
+  .funnel-step:last-child { border-radius: 0 0 14px 14px; }
+  .funnel-step:hover { background: var(--bg-card-hover); z-index: 2; }
+  .funnel-step + .funnel-step { border-top: none; }
+
+  .funnel-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .funnel-content { flex: 1; }
+  .funnel-content h4 { font-size: 0.88rem; font-weight: 700; margin-bottom: 1px; }
+  .funnel-content p { font-size: 0.75rem; color: var(--text-muted); }
+  .funnel-agents { display: flex; gap: 5px; flex-wrap: wrap; }
+
+  .funnel-agent {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    padding: 2px 7px;
+    border-radius: 4px;
+    background: rgba(212, 168, 83, 0.1);
+    color: var(--accent-gold-dim);
+  }
+
+  /* ========== METHOD CARD ========== */
+  .method-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+  }
+
+  .method-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px;
+    transition: all 0.3s ease;
+  }
+
+  .method-card:hover {
+    border-color: rgba(212, 168, 83, 0.3);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-card);
+  }
+
+  .method-year { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-muted); }
+  .method-name { font-size: 0.95rem; font-weight: 700; margin: 4px 0 2px; }
+  .method-author { font-size: 0.75rem; color: var(--accent-gold-dim); margin-bottom: 8px; }
+  .method-desc { font-size: 0.73rem; color: var(--text-secondary); line-height: 1.4; }
+
+  /* ========== STATS ========== */
+  .stats-row { display: flex; gap: 32px; justify-content: center; flex-wrap: wrap; margin: 28px 0; }
+  .stat { text-align: center; }
+
+  .stat-number {
+    font-size: clamp(2rem, 4vw, 3.2rem);
+    font-weight: 900;
+    background: var(--gradient-gold);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    line-height: 1;
+  }
+
+  .stat-label { font-size: 0.8rem; color: var(--text-muted); margin-top: 2px; font-weight: 500; }
+
+  /* ========== CHECKLIST ========== */
+  .checklist-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    transition: all 0.3s ease;
+  }
+
+  .checklist-item:hover {
+    background: var(--bg-card-hover);
+    border-color: rgba(52, 211, 153, 0.3);
+  }
+
+  .check-icon {
+    width: 22px;
+    height: 22px;
+    border-radius: 5px;
+    background: rgba(52, 211, 153, 0.12);
+    border: 1px solid rgba(52, 211, 153, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--accent-green);
+    flex-shrink: 0;
+  }
+
+  .check-icon-red {
+    background: rgba(248, 113, 113, 0.12);
+    border-color: rgba(248, 113, 113, 0.3);
+    color: var(--accent-red);
+  }
+
+  .checklist-text { font-size: 0.82rem; font-weight: 500; }
+
+  /* ========== BG FX ========== */
+  .bg-glow {
+    position: absolute;
+    width: 400px;
+    height: 400px;
+    border-radius: 50%;
+    filter: blur(120px);
+    opacity: 0.07;
+    pointer-events: none;
+  }
+
+  .bg-glow-gold { background: #d4a853; }
+  .bg-glow-blue { background: #4a7dff; }
+  .bg-glow-cyan { background: #22d3ee; }
+
+  .bg-grid {
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+    background-size: 60px 60px;
+    pointer-events: none;
+  }
+
+  /* ========== TABLE ========== */
+  .comparison-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    font-size: 0.82rem;
+  }
+
+  .comparison-table th {
+    background: rgba(212, 168, 83, 0.08);
+    padding: 10px 16px;
+    text-align: left;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--accent-gold);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .comparison-table td {
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-card);
+    transition: background 0.2s;
+  }
+
+  .comparison-table tr:hover td { background: var(--bg-card-hover); }
+  .comparison-table tr:last-child td { border-bottom: none; }
+
+  /* ========== CTA ========== */
+  .cta-box {
+    background: linear-gradient(135deg, rgba(212, 168, 83, 0.08) 0%, rgba(212, 168, 83, 0.02) 100%);
+    border: 1px solid rgba(212, 168, 83, 0.25);
+    border-radius: 16px;
+    padding: 36px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* ========== FLOW ========== */
+  .flow-row { display: flex; align-items: center; justify-content: center; gap: 6px; flex-wrap: wrap; margin: 20px 0; }
+
+  .flow-node {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    transition: all 0.3s;
+  }
+
+  .flow-node:hover { border-color: var(--accent-gold); background: var(--bg-card-hover); }
+  .flow-arrow { color: var(--accent-gold); font-size: 16px; }
+
+  /* ========== QUOTE ========== */
+  .quote-block {
+    border-left: 3px solid var(--accent-gold);
+    padding: 16px 22px;
+    background: rgba(212, 168, 83, 0.04);
+    border-radius: 0 10px 10px 0;
+    font-size: 0.92rem;
+    font-style: italic;
+    color: var(--text-secondary);
+    line-height: 1.5;
+  }
+
+  /* ========== CODE BLOCK ========== */
+  .code-block {
+    background: #0d1117;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+  }
+
+  .code-comment { color: var(--text-muted); }
+  .code-cmd { color: var(--accent-green); }
+  .code-val { color: var(--accent-cyan); }
+
+  /* ========== ANIMATIONS ========== */
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .animate-in { opacity: 0; animation: fadeInUp 0.5s ease forwards; }
+  .delay-1 { animation-delay: 0.1s; }
+  .delay-2 { animation-delay: 0.2s; }
+  .delay-3 { animation-delay: 0.3s; }
+  .delay-4 { animation-delay: 0.4s; }
+
+  /* ========== KEYBOARD HINT ========== */
+  .keyboard-hint {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 11px;
+    color: var(--text-muted);
+    background: rgba(10,10,15,0.8);
+    padding: 5px 14px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    backdrop-filter: blur(10px);
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    opacity: 0.6;
+  }
+
+  kbd {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 1px 5px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text-secondary);
+  }
+
+  /* ========== HELPERS ========== */
+  .mt-8  { margin-top: 8px; }
+  .mt-12 { margin-top: 12px; }
+  .mt-16 { margin-top: 16px; }
+  .mt-20 { margin-top: 20px; }
+  .mt-24 { margin-top: 24px; }
+  .mt-28 { margin-top: 28px; }
+  .mt-32 { margin-top: 32px; }
+  .mt-36 { margin-top: 36px; }
+  .mb-12 { margin-bottom: 12px; }
+  .mb-16 { margin-bottom: 16px; }
+  .text-center { text-align: center; }
+
+  .divider {
+    width: 50px;
+    height: 3px;
+    background: var(--gradient-gold);
+    border-radius: 2px;
+    margin: 14px 0;
+  }
+
+  .divider-center { margin-left: auto; margin-right: auto; }
+
+  /* ========== RESPONSIVE ========== */
+  @media (max-width: 768px) {
+    .slide { padding: 24px 16px; }
+    .grid-2, .grid-3, .grid-4, .method-grid { grid-template-columns: 1fr; }
+    .nav-dots { display: none; }
+    .flow-row { flex-direction: column; }
+    .flow-arrow { transform: rotate(90deg); }
+    .funnel-step { flex-direction: column; text-align: center; gap: 8px; }
+    .cta-box { padding: 24px 16px; }
+    .slide { height: auto; min-height: 100vh; }
+  }
+
+  @media print {
+    .slide { height: auto; min-height: auto; page-break-inside: avoid; padding: 30px 20px; }
+    .nav-dots, .progress-bar, .slide-counter, .keyboard-hint { display: none; }
+    body { background: #fff; color: #111; }
+  }
+</style>
+
+<!-- SVG ICON SPRITES -->
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none;">
+  <symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></symbol>
+  <symbol id="i-bar-chart" viewBox="0 0 24 24"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></symbol>
+  <symbol id="i-handshake" viewBox="0 0 24 24"><path d="M11 17l-5-5 1.41-1.41L11 14.17l7.59-7.59L20 8l-9 9z"/><path d="M2 12h3M19 12h3M12 2v3M12 19v3"/></symbol>
+  <symbol id="i-zap" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></symbol>
+  <symbol id="i-rocket" viewBox="0 0 24 24"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 00-2.91-.09z"/><path d="M12 15l-3-3a22 22 0 012-3.95A12.88 12.88 0 0122 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 01-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></symbol>
+  <symbol id="i-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></symbol>
+  <symbol id="i-mail" viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></symbol>
+  <symbol id="i-users" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></symbol>
+  <symbol id="i-trophy" viewBox="0 0 24 24"><path d="M6 9H4.5a2.5 2.5 0 010-5H6"/><path d="M18 9h1.5a2.5 2.5 0 000-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20 17 22"/><path d="M18 2H6v7a6 6 0 0012 0V2z"/></symbol>
+  <symbol id="i-refresh" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></symbol>
+  <symbol id="i-clipboard" viewBox="0 0 24 24"><path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></symbol>
+  <symbol id="i-terminal" viewBox="0 0 24 24"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></symbol>
+  <symbol id="i-layers" viewBox="0 0 24 24"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></symbol>
+  <symbol id="i-message" viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></symbol>
+  <symbol id="i-compass" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></symbol>
+  <symbol id="i-file-text" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></symbol>
+  <symbol id="i-mic" viewBox="0 0 24 24"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></symbol>
+  <symbol id="i-award" viewBox="0 0 24 24"><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></symbol>
+</svg>
+
+</head>
+<body>
+
+<div class="progress-bar" id="progressBar"></div>
+
+<nav class="nav-dots" id="navDots">
+  <button class="nav-dot active" data-slide="0" data-label="Capa"></button>
+  <button class="nav-dot" data-slide="1" data-label="Sales Chief"></button>
+  <button class="nav-dot" data-slide="2" data-label="Problema"></button>
+  <button class="nav-dot" data-slide="3" data-label="N&uacute;meros"></button>
+  <button class="nav-dot" data-slide="4" data-label="Metodologias"></button>
+  <button class="nav-dot" data-slide="5" data-label="Arquitetura"></button>
+  <button class="nav-dot" data-slide="6" data-label="Agentes"></button>
+  <button class="nav-dot" data-slide="7" data-label="Funil"></button>
+  <button class="nav-dot" data-slide="8" data-label="Tasks"></button>
+  <button class="nav-dot" data-slide="9" data-label="Como Usar"></button>
+  <button class="nav-dot" data-slide="10" data-label="Checklists"></button>
+  <button class="nav-dot" data-slide="11" data-label="Ativa&ccedil;&atilde;o"></button>
+</nav>
+
+<div class="slide-counter" id="slideCounter"><span>01</span> / 12</div>
+
+<div class="keyboard-hint">
+  <kbd>&uarr;</kbd> <kbd>&darr;</kbd> navegar &nbsp;|&nbsp; scroll para avan&ccedil;ar
+</div>
+
+
+<!-- ============================================================ -->
+<!-- SLIDE 0: CAPA -->
+<!-- ============================================================ -->
+<section class="slide" id="slide-0">
+  <div class="bg-glow bg-glow-gold" style="top: -200px; right: -200px;"></div>
+  <div class="bg-glow bg-glow-blue" style="bottom: -200px; left: -200px;"></div>
+  <div class="bg-grid"></div>
+
+  <div class="slide-inner text-center">
+    <div class="animate-in">
+      <span class="label label-pill">Academia Lend&aacute;ria &mdash; Fundamentals</span>
+    </div>
+
+    <h1 class="title-mega mt-28 animate-in delay-1">
+      Squad <span class="text-gold">Sales</span>
+    </h1>
+
+    <p class="subtitle mt-20 animate-in delay-2" style="margin-left: auto; margin-right: auto;">
+      9 agentes de IA baseados em 8 metodologias reais de vendas que j&aacute; geraram
+      bilh&otilde;es em receita no mundo real. Seu time de elite &mdash; dispon&iacute;vel 24/7.
+    </p>
+
+    <div class="stats-row animate-in delay-3">
+      <div class="stat">
+        <div class="stat-number">9</div>
+        <div class="stat-label">Agentes</div>
+      </div>
+      <div class="stat">
+        <div class="stat-number">9</div>
+        <div class="stat-label">Tasks</div>
+      </div>
+      <div class="stat">
+        <div class="stat-number">8</div>
+        <div class="stat-label">Metodologias</div>
+      </div>
+      <div class="stat">
+        <div class="stat-number">2</div>
+        <div class="stat-label">Checklists</div>
+      </div>
+    </div>
+
+    <p class="text-muted animate-in delay-4" style="font-size: 0.8rem; margin-top: 24px;">
+      v1.0.0 &middot; Synkra AIOX &middot; 2026
+    </p>
+  </div>
+</section>
+
+
+<!-- ============================================================ -->
+<!-- SLIDE 1: SALES CHIEF -->
+<!-- ============================================================ -->
+<section class="slide" id="slide-1">
+  <div class="bg-glow bg-glow-gold" style="top: 50%; left: 50%; transform: translate(-50%, -50%); width: 500px; height: 500px; opacity: 0.1;"></div>
+  <div class="bg-grid"></div>
+
+  <div class="slide-inner">
+    <span class="label label-pill animate-in">Conhe&ccedil;a o Orchestrator</span>
+
+    <div class="grid-2 mt-16 animate-in delay-1" style="align-items: start;">
+
+      <!-- LEFT: Identity -->
+      <div>
+        <h2 class="title-large">
+          <span class="text-gold">Sales Chief</span>
+        </h2>
+        <p class="text-dim mt-8" style="font-size: 0.88rem; line-height: 1.6; max-width: 480px;">
+          O c&eacute;rebro estrat&eacute;gico do squad. N&atilde;o vende &mdash; <strong>diagnostica, roteia e orquestra</strong>.
+          Sabe exatamente qual dos 8 especialistas aplicar na sua situa&ccedil;&atilde;o.
+        </p>
+
+        <div class="quote-block mt-16" style="font-size: 0.82rem;">
+          &ldquo;A maioria dos vendedores usa uma metodologia para tudo. O Sales Chief resolve isso:
+          framework certo para o problema certo.&rdquo;
+        </div>
+
+        <div class="mt-16" style="display: flex; flex-direction: column; gap: 6px;">
+          <div style="display: flex; align-items: center; gap: 10px; padding: 8px 0;">
+            <svg class="icon" style="color: var(--accent-gold);"><use href="#i-search"/></svg>
+            <span style="font-size: 0.82rem; font-weight: 500;">Diagnostica em 6 dimens&otilde;es antes de agir</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 10px; padding: 8px 0;">
+            <svg class="icon" style="color: var(--accent-gold);"><use href="#i-compass"/></svg>
+            <span style="font-size: 0.82rem; font-weight: 500;">Roteia para o especialista com o framework certo</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 10px; padding: 8px 0;">
+            <svg class="icon" style="color: var(--accent-gold);"><use href="#i-layers"/></svg>
+            <span style="font-size: 0.82rem; font-weight: 500;">Combina frameworks quando a situa&ccedil;&atilde;o exige</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 10px; padding: 8px 0;">
+            <svg class="icon" style="color: var(--accent-gold);"><use href="#i-shield"/></svg>
+            <span style="font-size: 0.82rem; font-weight: 500;">Nunca prescreve sem entender o contexto</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: Routing Map -->
+      <div>
+        <div class="card" style="padding: 20px;">
+          <h3 class="title-small mb-12" style="display: flex; align-items: center; gap: 8px;">
+            <svg class="icon" style="color: var(--accent-cyan);"><use href="#i-zap"/></svg>
+            Matriz de Roteamento por Nicho
+          </h3>
+
+          <div style="display: flex; flex-direction: column; gap: 6px;">
+            <!-- Niche 1 -->
+            <div style="background: var(--bg-primary); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; display: flex; justify-content: space-between; align-items: center;">
+              <div>
+                <div style="font-size: 0.8rem; font-weight: 600;">Infoproduto Low Ticket</div>
+                <div style="font-size: 0.68rem; color: var(--text-muted);">R$47&ndash;997 &middot; Volume alto</div>
+              </div>
+              <div style="display: flex; gap: 4px;">
+                <span class="task-agent-tag">chet-holmes</span>
+                <span class="task-agent-tag">jeb-blount</span>
+              </div>
+            </div>
+            <!-- Niche 2 -->
+            <div style="background: var(--bg-primary); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; display: flex; justify-content: space-between; align-items: center;">
+              <div>
+                <div style="font-size: 0.8rem; font-weight: 600;">Infoproduto High Ticket</div>
+                <div style="font-size: 0.68rem; color: var(--text-muted);">R$2k&ndash;30k &middot; 1-a-1</div>
+              </div>
+              <div style="display: flex; gap: 4px;">
+                <span class="task-agent-tag">sandler</span>
+                <span class="task-agent-tag">keenan</span>
+                <span class="task-agent-tag">voss</span>
+              </div>
+            </div>
+            <!-- Niche 3 -->
+            <div style="background: var(--bg-primary); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; display: flex; justify-content: space-between; align-items: center;">
+              <div>
+                <div style="font-size: 0.8rem; font-weight: 600;">SaaS SMB</div>
+                <div style="font-size: 0.68rem; color: var(--text-muted);">R$1k&ndash;20k ARR</div>
+              </div>
+              <div style="display: flex; gap: 4px;">
+                <span class="task-agent-tag">keenan</span>
+                <span class="task-agent-tag">rackham</span>
+                <span class="task-agent-tag">ross</span>
+              </div>
+            </div>
+            <!-- Niche 4 -->
+            <div style="background: var(--bg-primary); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; display: flex; justify-content: space-between; align-items: center;">
+              <div>
+                <div style="font-size: 0.8rem; font-weight: 600;">SaaS Enterprise</div>
+                <div style="font-size: 0.68rem; color: var(--text-muted);">R$50k&ndash;1M+ ARR &middot; Multi-stakeholder</div>
+              </div>
+              <div style="display: flex; gap: 4px;">
+                <span class="task-agent-tag">challenger</span>
+                <span class="task-agent-tag">rackham</span>
+                <span class="task-agent-tag">voss</span>
+              </div>
+            </div>
+            <!-- Niche 5 -->
+            <div style="background: var(--bg-primary); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; display: flex; justify-content: space-between; align-items: center;">
+              <div>
+                <div style="font-size: 0.8rem; font-weight: 600;">Consultoria / Servi&ccedil;os</div>
+                <div style="font-size: 0.68rem; color: var(--text-muted);">R$3k&ndash;50k+ &middot; Proposta</div>
+              </div>
+              <div style="display: flex; gap: 4px;">
+                <span class="task-agent-tag">sandler</span>
+                <span class="task-agent-tag">rackham</span>
+                <span class="task-agent-tag">voss</span>
+              </div>
+            </div>
+            <!-- Niche 6 -->
+            <div style="background: var(--bg-primary); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; display: flex; justify-content: space-between; align-items: center;">
+              <div>
+                <div style="font-size: 0.8rem; font-weight: 600;">E-commerce DTC</div>
+                <div style="font-size: 0.68rem; color: var(--text-muted);">R$50&ndash;500 &middot; Ads + LP</div>
+              </div>
+              <div style="display: flex; gap: 4px;">
+                <span class="task-agent-tag">chet-holmes</span>
+                <span class="task-agent-tag">blount</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Diagnostic dimensions -->
+    <div class="mt-16 animate-in delay-2">
+      <div style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;">
+        <div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 8px 16px; text-align: center;">
+          <div style="font-size: 0.7rem; color: var(--accent-orange); font-weight: 600; font-family: 'JetBrains Mono', monospace;">D0</div>
+          <div style="font-size: 0.75rem; font-weight: 600;">Nicho</div>
+        </div>
+        <div style="color: var(--accent-gold); display: flex; align-items: center; font-size: 14px;">&rarr;</div>
+        <div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 8px 16px; text-align: center;">
+          <div style="font-size: 0.7rem; color: var(--accent-gold); font-weight: 600; font-family: 'JetBrains Mono', monospace;">D1</div>
+          <div style="font-size: 0.75rem; font-weight: 600;">Est&aacute;gio</div>
+        </div>
+        <div style="color: var(--accent-gold); display: flex; align-items: center; font-size: 14px;">&rarr;</div>
+        <div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 8px 16px; text-align: center;">
+          <div style="font-size: 0.7rem; color: var(--accent-blue); font-weight: 600; font-family: 'JetBrains Mono', monospace;">D2</div>
+          <div style="font-size: 0.75rem; font-weight: 600;">Complexidade</div>
+        </div>
+        <div style="color: var(--accent-gold); display: flex; align-items: center; font-size: 14px;">&rarr;</div>
+        <div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 8px 16px; text-align: center;">
+          <div style="font-size: 0.7rem; color: var(--accent-cyan); font-weight: 600; font-family: 'JetBrains Mono', monospace;">D3</div>
+          <div style="font-size: 0.75rem; font-weight: 600;">Problema</div>
+        </div>
+        <div style="color: var(--accent-gold); display: flex; align-items: center; font-size: 14px;">&rarr;</div>
+        <div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 8px 16px; text-align: center;">
+          <div style="font-size: 0.7rem; color: var(--accent-purple); font-weight: 600; font-family: 'JetBrains Mono', monospace;">D4</div>
+          <div style="font-size: 0.75rem; font-weight: 600;">Buyer</div>
+        </div>
+        <div style="color: var(--accent-gold); display: flex; align-items: center; font-size: 14px;">&rarr;</div>
+        <div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 8px 16px; text-align: center;">
+          <div style="font-size: 0.7rem; color: var(--accent-green); font-weight: 600; font-family: 'JetBrains Mono', monospace;">D5</div>
+          <div style="font-size: 0.75rem; font-weight: 600;">Urg&ecirc;ncia</div>
+        </div>
+        <div style="color: var(--accent-gold); display: flex; align-items: center; font-size: 14px;">&rarr;</div>
+        <div style="background: rgba(212,168,83,0.1); border: 1px solid rgba(212,168,83,0.3); border-radius: 8px; padding: 8px 16px; text-align: center;">
+          <div style="font-size: 0.7rem; color: var(--accent-gold); font-weight: 600; font-family: 'JetBrains Mono', monospace;">OUT</div>
+          <div style="font-size: 0.75rem; font-weight: 600; color: var(--accent-gold);">Roteamento</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ============================================================ -->
+<!-- SLIDE 2: O PROBLEMA -->
+<!-- ============================================================ -->
+<section class="slide" id="slide-2">
+  <div class="bg-glow bg-glow-gold" style="top: 50%; left: -200px; transform: translateY(-50%);"></div>
+  <div class="slide-inner">
+    <span class="label label-pill animate-in">O Problema</span>
+
+    <h2 class="title-large mt-12 animate-in delay-1">
+      Por que 87% dos vendedores <span class="text-gold">n&atilde;o batem meta?</span>
+    </h2>
+
+    <div class="grid-2 mt-24 animate-in delay-2">
+      <div>
+        <div class="quote-block" style="font-size: 0.88rem;">
+          &ldquo;A maioria dos vendedores improvisa. Acha que carisma substitui processo.
+          Resultado: pipeline vazio, forecast errado, comiss&atilde;o zerada.&rdquo;
+        </div>
+
+        <div class="mt-16" style="display: flex; flex-direction: column; gap: 8px;">
+          <div class="checklist-item">
+            <div class="check-icon check-icon-red"><svg class="icon icon-sm"><use href="#i-x"/></svg></div>
+            <span class="checklist-text">Discovery sem estrutura &mdash; perguntas gen&eacute;ricas</span>
+          </div>
+          <div class="checklist-item">
+            <div class="check-icon check-icon-red"><svg class="icon icon-sm"><use href="#i-x"/></svg></div>
+            <span class="checklist-text">Qualifica&ccedil;&atilde;o por achismo &mdash; sem scoring real</span>
+          </div>
+          <div class="checklist-item">
+            <div class="check-icon check-icon-red"><svg class="icon icon-sm"><use href="#i-x"/></svg></div>
+            <span class="checklist-text">Negocia&ccedil;&atilde;o reativa &mdash; cede pre&ccedil;o sem estrat&eacute;gia</span>
+          </div>
+          <div class="checklist-item">
+            <div class="check-icon check-icon-red"><svg class="icon icon-sm"><use href="#i-x"/></svg></div>
+            <span class="checklist-text">Follow-up aleat&oacute;rio &mdash; perde deals no limbo</span>
+          </div>
+          <div class="checklist-item">
+            <div class="check-icon check-icon-red"><svg class="icon icon-sm"><use href="#i-x"/></svg></div>
+            <span class="checklist-text">Prospec&ccedil;&atilde;o sem sistema &mdash; depende de sorte</span>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="card" style="border-color: rgba(52, 211, 153, 0.3);">
+          <h3 class="title-small" style="color: var(--accent-green); display: flex; align-items: center; gap: 8px;">
+            <svg class="icon" style="color: var(--accent-green);"><use href="#i-check"/></svg>
+            A Solu&ccedil;&atilde;o: Processo > Talento
+          </h3>
+          <div class="divider" style="background: var(--accent-green);"></div>
+          <p class="text-dim" style="font-size: 0.82rem; line-height: 1.6;">
+            O Squad Sales codifica <strong>d&eacute;cadas de campo</strong> dos maiores nomes de vendas do mundo
+            em agentes de IA que voc&ecirc; ativa em segundos.
+          </p>
+          <div class="mt-12" style="display: flex; flex-direction: column; gap: 7px;">
+            <div class="checklist-item" style="border-color: rgba(52, 211, 153, 0.2);">
+              <div class="check-icon"><svg class="icon icon-sm"><use href="#i-check"/></svg></div>
+              <span class="checklist-text">Processo replic&aacute;vel e ensin&aacute;vel</span>
+            </div>
+            <div class="checklist-item" style="border-color: rgba(52, 211, 153, 0.2);">
+              <div class="check-icon"><svg class="icon icon-sm"><use href="#i-check"/></svg></div>
+              <span class="checklist-text">Diagn&oacute;stico antes de prescri&ccedil;&atilde;o</span>
+            </div>
+            <div class="checklist-item" style="border-color: rgba(52, 211, 153, 0.2);">
+              <div class="check-icon"><svg class="icon icon-sm"><use href="#i-check"/></svg></div>
+              <span class="checklist-text">Adapta&ccedil;&atilde;o por nicho autom&aacute;tica</span>
+            </div>
+            <div class="checklist-item" style="border-color: rgba(52, 211, 153, 0.2);">
+              <div class="check-icon"><svg class="icon icon-sm"><use href="#i-check"/></svg></div>
+              <span class="checklist-text">Output pronto para usar &mdash; n&atilde;o teoria</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ============================================================ -->
+<!-- SLIDE 3: N&Uacute;MEROS -->
+<!-- ============================================================ -->
+<section class="slide" id="slide-3">
+  <div class="bg-glow bg-glow-cyan" style="top: 30%; right: -100px;"></div>
+  <div class="slide-inner text-center">
+    <span class="label label-pill animate-in">Squad em N&uacute;meros</span>
+
+    <h2 class="title-large mt-12 animate-in delay-1">
+      O que voc&ecirc; tem <span class="text-gold">nas m&atilde;os</span>
+    </h2>
+
+    <div class="grid-4 mt-24 animate-in delay-2">
+      <div class="card text-center" style="padding: 18px;">
+        <div class="stat-number" style="font-size: 2.4rem;">18</div>
+        <div class="stat-label">Minds pesquisadas</div>
+      </div>
+      <div class="card text-center" style="padding: 18px;">
+        <div class="stat-number" style="font-size: 2.4rem;">8</div>
+        <div class="stat-label">Minds selecionadas</div>
+      </div>
+      <div class="card text-center" style="padding: 18px;">
+        <div class="stat-number" style="font-size: 2.4rem;">4</div>
+        <div class="stat-label">Tiers de especialidade</div>
+      </div>
+      <div class="card text-center" style="padding: 18px;">
+        <div class="stat-number" style="font-size: 2.4rem;">6</div>
+        <div class="stat-label">Nichos suportados</div>
+      </div>
+    </div>
+
+    <div class="mt-20 animate-in delay-3">
+      <table class="comparison-table">
+        <thead>
+          <tr>
+            <th>Nicho</th>
+            <th>Ticket</th>
+            <th>Ciclo</th>
+            <th>Abordagem</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Infoproduto Low Ticket</td>
+            <td style="color: var(--accent-green);">R$47&ndash;497</td>
+            <td>1&ndash;7 dias</td>
+            <td>Copy + urg&ecirc;ncia + social proof</td>
+          </tr>
+          <tr>
+            <td>Infoproduto High Ticket</td>
+            <td style="color: var(--accent-green);">R$997&ndash;12k+</td>
+            <td>7&ndash;30 dias</td>
+            <td>Discovery + demo + closing call</td>
+          </tr>
+          <tr>
+            <td>SaaS SMB</td>
+            <td style="color: var(--accent-green);">R$99&ndash;999/m&ecirc;s</td>
+            <td>14&ndash;45 dias</td>
+            <td>Free trial + onboarding + upsell</td>
+          </tr>
+          <tr>
+            <td>SaaS Enterprise</td>
+            <td style="color: var(--accent-green);">R$5k&ndash;100k+/m&ecirc;s</td>
+            <td>60&ndash;180 dias</td>
+            <td>Multi-stakeholder + POC</td>
+          </tr>
+          <tr>
+            <td>Consultoria/Servi&ccedil;os</td>
+            <td style="color: var(--accent-green);">R$3k&ndash;50k+</td>
+            <td>14&ndash;60 dias</td>
+            <td>Diagn&oacute;stico + proposta + contrato</td>
+          </tr>
+          <tr>
+            <td>E-commerce DTC</td>
+            <td style="color: var(--accent-green);">R$50&ndash;500</td>
+            <td>1&ndash;3 dias</td>
+            <td>Ads + LP + email + retargeting</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+
+<!-- ============================================================ -->
+<!-- SLIDE 4: METODOLOGIAS -->
+<!-- ============================================================ -->
+<section class="slide" id="slide-4">
+  <div class="bg-glow bg-glow-gold" style="bottom: -200px; left: 30%;"></div>
+  <div class="slide-inner">
+    <span class="label label-pill animate-in">Fundamentos</span>
+
+    <h2 class="title-large mt-12 animate-in delay-1">
+      8 Metodologias <span class="text-gold">Battle-Tested</span>
+    </h2>
+    <p class="subtitle mt-8 animate-in delay-2">
+      Cada agente codifica um sistema real &mdash; n&atilde;o teoria de livro. Frameworks validados em campo por d&eacute;cadas.
+    </p>
+
+    <div class="method-grid mt-20 animate-in delay-3">
+      <div class="method-card">
+        <div class="method-year">1988</div>
+        <div class="method-name">SPIN Selling</div>
+        <div class="method-author">Neil Rackham</div>
+        <div class="method-desc">Situation, Problem, Implication, Need-Payoff. Nasceu de 35.000 sales calls analisadas.</div>
+      </div>
+      <div class="method-card">
+        <div class="method-year">1967</div>
+        <div class="method-name">Sandler System</div>
+        <div class="method-author">David Sandler</div>
+        <div class="method-desc">7 etapas do Submarine. Pain Funnel, Up-Front Contract, Budget Step.</div>
+      </div>
+      <div class="method-card">
+        <div class="method-year">2018</div>
+        <div class="method-name">Gap Selling</div>
+        <div class="method-author">Keenan</div>
+        <div class="method-desc">Venda centrada no gap entre estado atual e desejado. Maior gap = maior urg&ecirc;ncia.</div>
+      </div>
+      <div class="method-card">
+        <div class="method-year">2016</div>
+        <div class="method-name">Tactical Empathy</div>
+        <div class="method-author">Chris Voss</div>
+        <div class="method-desc">Negocia&ccedil;&atilde;o do FBI aplicada a vendas. Labels, mirrors, calibrated questions.</div>
+      </div>
+      <div class="method-card">
+        <div class="method-year">2011</div>
+        <div class="method-name">Challenger Sale</div>
+        <div class="method-author">Dixon &amp; Adamson</div>
+        <div class="method-desc">Teach, Tailor, Take Control. Vendedores top s&atilde;o Challengers, n&atilde;o relacionais.</div>
+      </div>
+      <div class="method-card">
+        <div class="method-year">2015</div>
+        <div class="method-name">Fanatical Prospecting</div>
+        <div class="method-author">Jeb Blount</div>
+        <div class="method-desc">Pipeline &eacute; tudo. Blocos de prospec&ccedil;&atilde;o, RBO objection handling, Sales EQ.</div>
+      </div>
+      <div class="method-card">
+        <div class="method-year">2007</div>
+        <div class="method-name">Dream 100</div>
+        <div class="method-author">Chet Holmes</div>
+        <div class="method-desc">12 Core Strategies. Foque nos 100 clientes ideais com disciplina obstinada.</div>
+      </div>
+      <div class="method-card">
+        <div class="method-year">2011</div>
+        <div class="method-name">Predictable Revenue</div>
+        <div class="method-author">Aaron Ross</div>
+        <div class="method-desc">Cold Calling 2.0, Seeds-Nets-Spears. Levou a Salesforce de $0 a $100M ARR.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ============================================================ -->
+<!-- SLIDE 5: ARQUITETURA -->
+<!-- ============================================================ -->
+<section class="slide" id="slide-5">
+  <div class="bg-glow bg-glow-blue" style="top: -100px; right: -100px;"></div>
+  <div class="bg-grid"></div>
+  <div class="slide-inner">
+    <span class="label label-pill animate-in">Arquitetura</span>
+
+    <h2 class="title-large mt-12 animate-in delay-1">
+      Sistema de <span class="text-gold">4 Tiers</span>
+    </h2>
+    <p class="subtitle mt-8 animate-in delay-2">
+      Cada agente ocupa um tier espec&iacute;fico. Diagn&oacute;stico vem antes da prescri&ccedil;&atilde;o.
+    </p>
+
+    <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 20px;" class="animate-in delay-3">
+      <div class="card" style="border-left: 4px solid var(--accent-gold); display: flex; align-items: center; gap: 16px; padding: 16px 20px;">
+        <div class="agent-icon" style="width: 36px; height: 36px;"><svg class="icon"><use href="#i-compass"/></svg></div>
+        <div style="flex:1;">
+          <span class="tier-badge tier-1">ORCHESTRATOR</span>
+          <h3 class="title-small">Sales Chief</h3>
+          <p class="text-dim" style="font-size: 0.78rem;">Ponto de entrada. Diagnostica a situa&ccedil;&atilde;o, identifica o nicho, roteia para o especialista certo.</p>
+        </div>
+      </div>
+
+      <div class="card" style="border-left: 4px solid var(--accent-orange); display: flex; align-items: center; gap: 16px; padding: 16px 20px;">
+        <div class="agent-icon" style="width: 36px; height: 36px; background: rgba(251,146,60,0.1); border-color: rgba(251,146,60,0.2); color: var(--accent-orange);"><svg class="icon"><use href="#i-search"/></svg></div>
+        <div style="flex:1;">
+          <span class="tier-badge tier-0">TIER 0 &mdash; DIAGN&Oacute;STICO</span>
+          <h3 class="title-small">Neil Rackham <span class="text-muted" style="font-weight: 400;">&middot; SPIN Selling</span></h3>
+          <p class="text-dim" style="font-size: 0.78rem;">Sempre roda primeiro. Perguntas estruturadas para descobrir a dor real antes de qualquer pitch.</p>
+        </div>
+      </div>
+
+      <div class="card" style="border-left: 4px solid var(--accent-gold); padding: 16px 20px;">
+        <span class="tier-badge tier-1">TIER 1 &mdash; MASTERS</span>
+        <div class="grid-3" style="margin-top: 8px;">
+          <div>
+            <h4 class="title-small">David Sandler</h4>
+            <p class="text-muted" style="font-size: 0.75rem;">Sandler System &mdash; Qualifica&ccedil;&atilde;o e controle</p>
+          </div>
+          <div>
+            <h4 class="title-small">Keenan</h4>
+            <p class="text-muted" style="font-size: 0.75rem;">Gap Selling &mdash; Estado atual vs. desejado</p>
+          </div>
+          <div>
+            <h4 class="title-small">Chris Voss</h4>
+            <p class="text-muted" style="font-size: 0.75rem;">Tactical Empathy &mdash; Negocia&ccedil;&atilde;o e obje&ccedil;&otilde;es</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="border-left: 4px solid var(--accent-blue); padding: 16px 20px;">
+        <span class="tier-badge tier-2">TIER 2 &mdash; SYSTEMATIZERS</span>
+        <div class="grid-3" style="margin-top: 8px;">
+          <div>
+            <h4 class="title-small">Challenger Sale</h4>
+            <p class="text-muted" style="font-size: 0.75rem;">Enterprise B2B &mdash; Teach, Tailor, Take Control</p>
+          </div>
+          <div>
+            <h4 class="title-small">Jeb Blount</h4>
+            <p class="text-muted" style="font-size: 0.75rem;">Pipeline General &mdash; Prospec&ccedil;&atilde;o e Sales EQ</p>
+          </div>
+          <div>
+            <h4 class="title-small">Chet Holmes</h4>
+            <p class="text-muted" style="font-size: 0.75rem;">Dream 100 &mdash; Foco e persist&ecirc;ncia</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="border-left: 4px solid var(--accent-purple); display: flex; align-items: center; gap: 16px; padding: 16px 20px;">
+        <div class="agent-icon" style="width: 36px; height: 36px; background: rgba(167,139,250,0.1); border-color: rgba(167,139,250,0.2); color: var(--accent-purple);"><svg class="icon"><use href="#i-settings"/></svg></div>
+        <div style="flex:1;">
+          <span class="tier-badge tier-3">TIER 3 &mdash; SPECIALIST</span>
+          <h3 class="title-small">Aaron Ross <span class="text-muted" style="font-weight: 400;">&middot; Predictable Revenue</span></h3>
+          <p class="text-dim" style="font-size: 0.78rem;">Outbound engine. Cold Calling 2.0, arquitetura de SDR, Seeds-Nets-Spears.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ============================================================ -->
+<!-- SLIDE 6: AGENTES -->
+<!-- ============================================================ -->
+<section class="slide" id="slide-6">
+  <div class="bg-glow bg-glow-gold" style="top: 20%; left: -200px;"></div>
+  <div class="slide-inner">
+    <span class="label label-pill animate-in">Os 9 Agentes</span>
+
+    <h2 class="title-large mt-12 animate-in delay-1">
+      Seu time de <span class="text-gold">elite</span>
+    </h2>
+
+    <div class="grid-3 mt-20 animate-in delay-2">
+      <div class="agent-card" style="--card-accent: var(--accent-gold);">
+        <div class="agent-icon"><svg class="icon"><use href="#i-compass"/></svg></div>
+        <span class="tier-badge tier-1">ORCHESTRATOR</span>
+        <div class="agent-name">Sales Chief</div>
+        <div class="agent-role">Orchestrator do Squad</div>
+        <div class="agent-desc">Diagnostica, identifica nicho e roteia para o especialista certo.</div>
+      </div>
+
+      <div class="agent-card" style="--card-accent: var(--accent-orange);">
+        <div class="agent-icon" style="background: rgba(251,146,60,0.1); border-color: rgba(251,146,60,0.2); color: var(--accent-orange);"><svg class="icon"><use href="#i-search"/></svg></div>
+        <span class="tier-badge tier-0">TIER 0</span>
+        <div class="agent-name">Neil Rackham</div>
+        <div class="agent-role">SPIN Selling Diagnostician</div>
+        <div class="agent-method">SPIN Selling (1988)</div>
+        <div class="agent-desc">Discovery estruturada. 35.000 calls analisadas.</div>
+      </div>
+
+      <div class="agent-card" style="--card-accent: var(--accent-gold);">
+        <div class="agent-icon"><svg class="icon"><use href="#i-layers"/></svg></div>
+        <span class="tier-badge tier-1">TIER 1</span>
+        <div class="agent-name">David Sandler</div>
+        <div class="agent-role">Sandler System Architect</div>
+        <div class="agent-method">Sandler Submarine (1967)</div>
+        <div class="agent-desc">Pain Funnel, Up-Front Contract, Budget Step.</div>
+      </div>
+
+      <div class="agent-card" style="--card-accent: var(--accent-gold);">
+        <div class="agent-icon"><svg class="icon"><use href="#i-bar-chart"/></svg></div>
+        <span class="tier-badge tier-1">TIER 1</span>
+        <div class="agent-name">Keenan</div>
+        <div class="agent-role">Gap Selling Specialist</div>
+        <div class="agent-method">Gap Selling (2018)</div>
+        <div class="agent-desc">Estado atual vs. desejado. Maior gap = mais urg&ecirc;ncia.</div>
+      </div>
+
+      <div class="agent-card" style="--card-accent: var(--accent-gold);">
+        <div class="agent-icon"><svg class="icon"><use href="#i-message"/></svg></div>
+        <span class="tier-badge tier-1">TIER 1</span>
+        <div class="agent-name">Chris Voss</div>
+        <div class="agent-role">The Negotiator</div>
+        <div class="agent-method">Tactical Empathy (2016)</div>
+        <div class="agent-desc">T&eacute;cnicas do FBI. Labels, mirrors, calibrated questions.</div>
+      </div>
+
+      <div class="agent-card" style="--card-accent: var(--accent-blue);">
+        <div class="agent-icon" style="background: rgba(74,125,255,0.1); border-color: rgba(74,125,255,0.2); color: var(--accent-blue);"><svg class="icon"><use href="#i-zap"/></svg></div>
+        <span class="tier-badge tier-2">TIER 2</span>
+        <div class="agent-name">Challenger Sale</div>
+        <div class="agent-role">Enterprise B2B</div>
+        <div class="agent-method">Challenger (2011)</div>
+        <div class="agent-desc">Teach, Tailor, Take Control. M&uacute;ltiplos stakeholders.</div>
+      </div>
+
+      <div class="agent-card" style="--card-accent: var(--accent-blue);">
+        <div class="agent-icon" style="background: rgba(74,125,255,0.1); border-color: rgba(74,125,255,0.2); color: var(--accent-blue);"><svg class="icon"><use href="#i-rocket"/></svg></div>
+        <span class="tier-badge tier-2">TIER 2</span>
+        <div class="agent-name">Jeb Blount</div>
+        <div class="agent-role">The Pipeline General</div>
+        <div class="agent-method">Fanatical Prospecting (2015)</div>
+        <div class="agent-desc">Prospec&ccedil;&atilde;o obsessiva. Pipeline nunca seca.</div>
+      </div>
+
+      <div class="agent-card" style="--card-accent: var(--accent-blue);">
+        <div class="agent-icon" style="background: rgba(74,125,255,0.1); border-color: rgba(74,125,255,0.2); color: var(--accent-blue);"><svg class="icon"><use href="#i-target"/></svg></div>
+        <span class="tier-badge tier-2">TIER 2</span>
+        <div class="agent-name">Chet Holmes</div>
+        <div class="agent-role">Sales Machine Builder</div>
+        <div class="agent-method">Dream 100 (2007)</div>
+        <div class="agent-desc">12 Strategies. Foque nos 100 clientes ideais.</div>
+      </div>
+
+      <div class="agent-card" style="--card-accent: var(--accent-purple);">
+        <div class="agent-icon" style="background: rgba(167,139,250,0.1); border-color: rgba(167,139,250,0.2); color: var(--accent-purple);"><svg class="icon"><use href="#i-settings"/></svg></div>
+        <span class="tier-badge tier-3">TIER 3</span>
+        <div class="agent-name">Aaron Ross</div>
+        <div class="agent-role">Outbound Engine</div>
+        <div class="agent-method">Predictable Revenue (2011)</div>
+        <div class="agent-desc">Cold Calling 2.0. Seeds-Nets-Spears. Arquitetura SDR.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ============================================================ -->
+<!-- SLIDE 7: FUNIL -->
+<!-- ============================================================ -->
+<section class="slide" id="slide-7">
+  <div class="bg-glow bg-glow-cyan" style="bottom: -100px; right: -100px;"></div>
+  <div class="slide-inner">
+    <span class="label label-pill animate-in">Cobertura do Funil</span>
+
+    <h2 class="title-large mt-12 animate-in delay-1">
+      Do primeiro contato ao <span class="text-gold">cash in</span>
+    </h2>
+
+    <div class="funnel mt-24 animate-in delay-2">
+      <div class="funnel-step">
+        <div class="funnel-icon" style="background: rgba(251,146,60,0.12); color: var(--accent-orange);"><svg class="icon"><use href="#i-search"/></svg></div>
+        <div class="funnel-content">
+          <h4>1. Diagn&oacute;stico</h4>
+          <p>Entender contexto, dor, nicho e est&aacute;gio do deal</p>
+        </div>
+        <div class="funnel-agents"><span class="funnel-agent">sales-chief</span><span class="funnel-agent">neil-rackham</span></div>
+      </div>
+      <div class="funnel-step">
+        <div class="funnel-icon" style="background: rgba(52,211,153,0.12); color: var(--accent-green);"><svg class="icon"><use href="#i-clipboard"/></svg></div>
+        <div class="funnel-content">
+          <h4>2. Qualifica&ccedil;&atilde;o</h4>
+          <p>SPIN + Gap + Sandler Pain/Budget/Decision</p>
+        </div>
+        <div class="funnel-agents"><span class="funnel-agent">neil-rackham</span><span class="funnel-agent">keenan</span><span class="funnel-agent">david-sandler</span></div>
+      </div>
+      <div class="funnel-step">
+        <div class="funnel-icon" style="background: rgba(74,125,255,0.12); color: var(--accent-blue);"><svg class="icon"><use href="#i-mail"/></svg></div>
+        <div class="funnel-content">
+          <h4>3. Prospec&ccedil;&atilde;o</h4>
+          <p>Cold outreach, Dream 100, email sequences, SDR engine</p>
+        </div>
+        <div class="funnel-agents"><span class="funnel-agent">aaron-ross</span><span class="funnel-agent">jeb-blount</span><span class="funnel-agent">chet-holmes</span></div>
+      </div>
+      <div class="funnel-step">
+        <div class="funnel-icon" style="background: rgba(167,139,250,0.12); color: var(--accent-purple);"><svg class="icon"><use href="#i-message"/></svg></div>
+        <div class="funnel-content">
+          <h4>4. Negocia&ccedil;&atilde;o</h4>
+          <p>Tactical Empathy, labels, mirrors, objection handling</p>
+        </div>
+        <div class="funnel-agents"><span class="funnel-agent">chris-voss</span><span class="funnel-agent">david-sandler</span></div>
+      </div>
+      <div class="funnel-step">
+        <div class="funnel-icon" style="background: rgba(212,168,83,0.12); color: var(--accent-gold);"><svg class="icon"><use href="#i-trophy"/></svg></div>
+        <div class="funnel-content">
+          <h4>5. Closing</h4>
+          <p>Sandler Submarine + Challenger tension quando necess&aacute;rio</p>
+        </div>
+        <div class="funnel-agents"><span class="funnel-agent">david-sandler</span><span class="funnel-agent">challenger-sale</span></div>
+      </div>
+      <div class="funnel-step">
+        <div class="funnel-icon" style="background: rgba(34,211,238,0.12); color: var(--accent-cyan);"><svg class="icon"><use href="#i-refresh"/></svg></div>
+        <div class="funnel-content">
+          <h4>6. Follow-up &amp; Scale</h4>
+          <p>Sequ&ecirc;ncias por est&aacute;gio, email marketing, copy, scripts</p>
+        </div>
+        <div class="funnel-agents"><span class="funnel-agent">all agents</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ============================================================ -->
+<!-- SLIDE 8: TASKS -->
+<!-- ============================================================ -->
+<section class="slide" id="slide-8">
+  <div class="bg-glow bg-glow-gold" style="top: -150px; left: 50%; transform: translateX(-50%);"></div>
+  <div class="slide-inner">
+    <span class="label label-pill animate-in">9 Tasks Execut&aacute;veis</span>
+
+    <h2 class="title-large mt-12 animate-in delay-1">
+      N&atilde;o &eacute; teoria. &Eacute; <span class="text-gold">output pronto</span>.
+    </h2>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 20px;" class="animate-in delay-2">
+      <div class="task-card">
+        <div class="task-number">01</div>
+        <div class="task-info">
+          <h4>Diagnose Deal</h4>
+          <p>Diagn&oacute;stico completo: gaps, riscos e pr&oacute;ximos passos</p>
+          <div class="task-agents"><span class="task-agent-tag">neil-rackham</span><span class="task-agent-tag">keenan</span></div>
+        </div>
+      </div>
+      <div class="task-card">
+        <div class="task-number">02</div>
+        <div class="task-info">
+          <h4>Qualify Prospect</h4>
+          <p>SPIN + Gap + Sandler Pain/Budget/Decision scoring</p>
+          <div class="task-agents"><span class="task-agent-tag">neil-rackham</span><span class="task-agent-tag">keenan</span><span class="task-agent-tag">sandler</span></div>
+        </div>
+      </div>
+      <div class="task-card">
+        <div class="task-number">03</div>
+        <div class="task-info">
+          <h4>Create Cold Outreach</h4>
+          <p>Sequ&ecirc;ncia completa: email + call + social</p>
+          <div class="task-agents"><span class="task-agent-tag">aaron-ross</span><span class="task-agent-tag">jeb-blount</span><span class="task-agent-tag">chet-holmes</span></div>
+        </div>
+      </div>
+      <div class="task-card">
+        <div class="task-number">04</div>
+        <div class="task-info">
+          <h4>Negotiate Deal</h4>
+          <p>Tactical Empathy + Sandler closing discipline</p>
+          <div class="task-agents"><span class="task-agent-tag">chris-voss</span><span class="task-agent-tag">david-sandler</span></div>
+        </div>
+      </div>
+      <div class="task-card">
+        <div class="task-number">05</div>
+        <div class="task-info">
+          <h4>Close Deal</h4>
+          <p>Sandler Submarine + Challenger tension</p>
+          <div class="task-agents"><span class="task-agent-tag">david-sandler</span><span class="task-agent-tag">challenger-sale</span></div>
+        </div>
+      </div>
+      <div class="task-card">
+        <div class="task-number">06</div>
+        <div class="task-info">
+          <h4>Create Follow-up Sequence</h4>
+          <p>Sequ&ecirc;ncias por est&aacute;gio: discovery at&eacute; p&oacute;s-close</p>
+          <div class="task-agents"><span class="task-agent-tag">all 9 agents</span></div>
+        </div>
+      </div>
+      <div class="task-card">
+        <div class="task-number">07</div>
+        <div class="task-info">
+          <h4>Create Email Sequences</h4>
+          <p>Nurture, launch, cart, onboarding, reengagement, upsell</p>
+          <div class="task-agents"><span class="task-agent-tag">jeb-blount</span><span class="task-agent-tag">chet-holmes</span></div>
+        </div>
+      </div>
+      <div class="task-card">
+        <div class="task-number">08</div>
+        <div class="task-info">
+          <h4>Create Sales Copy</h4>
+          <p>Sales page, VSL, webinar, proposal, case study</p>
+          <div class="task-agents"><span class="task-agent-tag">all 8 specialists</span></div>
+        </div>
+      </div>
+      <div class="task-card" style="grid-column: span 2;">
+        <div class="task-number">09</div>
+        <div class="task-info">
+          <h4>Create Sales Scripts</h4>
+          <p>Scripts para discovery calls, demos, closing, obje&ccedil;&otilde;es, DMs/WhatsApp, triagem e referral &mdash; prontos para usar</p>
+          <div class="task-agents"><span class="task-agent-tag">david-sandler</span><span class="task-agent-tag">chris-voss</span><span class="task-agent-tag">neil-rackham</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ============================================================ -->
+<!-- SLIDE 9: COMO USAR -->
+<!-- ============================================================ -->
+<section class="slide" id="slide-9">
+  <div class="bg-glow bg-glow-blue" style="top: 50%; left: -200px; transform: translateY(-50%);"></div>
+  <div class="bg-grid"></div>
+  <div class="slide-inner">
+    <span class="label label-pill animate-in">Como Usar</span>
+
+    <h2 class="title-large mt-12 animate-in delay-1">
+      3 formas de <span class="text-gold">ativar</span>
+    </h2>
+
+    <div class="grid-3 mt-20 animate-in delay-2">
+      <div class="card" style="padding: 20px;">
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px; color: var(--accent-gold);">
+          <svg class="icon"><use href="#i-compass"/></svg>
+          <span class="title-small">Orchestrator</span>
+        </div>
+        <div class="code-block" style="font-size: 11px; padding: 12px;">
+          <span class="code-cmd">></span> <span class="code-val">/Sales:agents:sales-chief</span><br><br>
+          <span class="code-comment">// Analisa sua situa&ccedil;&atilde;o</span><br>
+          <span class="code-comment">// Roteia para o certo</span>
+        </div>
+        <p class="text-muted mt-12" style="font-size: 0.75rem;">Quando n&atilde;o sabe por onde come&ccedil;ar.</p>
+      </div>
+
+      <div class="card" style="padding: 20px;">
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px; color: var(--accent-green);">
+          <svg class="icon"><use href="#i-play"/></svg>
+          <span class="title-small">Executar Task</span>
+        </div>
+        <div class="code-block" style="font-size: 11px; padding: 12px;">
+          <span class="code-cmd">></span> <span class="code-val">/Sales:tasks:diagnose-deal</span><br><br>
+          <span class="code-cmd">></span> <span class="code-val">/Sales:tasks:close-deal</span><br><br>
+          <span class="code-cmd">></span> <span class="code-val">/Sales:tasks:create-cold-outreach</span>
+        </div>
+        <p class="text-muted mt-12" style="font-size: 0.75rem;">Quando sabe exatamente o que precisa.</p>
+      </div>
+
+      <div class="card" style="padding: 20px;">
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px; color: var(--accent-cyan);">
+          <svg class="icon"><use href="#i-users"/></svg>
+          <span class="title-small">Agente Direto</span>
+        </div>
+        <div class="code-block" style="font-size: 11px; padding: 12px;">
+          <span class="code-cmd">></span> <span class="code-val">/Sales:agents:chris-voss</span><br><br>
+          <span class="code-comment">// Conversa direta com o</span><br>
+          <span class="code-comment">// especialista em negocia&ccedil;&atilde;o</span>
+        </div>
+        <p class="text-muted mt-12" style="font-size: 0.75rem;">Quando quer a perspectiva de um framework.</p>
+      </div>
+    </div>
+
+    <div class="mt-24 animate-in delay-3">
+      <h3 class="title-small text-center mb-12">Fluxo t&iacute;pico de um deal</h3>
+      <div class="flow-row">
+        <div class="flow-node" style="border-color: var(--accent-orange);">Diagnose</div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-node" style="border-color: var(--accent-green);">Qualify</div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-node" style="border-color: var(--accent-blue);">Outreach</div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-node" style="border-color: var(--accent-purple);">Negotiate</div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-node" style="border-color: var(--accent-gold);">Close</div>
+        <div class="flow-arrow">&rarr;</div>
+        <div class="flow-node" style="border-color: var(--accent-cyan);">Follow-up</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ============================================================ -->
+<!-- SLIDE 10: CHECKLISTS -->
+<!-- ============================================================ -->
+<section class="slide" id="slide-10">
+  <div class="bg-glow bg-glow-gold" style="bottom: -200px; right: -200px;"></div>
+  <div class="slide-inner">
+    <span class="label label-pill animate-in">Quality Gates</span>
+
+    <h2 class="title-large mt-12 animate-in delay-1">
+      2 Checklists de <span class="text-gold">controle</span>
+    </h2>
+    <p class="subtitle mt-8 animate-in delay-2">
+      Nenhum deal avan&ccedil;a sem qualifica&ccedil;&atilde;o s&oacute;lida. Nenhuma discovery &eacute; desperdi&ccedil;ada.
+    </p>
+
+    <div class="grid-2 mt-20 animate-in delay-3">
+      <div class="card">
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 14px;">
+          <div class="check-icon" style="width: 32px; height: 32px;"><svg class="icon icon-sm"><use href="#i-clipboard"/></svg></div>
+          <div>
+            <h3 class="title-small">Deal Qualification</h3>
+            <p class="text-muted" style="font-size: 0.72rem;">Scoring multi-framework</p>
+          </div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 6px;">
+          <div class="checklist-item" style="padding: 8px 12px;">
+            <div class="check-icon" style="width: 20px; height: 20px;"><svg class="icon icon-sm"><use href="#i-check"/></svg></div>
+            <span class="checklist-text" style="font-size: 0.78rem;">Pain identificada e quantificada</span>
+          </div>
+          <div class="checklist-item" style="padding: 8px 12px;">
+            <div class="check-icon" style="width: 20px; height: 20px;"><svg class="icon icon-sm"><use href="#i-check"/></svg></div>
+            <span class="checklist-text" style="font-size: 0.78rem;">Budget confirmado ou estim&aacute;vel</span>
+          </div>
+          <div class="checklist-item" style="padding: 8px 12px;">
+            <div class="check-icon" style="width: 20px; height: 20px;"><svg class="icon icon-sm"><use href="#i-check"/></svg></div>
+            <span class="checklist-text" style="font-size: 0.78rem;">Decision maker mapeado</span>
+          </div>
+          <div class="checklist-item" style="padding: 8px 12px;">
+            <div class="check-icon" style="width: 20px; height: 20px;"><svg class="icon icon-sm"><use href="#i-check"/></svg></div>
+            <span class="checklist-text" style="font-size: 0.78rem;">Timeline definida</span>
+          </div>
+          <div class="checklist-item" style="padding: 8px 12px;">
+            <div class="check-icon" style="width: 20px; height: 20px;"><svg class="icon icon-sm"><use href="#i-check"/></svg></div>
+            <span class="checklist-text" style="font-size: 0.78rem;">Gap atual vs. desejado mensur&aacute;vel</span>
+          </div>
+        </div>
+        <div class="mt-12" style="padding: 8px 12px; background: rgba(52,211,153,0.08); border-radius: 6px; border: 1px solid rgba(52,211,153,0.2);">
+          <p style="font-size: 0.7rem; color: var(--accent-green); font-family: 'JetBrains Mono', monospace;">/Sales:checklists:deal-qualification-checklist</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 14px;">
+          <div class="check-icon" style="width: 32px; height: 32px;"><svg class="icon icon-sm"><use href="#i-mic"/></svg></div>
+          <div>
+            <h3 class="title-small">Discovery Quality</h3>
+            <p class="text-muted" style="font-size: 0.72rem;">Qualidade da conversa de discovery</p>
+          </div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 6px;">
+          <div class="checklist-item" style="padding: 8px 12px;">
+            <div class="check-icon" style="width: 20px; height: 20px;"><svg class="icon icon-sm"><use href="#i-check"/></svg></div>
+            <span class="checklist-text" style="font-size: 0.78rem;">Up-Front Contract estabelecido</span>
+          </div>
+          <div class="checklist-item" style="padding: 8px 12px;">
+            <div class="check-icon" style="width: 20px; height: 20px;"><svg class="icon icon-sm"><use href="#i-check"/></svg></div>
+            <span class="checklist-text" style="font-size: 0.78rem;">Perguntas SPIN aplicadas</span>
+          </div>
+          <div class="checklist-item" style="padding: 8px 12px;">
+            <div class="check-icon" style="width: 20px; height: 20px;"><svg class="icon icon-sm"><use href="#i-check"/></svg></div>
+            <span class="checklist-text" style="font-size: 0.78rem;">Dor aprofundada at&eacute; n&iacute;vel pessoal</span>
+          </div>
+          <div class="checklist-item" style="padding: 8px 12px;">
+            <div class="check-icon" style="width: 20px; height: 20px;"><svg class="icon icon-sm"><use href="#i-check"/></svg></div>
+            <span class="checklist-text" style="font-size: 0.78rem;">Impacto financeiro calculado</span>
+          </div>
+          <div class="checklist-item" style="padding: 8px 12px;">
+            <div class="check-icon" style="width: 20px; height: 20px;"><svg class="icon icon-sm"><use href="#i-check"/></svg></div>
+            <span class="checklist-text" style="font-size: 0.78rem;">Pr&oacute;ximos passos claros definidos</span>
+          </div>
+        </div>
+        <div class="mt-12" style="padding: 8px 12px; background: rgba(52,211,153,0.08); border-radius: 6px; border: 1px solid rgba(52,211,153,0.2);">
+          <p style="font-size: 0.7rem; color: var(--accent-green); font-family: 'JetBrains Mono', monospace;">/Sales:checklists:discovery-quality-checklist</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ============================================================ -->
+<!-- SLIDE 11: CTA -->
+<!-- ============================================================ -->
+<section class="slide" id="slide-11">
+  <div class="bg-glow bg-glow-gold" style="top: 50%; left: 50%; transform: translate(-50%, -50%); width: 500px; height: 500px; opacity: 0.1;"></div>
+  <div class="bg-grid"></div>
+  <div class="slide-inner text-center">
+    <div class="animate-in">
+      <span class="label label-pill">Pr&oacute;ximo Passo</span>
+    </div>
+
+    <h2 class="title-mega mt-20 animate-in delay-1">
+      Ative <span class="text-gold">agora</span>.
+    </h2>
+
+    <p class="subtitle mt-16 animate-in delay-2" style="margin-left: auto; margin-right: auto; max-width: 560px;">
+      Voc&ecirc; tem 9 especialistas de vendas no seu terminal.
+      Comece pelo diagn&oacute;stico e deixe o squad guiar voc&ecirc; pelo funil.
+    </p>
+
+    <div class="cta-box mt-28 animate-in delay-3" style="max-width: 640px; margin-left: auto; margin-right: auto;">
+      <div class="code-block" style="text-align: left; margin-bottom: 20px; padding: 18px;">
+        <div class="code-comment"># Passo 1: Ative o Sales Chief</div>
+        <div><span class="code-cmd">$</span> <span class="code-val">/Sales:agents:sales-chief</span></div>
+        <br>
+        <div class="code-comment"># Passo 2: Descreva sua situa&ccedil;&atilde;o</div>
+        <div><span class="code-cmd">$</span> "Preciso fechar um deal enterprise de R$50k/m&ecirc;s..."</div>
+        <br>
+        <div class="code-comment"># Passo 3: Siga o fluxo do squad</div>
+        <div><span class="code-cmd">$</span> <span style="color: var(--text-secondary);">Sales Chief roteia para os agentes certos</span></div>
+      </div>
+
+      <p style="font-size: 0.9rem; color: var(--text-secondary); font-weight: 500;">
+        Diagn&oacute;stico primeiro. Prescri&ccedil;&atilde;o depois. Sempre.
+      </p>
+    </div>
+
+    <div class="mt-32 animate-in delay-4">
+      <div class="divider divider-center"></div>
+      <p class="text-muted mt-16" style="font-size: 0.78rem;">
+        Squad Sales v1.0.0 &middot; 8 metodologias &middot; 9 agentes &middot; 9 tasks &middot; 2 checklists
+      </p>
+      <p class="text-muted mt-8" style="font-size: 0.72rem;">
+        Academia Lend&aacute;ria &mdash; Fundamentals &middot; Synkra AIOX
+      </p>
+    </div>
+  </div>
+</section>
+
+
+<script>
+  const slides = document.querySelectorAll('.slide');
+  const dots = document.querySelectorAll('.nav-dot');
+  const progressBar = document.getElementById('progressBar');
+  const slideCounter = document.getElementById('slideCounter');
+  const totalSlides = slides.length;
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const index = Array.from(slides).indexOf(entry.target);
+        updateActiveSlide(index);
+      }
+    });
+  }, { threshold: 0.5 });
+
+  slides.forEach(slide => observer.observe(slide));
+
+  function updateActiveSlide(index) {
+    dots.forEach((dot, i) => dot.classList.toggle('active', i === index));
+    progressBar.style.width = ((index + 1) / totalSlides) * 100 + '%';
+    slideCounter.innerHTML = `<span>${String(index + 1).padStart(2, '0')}</span> / ${totalSlides}`;
+  }
+
+  dots.forEach(dot => {
+    dot.addEventListener('click', () => {
+      slides[parseInt(dot.dataset.slide)].scrollIntoView({ behavior: 'smooth' });
+    });
+  });
+
+  document.addEventListener('keydown', (e) => {
+    const current = parseInt(document.querySelector('.nav-dot.active')?.dataset.slide || 0);
+    if (e.key === 'ArrowDown' || e.key === 'PageDown' || e.key === ' ') {
+      e.preventDefault();
+      slides[Math.min(current + 1, totalSlides - 1)].scrollIntoView({ behavior: 'smooth' });
+    }
+    if (e.key === 'ArrowUp' || e.key === 'PageUp') {
+      e.preventDefault();
+      slides[Math.max(current - 1, 0)].scrollIntoView({ behavior: 'smooth' });
+    }
+    if (e.key === 'Home') { e.preventDefault(); slides[0].scrollIntoView({ behavior: 'smooth' }); }
+    if (e.key === 'End') { e.preventDefault(); slides[totalSlides - 1].scrollIntoView({ behavior: 'smooth' }); }
+  });
+
+  const animObs = new IntersectionObserver((entries) => {
+    entries.forEach(entry => { if (entry.isIntersecting) entry.target.style.animationPlayState = 'running'; });
+  }, { threshold: 0.1 });
+  document.querySelectorAll('.animate-in').forEach(el => { el.style.animationPlayState = 'paused'; animObs.observe(el); });
+</script>
+
+</body>
+</html>

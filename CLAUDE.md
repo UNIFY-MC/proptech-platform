@@ -70,9 +70,18 @@ proptech-platform/
     ├── v4-energia/              ← V4 em construção (port livre) · simulador tarifas
     ├── v5-manutencao/           ← V5 produção (port 5175) · catálogo serviços
     └── (v3-seguros, v6-reabilitacao, ... a construir)
+└── squads/                      ← Conteúdo agentic (markdown puro, biblioteca CookAI)
+    ├── README.md                ← Índice das squads + como adicionar novas
+    └── sales/                   ← Squad Sales (v1.0.0, ADR-017) — 8 elite minds B2B
+        ├── agents/              ← 9 agents (sales-chief + Neil Rackham + Sandler + Keenan + Voss + Challenger + Jeb Blount + Chet Holmes + Aaron Ross)
+        ├── tasks/               ← 9 tasks (diagnose, qualify, cold-outreach, negotiate, close, followup, emails, copy, scripts)
+        ├── checklists/          ← 2 checklists (deal-qualification, discovery-quality)
+        └── config.yaml + README/ARCHITECTURE/CHANGELOG
 ```
 
 > **Nota cleanup 2026-05-13:** `apps/core/` e `apps/v1-core/` (cópias legacy do admin/index.html, 1941 linhas duplicadas) **removidos** com a centralização. Tudo o que era "core" é agora `apps/dashboard/` + schemas centrais (`core`, `iam`, `growth`, `system`).
+
+> **Nota squads 2026-05-23 (ADR-017):** `squads/sales/` adoptado como camada de conteúdo agentic (Acervo Formações T5 SQUAD vendas v1.0.0, 7.9/10 PASS). 25 ficheiros markdown, ~19k linhas, zero deps. Squad mapeia para `system.skills` (category='sales') + `system.agent_profile` (agent_id `sales.*`) via seed migration futura. OpenSquad foi **rejeitado** (compete com CookAI) — ver ADR-017.
 
 ---
 
