@@ -63,7 +63,8 @@ function AppInner() {
       <DrawerProvider>
        <YearProvider>
         <div className="app-shell">
-          <Sidebar theme={theme} setTheme={setTheme} />
+          {/* Sidebar recebe theme fixo dark; setTheme=no-op (V2 nunca light). */}
+          <Sidebar theme={theme} setTheme={() => {}} />
           <div className="app-main-wrap">
             <Topbar />
             <main className="app-main">
