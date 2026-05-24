@@ -179,10 +179,12 @@ Adicionar schema custom ao REST do Supabase **não** se faz pelo Dashboard UI ne
 
 ```sql
 ALTER ROLE authenticator SET pgrst.db_schemas =
-  'public, graphql_public, core, system, iam, marketing, v2_condominios, v3_seguros,
-   v4_energia, v5_manutencao, v1_owners_club, marketing';
+  'public, graphql_public, core, iam, system, growth, marketing, v10_owners_club,
+   v2_condominios, v2_new, v3_seguros, v4_energia, v5_manutencao';
 NOTIFY pgrst, 'reload config';
 ```
+
+> **Nota DB-005 (2026-05-24):** schema `v1_owners_club` renomeado para `v10_owners_club` via migration `202605240200_rename_v10_owners_club.sql`. Corrige naming canónico V1-V10 (Owners Club = V10, não V1). 3 tabelas + 6 rows + 4 policies + 9 triggers + 3 FKs preservados. `public.v_ofertas` view recriada com novo schema. pgrst.db_schemas actualizado.
 
 **Diagnóstico** quando aparece `PGRST106 Invalid schema` no REST:
 
