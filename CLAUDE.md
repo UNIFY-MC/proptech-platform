@@ -192,6 +192,28 @@ SELECT rolconfig FROM pg_roles WHERE rolname = 'authenticator';
 
 Ver `.claude/strategy/adrs/ADR-V2-002-postgrest-schema-exposure.md` (commit `a861c6b`).
 
+### Processo de Migrations (forward-only · efectivo 2026-05-24)
+
+**Regra:** ficheiro local PRIMEIRO em `supabase/migrations/`, `apply_migration` (MCP) ou `db push` (CLI) DEPOIS. Nunca o inverso.
+
+Baseline V1 capturado em 2026-05-24 (Story 019.4 · cobre DB-003 Critical):
+- Inventário JSON completo: `docs/database/v1-schema-snapshot-2026-05-24.json` (3.7 MB · 263 tabelas · 100% RLS · 316 migrations aplicadas)
+- Subset SQL executável: `supabase/baseline/v1-baseline-snapshot-2026-05-24.sql` (schemas + extensions + `is_staff` + `iam.*`)
+- README: `docs/database/README-baseline.md`
+- Política completa: `docs/database/migrations-policy-2026-05-24.md`
+
+**Naming obrigatório:** `YYYYMMDDHHMMSS_descricao_snake_case.sql` (timestamp UTC, 14 dígitos, descrição lowercase, max ~50 chars).
+
+**Header obrigatório por migration:** `-- WHY:`, `-- WHAT:`, `-- ROLLBACK:`, `-- VERIFY AFTER APPLY:`, `-- TICKET / STORY:`, `-- AUTHOR:` (exemplo completo em `migrations-policy-2026-05-24.md` §3).
+
+**Anti-padrões bloqueados:**
+- Aplicar DDL via Dashboard SQL Editor sem ficheiro local → reintroduz DB-003
+- Usar `mcp__claude_ai_Supabase__execute_sql` para DDL (só serve para SELECT/análise) → use `apply_migration`
+- Renomear migration já aplicada remotamente → `version` fica desync
+- `supabase db push` neste repo até reconciliação dos 46 ficheiros legacy (Story TBD) → vai tentar re-aplicar tudo
+
+**Workflow:** ver checklist em `migrations-policy-2026-05-24.md` §"Workflow checklist".
+
 ---
 
 ## 🎨 Design System (extraído originalmente do admin/index.html legacy, mantido em `packages/ui` + `apps/dashboard`)
@@ -280,6 +302,23 @@ body.dark {
 - **`architect-proptech`** — decisões arquitecturais · consulta Notion · valida impactos cross-vertical · escreve ADRs
 - **`supabase-designer`** — schemas, migrations, RLS policies, edge functions via MCP Supabase
 - **`vertical-builder`** — constrói novas verticais React em `apps/vN-<nome>/` · reutiliza design system do v1-core
+
+---
+
+## 🧠 Agents canónicos (personas executivas + departamentais)
+
+**3 camadas distintas — NÃO confundir.** Audit SQL em `system.agent_profile` 2026-05-24:
+
+| Camada | Agent | Localização | Função | Edge Function |
+|---|---|---|---|---|
+| **Executivo externo** | Hermes (Nous Research) | Self-hosted Ubuntu (Hetzner CAX11 ~€3.79/mês) | Conversação Discord `#hermes`, web research, scheduling NL, doc creation, orquestra CookAI via API | externo + `hermes-invoke-recipe` EF (ADR-018) |
+| **Personal Assistant** | `agent_id='bia'` | dashboard `/employees/bia`, BiaScorecard.jsx | PA cross-vertical do Mário · Calendar, Gmail, Drive, Notion | `bia-chat` v20 |
+| **V5 Ops Concierge** | `agent_id='mia'` | dashboard `/employees/mia` (futuro), mia-chat | Maintenance concierge V5 · pedidos, triagem, aprova ordens | `mia-chat` v4 |
+| **Squad Sales (9)** | `sales.*` (orchestrator + 8 elite minds) | `squads/sales/` + `system.agent_profile` source_squad='sales' | B2B sales know-how (SPIN, Gap, Sandler, Voss, etc.) | invocadas via `system.skills` `sales-*` |
+
+> **Bia ≠ Mia (correcção brownfield ARCH-002):** brownfield assessment afirmou "rename incompleto" mas audit 2026-05-24 confirmou são personas distintas (commit `30dcc0d` 2026-05-18 introduziu Bia como PA quando a Bia V5 anterior virou Mia). **NÃO deprecar** `bia-chat`. **NÃO remover** Views Bia*. ARCH-002 re-categorizado de Critical para "doc only".
+
+> **Hermes invoca CookAI:** via api_key `hermes_executor` em `system.api_keys` + `iam.permission_grants` whitelist 8 sections + RPC `iam.api_key_can()`. Edge Function wrapper: `hermes-invoke-recipe` v1 ACTIVE (ADR-018 Phase 1).
 
 ---
 
