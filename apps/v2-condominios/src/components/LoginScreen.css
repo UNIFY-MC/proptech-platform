@@ -1,0 +1,354 @@
+/* LoginScreen.css — cópia LITERAL das classes CSS de prataowners.pt (extraídas via Playwright 2026-05-24).
+ * NÃO INVENTAR. Se quiseres alterar, edita aqui directamente.
+ * Source: docs/v2-migration/legacy-source/login/styles-inline.css
+ */
+
+#scLogin {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: stretch;
+  justify-content: flex-end;
+  z-index: 1000;
+  background: rgb(10, 22, 40);
+  font-family: "DM Sans", sans-serif;
+}
+
+#scLogin::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(105deg, rgba(10, 22, 40, 0.8) 0px, rgba(10, 22, 40, 0.3) 55%, rgba(10, 22, 40, 0) 100%),
+    url("https://eozklslwfaqujaijvdnl.supabase.co/storage/v1/object/public/documentos/logos/prata_login_bg.jpeg") center center / cover no-repeat;
+  z-index: 0;
+}
+
+/* Lado esquerdo — branding sobre imagem */
+.login-photo-content {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 55%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 40px 52px;
+  z-index: 1;
+  box-sizing: border-box;
+}
+
+.login-photo-logo-top {
+  display: inline-flex;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.login-photo-logo-top-wrap {
+  background: rgb(255, 255, 255);
+  border-radius: 10px;
+  padding: 8px 14px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.25);
+  display: inline-flex;
+  align-items: center;
+}
+
+.login-photo-logo-top img {
+  height: 40px;
+  width: auto;
+  display: block;
+}
+
+.login-photo-logo-top-fallback {
+  display: none;
+  font-family: "Cormorant Garamond", serif;
+  font-size: 18px;
+  color: rgb(13, 17, 23);
+  font-weight: 700;
+}
+
+.login-photo-title {
+  font-family: "DM Serif Display", serif;
+  font-size: 38px;
+  color: rgb(255, 255, 255);
+  line-height: 1.1;
+  margin-bottom: 10px;
+  text-shadow: 0 2px 16px rgba(0, 0, 0, 0.3);
+}
+
+.login-photo-sub {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.7);
+  letter-spacing: 0.3px;
+  line-height: 1.6;
+}
+
+.login-photo-tag {
+  display: inline-block;
+  margin-top: 20px;
+  background: rgba(227, 179, 65, 0.15);
+  border: 1px solid rgba(227, 179, 65, 0.35);
+  color: rgb(227, 179, 65);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  padding: 5px 12px;
+  border-radius: 20px;
+}
+
+/* Lado direito — painel branco */
+.login-panel {
+  position: relative;
+  z-index: 2;
+  width: 45%;
+  min-width: 360px;
+  max-width: 480px;
+  background: rgb(255, 255, 255);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 52px 48px;
+  box-sizing: border-box;
+  overflow-y: auto;
+}
+
+.login-panel-top-logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 36px;
+}
+
+.login-panel-top-logo img {
+  height: 44px;
+  width: auto;
+  max-width: 180px;
+  object-fit: contain;
+}
+
+.login-panel-logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.login-panel-logo-mark {
+  width: 40px;
+  height: 40px;
+  background: rgb(24, 22, 15);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "Cormorant Garamond", serif;
+  font-size: 22px;
+  color: rgb(227, 179, 65);
+  font-weight: 700;
+}
+
+.login-panel-logo-text {
+  font-family: "DM Serif Display", serif;
+  font-size: 18px;
+  color: rgb(24, 22, 15);
+}
+
+.login-panel-header {
+  width: 100%;
+  text-align: center;
+  margin-bottom: 36px;
+}
+
+.login-panel-title {
+  font-family: "DM Serif Display", serif;
+  font-size: 24px;
+  color: rgb(24, 22, 15);
+  margin-bottom: 4px;
+}
+
+.login-panel-sub {
+  font-size: 12px;
+  color: rgb(138, 128, 112);
+  letter-spacing: 0.2px;
+}
+
+.login-box {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  max-width: 100%;
+  width: 100%;
+  text-align: left;
+}
+
+/* PT/EN language switch */
+.login-lang-row {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.login-lang-btn {
+  padding: 5px 16px;
+  border-radius: 20px;
+  border: 1.5px solid #d8d0c4;
+  background: transparent;
+  color: #8a8070;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.login-lang-btn.active {
+  border-color: #b8860b;
+  background: #b8860b;
+  color: #fff;
+  font-weight: 700;
+}
+
+/* Subtitle */
+.login-subtitle {
+  font-size: 12px;
+  color: #8a8070;
+  text-align: center;
+  margin-bottom: 18px;
+  line-height: 1.7;
+}
+
+/* Email label + input */
+.login-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #5c5548;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+  display: block;
+}
+
+.login-input {
+  width: 100%;
+  background: rgb(245, 242, 237);
+  border: 1.5px solid rgb(232, 225, 214);
+  border-radius: 10px;
+  padding: 13px 16px;
+  font-family: "DM Sans", sans-serif;
+  font-size: 14px;
+  color: rgb(24, 22, 15);
+  outline: 0;
+  transition: border-color 0.15s, background 0.15s;
+  margin-bottom: 10px;
+  box-sizing: border-box;
+}
+
+.login-input::placeholder {
+  color: rgb(181, 168, 152);
+}
+
+.login-input:focus {
+  border-color: rgb(184, 134, 11);
+  background: rgb(255, 255, 255);
+}
+
+/* Primary btn (Enviar link de acesso / Entrar) */
+.login-btn {
+  width: 100%;
+  padding: 14px;
+  background: rgb(24, 22, 15);
+  color: rgb(227, 179, 65);
+  border: none;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s;
+  font-family: "DM Sans", sans-serif;
+  letter-spacing: 0.2px;
+}
+
+.login-btn:hover { background: rgb(42, 38, 32); }
+.login-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Botões secundários (Staff / Token) */
+.login-secondary-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.login-secondary-btn {
+  flex: 1;
+  padding: 11px 14px;
+  border: 1.5px solid rgb(232, 225, 214);
+  background: transparent;
+  color: rgb(138, 128, 112);
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: "DM Sans", sans-serif;
+  letter-spacing: 0.3px;
+  transition: all 0.15s;
+}
+
+.login-secondary-btn:hover {
+  border-color: rgb(184, 134, 11);
+  color: rgb(184, 134, 11);
+}
+
+/* Errors / hints */
+.login-err {
+  font-size: 12px;
+  color: rgb(139, 26, 26);
+  margin-top: 6px;
+  margin-bottom: 2px;
+}
+
+.login-hint {
+  font-size: 11px;
+  color: rgb(138, 128, 112);
+  margin-top: 18px;
+  text-align: center;
+}
+
+.login-hint a {
+  color: rgb(184, 134, 11);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+/* Footer (NIF / Marvila) */
+.login-footer {
+  margin-top: 40px;
+  padding-top: 24px;
+  border-top: 1px solid rgb(232, 225, 214);
+  width: 100%;
+  text-align: center;
+  font-size: 10px;
+  color: rgb(181, 168, 152);
+  letter-spacing: 0.3px;
+}
+
+/* Mobile responsive (legacy 768px breakpoint) */
+@media (max-width: 768px) {
+  .login-photo-content {
+    width: 100%;
+    height: 50vh;
+    padding: 24px;
+  }
+  .login-panel {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    background: rgba(255, 255, 255, 0.97);
+    border-radius: 24px 24px 0 0;
+    padding: 32px 28px 40px;
+    box-shadow: 0 -8px 40px rgba(0, 0, 0, 0.25);
+  }
+}
