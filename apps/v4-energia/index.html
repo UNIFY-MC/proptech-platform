@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="pt">
+<html lang="pt-PT">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
@@ -9,9 +9,15 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <script>
-      // Aplicar tema antes do React carregar para evitar flash de cor errada
+      // FE-010: aplicar tema antes do React carregar (chave unificada 'proptech-theme')
+      // Fallback para legacy 'v1theme' com migração transparente
       (function() {
-        var t = localStorage.getItem('v1theme') || 'light';
+        var t = localStorage.getItem('proptech-theme');
+        if (!t) {
+          t = localStorage.getItem('v1theme') || 'light';
+          if (t !== 'light') localStorage.setItem('proptech-theme', t);
+          localStorage.removeItem('v1theme');
+        }
         if (t === 'dark') document.documentElement.classList.add('dark');
       })();
     </script>

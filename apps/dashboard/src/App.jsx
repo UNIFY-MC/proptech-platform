@@ -74,11 +74,23 @@ export default function App() {
   const { activeAppSlug } = useAppShellStore()
   const showEmbed = !IS_EMBEDDED && activeAppSlug !== 'dashboard'
 
-  const [theme, setTheme] = useState(() => localStorage.getItem('dashboard-theme') || 'dark')
+  // FE-010 brownfield: chave unificada 'proptech-theme' (todas as apps partilham)
+  // Migração transparente do legacy 'dashboard-theme'
+  const [theme, setTheme] = useState(() => {
+    const unified = localStorage.getItem('proptech-theme')
+    if (unified) return unified
+    const legacy = localStorage.getItem('dashboard-theme')
+    if (legacy) {
+      localStorage.setItem('proptech-theme', legacy)
+      localStorage.removeItem('dashboard-theme')
+      return legacy
+    }
+    return 'dark'
+  })
 
   useEffect(() => {
     document.body.setAttribute('data-theme', theme)
-    localStorage.setItem('dashboard-theme', theme)
+    localStorage.setItem('proptech-theme', theme)
   }, [theme])
 
   const mainClass = 'app-main' + (showEmbed ? ' embed-mode' : '')

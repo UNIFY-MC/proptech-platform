@@ -1,7 +1,8 @@
 /* ══════════════════════════════════════════════════════════════════════
  *  V4 ENERGIA · Design Tokens
- *  Alinhados com v1-core (CLAUDE.md secção "Design System").
- *  Dark mode persistido em localStorage.v1theme (chave partilhada).
+ *  Alinhados com apps/dashboard (CLAUDE.md secção "Design System").
+ *  Dark mode persistido em localStorage.proptech-theme (chave unificada FE-010).
+ *  Migração transparente da chave legacy 'v1theme' (ver App.jsx).
  *  Removido: amber, teal — substituídos por blue/green/gold canónicos.
  * ══════════════════════════════════════════════════════════════════════ */
 

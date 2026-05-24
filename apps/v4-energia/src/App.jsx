@@ -184,13 +184,23 @@ body.dark{
 export default function V4EnergiaApp() {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [theme, setTheme] = useState(
-    () => localStorage.getItem('v1theme') || 'light'
-  );
+  // FE-010 brownfield: chave unificada 'proptech-theme' (todas as apps partilham)
+  // Migração transparente do legacy 'v1theme'
+  const [theme, setTheme] = useState(() => {
+    const unified = localStorage.getItem('proptech-theme');
+    if (unified) return unified;
+    const legacy = localStorage.getItem('v1theme');
+    if (legacy) {
+      localStorage.setItem('proptech-theme', legacy);
+      localStorage.removeItem('v1theme');
+      return legacy;
+    }
+    return 'light';
+  });
 
   useEffect(() => {
     document.body.classList.toggle('dark', theme === 'dark');
-    localStorage.setItem('v1theme', theme);
+    localStorage.setItem('proptech-theme', theme);
   }, [theme]);
 
   useEffect(() => {
