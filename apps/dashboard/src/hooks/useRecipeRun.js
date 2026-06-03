@@ -5,18 +5,27 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase.js'
 
-// Steps cujo handler vive em v2-quota-extra-step edge function
-const EDGE_FN_STEPS = new Set([
-  'parse-xlsx-carregadores',
-  'diff-leituras-carregadores',
-  'calcular-quota-extra-carregadores',
-  'validar-cobertura-fracoes',
-  'v2-ingest-carregadores',
-  'emit-quota-extra',
-  'auditar-conta-corrente-pos-emissao',
-])
+// Map skill → edge function que o executa server-side.
+const SKILL_TO_EDGE_FN = {
+  // Recipe carregadores (Quota Extra)
+  'parse-xlsx-carregadores': 'v2-quota-extra-step',
+  'diff-leituras-carregadores': 'v2-quota-extra-step',
+  'calcular-quota-extra-carregadores': 'v2-quota-extra-step',
+  'validar-cobertura-fracoes': 'v2-quota-extra-step',
+  'v2-ingest-carregadores': 'v2-quota-extra-step',
+  'emit-quota-extra': 'v2-quota-extra-step',
+  'auditar-conta-corrente-pos-emissao': 'v2-quota-extra-step',
+  // Recipe Emissão de Avisos Mensais
+  'verificar-avisos-mes': 'v2-emitir-avisos-mensais',
+  'conferir-orcamento-ano': 'v2-emitir-avisos-mensais',
+  'conferir-orcamento-fracao': 'v2-emitir-avisos-mensais',
+  'emitir-avisos-mensais': 'v2-emitir-avisos-mensais',
+  'auditar-avisos-mensais': 'v2-emitir-avisos-mensais',
+}
+const EDGE_FN_STEPS = new Set(Object.keys(SKILL_TO_EDGE_FN))
+const edgeFnForSkill = (skill) => SKILL_TO_EDGE_FN[skill] || 'v2-quota-extra-step'
 
-// Map step_number → skill_name (1ª skill da step) para a recipe carregadores
+// Map step_number → skill_name (1ª skill da step)
 function getEdgeFnSkillForStep(step) {
   if (!step || step.step_type !== 'agent') return null
   if (!Array.isArray(step.skills) || step.skills.length === 0) return null
@@ -79,6 +88,15 @@ function buildEdgeFnParams(skillName, run, allSteps) {
       return {
         numeros_emitidos: step9?.output_jsonb?.numeros_emitidos ?? [],
       }
+    // Recipe Emissão de Avisos Mensais — todos os steps usam {ano, mes};
+    // emitir também recebe a data_emissao escolhida no gate.
+    case 'verificar-avisos-mes':
+    case 'conferir-orcamento-ano':
+    case 'conferir-orcamento-fracao':
+    case 'auditar-avisos-mensais':
+      return { ano: Number(inputs.ano), mes: Number(inputs.mes) }
+    case 'emitir-avisos-mensais':
+      return { ano: Number(inputs.ano), mes: Number(inputs.mes), data_emissao: inputs.data_emissao || undefined }
     default:
       return {}
   }
@@ -133,7 +151,7 @@ export function useRecipeRun(runId) {
           console.log(`[auto-exec] Step ${step.step_number} (${skill}) →`, params)
 
           // Fire-and-forget; o resultado aparece no próximo polling
-          supabase.functions.invoke('v2-quota-extra-step', {
+          supabase.functions.invoke(edgeFnForSkill(skill), {
             body: {
               recipe_run_id: runId,
               step_number: step.step_number,
@@ -313,6 +331,16 @@ export async function failStep(recipeRunId, stepNumber, reason = '') {
     completed_at: now.toISOString(),
     error_message: `Step ${stepNumber} falhou: ${reason || 'sem motivo indicado'}`,
   }).eq('id', recipeRunId)
+}
+
+// Merge de valores nos inputs_jsonb do run (ex: data_emissao escolhida no gate)
+export async function mergeRunInputs(recipeRunId, patch) {
+  if (!supabase) return
+  const { data } = await supabase.schema('system').from('recipe_runs')
+    .select('inputs_jsonb').eq('id', recipeRunId).maybeSingle()
+  const merged = { ...(data?.inputs_jsonb || {}), ...patch }
+  await supabase.schema('system').from('recipe_runs').update({ inputs_jsonb: merged }).eq('id', recipeRunId)
+  return merged
 }
 
 // Aprovar step humano

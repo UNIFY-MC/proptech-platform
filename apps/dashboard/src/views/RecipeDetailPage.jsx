@@ -13,7 +13,7 @@ import {
 } from 'lucide-react'
 import { useRecipes } from '../hooks/useRecipes.js'
 import { useAgentsList } from '../hooks/useAgentsList.js'
-import { useRecipeRun, createRecipeRun, approveStep, rejectStep, completeStep, failStep, submitStep5Config, submitStep5AndChain, emitStep8AndChain, invokeRecipeStep } from '../hooks/useRecipeRun.js'
+import { useRecipeRun, createRecipeRun, approveStep, rejectStep, completeStep, failStep, submitStep5Config, submitStep5AndChain, emitStep8AndChain, invokeRecipeStep, mergeRunInputs } from '../hooks/useRecipeRun.js'
 import { supabase } from '../lib/supabase.js'
 import RecipeFlowChart from '../components/RecipeFlowChart.jsx'
 
@@ -2368,7 +2368,7 @@ function ExecutionPanel({ runId, recipe, agents, onClose }) {
 
               {/* Renderers dedicados por step_name (paridade legacy V2). Substituem o approval genérico.
                   Matching insensível a acentos — os nomes em BD são ASCII. */}
-              {s.status === 'awaiting_approval' && isStep5Config(s.step_name) && (
+              {recipe.slug === 'fluxo-quota-extra-carregadores' && s.status === 'awaiting_approval' && isStep5Config(s.step_name) && (
                 <Step5ConfigForm
                   step={s}
                   runId={runId}
@@ -2379,7 +2379,7 @@ function ExecutionPanel({ runId, recipe, agents, onClose }) {
                 />
               )}
 
-              {isStep8Emit(s.step_name) && ['awaiting_approval', 'completed', 'failed', 'rejected'].includes(s.status) && (
+              {recipe.slug === 'fluxo-quota-extra-carregadores' && isStep8Emit(s.step_name) && ['awaiting_approval', 'completed', 'failed', 'rejected'].includes(s.status) && (
                 <Step8EmitPanel
                   step={s}
                   runId={runId}
@@ -2392,10 +2392,25 @@ function ExecutionPanel({ runId, recipe, agents, onClose }) {
                 />
               )}
 
+              {/* Recipe Emissão de Avisos Mensais — relatório no gate (Step "Aprovar emissao") */}
+              {recipe.slug === 'emissao-avisos-mensais' && isStep8Emit(s.step_name) && ['awaiting_approval', 'completed', 'failed', 'rejected'].includes(s.status) && (
+                <AvisosGatePanel
+                  step={s}
+                  runId={runId}
+                  allSteps={steps}
+                  recipeInputs={run?.inputs_jsonb}
+                  processing={processingAction}
+                  setProcessing={setProcessingAction}
+                  onApprove={handleApprove}
+                  onReject={handleReject}
+                  readonly={s.status !== 'awaiting_approval'}
+                />
+              )}
+
               {/* Approval action genérico — só aparece se NÃO houver renderer dedicado */}
               {s.status === 'awaiting_approval'
-                && !isStep5Config(s.step_name)
-                && !isStep8Emit(s.step_name) && (
+                && !(recipe.slug === 'fluxo-quota-extra-carregadores' && isStep5Config(s.step_name))
+                && !(isStep8Emit(s.step_name) && (recipe.slug === 'fluxo-quota-extra-carregadores' || recipe.slug === 'emissao-avisos-mensais')) && (
                 <div style={{ display: 'flex', gap: 6, marginTop: 10, marginLeft: 32 }}>
                   <button
                     onClick={() => handleApprove(s.step_number)}
@@ -2970,6 +2985,113 @@ function Step8EmitPanel({ step, runId, allSteps, recipeInputs, processing, setPr
 }
 
 // ─── Resumo amigável do output por step_name ──────────────────────────────
+// ─── AvisosGatePanel ──────────────────────────────────────────────────────
+// Gate da recipe "Emissão de Avisos Mensais": relatório de quotas a emitir
+// (valor + comparação com mês anterior) + escolha da data de emissão.
+function AvisosGatePanel({ step, runId, allSteps, recipeInputs, processing, setProcessing, onApprove, onReject, readonly = false }) {
+  const stepConf = allSteps.find((s) => Array.isArray(s.skills) && s.skills[0] === 'conferir-orcamento-fracao')
+  const conf = stepConf?.output_jsonb || {}
+  const comparacao = Array.isArray(conf.comparacao) ? conf.comparacao : []
+  const anomalias = Array.isArray(conf.anomalias) ? conf.anomalias : []
+  const ano = Number(recipeInputs?.ano) || new Date().getFullYear()
+  const mes = Number(recipeInputs?.mes) || 1
+  const defaultDate = recipeInputs?.data_emissao || `${ano}-${String(mes).padStart(2, '0')}-01`
+  const [dataEmissao, setDataEmissao] = useState(defaultDate)
+
+  const stepEmit = allSteps.find((s) => Array.isArray(s.skills) && s.skills[0] === 'emitir-avisos-mensais')
+  const emitido = stepEmit?.status === 'completed'
+
+  const handleEmitir = async () => {
+    if (!dataEmissao) { alert('Escolhe a data de emissão'); return }
+    setProcessing(true)
+    try {
+      await mergeRunInputs(runId, { data_emissao: dataEmissao })
+      await onApprove(step.step_number)   // aprova gate → executor emite com a data
+    } finally {
+      setProcessing(false)
+    }
+  }
+
+  const fmt = (v) => v == null ? '—' : `€${Number(v).toFixed(2)}`
+
+  return (
+    <div style={{ marginTop: 10, marginLeft: 32, padding: 14, background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 8 }}>
+      {readonly && (
+        <div style={{ marginBottom: 8, fontWeight: 700, fontSize: 12, color: emitido ? '#10b981' : step.status === 'rejected' ? '#ef4444' : 'var(--text)' }}>
+          {emitido ? '✅ Avisos emitidos em V2' : step.status === 'completed' ? '✓ Aprovado' : step.status === 'rejected' ? '✗ Rejeitado' : '✗ Falhou'}
+          <span style={{ fontWeight: 400, color: 'var(--text-dim)', marginLeft: 8 }}>(registo do que foi aprovado)</span>
+        </div>
+      )}
+
+      {/* Cabeçalho do relatório */}
+      <div style={{ fontSize: 12, color: 'var(--text)', fontFamily: 'JetBrains Mono, monospace', marginBottom: 10 }}>
+        <strong>{conf.n_fracoes ?? comparacao.length}</strong> frações · total <strong>{fmt(conf.total)}</strong>
+        <span style={{ color: 'var(--text-dim)' }}> (quota {fmt(conf.quota)} + FCR {fmt(conf.fcr)})</span>
+        <div style={{ color: 'var(--text-dim)', fontSize: 11, marginTop: 2 }}>{conf.periodo} · comparado com {conf.mes_anterior}</div>
+      </div>
+
+      {/* Anomalias */}
+      {anomalias.length > 0 && (
+        <div style={{ marginBottom: 10, padding: '8px 10px', borderRadius: 5, background: 'rgba(245,158,11,0.10)', border: '1px solid rgba(245,158,11,0.4)', fontSize: 11, color: 'var(--text)' }}>
+          ⚠️ <strong>{anomalias.length}</strong> fração(ões) com variação &gt;10% vs {conf.mes_anterior}:
+          {' '}{anomalias.slice(0, 6).map((a) => `${a.fracao} (${fmt(a.anterior)}→${fmt(a.novo)}, ×${a.ratio})`).join(' · ')}
+        </div>
+      )}
+
+      {/* Data de emissão */}
+      {!readonly && (
+        <div style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.08em', fontFamily: 'JetBrains Mono, monospace' }}>Data de emissão</label>
+          <input type="date" value={dataEmissao} onChange={(e) => setDataEmissao(e.target.value)} disabled={processing}
+            style={{ padding: '6px 10px', borderRadius: 5, border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontFamily: 'JetBrains Mono, monospace', fontSize: 12 }} />
+        </div>
+      )}
+
+      {/* Tabela comparação */}
+      {comparacao.length > 0 && (
+        <div style={{ maxHeight: 300, overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 5, marginBottom: 12 }}>
+          <table style={{ width: '100%', fontSize: 11, fontFamily: 'JetBrains Mono, monospace', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ background: 'var(--bg)', borderBottom: '1px solid var(--border)' }}>
+                <th style={{ padding: '6px 8px', textAlign: 'left', fontSize: 9, textTransform: 'uppercase', color: 'var(--text-dim)' }}>Fração</th>
+                <th style={{ padding: '6px 8px', textAlign: 'right', fontSize: 9, textTransform: 'uppercase', color: 'var(--text-dim)' }}>{conf.mes_anterior || 'Anterior'}</th>
+                <th style={{ padding: '6px 8px', textAlign: 'right', fontSize: 9, textTransform: 'uppercase', color: 'var(--text-dim)' }}>{conf.periodo || 'Novo'}</th>
+                <th style={{ padding: '6px 8px', textAlign: 'right', fontSize: 9, textTransform: 'uppercase', color: 'var(--text-dim)' }}>Δ</th>
+              </tr>
+            </thead>
+            <tbody>
+              {comparacao.map((c) => {
+                const anomalo = c.ratio != null && c.ratio > 1.10
+                return (
+                  <tr key={c.fracao} style={{ borderBottom: '1px solid var(--border)', background: anomalo ? 'rgba(245,158,11,0.08)' : 'transparent' }}>
+                    <td style={{ padding: '5px 8px', color: 'var(--text)' }}>{c.fracao}{anomalo ? ' ⚠️' : ''}</td>
+                    <td style={{ padding: '5px 8px', textAlign: 'right', color: 'var(--text-dim)' }}>{fmt(c.anterior)}</td>
+                    <td style={{ padding: '5px 8px', textAlign: 'right', color: 'var(--text)', fontWeight: 600 }}>{fmt(c.novo)}</td>
+                    <td style={{ padding: '5px 8px', textAlign: 'right', color: c.delta > 0 ? '#10b981' : 'var(--text-dim)' }}>{c.delta == null ? '—' : (c.delta > 0 ? '+' : '') + Number(c.delta).toFixed(2)}</td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {!readonly && (
+        <div style={{ display: 'flex', gap: 6 }}>
+          <button onClick={handleEmitir} disabled={processing || comparacao.length === 0}
+            style={{ flex: 2, padding: '8px 14px', borderRadius: 5, background: '#1a5296', color: '#fff', border: 'none', cursor: processing ? 'not-allowed' : 'pointer', fontSize: 12, fontWeight: 700 }}>
+            {processing ? '⏳ A emitir…' : `📋 Emitir ${conf.n_fracoes ?? comparacao.length} avisos · ${fmt(conf.total)} · ${dataEmissao}`}
+          </button>
+          <button onClick={() => onReject(step.step_number)} disabled={processing}
+            style={{ flex: 1, padding: '8px 14px', borderRadius: 5, background: 'transparent', color: '#ef4444', border: '1px solid #ef4444', cursor: processing ? 'not-allowed' : 'pointer', fontSize: 12, fontWeight: 600 }}>
+            ✗ Rejeitar
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function StepSummary({ step }) {
   const o = step.output_jsonb || {}
   const isSkipped = step.status === 'skipped' || o.skipped_reason
@@ -3280,6 +3402,41 @@ function StepSummary({ step }) {
       }
       break
     }
+    // ── Recipe Emissão de Avisos Mensais (resumo legível por passo) ──
+    case 'Conferir se mes ja emitido':
+      summary = (
+        <div style={{ color: o.ja_emitido ? '#f59e0b' : '#10b981' }}>{o.resumo}</div>
+      ); break
+    case 'Conferir orcamento do ano':
+      summary = (
+        <>
+          <div>{o.resumo}</div>
+          <div style={{ color: 'var(--text-dim)', fontSize: 11, marginTop: 2 }}>Receitas €{Number(o.receitas_mensal ?? 0).toFixed(2)}/mês · Despesas €{Number(o.despesas_anual ?? 0).toFixed(2)}/ano</div>
+        </>
+      ); break
+    case 'Conferir orcamento por fracao':
+      summary = (
+        <>
+          <div><strong>{o.n_fracoes ?? '?'}</strong> frações · total <strong>€{Number(o.total ?? 0).toFixed(2)}</strong> (quota €{Number(o.quota ?? 0).toFixed(2)} + FCR €{Number(o.fcr ?? 0).toFixed(2)})</div>
+          <div style={{ color: (o.anomalias?.length ? '#f59e0b' : 'var(--text-dim)'), fontSize: 11, marginTop: 2 }}>
+            {o.anomalias?.length ? `⚠️ ${o.anomalias.length} com variação >10% vs ${o.mes_anterior}` : `Variações normais vs ${o.mes_anterior}`}
+          </div>
+        </>
+      ); break
+    case 'Emitir avisos mensais':
+      summary = (
+        <>
+          <div><strong>{o.emitidos ?? 0}</strong> avisos emitidos · total <strong style={{ color: '#10b981' }}>€{Number(o.total ?? 0).toFixed(2)}</strong></div>
+          <div style={{ color: 'var(--text-dim)', fontSize: 11, marginTop: 2 }}>{o.periodo} · emissão {o.data_emissao} · nº {o.numero_de}–{o.numero_ate}</div>
+        </>
+      ); break
+    case 'Auditar avisos emitidos':
+      summary = (
+        <>
+          <div style={{ color: o.ok ? '#10b981' : '#f59e0b', fontWeight: 600 }}>{o.ok ? '✓ Auditoria OK' : '⚠ Sem avisos'}</div>
+          <div style={{ color: 'var(--text-dim)', fontSize: 11, marginTop: 2 }}>{o.resumo}</div>
+        </>
+      ); break
     default:
       break
   }
