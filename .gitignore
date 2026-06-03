@@ -60,3 +60,6 @@ __MACOSX/
 # Dados reais de produção V2 (excels exportados, nunca commitar)
 apps/v2-condominios/docs/
 *.xlsx
+
+# V2 discovery — screenshots internos podem conter dados reais (PII), nao commitar
+docs/v2-migration/screenshots/internal/

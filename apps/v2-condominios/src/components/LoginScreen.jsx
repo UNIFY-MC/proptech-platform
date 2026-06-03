@@ -1,166 +1,268 @@
+// LoginScreen — cópia LITERAL do login de prataowners.pt LIVE (extraído 2026-05-24)
+// Source: docs/v2-migration/legacy-source/login/ (HTML+CSS+screenshot+logo)
+// NÃO INVENTAR. Estrutura DOM idêntica + 3 fluxos auth (magic-link email / Staff / Token).
+// Se quiseres alterar layout/texto/cores, edita aqui ou em LoginScreen.css.
 import { useState } from 'react'
 import { v2Client } from '../lib/clients.js'
+import './LoginScreen.css'
 
-const MODES = [
-  { id: 'condomino', label: 'Condómino', sub: 'Link UUID privado' },
-  { id: 'staff',     label: 'Equipa',    sub: 'Utilizador + password' },
-]
+const LOGO_URL = 'https://eozklslwfaqujaijvdnl.supabase.co/storage/v1/object/public/documentos/logos/logo_condominio_1775177295282.png'
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 export default function LoginScreen({ mainClient }) {
-  const [mode, setMode] = useState('staff')
+  // 3 modes do legacy: 'magic' (default email magic-link), 'staff' (alias+pwd), 'token' (UUID condómino)
+  const [mode, setMode] = useState('magic')
+  const [lang, setLang] = useState('pt')
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      display: 'flex',
-      background: 'var(--bg)',
-      color: 'var(--tx)',
-      fontFamily: 'DM Sans, sans-serif',
-    }}>
-      {/* Lado esquerdo — branding */}
-      <aside style={{
-        flex: '1 1 50%',
-        padding: '48px 56px',
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'space-between',
-        background: 'linear-gradient(135deg, var(--sf) 0%, var(--sf2) 100%)',
-        borderRight: '1px solid var(--bd)',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          <div style={{
-            width: 48, height: 48,
-            background: 'var(--go)', borderRadius: 10,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontFamily: 'Cormorant Garamond, serif',
-            fontSize: 26, fontWeight: 700,
-            color: '#0d1117',
-          }}>P</div>
-          <div>
-            <div style={{ fontFamily: 'DM Serif Display, serif', fontSize: 22, lineHeight: 1.1 }}>
-              Prata Owners
-            </div>
-            <div className="mono" style={{ fontSize: 10, color: 'var(--mu)', letterSpacing: 1, textTransform: 'uppercase' }}>
-              V2 · Condomínios
-            </div>
-          </div>
-        </div>
-
+    <div id="scLogin" role="main" aria-label="Ecrã de autenticação">
+      {/* Lado esquerdo — imagem hero + branding (literal de prataowners.pt) */}
+      <div className="login-photo-content" aria-hidden="true">
         <div>
-          <h1 style={{
-            fontFamily: 'Cormorant Garamond, serif',
-            fontSize: 44, lineHeight: 1.1, fontWeight: 500,
-            marginBottom: 14, color: 'var(--tx)',
-          }}>
-            Gestão moderna<br />de condomínios.
-          </h1>
-          <p style={{ color: 'var(--mu)', fontSize: 14, maxWidth: 420, lineHeight: 1.6 }}>
-            Plataforma viva com AI integrada. Contas, frações, mora, OCR de facturas e
-            energia EV — tudo num único lugar, com rasto completo de actividade.
-          </p>
-        </div>
-
-        <div className="mono" style={{ fontSize: 10, color: 'var(--mu)', letterSpacing: 1 }}>
-          © {new Date().getFullYear()} Property 007, Lda · prataowners.pt
-        </div>
-      </aside>
-
-      {/* Lado direito — formulário */}
-      <main style={{
-        flex: '1 1 50%',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: 32,
-      }}>
-        <div style={{ width: '100%', maxWidth: 380 }}>
-          <h2 style={{
-            fontFamily: 'DM Serif Display, serif',
-            fontSize: 26, marginBottom: 6, color: 'var(--tx)',
-          }}>
-            Entrar
-          </h2>
-          <p className="dim" style={{ fontSize: 13, marginBottom: 24 }}>
-            Escolhe o tipo de acesso.
-          </p>
-
-          {/* Toggle de modo */}
-          <div style={{
-            display: 'flex',
-            background: 'var(--sf)',
-            border: '1px solid var(--bd)',
-            borderRadius: 8,
-            padding: 4,
-            marginBottom: 22,
-          }}>
-            {MODES.map(m => (
-              <button
-                key={m.id}
-                onClick={() => setMode(m.id)}
-                style={{
-                  flex: 1,
-                  padding: '8px 10px',
-                  background: mode === m.id ? 'var(--sf2)' : 'transparent',
-                  border: 'none',
-                  borderRadius: 6,
-                  color: mode === m.id ? 'var(--tx)' : 'var(--mu)',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                  transition: 'background 0.12s',
-                }}
-              >
-                <div style={{ fontSize: 12, fontWeight: 600 }}>{m.label}</div>
-                <div className="mono" style={{ fontSize: 9, color: 'var(--mu)', marginTop: 2, letterSpacing: 0.4 }}>
-                  {m.sub}
-                </div>
-              </button>
-            ))}
+          <div className="login-photo-logo-top">
+            <div className="login-photo-logo-top-wrap">
+              <img src={LOGO_URL} alt="Prata Owners" onError={(e) => {
+                e.currentTarget.style.display = 'none'
+                e.currentTarget.nextElementSibling.style.display = 'block'
+              }} />
+              <span className="login-photo-logo-top-fallback">Prata Owners</span>
+            </div>
           </div>
+          <div className="login-photo-title">Prata Owners</div>
+          <div className="login-photo-sub">
+            Condomínio Prata Lote 2A<br />
+            Prata Riverside Village · Lisboa
+          </div>
+          <div className="login-photo-tag">Portal de Condóminos</div>
+        </div>
+      </div>
 
-          {mode === 'condomino' && <FormCondomino />}
-          {mode === 'staff'     && <FormStaff mainClient={mainClient} />}
-
-          <div className="dim mono" style={{ fontSize: 10, textAlign: 'center', marginTop: 28, lineHeight: 1.6 }}>
-            Acesso registado em <code>activity_logs</code>.<br />
-            Problemas? Contacta <a href="mailto:mario@prataowners.pt" style={{ color: 'var(--bl)' }}>mario@prataowners.pt</a>
+      {/* Lado direito — painel branco */}
+      <div className="login-panel">
+        <div className="login-panel-logo">
+          <img src={LOGO_URL} alt="Prata Owners" style={{ maxHeight: 48, maxWidth: 160, objectFit: 'contain' }}
+               onError={(e) => {
+                 e.currentTarget.style.display = 'none'
+                 e.currentTarget.nextElementSibling.style.display = 'flex'
+               }} />
+          <div style={{ display: 'none', alignItems: 'center', gap: 8 }}>
+            <div className="login-panel-logo-mark">P</div>
+            <div className="login-panel-logo-text">Prata Owners</div>
           </div>
         </div>
-      </main>
+
+        <div className="login-panel-header">
+          <div className="login-panel-title">Bem-vindo</div>
+          <div className="login-panel-sub">Condomínio Prata Lote 2A</div>
+        </div>
+
+        <div className="login-box">
+          {/* Lang PT / EN */}
+          <div className="login-lang-row">
+            <button type="button" className={'login-lang-btn' + (lang === 'pt' ? ' active' : '')} onClick={() => setLang('pt')}>
+              🇵🇹 PT
+            </button>
+            <button type="button" className={'login-lang-btn' + (lang === 'en' ? ' active' : '')} onClick={() => setLang('en')}>
+              🇬🇧 EN
+            </button>
+          </div>
+
+          {/* Form principal — varia por mode */}
+          {mode === 'magic' && <FormMagic mainClient={mainClient} lang={lang} onSwitchStaff={() => setMode('staff')} onSwitchToken={() => setMode('token')} />}
+          {mode === 'staff' && <FormStaff mainClient={mainClient} lang={lang} onBack={() => setMode('magic')} />}
+          {mode === 'token' && <FormToken lang={lang} onBack={() => setMode('magic')} />}
+        </div>
+
+        <div className="login-footer">
+          Prata Lote 2A · NIF 902266535 · Marvila, Lisboa
+        </div>
+      </div>
     </div>
   )
 }
 
-/* ─────────────── Formulário Condómino (UUID) ─────────────── */
+/* ─── Form Magic Link (email — default) ─── */
+function FormMagic({ mainClient, lang, onSwitchStaff, onSwitchToken }) {
+  const [email, setEmail] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [err, setErr] = useState(null)
+  const [sent, setSent] = useState(false)
 
-function FormCondomino() {
+  const t = lang === 'en' ? {
+    subtitle: <>Enter your email to receive a<br />secure access link.</>,
+    label: 'Email',
+    placeholder: 'your@email.com',
+    btn: '✉ Send access link',
+    staff: 'Staff →',
+    token: 'Token',
+    sent: 'Link sent. Check your inbox.',
+  } : {
+    subtitle: <>Introduza o seu email para receber um link<br />de acesso seguro.</>,
+    label: 'Email',
+    placeholder: 'o.seu@email.com',
+    btn: '✉ Enviar link de acesso',
+    staff: 'Staff →',
+    token: 'Token',
+    sent: 'Link enviado. Verifique a sua caixa de entrada.',
+  }
+
+  async function submit(e) {
+    e.preventDefault()
+    setErr(null); setLoading(true)
+    const { error } = await mainClient.auth.signInWithOtp({ email: email.trim().toLowerCase() })
+    setLoading(false)
+    if (error) setErr(error.message); else setSent(true)
+  }
+
+  if (sent) {
+    return (
+      <div style={{ textAlign: 'center', padding: '20px 0' }}>
+        <div style={{ fontSize: 32, marginBottom: 12 }}>✉</div>
+        <div style={{ color: 'rgb(24,22,15)', fontSize: 14 }}>{t.sent}</div>
+      </div>
+    )
+  }
+
+  return (
+    <form onSubmit={submit}>
+      <div className="login-subtitle">{t.subtitle}</div>
+      <label htmlFor="magicEmail" className="login-label">{t.label}</label>
+      <input
+        id="magicEmail"
+        type="email"
+        className="login-input"
+        placeholder={t.placeholder}
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        autoComplete="email"
+        required
+      />
+      {err && <div className="login-err">{err}</div>}
+      <button type="submit" className="login-btn" disabled={loading}>
+        {loading ? '…' : t.btn}
+      </button>
+      <div className="login-secondary-row">
+        <button type="button" className="login-secondary-btn" onClick={onSwitchStaff}>{t.staff}</button>
+        <button type="button" className="login-secondary-btn" onClick={onSwitchToken}>{t.token}</button>
+      </div>
+      <div className="login-hint">
+        Acesso registado em <code>activity_logs</code>.<br />
+        Problemas? Contacta <a href="mailto:mario@prataowners.pt">mario@prataowners.pt</a>
+      </div>
+    </form>
+  )
+}
+
+/* ─── Form Staff (alias/email + password) ─── */
+function FormStaff({ mainClient, lang, onBack }) {
+  // Em dev (Vite import.meta.env.DEV), pré-popular com staff BOSSMC para acelerar testes
+  // Não fazer nada em produção.
+  const isDev = import.meta.env.DEV
+  const [alias, setAlias] = useState(isDev ? 'BOSSMC' : '')
+  const [password, setPassword] = useState(isDev ? 'BOSSMC@2026' : '')
+  const [loading, setLoading] = useState(false)
+  const [err, setErr] = useState(null)
+
+  const t = lang === 'en' ? {
+    subtitle: 'Staff access — username or email + password.',
+    user: 'Username or email',
+    pwd: 'Password',
+    btn: 'Sign in',
+    back: '← Back',
+  } : {
+    subtitle: 'Acesso staff — utilizador ou email + password.',
+    user: 'Utilizador ou email',
+    pwd: 'Password',
+    btn: 'Entrar',
+    back: '← Voltar',
+  }
+
+  async function submit(e) {
+    e.preventDefault()
+    setErr(null); setLoading(true)
+    let email = alias.trim()
+    if (!email.includes('@')) {
+      const { data, error: rpcErr } = await v2Client.rpc('staff_login_lookup', { p_alias: email.toLowerCase() })
+      if (rpcErr || !data || data.ok !== true || !data.email) {
+        setLoading(false); setErr('Alias não encontrado. Tenta o email completo.'); return
+      }
+      email = data.email
+    }
+    const { error: authErr } = await mainClient.auth.signInWithPassword({ email, password })
+    setLoading(false)
+    if (authErr) setErr(authErr.message)
+  }
+
+  return (
+    <form onSubmit={submit}>
+      <div className="login-subtitle">{t.subtitle}</div>
+      <label className="login-label">{t.user}</label>
+      <input
+        type="text"
+        className="login-input"
+        value={alias}
+        onChange={(e) => setAlias(e.target.value)}
+        placeholder="mario"
+        autoComplete="username"
+        required
+        autoFocus
+      />
+      <label className="login-label">{t.pwd}</label>
+      <input
+        type="password"
+        className="login-input"
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+        autoComplete="current-password"
+        required
+      />
+      {err && <div className="login-err">{err}</div>}
+      <button type="submit" className="login-btn" disabled={loading}>
+        {loading ? '…' : t.btn}
+      </button>
+      <div className="login-secondary-row">
+        <button type="button" className="login-secondary-btn" onClick={onBack}>{t.back}</button>
+      </div>
+    </form>
+  )
+}
+
+/* ─── Form Token (UUID condómino) ─── */
+function FormToken({ lang, onBack }) {
   const [token, setToken] = useState('')
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState(null)
+  const [err, setErr] = useState(null)
   const [success, setSuccess] = useState(null)
 
-  async function handleSubmit(e) {
+  const t = lang === 'en' ? {
+    subtitle: <>Enter the UUID token sent to you<br />by email.</>,
+    label: 'Access token (UUID)',
+    placeholder: '00000000-0000-0000-0000-000000000000',
+    btn: 'Enter portal',
+    back: '← Back',
+  } : {
+    subtitle: <>Introduza o token UUID que recebeu<br />por email.</>,
+    label: 'Token de acesso (UUID)',
+    placeholder: '00000000-0000-0000-0000-000000000000',
+    btn: 'Entrar no portal',
+    back: '← Voltar',
+  }
+
+  async function submit(e) {
     e.preventDefault()
-    setError(null); setSuccess(null)
+    setErr(null); setSuccess(null)
     const clean = token.trim().toLowerCase()
-    if (!UUID_RE.test(clean)) {
-      setError('UUID inválido. Formato: 00000000-0000-0000-0000-000000000000')
-      return
-    }
+    if (!UUID_RE.test(clean)) { setErr('UUID inválido. Formato: 00000000-0000-0000-0000-000000000000'); return }
     setLoading(true)
     const { data, error: rpcErr } = await v2Client.rpc('portal_token_login', { p_token: clean })
     setLoading(false)
-    if (rpcErr) { setError(rpcErr.message); return }
+    if (rpcErr) { setErr(rpcErr.message); return }
     if (!data || data.ok !== true) {
-      const map = {
-        token_not_found_or_inactive: 'Token não reconhecido ou inactivo.',
-      }
-      setError(map[data?.error] || data?.error || 'Erro desconhecido.')
-      return
+      const map = { token_not_found_or_inactive: 'Token não reconhecido ou inactivo.' }
+      setErr(map[data?.error] || data?.error || 'Erro desconhecido.'); return
     }
     setSuccess(`Bem-vindo, ${data.nome ?? 'condómino'}. A redireccionar…`)
-    // Marker no localStorage — modo preview read-only ligado a PortalCondomino.
     localStorage.setItem('v2_portal_token', clean)
     localStorage.setItem('v2_portal_fracao_id', data.fracao_id ?? '')
     localStorage.setItem('v2_portal_condomino_id', data.condomino_id ?? '')
@@ -170,151 +272,35 @@ function FormCondomino() {
   }
 
   return (
-    <form onSubmit={handleSubmit}>
-      <Field label="Token de acesso (UUID)">
-        <input
-          type="text"
-          value={token}
-          onChange={e => setToken(e.target.value)}
-          placeholder="00000000-0000-0000-0000-000000000000"
-          required
-          autoFocus
-          style={inputStyle}
-        />
-      </Field>
-
-      <p className="dim" style={{ fontSize: 11, lineHeight: 1.6, marginBottom: 14 }}>
-        O link UUID foi-te enviado por email. Cada acesso é registado.
-      </p>
-
-      {error   && <div className="error-banner">{error}</div>}
-      {success && <div style={successStyle}>{success}</div>}
-
-      <button type="submit" disabled={loading} style={primaryBtn}>
-        {loading ? 'A validar…' : 'Entrar no portal'}
+    <form onSubmit={submit}>
+      <div className="login-subtitle">{t.subtitle}</div>
+      <label className="login-label">{t.label}</label>
+      <input
+        type="text"
+        className="login-input"
+        value={token}
+        onChange={(e) => setToken(e.target.value)}
+        placeholder={t.placeholder}
+        required
+        autoFocus
+        style={{ fontFamily: 'DM Mono, monospace', letterSpacing: 1 }}
+      />
+      {err && <div className="login-err">{err}</div>}
+      {success && <div style={{
+        padding: '10px 14px',
+        background: 'rgba(63,185,80,0.10)',
+        color: 'rgb(63,185,80)',
+        border: '1px solid rgba(63,185,80,0.30)',
+        borderRadius: 8,
+        fontSize: 13,
+        marginBottom: 14,
+      }}>{success}</div>}
+      <button type="submit" className="login-btn" disabled={loading}>
+        {loading ? '…' : t.btn}
       </button>
+      <div className="login-secondary-row">
+        <button type="button" className="login-secondary-btn" onClick={onBack}>{t.back}</button>
+      </div>
     </form>
   )
-}
-
-/* ─────────────── Formulário Staff (alias + password) ─────────────── */
-
-function FormStaff({ mainClient }) {
-  const [alias, setAlias] = useState('')
-  const [password, setPassword] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState(null)
-
-  async function handleSubmit(e) {
-    e.preventDefault()
-    setError(null)
-    setLoading(true)
-
-    // Resolve alias → email via RPC v2_condominios.staff_login_lookup.
-    // Se utilizador já escreveu email completo, salta o lookup.
-    let email = alias.trim()
-    if (!email.includes('@')) {
-      const { data, error: rpcErr } = await v2Client.rpc('staff_login_lookup', { p_alias: email.toLowerCase() })
-      if (rpcErr || !data || data.ok !== true || !data.email) {
-        setLoading(false)
-        setError('Alias não encontrado. Tenta o email completo.')
-        return
-      }
-      email = data.email
-    }
-
-    const { error: authErr } = await mainClient.auth.signInWithPassword({ email, password })
-    setLoading(false)
-    if (authErr) setError(authErr.message)
-  }
-
-  return (
-    <form onSubmit={handleSubmit}>
-      <Field label="Utilizador ou email">
-        <input
-          type="text"
-          value={alias}
-          onChange={e => setAlias(e.target.value)}
-          placeholder="mario"
-          autoComplete="username"
-          required
-          autoFocus
-          style={inputStyle}
-        />
-      </Field>
-
-      <Field label="Password">
-        <input
-          type="password"
-          value={password}
-          onChange={e => setPassword(e.target.value)}
-          autoComplete="current-password"
-          required
-          style={inputStyle}
-        />
-      </Field>
-
-      {error && <div className="error-banner">{error}</div>}
-
-      <button type="submit" disabled={loading} style={primaryBtn}>
-        {loading ? 'A entrar…' : 'Entrar'}
-      </button>
-    </form>
-  )
-}
-
-/* ─────────────── Helpers visuais ─────────────── */
-
-function Field({ label, children }) {
-  return (
-    <label style={{ display: 'block', marginBottom: 14 }}>
-      <span className="mono" style={{
-        display: 'block',
-        fontSize: 9, color: 'var(--mu)',
-        textTransform: 'uppercase', letterSpacing: 1,
-        marginBottom: 5,
-      }}>
-        {label}
-      </span>
-      {children}
-    </label>
-  )
-}
-
-const inputStyle = {
-  width: '100%',
-  padding: '9px 11px',
-  background: 'var(--sf)',
-  border: '1px solid var(--bd)',
-  borderRadius: 6,
-  fontSize: 13,
-  color: 'var(--tx)',
-  fontFamily: 'DM Mono, monospace',
-  boxSizing: 'border-box',
-  outline: 'none',
-}
-
-const primaryBtn = {
-  width: '100%',
-  padding: '11px',
-  background: 'var(--go)',
-  color: '#0d1117',
-  border: 'none',
-  borderRadius: 6,
-  fontSize: 13,
-  fontWeight: 600,
-  cursor: 'pointer',
-  fontFamily: 'DM Sans, sans-serif',
-  letterSpacing: 0.3,
-  transition: 'opacity 0.12s',
-}
-
-const successStyle = {
-  padding: '10px 14px',
-  background: 'rgba(63,185,80,0.10)',
-  color: 'var(--gr)',
-  border: '1px solid rgba(63,185,80,0.30)',
-  borderRadius: 6,
-  fontSize: 13,
-  marginBottom: 14,
 }

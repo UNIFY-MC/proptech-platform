@@ -34,6 +34,7 @@ import V2Legacy from './views/V2Legacy.jsx'
 
 function AppInner() {
   const { authenticated, loading } = useAuth()
+  // Default dark (parity prataowners.pt legacy). Sidebar tem botão "Light mode" para toggle.
   const [theme, setTheme] = useState(() => localStorage.getItem('v2theme') || 'dark')
 
   // Growth pixel — tracka pageviews + form submits cross-vertical (ADR-015)

@@ -12,7 +12,9 @@
     "dev:all": "concurrently -k -n dashboard,v2,v4,v5 -c blue.bold,green.bold,yellow.bold,magenta.bold \"pnpm --filter @proptech/dashboard dev\" \"pnpm --filter v2-condominios dev\" \"pnpm --filter v4-energia dev\" \"pnpm --filter v5-manutencao dev\""
   },
   "devDependencies": {
+    "@playwright/test": "^1.60.0",
     "concurrently": "^9.0.0",
-    "gray-matter": "^4.0.3"
+    "gray-matter": "^4.0.3",
+    "playwright": "^1.60.0"
   }
 }

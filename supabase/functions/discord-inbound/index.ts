@@ -25,11 +25,13 @@ const cors = {
   "Access-Control-Allow-Methods": "POST,OPTIONS",
 }
 
-// Discord usa Ed25519 signatures (https://discord.com/developers/docs/interactions/receiving-and-responding)
-// Para verificar precisamos do public key + ed25519 cryptography.
-// Deno tem Web Crypto API mas não suporta Ed25519 nativamente em todos os runtimes.
-// Para MVP: aceitar sem verificação se DISCORD_PUBLIC_KEY=='' (dev mode).
-// Em produção: implementar verify via tweetnacl ou similar.
+function hexToBytes(hex: string): Uint8Array {
+  const bytes = new Uint8Array(hex.length / 2)
+  for (let i = 0; i < hex.length; i += 2) {
+    bytes[i / 2] = parseInt(hex.slice(i, i + 2), 16)
+  }
+  return bytes
+}
 
 async function verifyDiscordSignature(
   body: string,
@@ -38,9 +40,23 @@ async function verifyDiscordSignature(
 ): Promise<boolean> {
   if (!DISCORD_PUBLIC_KEY) return true  // dev mode: skip verification
   if (!signature || !timestamp) return false
-  // TODO: implementar Ed25519 verify quando passar a produção
-  // Por agora, em produção, exige DISCORD_PUBLIC_KEY vazio (dev) ou implementação real
-  return true
+  try {
+    const key = await crypto.subtle.importKey(
+      "raw",
+      hexToBytes(DISCORD_PUBLIC_KEY),
+      { name: "Ed25519" },
+      false,
+      ["verify"],
+    )
+    return await crypto.subtle.verify(
+      "Ed25519",
+      key,
+      hexToBytes(signature),
+      new TextEncoder().encode(timestamp + body),
+    )
+  } catch {
+    return false
+  }
 }
 
 const ROUTING_HEADS = [
@@ -115,7 +131,11 @@ Deno.serve(async (req) => {
     const messageId: string = body.id || body.token || ""
     const kind: string = body.type === "dm" ? "discord_dm" : "discord_mention"
 
-    if (!messageContent) {
+    // Anexos do Discord (ficheiros que o Mário envia à Sandra)
+    const rawAttachments: any[] = Array.isArray(body.attachments) ? body.attachments : []
+
+    // Sem texto E sem anexos → nada a fazer
+    if (!messageContent && rawAttachments.length === 0) {
       return new Response(JSON.stringify({ error: "no_content_to_route" }), {
         status: 400, headers: { ...cors, "Content-Type": "application/json" },
       })
@@ -123,14 +143,59 @@ Deno.serve(async (req) => {
 
     const sb = createClient(SUPABASE_URL, SERVICE_KEY)
 
-    // Classifica intent → escolhe agent
-    const agentId = await routeIntent(messageContent)
+    // Descarrega cada anexo do CDN do Discord e guarda em Storage (condo-uploads).
+    // Assim a Sandra (e as recipes) conseguem ler o ficheiro via service role.
+    const UPLOAD_BUCKET = "condo-uploads"
+    const storedAttachments: any[] = []
+    for (const att of rawAttachments) {
+      try {
+        const url = att.url || att.proxy_url
+        if (!url) continue
+        const res = await fetch(url)
+        if (!res.ok) { storedAttachments.push({ filename: att.filename, error: `download ${res.status}` }); continue }
+        const bytes = new Uint8Array(await res.arrayBuffer())
+        const safe = String(att.filename || "anexo").replace(/[^\w.\-]+/g, "_")
+        const stamp = new Date().toISOString().replace(/[:.]/g, "-")
+        const objectPath = `recipes/discord/${stamp}-${safe}`
+        const { error: upErr } = await sb.storage.from(UPLOAD_BUCKET).upload(objectPath, bytes, {
+          upsert: true, contentType: att.content_type || undefined,
+        })
+        if (upErr) { storedAttachments.push({ filename: att.filename, error: upErr.message }); continue }
+        storedAttachments.push({
+          filename: att.filename,
+          content_type: att.content_type || null,
+          size: att.size ?? bytes.length,
+          storage_path: `${UPLOAD_BUCKET}/${objectPath}`,
+        })
+      } catch (e) {
+        storedAttachments.push({ filename: att?.filename, error: String(e) })
+      }
+    }
+
+    // Texto efectivo para routing (se só há anexo, usa nome do ficheiro como pista)
+    const routingText = messageContent ||
+      `ficheiro ${storedAttachments.map((a) => a.filename).filter(Boolean).join(", ")}`
+
+    // Classifica intent → escolhe agent. Anexo XLSX de carregadores → orquestrador-condo (Sandra).
+    let agentId = await routeIntent(routingText)
+    const hasSpreadsheet = storedAttachments.some((a) =>
+      /\.(xlsx|xls|csv)$/i.test(a.filename || "") || /spreadsheet|excel|csv/i.test(a.content_type || ""))
+    if (hasSpreadsheet && /carregad|quota|eletric|kwh|contagem/i.test(routingText)) {
+      agentId = "orquestrador-condo"
+    }
 
     // Cria task
-    const title = messageContent.length > 60 ? messageContent.slice(0, 57) + "…" : messageContent
+    const baseTitle = messageContent || `Anexo: ${storedAttachments.map((a) => a.filename).filter(Boolean).join(", ") || "ficheiro"}`
+    const title = baseTitle.length > 60 ? baseTitle.slice(0, 57) + "…" : baseTitle
+    const attachmentsMd = storedAttachments.length
+      ? `\n\n**Anexos (${storedAttachments.length}):**\n` +
+        storedAttachments.map((a) => a.storage_path
+          ? `- \`${a.filename}\` → \`${a.storage_path}\``
+          : `- \`${a.filename}\` ⚠️ ${a.error}`).join("\n")
+      : ""
     const { data: taskId, error: tErr } = await sb.schema("system").rpc("task_create", {
       p_title: title,
-      p_description_md: `**Do Discord ${kind === 'discord_dm' ? '(DM)' : '(mention)'} por @${authorName}:**\n\n${messageContent}`,
+      p_description_md: `**Do Discord ${kind === 'discord_dm' ? '(DM)' : '(mention)'} por @${authorName}:**\n\n${messageContent || '(sem texto)'}${attachmentsMd}`,
       p_kind: kind,
       p_priority: "normal",
       p_vertical: null,
@@ -145,8 +210,10 @@ Deno.serve(async (req) => {
           message_id: messageId,
           raw_content: messageContent,
         },
+        attachments: storedAttachments,
       },
-      p_tags: ["discord", `kind:${kind}`, `author:${authorName}`],
+      p_tags: ["discord", `kind:${kind}`, `author:${authorName}`,
+        ...(storedAttachments.length ? ["has-attachment"] : [])],
     })
 
     if (tErr) {
@@ -159,6 +226,7 @@ Deno.serve(async (req) => {
       ok: true,
       task_id: taskId,
       routed_to: agentId,
+      attachments_stored: storedAttachments,
     }), { headers: { ...cors, "Content-Type": "application/json" } })
 
   } catch (e) {
